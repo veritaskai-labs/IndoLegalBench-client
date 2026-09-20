@@ -18,4 +18,10 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
+
+      # No-op until someone adds a "test" script to package.json, then this
+      # step starts enforcing tests on its own. Whoever wires up Vitest must
+      # also bump node-version above: Vitest 5 needs Node >= 22.12.
+      - run: npm run test --if-present
+
       - run: npm run build
