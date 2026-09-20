@@ -18,6 +18,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
+      - run: git diff --exit-code src/lib/generated
+      - run: npm run typecheck
+      - run: npm run lint
 
       # No-op until someone adds a "test" script to package.json, then this
       # step starts enforcing tests on its own. Whoever wires up Vitest must

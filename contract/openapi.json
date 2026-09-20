@@ -1,0 +1,52 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "IndoLegalBench API", "version": "0.1.0-draft" },
+  "paths": {
+    "/me": {
+      "get": {
+        "summary": "Profil pengguna dari sesi aktif",
+        "responses": {
+          "200": {
+            "description": "Pengguna terautentikasi",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Me" }
+              }
+            }
+          },
+          "401": {
+            "description": "Tidak ada sesi aktif",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Role": {
+        "type": "string",
+        "enum": ["author", "reviewer", "admin", "viewer"]
+      },
+      "Me": {
+        "type": "object",
+        "required": ["id", "name", "email", "role"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "$ref": "#/components/schemas/Role" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["detail"],
+        "properties": { "detail": { "type": "string" } }
+      }
+    }
+  }
+}
