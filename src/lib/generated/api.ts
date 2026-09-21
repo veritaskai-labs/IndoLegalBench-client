@@ -30,7 +30,7 @@ export interface paths {
                         "application/json": components["schemas"]["Me"];
                     };
                 };
-                /** @description Tidak ada sesi aktif */
+                /** @description UNAUTHENTICATED atau SESSION_EXPIRED */
                 401: {
                     headers: {
                         [name: string]: unknown;
@@ -54,16 +54,18 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        Role: "AUTHOR" | "REVIEWER" | "ADMIN" | "VIEWER";
+        Role: "author" | "reviewer" | "admin" | "viewer";
         Me: {
-            id: string;
+            /** @description UUID atau int, menunggu SCRUM-89 */
+            id: string | number;
             name: string;
             /** Format: email */
             email: string;
             role: components["schemas"]["Role"];
         };
         ErrorResponse: {
-            detail: string;
+            code: string;
+            message: string;
         };
     };
     responses: never;

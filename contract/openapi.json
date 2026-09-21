@@ -15,7 +15,7 @@
             }
           },
           "401": {
-            "description": "Tidak ada sesi aktif",
+            "description": "UNAUTHENTICATED atau SESSION_EXPIRED",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/ErrorResponse" }
@@ -30,13 +30,16 @@
     "schemas": {
       "Role": {
         "type": "string",
-        "enum": ["AUTHOR", "REVIEWER", "ADMIN", "VIEWER"]
+        "enum": ["author", "reviewer", "admin", "viewer"]
       },
       "Me": {
         "type": "object",
         "required": ["id", "name", "email", "role"],
         "properties": {
-          "id": { "type": "string" },
+          "id": {
+            "description": "UUID atau int, menunggu SCRUM-89",
+            "oneOf": [{ "type": "string" }, { "type": "integer" }]
+          },
           "name": { "type": "string" },
           "email": { "type": "string", "format": "email" },
           "role": { "$ref": "#/components/schemas/Role" }
@@ -44,8 +47,11 @@
       },
       "ErrorResponse": {
         "type": "object",
-        "required": ["detail"],
-        "properties": { "detail": { "type": "string" } }
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
       }
     }
   }

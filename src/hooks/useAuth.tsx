@@ -29,20 +29,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (MOCK_ENABLED) return;
 
     let cancelled = false;
-
+    
+    
     apiFetch<Me>("/me")
-      .then((user) => {
-        if (cancelled) return;
-        sessionStorage.setItem("ilb:had-session", "1");
-        setState({ status: "authenticated", user });
+    .then((user) => {
+      if (cancelled) 
+        return;
+      setState({ status: "authenticated", user });
       })
       .catch((error) => {
-        if (cancelled) return;
-        /** Sesi habis & belum login dua-duanya 401, sementara dibedakan lokal */
-        const hadSession = sessionStorage.getItem("ilb:had-session") === "1";
-        sessionStorage.removeItem("ilb:had-session");
+        if (cancelled) 
+          return;
         const expired =
-          error instanceof ApiError && error.status === 401 && hadSession;
+        error instanceof ApiError && error.code === "SESSION_EXPIRED";
         setState({
           status: "unauthenticated",
           reason: expired ? "expired" : "no_session",

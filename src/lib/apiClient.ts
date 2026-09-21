@@ -10,14 +10,14 @@ export class ApiError extends Error {
   }
 }
 
-/** Read JSON error backend, Asumsi -> { detail: string } */
+/** Read JSON error backend: { code, message } */
 async function parseError(response: Response): Promise<ApiError> {
   let code = "UNKNOWN_ERROR";
   try {
     const body = await response.json();
-    if (typeof body?.detail === "string") code = body.detail;
+    if (typeof body?.code === "string") code = body.code;
   } catch {
-
+    // no JSON body
   }
   return new ApiError(response.status, code);
 }
