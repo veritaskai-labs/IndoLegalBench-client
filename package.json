@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "gen:api": "openapi-typescript ./contract/openapi.json -o ./src/lib/generated/api.ts"
   },
   "dependencies": {
