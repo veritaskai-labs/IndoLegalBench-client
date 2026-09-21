@@ -6,5 +6,5 @@ export const mockMe: Me = {
   id: "u-mock",
   name: "Nama User",
   email: "namauser@veritask.id",
-  role: (process.env.NEXT_PUBLIC_MOCK_ROLE as Role) ?? "author",
+  role: (process.env.NEXT_PUBLIC_MOCK_ROLE as Role) ?? "AUTHOR",
 };

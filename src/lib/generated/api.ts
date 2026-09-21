@@ -54,7 +54,7 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        Role: "author" | "reviewer" | "admin" | "viewer";
+        Role: "AUTHOR" | "REVIEWER" | "ADMIN" | "VIEWER";
         Me: {
             id: string;
             name: string;

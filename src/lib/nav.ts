@@ -3,7 +3,7 @@ import type { Role } from "@/types";
 export type NavItem = { label: string; href: string; roles: Role[] };
 export type NavGroup = { heading: string; items: NavItem[] };
 
-const ALL: Role[] = ["author", "reviewer", "admin", "viewer"];
+const ALL: Role[] = ["AUTHOR", "REVIEWER", "ADMIN", "VIEWER"];
 
 /** Mockup 5.2 beda, nunggu SCRUM-97 */
 export const NAV_GROUPS: NavGroup[] = [
@@ -15,23 +15,23 @@ export const NAV_GROUPS: NavGroup[] = [
       {
         label: "Antrean tinjauan",
         href: "/reviews",
-        roles: ["reviewer", "admin"],
+        roles: ["REVIEWER", "ADMIN"],
       },
     ],
   },
   {
     heading: "Pengukuran",
     items: [
-      { label: "Penyedia", href: "/admin/providers", roles: ["admin"] },
-      { label: "Eksekusi", href: "/runs", roles: ["admin"] },
-      { label: "Laporan", href: "/reports", roles: ["admin", "viewer"] },
+      { label: "Penyedia", href: "/admin/providers", roles: ["ADMIN"] },
+      { label: "Eksekusi", href: "/runs", roles: ["ADMIN"] },
+      { label: "Laporan", href: "/reports", roles: ["ADMIN", "VIEWER"] },
     ],
   },
   {
     heading: "Sistem",
     items: [
-      { label: "Anggota", href: "/admin/members", roles: ["admin"] },
-      { label: "Log audit", href: "/admin/audit", roles: ["admin"] },
+      { label: "Anggota", href: "/admin/members", roles: ["ADMIN"] },
+      { label: "Log audit", href: "/admin/audit", roles: ["ADMIN"] },
     ],
   },
 ];

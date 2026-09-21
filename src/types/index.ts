@@ -5,8 +5,8 @@ export type Me = components["schemas"]["Me"];
 
 /**Role Label (Interface) */
 export const ROLE_LABEL: Record<Role, string> = {
-  author: "Penulis",
-  reviewer: "Peninjau",
-  admin: "Admin",
-  viewer: "Pembaca",
+  AUTHOR: "Penulis",
+  REVIEWER: "Peninjau",
+  ADMIN: "Admin",
+  VIEWER: "Pembaca",
 };

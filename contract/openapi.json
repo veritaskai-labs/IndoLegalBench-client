@@ -30,7 +30,7 @@
     "schemas": {
       "Role": {
         "type": "string",
-        "enum": ["author", "reviewer", "admin", "viewer"]
+        "enum": ["AUTHOR", "REVIEWER", "ADMIN", "VIEWER"]
       },
       "Me": {
         "type": "object",
