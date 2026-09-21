@@ -1,0 +1,45 @@
+/**
+ * Auth constants shared by the login page and the /auth/done handler.
+ *
+ * TODO(SCRUM-93): replace `Role` and the /me shape with the types generated
+ * from the OpenAPI contract once that work is merged into staging.
+ */
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+// Full-page navigation target that starts the OIDC flow (handled by the backend).
+export const LOGIN_URL = `${API_BASE_URL}/auth/login`;
+export const ME_URL = `${API_BASE_URL}/me`;
+
+export const ROLE_HOME_PATH = {
+  AUTHOR: "/suites",
+  ADMIN: "/admin/users",
+  REVIEWER: "/reviews", // placeholder page
+  VIEWER: "/reports", // placeholder page
+} as const;
+
+export type Role = keyof typeof ROLE_HOME_PATH;
+
+/**
+ * Strict on purpose: role values are uppercase ("AUTHOR", "ADMIN",
+ * "REVIEWER", "VIEWER"), as agreed by the team. Any other casing or unknown
+ * value returns null.
+ */
+export function parseRole(value: unknown): Role | null {
+  if (typeof value !== "string") return null;
+  return Object.keys(ROLE_HOME_PATH).includes(value) ? (value as Role) : null;
+}
+
+export const AUTH_ERROR_CODES = [
+  "USER_NOT_REGISTERED",
+  "USER_DEACTIVATED",
+] as const;
+
+export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[number];
+
+export function isAuthErrorCode(value: unknown): value is AuthErrorCode {
+  return (
+    typeof value === "string" &&
+    (AUTH_ERROR_CODES as readonly string[]).includes(value)
+  );
+}

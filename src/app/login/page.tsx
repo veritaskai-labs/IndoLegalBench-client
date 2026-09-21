@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LOGIN_URL } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Masuk | IndoLegalBench",
@@ -44,7 +45,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="mt-8 flex flex-col gap-4">
           {/* Plain <a>: full-page navigation into the OIDC flow, not client-side routing */}
           <a
-            href="/auth/login"
+            href={LOGIN_URL}
             className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-400"
           >
             Masuk dengan akun Veritask
