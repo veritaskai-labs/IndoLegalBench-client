@@ -56,8 +56,8 @@ export interface components {
         /** @enum {string} */
         Role: "author" | "reviewer" | "admin" | "viewer";
         Me: {
-            /** @description UUID atau int, menunggu SCRUM-89 */
-            id: string | number;
+            /** Format: uuid */
+            id: string;
             name: string;
             /** Format: email */
             email: string;

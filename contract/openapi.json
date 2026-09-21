@@ -1,6 +1,6 @@
 {
   "openapi": "3.1.0",
-  "info": { "title": "IndoLegalBench API", "version": "0.1.0-draft" },
+  "info": { "title": "IndoLegalBench API", "version": "0.1.0-draft", "description": "PLACEHOLDER : ditulis manual dari draft API SCRUM-90, bukan hasil generate server. Ganti dengan artifact openapi-contract dari CI server begitu SCRUM-90 masuk." },
   "paths": {
     "/me": {
       "get": {
@@ -36,10 +36,7 @@
         "type": "object",
         "required": ["id", "name", "email", "role"],
         "properties": {
-          "id": {
-            "description": "UUID atau int, menunggu SCRUM-89",
-            "oneOf": [{ "type": "string" }, { "type": "integer" }]
-          },
+          "id": {"type": "string", "format": "uuid" },
           "name": { "type": "string" },
           "email": { "type": "string", "format": "email" },
           "role": { "$ref": "#/components/schemas/Role" }
