@@ -33,15 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     apiFetch<Me>("/me")
     .then((user) => {
-      if (cancelled) 
-        return;
+      if (cancelled) return;
       setState({ status: "authenticated", user });
       })
       .catch((error) => {
-        if (cancelled) 
-          return;
-        const expired =
-        error instanceof ApiError && error.code === "SESSION_EXPIRED";
+        if (cancelled) return;
+        const expired = error instanceof ApiError && error.code === "SESSION_EXPIRED";
         setState({
           status: "unauthenticated",
           reason: expired ? "expired" : "no_session",
