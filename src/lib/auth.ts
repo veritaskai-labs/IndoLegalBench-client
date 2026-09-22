@@ -1,14 +1,8 @@
-/**
- * Auth constants shared by the login page and the /auth/done handler.
- *
- * TODO(SCRUM-93): replace `Role` and the /me shape with the types generated
- * from the OpenAPI contract once that work is merged into staging.
- */
+import { BASE_URL } from "./apiClient";
+import type { components } from "./generated/api";
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-export const LOGIN_URL = `${API_BASE_URL}/auth/login`;
-export const ME_URL = `${API_BASE_URL}/me`;
+export const LOGIN_URL = `${BASE_URL}/auth/login`;
+export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
 
 export const ROLE_HOME_PATH = {
   author: "/suites",
@@ -17,12 +11,7 @@ export const ROLE_HOME_PATH = {
   viewer: "/reports", // placeholder page
 } as const;
 
-export type Role = keyof typeof ROLE_HOME_PATH;
-
-// TODO(SCRUM-94): logout action and the 403 -> /forbidden interceptor are
-// owned by this ticket but intentionally deferred until PR SCRUM-93
-// (Herdayani's apiClient/useAuth) merges into staging, to avoid duplicate
-// implementation. Confirmed with Herdayani, 22 Sep 2026.
+export type Role = components["schemas"]["Role"];
 
 /**
  * Strict on purpose: role values are lowercase ("author", "admin",
