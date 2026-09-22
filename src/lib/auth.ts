@@ -12,18 +12,18 @@ export const LOGIN_URL = `${API_BASE_URL}/auth/login`;
 export const ME_URL = `${API_BASE_URL}/me`;
 
 export const ROLE_HOME_PATH = {
-  AUTHOR: "/suites",
-  ADMIN: "/admin/users",
-  REVIEWER: "/reviews", // placeholder page
-  VIEWER: "/reports", // placeholder page
+  author: "/suites",
+  admin: "/admin/users",
+  reviewer: "/reviews", // placeholder page
+  viewer: "/reports", // placeholder page
 } as const;
 
 export type Role = keyof typeof ROLE_HOME_PATH;
 
 /**
- * Strict on purpose: role values are uppercase ("AUTHOR", "ADMIN",
- * "REVIEWER", "VIEWER"), as agreed by the team. Any other casing or unknown
- * value returns null.
+ * Strict on purpose: role values are lowercase ("author", "admin",
+ * "reviewer", "viewer"), as sent by the backend /me endpoint. Any other
+ * casing or unknown value returns null.
  */
 export function parseRole(value: unknown): Role | null {
   if (typeof value !== "string") return null;
