@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { apiFetch, ApiError } from "@/lib/apiClient";
-import { MOCK_ENABLED, mockMe } from "@/lib/mockAuth";
+import { MOCK_ENABLED, getMockMe } from "@/lib/mockAuth";
 import type { Me } from "@/types";
 
 type AuthState =
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthState>({ status: "loading" });
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(() =>
     MOCK_ENABLED
-      ? { status: "authenticated", user: mockMe }
+      ? { status: "authenticated", user: getMockMe() }
       : { status: "loading" },
   );
 

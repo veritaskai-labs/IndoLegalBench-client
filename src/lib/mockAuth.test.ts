@@ -41,16 +41,16 @@ describe("mockAuth", () => {
   it("reads the role case-insensitively", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_ROLE", "ADMIN");
 
-    const { mockMe } = await loadMockAuth();
+    const { getMockMe } = await import("./mockAuth");
 
-    expect(mockMe.role).toBe("admin");
+    expect(getMockMe().role).toBe("admin");
   });
 
   it("falls back to author for an unknown role", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_ROLE", "superuser");
 
-    const { mockMe } = await loadMockAuth();
+    const { getMockMe } = await import("./mockAuth");
 
-    expect(mockMe.role).toBe("author");
+    expect(getMockMe().role).toBe("author");
   });
 });
