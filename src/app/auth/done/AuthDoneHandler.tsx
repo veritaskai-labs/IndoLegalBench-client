@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { ApiError, apiFetch } from "@/lib/apiClient";
 import {
-  ME_URL,
   ROLE_HOME_PATH,
   isAuthErrorCode,
   isSessionExpiredCode,
@@ -79,43 +79,39 @@ export function AuthDoneHandler({ initialErrorCode }: AuthDoneHandlerProps) {
 
     async function resolveProfile() {
       try {
-        const response = await fetch(ME_URL, {
-          credentials: "include", // send the session cookie across origins
+        const body: unknown = await apiFetch("/me", {
           signal: controller.signal,
         });
-        const body: unknown = await response.json().catch(() => null);
 
         // 2. Success: redirect to the home page of the user's role.
-        if (response.ok) {
-          const role = parseRole(readField(body, "role"));
-          if (role) {
-            router.replace(ROLE_HOME_PATH[role]);
-          } else {
-            setState({ status: "failed" });
+        const role = parseRole(readField(body, "role"));
+        if (role) {
+          router.replace(ROLE_HOME_PATH[role]);
+        } else {
+          setState({ status: "failed" });
+        }
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        if (err instanceof ApiError) {
+          const { code, status } = err;
+
+          // 3. Known account errors: show a dedicated screen.
+          if (isAuthErrorCode(code)) {
+            setState({ status: "auth-error", code });
+            return;
           }
-          return;
-        }
 
-        const code = readField(body, "code");
-
-        // 3. Known account errors: show a dedicated screen.
-        if (isAuthErrorCode(code)) {
-          setState({ status: "auth-error", code });
-          return;
-        }
-
-        // 4. Not signed in: go back to the login page.
-        if (response.status === 401) {
-        router.replace(
-            isSessionExpiredCode(code) ? "/login?reason=expired" : "/login",
-        );
-        return;
+          // 4. Not signed in: go back to the login page.
+          if (status === 401) {
+            router.replace(
+              isSessionExpiredCode(code) ? "/login?reason=expired" : "/login",
+            );
+            return;
+          }
         }
 
         // 5. Anything else: generic failure with a retry button.
-        setState({ status: "failed" });
-      } catch {
-        if (controller.signal.aborted) return;
         setState({ status: "failed" });
       }
     }
