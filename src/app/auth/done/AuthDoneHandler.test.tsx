@@ -55,11 +55,11 @@ describe("AuthDoneHandler", () => {
     );
   });
 
-  it("shows the dedicated screen for a known auth error code", async () => {
+  it("shows a generic failure when /me returns 403 (account-status codes arrive via query param, not from /me)", async () => {
     mockFetchOnce({ ok: false, status: 403, body: { code: "USER_NOT_REGISTERED" } });
     render(<AuthDoneHandler />);
     await waitFor(() =>
-      expect(screen.getByText("Akun Anda belum terdaftar")).toBeInTheDocument(),
+      expect(screen.getByText("Gagal memproses login")).toBeInTheDocument(),
     );
   });
 

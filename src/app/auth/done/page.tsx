@@ -18,10 +18,8 @@ export default async function AuthDonePage({
   const { error } = await searchParams;
   const errorValue = Array.isArray(error) ? error[0] : error;
 
-  // TODO(SCRUM-94): PROPOSAL, not agreed with BE yet. Reading `?error=<CODE>`
-  // assumes the backend redirects failed callbacks to /auth/done?error=<CODE>.
-  // Adjust or remove once BE confirms how USER_NOT_REGISTERED and
-  // USER_DEACTIVATED reach the frontend.
+  // Confirmed with BE (server #7, SCRUM-90): failed callbacks redirect to
+  // /auth/done?error=<CODE> with USER_NOT_REGISTERED or USER_DEACTIVATED.
   const initialErrorCode = isAuthErrorCode(errorValue) ? errorValue : undefined;
 
   return <AuthDoneHandler initialErrorCode={initialErrorCode} />;

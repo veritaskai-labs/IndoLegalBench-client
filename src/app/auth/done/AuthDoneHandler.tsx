@@ -7,7 +7,6 @@ import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import {
   ROLE_HOME_PATH,
-  isAuthErrorCode,
   isSessionExpiredCode,
   parseRole,
   type AuthErrorCode,
@@ -37,7 +36,7 @@ const MESSAGE_CLASS = "mt-3 text-sm text-zinc-600 dark:text-zinc-400";
 const PRIMARY_BUTTON_CLASS =
   "inline-flex w-full items-center justify-center rounded-lg bg-indigo-900 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-indigo-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-900 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-400";
 
-const AUTH_ERROR_COPY: Record <
+const AUTH_ERROR_COPY: Record<
   AuthErrorCode,
   { title: string; message: string }
 > = {
@@ -93,25 +92,18 @@ export function AuthDoneHandler({ initialErrorCode }: AuthDoneHandlerProps) {
       } catch (err) {
         if (controller.signal.aborted) return;
 
-        if (err instanceof ApiError) {
-          const { code, status } = err;
-
-          // 3. Known account errors: show a dedicated screen.
-          if (isAuthErrorCode(code)) {
-            setState({ status: "auth-error", code });
-            return;
-          }
-
-          // 4. Not signed in: go back to the login page.
-          if (status === 401) {
-            router.replace(
-              isSessionExpiredCode(code) ? "/login?reason=expired" : "/login",
-            );
-            return;
-          }
+        // Account errors (USER_NOT_REGISTERED, USER_DEACTIVATED) arrive via
+        // the /auth/done?error=<CODE> query param from the callback redirect,
+        // not from a /me failure — see AuthDonePage. Confirmed with Rafa,
+        // server #7.
+        if (err instanceof ApiError && err.status === 401) {
+          router.replace(
+            isSessionExpiredCode(err.code) ? "/login?reason=expired" : "/login",
+          );
+          return;
         }
 
-        // 5. Anything else: generic failure with a retry button.
+        // Anything else: generic failure with a retry button.
         setState({ status: "failed" });
       }
     }
