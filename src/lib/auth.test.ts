@@ -46,4 +46,8 @@ describe("isAuthErrorCode", () => {
     expect(isAuthErrorCode(undefined)).toBe(false);
     expect(isAuthErrorCode(42)).toBe(false);
   });
+  
+  it("recognizes SESSION_EXPIRED as a valid auth error code", () => {
+    expect(isAuthErrorCode("SESSION_EXPIRED")).toBe(true);
+  });
 });
