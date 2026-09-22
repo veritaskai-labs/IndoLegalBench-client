@@ -26,6 +26,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate API types
+        run: npm run gen:api
+
+      - name: Check generated types are committed
+        run: git diff --exit-code src/lib/generated
+
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Lint
         run: npm run lint
 
