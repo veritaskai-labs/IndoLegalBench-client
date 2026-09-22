@@ -19,6 +19,11 @@ export const ROLE_HOME_PATH = {
 
 export type Role = keyof typeof ROLE_HOME_PATH;
 
+// TODO(SCRUM-94): logout action and the 403 -> /forbidden interceptor are
+// owned by this ticket but intentionally deferred until PR SCRUM-93
+// (Herdayani's apiClient/useAuth) merges into staging, to avoid duplicate
+// implementation. Confirmed with Herdayani, 22 Sep 2026.
+
 /**
  * Strict on purpose: role values are lowercase ("author", "admin",
  * "reviewer", "viewer"), as sent by the backend /me endpoint. Any other
