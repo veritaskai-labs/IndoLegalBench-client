@@ -7,7 +7,6 @@
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-// Full-page navigation target that starts the OIDC flow (handled by the backend).
 export const LOGIN_URL = `${API_BASE_URL}/auth/login`;
 export const ME_URL = `${API_BASE_URL}/me`;
 
@@ -42,4 +41,13 @@ export function isAuthErrorCode(value: unknown): value is AuthErrorCode {
     typeof value === "string" &&
     (AUTH_ERROR_CODES as readonly string[]).includes(value)
   );
+}
+
+// Session-expired is a redirect signal from a 401 response, not an
+// account-state error handled by AUTH_ERROR_COPY, so it's kept separate
+// from AuthErrorCode on purpose.
+export const SESSION_EXPIRED_CODE = "SESSION_EXPIRED";
+
+export function isSessionExpiredCode(value: unknown): boolean {
+  return value === SESSION_EXPIRED_CODE;
 }

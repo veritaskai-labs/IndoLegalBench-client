@@ -8,6 +8,7 @@ import {
   ME_URL,
   ROLE_HOME_PATH,
   isAuthErrorCode,
+  isSessionExpiredCode,
   parseRole,
   type AuthErrorCode,
 } from "@/lib/auth";
@@ -105,10 +106,10 @@ export function AuthDoneHandler({ initialErrorCode }: AuthDoneHandlerProps) {
 
         // 4. Not signed in: go back to the login page.
         if (response.status === 401) {
-          router.replace(
-            code === "SESSION_EXPIRED" ? "/login?reason=expired" : "/login",
-          );
-          return;
+        router.replace(
+            isSessionExpiredCode(code) ? "/login?reason=expired" : "/login",
+        );
+        return;
         }
 
         // 5. Anything else: generic failure with a retry button.

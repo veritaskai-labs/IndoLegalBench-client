@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRole, isAuthErrorCode, ROLE_HOME_PATH } from "./auth";
+import { parseRole, isAuthErrorCode, isSessionExpiredCode, ROLE_HOME_PATH } from "./auth";
 
 describe("parseRole", () => {
   it("returns the role for a known lowercase value", () => {
@@ -47,7 +47,20 @@ describe("isAuthErrorCode", () => {
     expect(isAuthErrorCode(42)).toBe(false);
   });
   
-  it("recognizes SESSION_EXPIRED as a valid auth error code", () => {
-    expect(isAuthErrorCode("SESSION_EXPIRED")).toBe(true);
+});
+
+describe("isSessionExpiredCode", () => {
+  it("returns true for the session-expired code", () => {
+    expect(isSessionExpiredCode("SESSION_EXPIRED")).toBe(true);
+  });
+
+  it("returns false for other auth error codes", () => {
+    expect(isSessionExpiredCode("USER_DEACTIVATED")).toBe(false);
+  });
+
+  it("returns false for non-string or unrelated values", () => {
+    expect(isSessionExpiredCode(null)).toBe(false);
+    expect(isSessionExpiredCode(undefined)).toBe(false);
+    expect(isSessionExpiredCode("session_expired")).toBe(false); // strict casing
   });
 });
