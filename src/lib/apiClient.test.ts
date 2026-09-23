@@ -77,4 +77,19 @@ describe("apiFetch", () => {
       code: "UNKNOWN_ERROR",
     });
   });
+
+    it("redirects to /forbidden and still throws on 403", async () => {
+    const location = { href: "" };
+    vi.stubGlobal("location", location);
+
+    fetchMock.mockResolvedValue(
+      fakeResponse(403, { code: "FORBIDDEN" }),
+    );
+
+    await expect(apiFetch("/admin/users")).rejects.toMatchObject({
+      status: 403,
+    });
+
+    expect(location.href).toBe("/forbidden");
+  });
 });
