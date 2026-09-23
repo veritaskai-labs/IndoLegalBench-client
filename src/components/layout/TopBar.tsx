@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
+import { LOGOUT_URL } from "@/lib/auth";
 import { ROLE_LABEL } from "@/types";
 
 function initials(name: string) {
@@ -34,6 +35,14 @@ export function TopBar() {
               {ROLE_LABEL[auth.user.role]}
             </span>
           </span>
+          <form method="POST" action={LOGOUT_URL}>
+            <button
+              type="submit"
+              className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+            >
+              Keluar
+            </button>
+          </form>
         </div>
       )}
     </header>
