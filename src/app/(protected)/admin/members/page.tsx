@@ -14,6 +14,11 @@ export default function AdminMembersPage() {
   const auth = useAuth();
   const router = useRouter();
 
+  // Ambil status & role dengan aman untuk discriminated union
+  const isAuthenticated = auth.status === "authenticated";
+  const userRole = isAuthenticated ? auth.user.role : null;
+
+  // 1. Deklarasi State
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -26,13 +31,14 @@ export default function AdminMembersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deactivatingUser, setDeactivatingUser] = useState<User | null>(null);
 
-  // Hook RBAC: Redirect jika bukan admin
+  // 2. Hook RBAC: Redirect jika bukan admin
   useEffect(() => {
-    if (auth.status === "authenticated" && auth.user.role !== "admin") {
+    if (isAuthenticated && userRole !== "admin") {
       router.replace("/dashboard");
     }
-  }, [auth, router]);
+  }, [isAuthenticated, userRole, router]);
 
+  // 3. Hook Data Fetching
   useEffect(() => {
     let cancelled = false;
 
@@ -66,15 +72,16 @@ export default function AdminMembersPage() {
       }
     }
 
-    if (auth.status === "authenticated" && auth.user.role === "admin") {
+    if (isAuthenticated && userRole === "admin") {
       loadInitialData();
     }
 
     return () => {
       cancelled = true;
     };
-  }, [auth.status, auth.user?.role, filterStatus]);
+  }, [isAuthenticated, userRole, filterStatus]);
 
+  // 4. Hook useMemo
   const displayedUsers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
@@ -96,6 +103,7 @@ export default function AdminMembersPage() {
     });
   }, [users, searchQuery, filterRoles, filterStatus]);
 
+  // 5. Fungsi Refresh & Mutasi
   const refreshUsers = async () => {
     setIsLoading(true);
     setApiError(null);
@@ -157,11 +165,12 @@ export default function AdminMembersPage() {
     );
   };
 
+  // 6. Early returns setelah semua hook
   if (auth.status === "loading") {
     return <div className="p-8 text-xs text-slate-500">Memeriksa hak akses…</div>;
   }
 
-  if (auth.status === "authenticated" && auth.user.role !== "admin") {
+  if (isAuthenticated && userRole !== "admin") {
     return null;
   }
 
