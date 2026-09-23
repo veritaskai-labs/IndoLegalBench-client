@@ -1,22 +1,22 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { apiFetch, ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { User, UserCreateRequest, StatusFilter } from "@/types/user-management";
 import { CreateUserModal } from "@/components/admin/CreateUserModal";
 import { DeactivateConfirmModal } from "@/components/admin/DeactivateConfirmModal";
 import { FilterPopover } from "@/components/admin/FilterPopover";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
 
 export default function AdminMembersPage() {
+  const auth = useAuth();
+  const router = useRouter();
+
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-
-  const auth = useAuth();
-  const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRoles, setFilterRoles] = useState<Role[]>([]);
@@ -26,20 +26,12 @@ export default function AdminMembersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deactivatingUser, setDeactivatingUser] = useState<User | null>(null);
 
-  // 1. Fetch data dari backend saat pertama mount atau filter status berubah
+  // Hook RBAC: Redirect jika bukan admin
   useEffect(() => {
     if (auth.status === "authenticated" && auth.user.role !== "admin") {
       router.replace("/dashboard");
     }
   }, [auth, router]);
-
-  if (auth.status === "loading") {
-    return <div className="p-8 text-xs text-slate-500">Memeriksa hak akses…</div>;
-  }
-
-  if (auth.status === "authenticated" && auth.user.role !== "admin") {
-    return null;
-  }
 
   useEffect(() => {
     let cancelled = false;
@@ -74,14 +66,36 @@ export default function AdminMembersPage() {
       }
     }
 
-    loadInitialData();
+    if (auth.status === "authenticated" && auth.user.role === "admin") {
+      loadInitialData();
+    }
 
     return () => {
       cancelled = true;
     };
-  }, [filterStatus]);
+  }, [auth.status, auth.user?.role, filterStatus]);
 
-  // 2. Fungsi refresh yang dipanggil setelah mutasi (create/retry)
+  const displayedUsers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return users.filter((user) => {
+      const matchesSearch =
+        !query ||
+        user.name.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.id.toLowerCase().includes(query);
+
+      const matchesRole = filterRoles.length === 0 || filterRoles.includes(user.role);
+
+      const matchesStatus =
+        filterStatus === "all" ||
+        (filterStatus === "active" && user.is_active) ||
+        (filterStatus === "inactive" && !user.is_active);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, searchQuery, filterRoles, filterStatus]);
+
   const refreshUsers = async () => {
     setIsLoading(true);
     setApiError(null);
@@ -106,7 +120,6 @@ export default function AdminMembersPage() {
     }
   };
 
-  // POST /admin/users
   const handleCreateUser = async (payload: UserCreateRequest) => {
     await apiFetch<User>("/admin/users", {
       method: "POST",
@@ -115,7 +128,6 @@ export default function AdminMembersPage() {
     await refreshUsers();
   };
 
-  // PATCH /admin/users/{id}
   const handleRoleChange = async (userId: string, newRole: Role) => {
     const previous = [...users];
     setUsers((prev) =>
@@ -133,7 +145,6 @@ export default function AdminMembersPage() {
     }
   };
 
-  // POST /admin/users/{id}/deactivate
   const handleConfirmDeactivate = async () => {
     if (!deactivatingUser) return;
 
@@ -146,57 +157,46 @@ export default function AdminMembersPage() {
     );
   };
 
-  const displayedUsers = useMemo(() => {
-    return users.filter((user) => {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        user.name.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.id.toLowerCase().includes(query);
+  if (auth.status === "loading") {
+    return <div className="p-8 text-xs text-slate-500">Memeriksa hak akses…</div>;
+  }
 
-      const matchesRole = filterRoles.length === 0 || filterRoles.includes(user.role);
-
-      const matchesStatus =
-        filterStatus === "all" ||
-        (filterStatus === "active" && user.is_active) ||
-        (filterStatus === "inactive" && !user.is_active);
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [users, searchQuery, filterRoles, filterStatus]);
+  if (auth.status === "authenticated" && auth.user.role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="w-full">
       {/* Action Bar */}
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div className="flex flex-1 max-w-2xl gap-2">
-            <input
-              type="text"
-              placeholder="Cari ID, nama atau email pengguna"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-4 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 shadow-xs"
-            />
-            <button
-              type="button"
-              aria-label="Cari"
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-xs shrink-0 cursor-pointer"
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex flex-1 max-w-2xl gap-2">
+          <input
+            type="text"
+            placeholder="Cari ID, nama atau email pengguna"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-4 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 shadow-xs"
+          />
+          <button
+            type="button"
+            aria-label="Cari"
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-xs shrink-0 cursor-pointer"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-4 h-4"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-            </button>
-          </div>
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </button>
+        </div>
 
         <div className="flex items-center gap-3 relative">
           <button
@@ -241,7 +241,7 @@ export default function AdminMembersPage() {
           <p className="text-xs text-red-800">Galat memuat data: {apiError}</p>
           <button
             onClick={refreshUsers}
-            className="text-xs text-red-700 hover:text-red-900 font-medium px-2 py-1 rounded bg-red-100"
+            className="text-xs text-red-700 hover:text-red-900 font-medium px-2 py-1 rounded bg-red-100 cursor-pointer"
           >
             Coba lagi
           </button>
@@ -250,30 +250,28 @@ export default function AdminMembersPage() {
 
       {/* Tabel Pengguna */}
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
-        <table className="w-full text-left text-xs text-slate-700 border-collapse">
+        <table className="w-full text-left text-xs text-slate-700 border-collapse table-fixed">
           <thead>
             <tr className="border-b border-slate-200 bg-white text-slate-900 font-semibold">
-              <th className="py-3.5 pl-6 pr-2 w-88">ID</th>
-              <th className="py-3.5 px-6">Nama Lengkap</th>
+              <th className="py-3.5 pl-6 pr-2 w-36">ID</th>
+              <th className="py-3.5 pl-2 pr-6">Nama Lengkap</th>
               <th className="py-3.5 px-6">Email</th>
-              <th className="py-3.5 px-6">Peran</th>
-              <th className="py-3.5 px-6 text-right">Aktif</th>
+              <th className="py-3.5 px-6 w-36">Peran</th>
+              <th className="py-3.5 px-6 text-right w-24">Aktif</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {/* Loading Skeleton */}
             {isLoading ? (
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
-                  <td className="py-4 px-6"><div className="h-3.5 w-16 bg-slate-200 rounded" /></td>
-                  <td className="py-4 px-6"><div className="h-3.5 w-32 bg-slate-200 rounded" /></td>
+                  <td className="py-4 pl-6 pr-2"><div className="h-3.5 w-20 bg-slate-200 rounded" /></td>
+                  <td className="py-4 pl-2 pr-6"><div className="h-3.5 w-32 bg-slate-200 rounded" /></td>
                   <td className="py-4 px-6"><div className="h-3.5 w-44 bg-slate-200 rounded" /></td>
                   <td className="py-4 px-6"><div className="h-7 w-24 bg-slate-200 rounded" /></td>
                   <td className="py-4 px-6 text-right"><div className="inline-block h-5 w-9 bg-slate-200 rounded-full" /></td>
                 </tr>
               ))
             ) : displayedUsers.length === 0 ? (
-              /* Empty State */
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-400">
                   <p className="font-medium text-slate-600 mb-1">Tidak ada anggota ditemukan</p>
@@ -285,16 +283,17 @@ export default function AdminMembersPage() {
                 </td>
               </tr>
             ) : (
-              /* Table Rows */
-              displayedUsers.map((user, idx) => (
+              displayedUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-3 px-6 font-mono text-slate-600">
+                  <td className="py-3 pl-6 pr-2 font-mono text-slate-500 whitespace-nowrap">
                     <span title={user.id}>
-                      {user.id}
+                      {user.id.slice(0, 8)}…
                     </span>
                   </td>
-                  <td className="py-3 px-6 font-medium text-slate-900">{user.name}</td>
-                  <td className="py-3 px-6 text-slate-600">{user.email}</td>
+                  <td className="py-3 pl-2 pr-6 font-medium text-slate-900">
+                    {user.name}
+                  </td>
+                  <td className="py-3 px-6 text-slate-600 truncate">{user.email}</td>
                   <td className="py-3 px-6">
                     <select
                       aria-label={`Ubah peran ${user.name}`}
