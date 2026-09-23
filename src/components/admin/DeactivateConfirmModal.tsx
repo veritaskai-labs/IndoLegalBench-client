@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { User } from "@/types/user-management";
-import { ApiError } from "@/lib/apiClient";
+import { adminErrorMessage } from "./errorMessage";
 
 interface DeactivateConfirmModalProps {
   user: User | null;
@@ -29,13 +29,7 @@ export function DeactivateConfirmModal({
       await onConfirm();
       onClose();
     } catch (err: unknown) {
-      if (err instanceof ApiError && err.code === "CANNOT_DEACTIVATE_SELF") {
-        setErrorMessage("Anda tidak dapat menonaktifkan akun Anda sendiri.");
-      } else if (err instanceof ApiError) {
-        setErrorMessage(err.code || "Gagal menonaktifkan akun.");
-      } else {
-        setErrorMessage("Terjadi kesalahan jaringan.");
-      }
+      setErrorMessage(adminErrorMessage(err, "Gagal menonaktifkan akun."));
     } finally {
       setIsProcessing(false);
     }

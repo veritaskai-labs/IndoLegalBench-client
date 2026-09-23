@@ -3,12 +3,22 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { apiFetch, ApiError } from "@/lib/apiClient";
+import { apiFetch } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { User, UserCreateRequest, StatusFilter } from "@/types/user-management";
 import { CreateUserModal } from "@/components/admin/CreateUserModal";
 import { DeactivateConfirmModal } from "@/components/admin/DeactivateConfirmModal";
 import { FilterPopover } from "@/components/admin/FilterPopover";
+import { adminErrorMessage } from "@/components/admin/errorMessage";
+
+const LOAD_ERROR = "Gagal memuat daftar anggota.";
+const SELF_LOCKED = "Anda tidak dapat mengubah akun Anda sendiri.";
+
+function fetchUsers(status: StatusFilter): Promise<User[]> {
+  const queryParam =
+    status === "active" ? "?is_active=true" : status === "inactive" ? "?is_active=false" : "";
+  return apiFetch<User[]>(`/admin/users${queryParam}`);
+}
 
 export default function AdminMembersPage() {
   const auth = useAuth();
@@ -17,6 +27,7 @@ export default function AdminMembersPage() {
   // Ambil status & role dengan aman untuk discriminated union
   const isAuthenticated = auth.status === "authenticated";
   const userRole = isAuthenticated ? auth.user.role : null;
+  const currentUserId = isAuthenticated ? auth.user.id : null;
 
   // 1. Deklarasi State
   const [users, setUsers] = useState<User[]>([]);
@@ -46,24 +57,13 @@ export default function AdminMembersPage() {
       setIsLoading(true);
       setApiError(null);
       try {
-        const queryParam =
-          filterStatus === "active"
-            ? "?is_active=true"
-            : filterStatus === "inactive"
-            ? "?is_active=false"
-            : "";
-
-        const data = await apiFetch<User[]>(`/admin/users${queryParam}`);
+        const data = await fetchUsers(filterStatus);
         if (!cancelled) {
           setUsers(data);
         }
       } catch (err: unknown) {
         if (!cancelled) {
-          if (err instanceof ApiError) {
-            setApiError(err.code);
-          } else {
-            setApiError("Gagal menghubungi server");
-          }
+          setApiError(adminErrorMessage(err, LOAD_ERROR));
         }
       } finally {
         if (!cancelled) {
@@ -108,21 +108,9 @@ export default function AdminMembersPage() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const queryParam =
-        filterStatus === "active"
-          ? "?is_active=true"
-          : filterStatus === "inactive"
-          ? "?is_active=false"
-          : "";
-
-      const data = await apiFetch<User[]>(`/admin/users${queryParam}`);
-      setUsers(data);
+      setUsers(await fetchUsers(filterStatus));
     } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setApiError(err.code);
-      } else {
-        setApiError("Gagal menghubungi server");
-      }
+      setApiError(adminErrorMessage(err, LOAD_ERROR));
     } finally {
       setIsLoading(false);
     }
@@ -138,6 +126,7 @@ export default function AdminMembersPage() {
 
   const handleRoleChange = async (userId: string, newRole: Role) => {
     const previous = [...users];
+    setApiError(null);
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
     );
@@ -147,9 +136,9 @@ export default function AdminMembersPage() {
         method: "PATCH",
         body: JSON.stringify({ role: newRole }),
       });
-    } catch {
+    } catch (err: unknown) {
       setUsers(previous);
-      alert("Gagal mengubah peran pengguna.");
+      setApiError(adminErrorMessage(err, "Gagal mengubah peran pengguna."));
     }
   };
 
@@ -247,7 +236,7 @@ export default function AdminMembersPage() {
           role="alert"
           className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 flex items-center justify-between"
         >
-          <p className="text-xs text-red-800">Galat memuat data: {apiError}</p>
+          <p className="text-xs text-red-800">{apiError}</p>
           <button
             onClick={refreshUsers}
             className="text-xs text-red-700 hover:text-red-900 font-medium px-2 py-1 rounded bg-red-100 cursor-pointer"
@@ -292,7 +281,12 @@ export default function AdminMembersPage() {
                 </td>
               </tr>
             ) : (
-              displayedUsers.map((user) => (
+              displayedUsers.map((user) => {
+                // Backend menolak ubah peran / nonaktifkan akun sendiri
+                // (CANNOT_CHANGE_OWN_ROLE, CANNOT_DEACTIVATE_SELF), jadi
+                // kontrolnya dikunci di sini juga.
+                const isSelf = user.id === currentUserId;
+                return (
                 <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="py-3 pl-6 pr-2 font-mono text-slate-500 whitespace-nowrap">
                     <span title={user.id}>
@@ -307,7 +301,8 @@ export default function AdminMembersPage() {
                     <select
                       aria-label={`Ubah peran ${user.name}`}
                       value={user.role}
-                      disabled={!user.is_active}
+                      disabled={!user.is_active || isSelf}
+                      title={isSelf ? SELF_LOCKED : undefined}
                       onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
                       className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 shadow-2xs hover:border-slate-300 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 cursor-pointer"
                     >
@@ -321,12 +316,14 @@ export default function AdminMembersPage() {
                     <button
                       type="button"
                       aria-label={`Toggle aktif ${user.name}`}
+                      disabled={!user.is_active || isSelf}
+                      title={isSelf ? SELF_LOCKED : undefined}
                       onClick={() => {
-                        if (user.is_active) setDeactivatingUser(user);
+                        if (user.is_active && !isSelf) setDeactivatingUser(user);
                       }}
-                      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        user.is_active ? "bg-indigo-600 cursor-pointer" : "bg-slate-200 cursor-not-allowed"
-                      }`}
+                      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:cursor-not-allowed ${
+                        user.is_active ? "bg-indigo-600 cursor-pointer" : "bg-slate-200"
+                      } ${isSelf ? "opacity-50" : ""}`}
                     >
                       <span
                         className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
@@ -336,7 +333,8 @@ export default function AdminMembersPage() {
                     </button>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

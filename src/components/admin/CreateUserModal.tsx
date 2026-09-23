@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Role } from "@/types";
 import type { UserCreateRequest } from "@/types/user-management";
 import { ApiError } from "@/lib/apiClient";
+import { adminErrorMessage } from "./errorMessage";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -42,10 +43,8 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
     } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 409) {
         setErrorMessage(`Email '${email.trim()}' sudah terdaftar dalam sistem.`);
-      } else if (err instanceof ApiError) {
-        setErrorMessage(err.code || "Gagal menambahkan pengguna.");
       } else {
-        setErrorMessage("Terjadi kesalahan jaringan.");
+        setErrorMessage(adminErrorMessage(err, "Gagal menambahkan pengguna."));
       }
     } finally {
       setIsSubmitting(false);
@@ -125,7 +124,7 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               disabled={isSubmitting}
               className="w-1/2 rounded-lg border border-slate-300 bg-white py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
             >
-              Cancel
+              Batal
             </button>
             <button
               type="button"

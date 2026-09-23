@@ -101,7 +101,7 @@ describe("AuthDoneHandler", () => {
       expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument(),
     );
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/admin/users"));
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/admin/members"));
   });
 
   it("renders the auth-error screen directly when initialErrorCode is provided, without fetching", () => {

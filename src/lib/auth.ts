@@ -6,7 +6,7 @@ export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
 
 export const ROLE_HOME_PATH = {
   author: "/suites",
-  admin: "/admin/users",
+  admin: "/admin/members",
   reviewer: "/reviews", // placeholder page
   viewer: "/reports", // placeholder page
 } as const;
