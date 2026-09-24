@@ -7,6 +7,9 @@ type Props = {
   status: "loading" | "ready" | "error";
   suites: Suite[];
   onRetry: () => void;
+  onEdit: (suite: Suite) => void;
+  onDelete: (suite: Suite) => void;
+  onArchive: (suite: Suite) => void;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -14,7 +17,14 @@ const STATUS_LABEL: Record<string, string> = {
   archived: "Arsip",
 };
 
-export function SuiteList({ status, suites, onRetry }: Props) {
+export function SuiteList({
+  status,
+  suites,
+  onRetry,
+  onEdit,
+  onDelete,
+  onArchive,
+}: Props) {
   if (status === "loading") return <LoadingState />;
 
   if (status === "error") {
@@ -51,6 +61,7 @@ export function SuiteList({ status, suites, onRetry }: Props) {
           <th scope="col" className="px-4 py-3 font-medium">Deskripsi</th>
           <th scope="col" className="px-4 py-3 font-medium">Jumlah kasus</th>
           <th scope="col" className="px-4 py-3 font-medium">Status</th>
+          <th scope="col" className="px-4 py-3 font-medium">Aksi</th>
         </tr>
       </thead>
       <tbody>
@@ -70,6 +81,38 @@ export function SuiteList({ status, suites, onRetry }: Props) {
             <td className="px-4 py-3 text-slate-600">{suite.case_count}</td>
             <td className="px-4 py-3 text-slate-600">
               {STATUS_LABEL[suite.status] ?? suite.status}
+            </td>
+            <td className="px-4 py-3">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => onEdit(suite)}
+                  aria-label={`Ubah ${suite.name}`}
+                  className="text-sm text-slate-700 hover:underline"
+                >
+                  Ubah
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onArchive(suite)}
+                  aria-label={
+                    suite.status === "archived"
+                      ? `Aktifkan ${suite.name}`
+                      : `Arsipkan ${suite.name}`
+                  }
+                  className="text-sm text-slate-700 hover:underline"
+                >
+                  {suite.status === "archived" ? "Aktifkan" : "Arsipkan"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(suite)}
+                  aria-label={`Hapus ${suite.name}`}
+                  className="text-sm text-red-700 hover:underline"
+                >
+                  Hapus
+                </button>
+              </div>
             </td>
           </tr>
         ))}
