@@ -1,8 +1,9 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "@/lib/apiClient";
-import type { SuitePage } from "@/types/suite";
+import type { SuitePage, SuiteStatus } from "@/types/suite";
 import { useSuites } from "./useSuites";
+
 
 vi.mock("@/lib/apiClient", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/apiClient")>()),
@@ -68,8 +69,8 @@ describe("useSuites", () => {
   it("refetches when the status changes", async () => {
     apiFetchMock.mockResolvedValue(page);
 
-    const { rerender } = renderHook(({ s }) => useSuites(s), {
-      initialProps: { s: "active" as const },
+    const { rerender } = renderHook(({ s }: { s: SuiteStatus }) => useSuites(s), {
+      initialProps: { s: "active" },
     });
 
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(1));
