@@ -140,4 +140,95 @@ describe("SuitesPage", () => {
 
     expect(screen.getByText("Perburuhan")).toBeInTheDocument();
   });
+    const oneSuite = [
+    {
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "Perburuhan",
+      description: "Kasus hukum ketenagakerjaan",
+      status: "active",
+      case_count: 3,
+      is_empty: false,
+      exportable: true,
+      created_at: "2026-09-01T00:00:00Z",
+      updated_at: "2026-09-01T00:00:00Z",
+    },
+  ];
+
+  it("opens the delete dialog from a row", async () => {
+    const user = userEvent.setup();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      suites: oneSuite,
+      reload: vi.fn(),
+    });
+
+    render(<SuitesPage />);
+    await user.click(screen.getByRole("button", { name: "Hapus Perburuhan" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Hapus suite" }),
+    ).toBeInTheDocument();
+  });
+
+  it("closes the delete dialog and reloads after deleting", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      suites: oneSuite,
+      reload,
+    });
+    apiFetchMock.mockResolvedValue(undefined);
+
+    render(<SuitesPage />);
+    await user.click(screen.getByRole("button", { name: "Hapus Perburuhan" }));
+    await user.click(screen.getByRole("button", { name: "Hapus" }));
+
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("archives a suite from the row and reloads", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      suites: oneSuite,
+      reload,
+    });
+    apiFetchMock.mockResolvedValue(oneSuite[0]);
+
+    render(<SuitesPage />);
+    await user.click(
+      screen.getByRole("button", { name: "Arsipkan Perburuhan" }),
+    );
+
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      "/suites/11111111-1111-1111-1111-111111111111/archive",
+      { method: "POST" },
+    );
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+  });
+
+  it("unarchives an archived suite from the row", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      suites: [{ ...oneSuite[0], status: "archived" }],
+      reload,
+    });
+    apiFetchMock.mockResolvedValue(oneSuite[0]);
+
+    render(<SuitesPage />);
+    await user.click(
+      screen.getByRole("button", { name: "Aktifkan Perburuhan" }),
+    );
+
+    expect(apiFetchMock).toHaveBeenCalledWith(
+      "/suites/11111111-1111-1111-1111-111111111111/unarchive",
+      { method: "POST" },
+    );
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+  });
 });
