@@ -5,6 +5,8 @@ import { SuiteFormDialog } from "@/components/suites/SuiteFormDialog";
 import { SuiteList } from "@/components/suites/SuiteList";
 import { useSuites } from "@/hooks/useSuites";
 import type { Suite, SuiteStatus } from "@/types/suite";
+import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
+import { apiFetch } from "@/lib/apiClient";
 
 const TABS: { value: SuiteStatus; label: string }[] = [
   { value: "active", label: "Aktif" },
@@ -15,7 +17,14 @@ export default function SuitesPage() {
   const [status, setStatus] = useState<SuiteStatus>("active");
   const suites = useSuites(status);
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
-  type DialogState = | { mode: "closed" } | { mode: "create" } | { mode: "edit"; suite: Suite };
+   async function toggleArchive(suite: Suite) {
+    const action = suite.status === "archived" ? "unarchive" : "archive";
+    try {
+      await apiFetch(`/suites/${suite.id}/${action}`, { method: "POST" });
+      suites.reload();
+    } catch {    }
+  }
+  type DialogState = | { mode: "closed" } | { mode: "create" } | { mode: "edit"; suite: Suite } | { mode: "delete"; suite: Suite };
 
   return (
     <div className="space-y-6">
@@ -61,15 +70,26 @@ export default function SuitesPage() {
         suites={suites.suites}
         onRetry={suites.reload}
         onEdit={(suite) => setDialog({ mode: "edit", suite })}
-        onDelete={() => {}}
-        onArchive={() => {}}
+        onDelete={(suite) => setDialog({ mode: "delete", suite })}
+        onArchive={toggleArchive}
       />
 
-      {dialog.mode !== "closed" && (
+      {(dialog.mode === "create" || dialog.mode === "edit") && (
         <SuiteFormDialog
           suite={dialog.mode === "edit" ? dialog.suite : undefined}
           onClose={() => setDialog({ mode: "closed" })}
           onSaved={() => {
+            setDialog({ mode: "closed" });
+            suites.reload();
+          }}
+        />
+      )}
+
+      {dialog.mode === "delete" && (
+        <DeleteSuiteDialog
+          suite={dialog.suite}
+          onClose={() => setDialog({ mode: "closed" })}
+          onDone={() => {
             setDialog({ mode: "closed" });
             suites.reload();
           }}
