@@ -1,8 +1,8 @@
-import { render, screen,  } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Suite } from "@/types/suite";
 import { SuiteList } from "./SuiteList";
-import userEvent from "@testing-library/user-event";
 
 function makeSuite(overrides: Partial<Suite> = {}): Suite {
   return {
@@ -21,7 +21,16 @@ function makeSuite(overrides: Partial<Suite> = {}): Suite {
 
 describe("SuiteList", () => {
   it("shows a loading indicator while fetching", () => {
-    render(<SuiteList status="loading" suites={[]} onRetry={vi.fn()} />);
+    render(
+      <SuiteList
+        status="loading"
+        suites={[]}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -30,14 +39,34 @@ describe("SuiteList", () => {
   it("shows an error message with a retry button when the fetch failed", () => {
     const onRetry = vi.fn();
 
-    render(<SuiteList status="error" suites={[]} onRetry={onRetry} />);
+    render(
+      <SuiteList
+        status="error"
+        suites={[]}
+        onRetry={onRetry}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText(/gagal/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /coba lagi/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /coba lagi/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows an empty message when there are no suites", () => {
-    render(<SuiteList status="ready" suites={[]} onRetry={vi.fn()} />);
+    render(
+      <SuiteList
+        status="ready"
+        suites={[]}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText(/belum ada suite/i)).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -54,7 +83,16 @@ describe("SuiteList", () => {
       }),
     ];
 
-    render(<SuiteList status="ready" suites={suites} onRetry={vi.fn()} />);
+    render(
+      <SuiteList
+        status="ready"
+        suites={suites}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2 baris
     expect(screen.getByText("Perburuhan")).toBeInTheDocument();
@@ -65,7 +103,16 @@ describe("SuiteList", () => {
   it("marks an empty suite with a Kosong badge", () => {
     const suites = [makeSuite({ is_empty: true, case_count: 0 })];
 
-    render(<SuiteList status="ready" suites={suites} onRetry={vi.fn()} />);
+    render(
+      <SuiteList
+        status="ready"
+        suites={suites}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText("Kosong")).toBeInTheDocument();
   });
@@ -73,7 +120,16 @@ describe("SuiteList", () => {
   it("leaves a suite that has cases without the badge", () => {
     const suites = [makeSuite({ is_empty: false, case_count: 3 })];
 
-    render(<SuiteList status="ready" suites={suites} onRetry={vi.fn()} />);
+    render(
+      <SuiteList
+        status="ready"
+        suites={suites}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.queryByText("Kosong")).not.toBeInTheDocument();
   });
@@ -81,12 +137,21 @@ describe("SuiteList", () => {
   it("falls back to a dash when a suite has no description", () => {
     const suites = [makeSuite({ description: null })];
 
-    render(<SuiteList status="ready" suites={suites} onRetry={vi.fn()} />);
+    render(
+      <SuiteList
+        status="ready"
+        suites={suites}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText("—")).toBeInTheDocument();
   });
 
-    it("offers edit, delete and archive actions per row", async () => {
+  it("offers edit, delete and archive actions per row", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
     const onDelete = vi.fn();
@@ -110,7 +175,9 @@ describe("SuiteList", () => {
     await user.click(screen.getByRole("button", { name: "Hapus Perburuhan" }));
     expect(onDelete).toHaveBeenCalledWith(suite);
 
-    await user.click(screen.getByRole("button", { name: "Arsipkan Perburuhan" }));
+    await user.click(
+      screen.getByRole("button", { name: "Arsipkan Perburuhan" }),
+    );
     expect(onArchive).toHaveBeenCalledWith(suite);
   });
 
