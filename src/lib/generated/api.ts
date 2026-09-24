@@ -49,6 +49,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/suites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar suite
+         * @description PLACEHOLDER: dari draft PR suites BE.
+         */
+        get: operations["list_suites_suites_get"];
+        put?: never;
+        /**
+         * Buat suite baru
+         * @description PLACEHOLDER: dari draft PR suites BE.
+         */
+        post: operations["create_suite_suites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/suites/{suite_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Hapus suite, ditolak kalau berisi kasus approved
+         * @description PLACEHOLDER: dari draft PR suites BE.
+         */
+        delete: operations["delete_suite_suites__suite_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Ubah suite
+         * @description PLACEHOLDER: dari draft PR suites BE.
+         */
+        patch: operations["update_suite_suites__suite_id__patch"];
+        trace?: never;
+    };
+    "/suites/{suite_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Arsipkan suite
+         * @description PLACEHOLDER: dari draft PR suites BE.
+         */
+        post: operations["archive_suite_suites__suite_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/suites/{suite_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aktifkan kembali suite yang diarsipkan
+         * @description PLACEHOLDER: dari draft PR suites BE.
+         */
+        post: operations["unarchive_suite_suites__suite_id__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -67,6 +155,84 @@ export interface components {
             code: string;
             message: string;
         };
+        /** @description PLACEHOLDER: ditulis manual dari draft PR suites BE. */
+        ErrorBody: {
+            code: string;
+            message: string;
+        };
+        /**
+         * SuiteStatus
+         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         * @enum {string}
+         */
+        SuiteStatus: "active" | "archived";
+        /**
+         * SuiteCreate
+         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         */
+        SuiteCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * SuiteUpdate
+         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         */
+        SuiteUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * SuiteRead
+         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         */
+        SuiteRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string | null;
+            /** Status */
+            status: string;
+            /** Case Count */
+            case_count: number;
+            /** Is Empty */
+            is_empty: boolean;
+            /** Exportable */
+            exportable: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * Page[SuiteRead]
+         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         */
+        Page_SuiteRead_: {
+            /** Items */
+            items: components["schemas"]["SuiteRead"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -75,4 +241,170 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export type operations = Record<string, never>;
+export interface operations {
+    list_suites_suites_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["SuiteStatus"];
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SuiteRead_"];
+                };
+            };
+        };
+    };
+    create_suite_suites_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuiteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteRead"];
+                };
+            };
+            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_suite_suites__suite_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Suite berisi kasus approved (`SUITE_HAS_APPROVED_CASES`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    update_suite_suites__suite_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuiteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteRead"];
+                };
+            };
+            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    archive_suite_suites__suite_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteRead"];
+                };
+            };
+        };
+    };
+    unarchive_suite_suites__suite_id__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteRead"];
+                };
+            };
+        };
+    };
+}
