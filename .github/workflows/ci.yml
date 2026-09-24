@@ -14,8 +14,15 @@ jobs:
   # Branch protection uses this job name as the required check. Do not rename it.
   build:
     runs-on: ubuntu-latest
+    env:
+      # Kosong sampai secret dipasang. Dipakai di if: langkah SonarQube.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # SonarQube butuh riwayat penuh untuk menentukan kode baru.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -39,7 +46,15 @@ jobs:
         run: npm run lint
 
       - name: Test
-        run: npm run test
+        run: npm run test -- --coverage --coverage.reporter=lcov --coverage.reporter=text
+
+      # Community Build hanya punya satu dashboard per project, jadi analisis
+      # hanya dijalankan saat merge ke staging. Kalau dijalankan di setiap PR,
+      # hasil branch PR akan menimpa hasil staging.
+      # Langkah ini melompat sendiri selama secret SONAR_TOKEN belum dipasang.
+      - name: SonarQube scan
+        if: github.event_name == 'push' && github.ref == 'refs/heads/staging' && env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v6
 
       - name: Build
         run: npm run build
