@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen,  } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Suite } from "@/types/suite";
 import { SuiteList } from "./SuiteList";
+import userEvent from "@testing-library/user-event";
 
 function makeSuite(overrides: Partial<Suite> = {}): Suite {
   return {
@@ -83,5 +84,55 @@ describe("SuiteList", () => {
     render(<SuiteList status="ready" suites={suites} onRetry={vi.fn()} />);
 
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+    it("offers edit, delete and archive actions per row", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    const onArchive = vi.fn();
+    const suite = makeSuite();
+
+    render(
+      <SuiteList
+        status="ready"
+        suites={[suite]}
+        onRetry={vi.fn()}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onArchive={onArchive}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Ubah Perburuhan" }));
+    expect(onEdit).toHaveBeenCalledWith(suite);
+
+    await user.click(screen.getByRole("button", { name: "Hapus Perburuhan" }));
+    expect(onDelete).toHaveBeenCalledWith(suite);
+
+    await user.click(screen.getByRole("button", { name: "Arsipkan Perburuhan" }));
+    expect(onArchive).toHaveBeenCalledWith(suite);
+  });
+
+  it("offers unarchive instead of archive for an archived suite", () => {
+    const suite = makeSuite({ status: "archived" });
+
+    render(
+      <SuiteList
+        status="ready"
+        suites={[suite]}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Aktifkan Perburuhan" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Arsipkan Perburuhan" }),
+    ).not.toBeInTheDocument();
   });
 });
