@@ -1,12 +1,20 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSuites } from "@/hooks/useSuites";
 import SuitesPage from "./page";
+import { apiFetch } from "@/lib/apiClient";
 
 const { useSuitesMock } = vi.hoisted(() => ({ useSuitesMock: vi.fn() }));
 
 vi.mock("@/hooks/useSuites", () => ({ useSuites: useSuitesMock }));
+
+vi.mock("@/lib/apiClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/apiClient")>()),
+  apiFetch: vi.fn(),
+}));
+
+const apiFetchMock = vi.mocked(apiFetch);
 
 beforeEach(() => {
   useSuitesMock.mockReset();
@@ -15,6 +23,7 @@ beforeEach(() => {
     suites: [],
     reload: vi.fn(),
   });
+  apiFetchMock.mockReset();
 });
 
 describe("SuitesPage", () => {
@@ -22,6 +31,56 @@ describe("SuitesPage", () => {
     render(<SuitesPage />);
 
     expect(useSuites).toHaveBeenCalledWith("active");
+  });
+    it("opens the create dialog from the button", async () => {
+    const user = userEvent.setup();
+
+    render(<SuitesPage />);
+    await user.click(screen.getByRole("button", { name: "Buat Suite" }));
+
+    expect(screen.getByRole("dialog", { name: "Buat suite" })).toBeInTheDocument();
+  });
+
+  it("opens the edit dialog from a row", async () => {
+    const user = userEvent.setup();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      reload: vi.fn(),
+      suites: [
+        {
+          id: "11111111-1111-1111-1111-111111111111",
+          name: "Perburuhan",
+          description: "Kasus hukum ketenagakerjaan",
+          status: "active",
+          case_count: 3,
+          is_empty: false,
+          exportable: true,
+          created_at: "2026-09-01T00:00:00Z",
+          updated_at: "2026-09-01T00:00:00Z",
+        },
+      ],
+    });
+
+    render(<SuitesPage />);
+    await user.click(screen.getByRole("button", { name: "Ubah Perburuhan" }));
+
+    expect(screen.getByRole("dialog", { name: "Ubah suite" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nama")).toHaveValue("Perburuhan");
+  });
+
+  it("closes the dialog and reloads after saving", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({ status: "ready", suites: [], reload });
+    apiFetchMock.mockResolvedValue({});
+
+    render(<SuitesPage />);
+    await user.click(screen.getByRole("button", { name: "Buat Suite" }));
+    await user.type(screen.getByLabelText("Nama"), "Pertanahan");
+    await user.click(screen.getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("marks the Aktif tab as selected on load", () => {
