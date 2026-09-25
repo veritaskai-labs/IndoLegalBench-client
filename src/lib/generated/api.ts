@@ -4,6 +4,97 @@
  */
 
 export interface paths {
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cek kesehatan aplikasi */
+        get: operations["get_health_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mulai login OIDC */
+        get: operations["login_auth_login_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Callback OIDC
+         * @description Selalu membalas 302, termasuk saat gagal. Kegagalan dibelokkan ke `/auth/done?error=<CODE>` dengan kode seperti `USER_NOT_REGISTERED`, `USER_DEACTIVATED`, `INVALID_OIDC_STATE`, atau `OIDC_EXCHANGE_FAILED`. Endpoint ini adalah navigasi halaman penuh dari IdP, jadi sengaja tidak pernah membalas badan error JSON.
+         */
+        get: operations["callback_auth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hapus sesi dan logout IdP */
+        post: operations["logout_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Landing lokal setelah login
+         * @description Same payload as /me. Used when there is no frontend on :3000.
+         */
+        get: operations["auth_done_auth_done_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -11,38 +102,62 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Profil pengguna dari sesi aktif */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Pengguna terautentikasi */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Me"];
-                    };
-                };
-                /** @description UNAUTHENTICATED atau SESSION_EXPIRED */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-            };
-        };
+        /** Profil pengguna yang sedang login */
+        get: operations["me_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Users */
+        get: operations["get_users_admin_users_get"];
+        put?: never;
+        /** Create User */
+        post: operations["create_user_admin_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update User Role */
+        patch: operations["update_user_role_admin_users__user_id__patch"];
+        trace?: never;
+    };
+    "/admin/users/{user_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deactivate User */
+        post: operations["deactivate_user_admin_users__user_id__deactivate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -56,16 +171,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Daftar suite
-         * @description PLACEHOLDER: dari draft PR suites BE.
-         */
+        /** Daftar suite */
         get: operations["list_suites_suites_get"];
         put?: never;
-        /**
-         * Buat suite baru
-         * @description PLACEHOLDER: dari draft PR suites BE.
-         */
+        /** Buat suite baru */
         post: operations["create_suite_suites_post"];
         delete?: never;
         options?: never;
@@ -80,20 +189,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Detail satu suite */
+        get: operations["get_suite_suites__suite_id__get"];
         put?: never;
         post?: never;
-        /**
-         * Hapus suite, ditolak kalau berisi kasus approved
-         * @description PLACEHOLDER: dari draft PR suites BE.
-         */
+        /** Hapus suite, ditolak kalau berisi kasus approved */
         delete: operations["delete_suite_suites__suite_id__delete"];
         options?: never;
         head?: never;
-        /**
-         * Ubah suite
-         * @description PLACEHOLDER: dari draft PR suites BE.
-         */
+        /** Ubah suite */
         patch: operations["update_suite_suites__suite_id__patch"];
         trace?: never;
     };
@@ -106,10 +210,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Arsipkan suite
-         * @description PLACEHOLDER: dari draft PR suites BE.
-         */
+        /** Arsipkan suite */
         post: operations["archive_suite_suites__suite_id__archive_post"];
         delete?: never;
         options?: never;
@@ -126,10 +227,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Aktifkan kembali suite yang diarsipkan
-         * @description PLACEHOLDER: dari draft PR suites BE.
-         */
+        /** Aktifkan kembali suite yang diarsipkan */
         post: operations["unarchive_suite_suites__suite_id__unarchive_post"];
         delete?: never;
         options?: never;
@@ -141,55 +239,73 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @enum {string} */
-        Role: "author" | "reviewer" | "admin" | "viewer";
-        Me: {
-            /** Format: uuid */
+        /** ErrorBody */
+        ErrorBody: {
+            /** Code */
+            code: string;
+            /**
+             * Message
+             * @example No platform account is mapped to this identity.
+             */
+            message: string;
+        };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HealthResponse */
+        HealthResponse: {
+            /** Status */
+            status: string;
+            /** App Env */
+            app_env: string;
+            /** Database */
+            database: string;
+        };
+        /** MeResponse */
+        MeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
             id: string;
+            /** Name */
             name: string;
-            /** Format: email */
+            /** Email */
             email: string;
             role: components["schemas"]["Role"];
         };
-        ErrorResponse: {
-            code: string;
-            message: string;
-        };
-        /** @description PLACEHOLDER: ditulis manual dari draft PR suites BE. */
-        ErrorBody: {
-            code: string;
-            message: string;
+        /** Page[SuiteRead] */
+        Page_SuiteRead_: {
+            /** Items */
+            items: components["schemas"]["SuiteRead"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
         };
         /**
-         * SuiteStatus
-         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         * Role
          * @enum {string}
          */
-        SuiteStatus: "active" | "archived";
-        /**
-         * SuiteCreate
-         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
-         */
+        Role: "author" | "reviewer" | "admin" | "viewer";
+        /** SuiteCreate */
         SuiteCreate: {
-            /** Name */
+            /**
+             * Name
+             * @description Nama suite, harus unik
+             */
             name: string;
-            /** Description */
+            /**
+             * Description
+             * @description Tema atau deskripsi singkat suite
+             */
             description?: string | null;
         };
-        /**
-         * SuiteUpdate
-         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
-         */
-        SuiteUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Description */
-            description?: string | null;
-        };
-        /**
-         * SuiteRead
-         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
-         */
+        /** SuiteRead */
         SuiteRead: {
             /**
              * Id
@@ -202,11 +318,20 @@ export interface components {
             description: string | null;
             /** Status */
             status: string;
-            /** Case Count */
+            /**
+             * Case Count
+             * @description Jumlah kasus di dalam suite ini
+             */
             case_count: number;
-            /** Is Empty */
+            /**
+             * Is Empty
+             * @description True kalau suite belum punya kasus sama sekali
+             */
             is_empty: boolean;
-            /** Exportable */
+            /**
+             * Exportable
+             * @description False kalau suite kosong atau diarsipkan, jadi tidak ikut pengukuran
+             */
             exportable: boolean;
             /**
              * Created At
@@ -220,18 +345,59 @@ export interface components {
             updated_at: string;
         };
         /**
-         * Page[SuiteRead]
-         * @description PLACEHOLDER: ditulis manual dari draft PR suites BE.
+         * SuiteStatus
+         * @enum {string}
          */
-        Page_SuiteRead_: {
-            /** Items */
-            items: components["schemas"]["SuiteRead"][];
-            /** Total */
-            total: number;
-            /** Page */
-            page: number;
-            /** Size */
-            size: number;
+        SuiteStatus: "active" | "archived";
+        /** SuiteUpdate */
+        SuiteUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /** UserCreateRequest */
+        UserCreateRequest: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Name */
+            name: string;
+            role: components["schemas"]["Role"];
+        };
+        /** UserResponse */
+        UserResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            role: components["schemas"]["Role"];
+            /** Is Active */
+            is_active: boolean;
+        };
+        /** UserUpdateRoleRequest */
+        UserUpdateRoleRequest: {
+            role: components["schemas"]["Role"];
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
     };
     responses: never;
@@ -242,6 +408,298 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_health_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+        };
+    };
+    login_auth_login_get: {
+        parameters: {
+            query?: {
+                sub?: string | null;
+                email?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_auth_callback_get: {
+        parameters: {
+            query?: {
+                code?: string | null;
+                state?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    auth_done_auth_done_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Tidak ada sesi aktif (`UNAUTHENTICATED`), atau sesi sudah melewati batas idle (`SESSION_EXPIRED`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    me_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description Tidak ada sesi aktif (`UNAUTHENTICATED`), atau sesi sudah melewati batas idle (`SESSION_EXPIRED`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_users_admin_users_get: {
+        parameters: {
+            query?: {
+                is_active?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_user_admin_users_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_role_admin_users__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_user_admin_users__user_id__deactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_suites_suites_get: {
         parameters: {
             query?: {
@@ -262,6 +720,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_SuiteRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -288,13 +755,53 @@ export interface operations {
                     "application/json": components["schemas"]["SuiteRead"];
                 };
             };
-            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`). */
+            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`), suite berisi kasus approved (`SUITE_HAS_APPROVED_CASES`), atau suite arsip dihapus. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_suite_suites__suite_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuiteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -317,13 +824,22 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Suite berisi kasus approved (`SUITE_HAS_APPROVED_CASES`). */
+            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`), suite berisi kasus approved (`SUITE_HAS_APPROVED_CASES`), atau suite arsip dihapus. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -352,13 +868,22 @@ export interface operations {
                     "application/json": components["schemas"]["SuiteRead"];
                 };
             };
-            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`). */
+            /** @description Nama sudah dipakai (`SUITE_NAME_TAKEN`), suite berisi kasus approved (`SUITE_HAS_APPROVED_CASES`), atau suite arsip dihapus. */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -383,6 +908,15 @@ export interface operations {
                     "application/json": components["schemas"]["SuiteRead"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     unarchive_suite_suites__suite_id__unarchive_post: {
@@ -403,6 +937,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuiteRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
