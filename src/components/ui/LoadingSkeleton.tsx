@@ -1,5 +1,3 @@
-import React from "react";
-
 export interface LoadingSkeletonProps {
   variant?: "table" | "cards" | "lines";
   cardType?: "case" | "metric" | "provider" | "generic";
@@ -15,12 +13,18 @@ export function LoadingSkeleton({
   columns = 5,
   className = "",
 }: LoadingSkeletonProps) {
+
   // Table Skeleton
   if (variant === "table") {
     return (
       <>
         {Array.from({ length: rows }).map((_, rowIndex) => (
-          <tr key={rowIndex} className={`animate-pulse ${className}`}>
+          <tr
+            key={rowIndex}
+            role="status"
+            aria-busy="true"
+            className={`animate-pulse ${className}`}
+          >
             {Array.from({ length: columns }).map((_, colIndex) => (
               <td key={colIndex} className="py-4 px-6">
                 <div
@@ -29,6 +33,7 @@ export function LoadingSkeleton({
                     width: colIndex === 0 ? "40%" : colIndex === 1 ? "75%" : "60%",
                   }}
                 />
+                {colIndex === 0 && <span className="sr-only">Memuat data tabel…</span>}
               </td>
             ))}
           </tr>
@@ -37,10 +42,15 @@ export function LoadingSkeleton({
     );
   }
 
-  // Cards Skeleton
+  // Card Skeleton
   if (variant === "cards") {
     return (
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}>
+      <div
+        role="status"
+        aria-busy="true"
+        className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${className}`}
+      >
+        <span className="sr-only">Memuat kartu…</span>
         {Array.from({ length: rows }).map((_, idx) => (
           <div
             key={idx}
@@ -107,9 +117,14 @@ export function LoadingSkeleton({
     );
   }
 
-  // 3. Text Skeleton
+  // Text Skeleton
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div
+      role="status"
+      aria-busy="true"
+      className={`space-y-3 ${className}`}
+    >
+      <span className="sr-only">Memuat konten…</span>
       {Array.from({ length: rows }).map((_, idx) => (
         <div key={idx} className="animate-pulse flex items-center gap-4">
           <div className="h-4 bg-slate-200 rounded w-full" />
