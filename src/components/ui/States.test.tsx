@@ -24,10 +24,15 @@ describe("Reusable States UI Components", () => {
 
       const tableRows = screen.getAllByRole("row");
       expect(tableRows).toHaveLength(3);
+      tableRows.forEach((row) => {
+        expect(row).toHaveAttribute("aria-busy", "true");
+      });
 
-      // Total 3 baris x 4 kolom = 12 cell <td>
       const cells = screen.getAllByRole("cell");
       expect(cells).toHaveLength(12);
+
+      const statusAnnouncements = screen.getAllByRole("status");
+      expect(statusAnnouncements).toHaveLength(3);
     });
 
     it("merender varian 'cards' untuk tipe case, metric, dan provider", () => {

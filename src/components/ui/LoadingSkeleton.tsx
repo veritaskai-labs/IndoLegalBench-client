@@ -21,7 +21,6 @@ export function LoadingSkeleton({
         {Array.from({ length: rows }).map((_, rowIndex) => (
           <tr
             key={rowIndex}
-            role="status"
             aria-busy="true"
             className={`animate-pulse ${className}`}
           >
@@ -33,7 +32,11 @@ export function LoadingSkeleton({
                     width: colIndex === 0 ? "40%" : colIndex === 1 ? "75%" : "60%",
                   }}
                 />
-                {colIndex === 0 && <span className="sr-only">Memuat data tabel…</span>}
+                {colIndex === 0 && (
+                  <span role="status" className="sr-only">
+                    Memuat data tabel…
+                  </span>
+                )}
               </td>
             ))}
           </tr>
