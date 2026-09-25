@@ -1,5 +1,3 @@
-import React from "react";
-
 export interface ProviderCardProps {
   name: string;
   rpm: number;
@@ -13,8 +11,8 @@ export function ProviderCard({
   name,
   rpm,
   version,
-  tosReviewed = true,
-  keyEncrypted = true,
+  tosReviewed = false,
+  keyEncrypted = false,
   className = "",
 }: ProviderCardProps) {
   return (
@@ -22,10 +20,8 @@ export function ProviderCard({
       className={`bg-white border border-slate-200 rounded p-4 flex flex-col justify-between text-xs ${className}`}
     >
       <div>
-        {/* Header: Ikon Server + Nama + Meta */}
         <div className="flex items-start gap-3 mb-4">
           <div className="w-9 h-9 rounded bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-            {/* Lucide server icon */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -50,7 +46,6 @@ export function ProviderCard({
           </div>
         </div>
 
-        {/* Badges / Status */}
         <div className="space-y-1.5">
           {tosReviewed && (
             <div>
