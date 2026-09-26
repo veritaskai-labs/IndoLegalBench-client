@@ -125,3 +125,4 @@ describe("useSuites", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(apiFetchMock).toHaveBeenCalledTimes(1);
   });
+  });
