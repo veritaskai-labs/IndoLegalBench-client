@@ -13,18 +13,29 @@ const TABS: { value: SuiteStatus; label: string }[] = [
   { value: "archived", label: "Arsip" },
 ];
 
+type DialogState = | { mode: "closed" } | { mode: "create" } | { mode: "edit"; suite: Suite } | { mode: "delete"; suite: Suite };
+
 export default function SuitesPage() {
   const [status, setStatus] = useState<SuiteStatus>("active");
   const suites = useSuites(status);
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
-   async function toggleArchive(suite: Suite) {
+  const [actionError, setActionError] = useState<string | null>(null);
+
+    async function toggleArchive(suite: Suite) {
     const action = suite.status === "archived" ? "unarchive" : "archive";
+    setActionError(null);
+
     try {
       await apiFetch(`/suites/${suite.id}/${action}`, { method: "POST" });
       suites.reload();
-    } catch {    }
+    } catch {
+      setActionError(
+        action === "archive"
+          ? "Gagal mengarsipkan suite. Coba lagi."
+          : "Gagal mengaktifkan suite. Coba lagi.",
+      );
+    }
   }
-  type DialogState = | { mode: "closed" } | { mode: "create" } | { mode: "edit"; suite: Suite } | { mode: "delete"; suite: Suite };
 
   return (
     <div className="space-y-6">
@@ -64,6 +75,15 @@ export default function SuitesPage() {
           );
         })}
       </div>
+
+      {actionError && (
+        <div
+          role="alert"
+          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800"
+        >
+          {actionError}
+        </div>
+      )}
 
       <SuiteList
         status={suites.status}
