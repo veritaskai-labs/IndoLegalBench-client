@@ -231,4 +231,23 @@ describe("SuitesPage", () => {
     );
     await waitFor(() => expect(reload).toHaveBeenCalled());
   });
+    it("shows an error when archiving fails", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      suites: oneSuite,
+      reload,
+    });
+    apiFetchMock.mockRejectedValue(new Error("boom"));
+
+    render(<SuitesPage />);
+    await user.click(
+      screen.getByRole("button", { name: "Arsipkan Perburuhan" }),
+    );
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
+  });
+  
 });
