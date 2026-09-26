@@ -45,7 +45,9 @@ describe("useSuites", () => {
     renderHook(() => useSuites("active"));
 
     await waitFor(() =>
-      expect(apiFetchMock).toHaveBeenCalledWith("/suites?status=active"),
+      expect(apiFetchMock).toHaveBeenCalledWith(
+        "/suites?status=active&page=1&size=100",
+      ),
     );
   });
 
@@ -75,10 +77,51 @@ describe("useSuites", () => {
 
     await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(1));
 
-    rerender({ s: "archived" as const });
+    rerender({ s: "archived" });
 
     await waitFor(() =>
-      expect(apiFetchMock).toHaveBeenLastCalledWith("/suites?status=archived"),
+      expect(apiFetchMock).toHaveBeenLastCalledWith(
+        "/suites?status=archived&page=1&size=100",
+      ),
     );
   });
-});
+
+  it("keeps fetching until every suite is loaded", async () => {
+    const first: SuitePage = {
+      items: Array.from({ length: 100 }, (_, i) => ({
+        ...suite,
+        id: `first-${i}`,
+      })),
+      total: 150,
+      page: 1,
+      size: 100,
+    };
+    const second: SuitePage = {
+      items: Array.from({ length: 50 }, (_, i) => ({
+        ...suite,
+        id: `second-${i}`,
+      })),
+      total: 150,
+      page: 2,
+      size: 100,
+    };
+    apiFetchMock.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+
+    const { result } = renderHook(() => useSuites("active"));
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.suites).toHaveLength(150);
+    expect(apiFetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/suites?status=active&page=2&size=100",
+    );
+  });
+
+  it("stops after one page when everything fits", async () => {
+    apiFetchMock.mockResolvedValue(page);
+
+    const { result } = renderHook(() => useSuites("active"));
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(apiFetchMock).toHaveBeenCalledTimes(1);
+  });
