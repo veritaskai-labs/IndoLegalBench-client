@@ -180,12 +180,12 @@ describe("SuiteList", () => {
     );
     expect(onArchive).toHaveBeenCalledWith(suite);
   });
-
+  
   it("offers unarchive instead of archive for an archived suite", () => {
     const suite = makeSuite({ status: "archived" });
-
+    
     render(
-      <SuiteList
+    <SuiteList
         status="ready"
         suites={[suite]}
         onRetry={vi.fn()}
@@ -202,4 +202,24 @@ describe("SuiteList", () => {
       screen.queryByRole("button", { name: "Arsipkan Perburuhan" }),
     ).not.toBeInTheDocument();
   });
+
+  it("hides delete for an archived suite", () => {
+    const suite = makeSuite({ status: "archived" });
+
+    render(
+      <SuiteList
+        status="ready"
+        suites={[suite]}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Hapus Perburuhan" }),
+    ).not.toBeInTheDocument();
+  });
+
 });
