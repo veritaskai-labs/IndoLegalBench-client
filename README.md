@@ -36,6 +36,20 @@ The app runs at http://localhost:3000.
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint. CI runs this on every PR |
 
+## Docker
+
+The [`Dockerfile`](Dockerfile) builds the production image used for deployment.
+`NEXT_PUBLIC_API_BASE_URL` is baked in at build time, so it is a required build
+argument, not a runtime env var:
+
+```bash
+docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.legalbench.veritask.ai -t indolegalbench-client .
+docker run -p 3000:3000 indolegalbench-client
+```
+
+The container listens on port 3000, runs as the unprivileged `node` user, and
+`/login` answers 200 without a session, so it works as a health check path.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before your first commit. The rules
@@ -50,4 +64,5 @@ that catch people out most often:
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs lint, test and
-build on every push and pull request touching `main` or `staging`.
+build on every push and pull request touching `main` or `staging`, then builds
+the Docker image and checks that it serves `/login`.
