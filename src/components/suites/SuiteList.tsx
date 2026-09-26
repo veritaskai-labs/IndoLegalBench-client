@@ -104,14 +104,15 @@ export function SuiteList({
                 >
                   {suite.status === "archived" ? "Aktifkan" : "Arsipkan"}
                 </button>
-                <button
+                {suite.status !== "archived" && (
+                  <button
                   type="button"
                   onClick={() => onDelete(suite)}
                   aria-label={`Hapus ${suite.name}`}
-                  className="text-sm text-red-700 hover:underline"
-                >
-                  Hapus
-                </button>
+                  className="text-sm text-red-700 hover:underline">
+                    Hapus
+                    </button>
+                )}
               </div>
             </td>
           </tr>
