@@ -21,13 +21,31 @@ export function useSuites(status: SuiteStatus): UseSuites {
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
-  useEffect(() => {
+    useEffect(() => {
     let cancelled = false;
 
-    apiFetch<SuitePage>(`/suites?status=${status}`)
-      .then((page) => {
+    async function loadAll() {
+      const collected: Suite[] = [];
+      let page = 1;
+
+      // BE membatasi size 100, jadi ambil halaman berikutnya sampai total tercapai
+      for (;;) {
+        const result = await apiFetch<SuitePage>(
+          `/suites?status=${status}&page=${page}&size=100`,
+        );
+        collected.push(...result.items);
+
+        if (collected.length >= result.total || result.items.length === 0) {
+          return collected;
+        }
+        page += 1;
+      }
+    }
+
+    loadAll()
+      .then((all) => {
         if (cancelled) return;
-        setState({ status: "ready", suites: page.items });
+        setState({ status: "ready", suites: all });
       })
       .catch(() => {
         if (cancelled) return;
