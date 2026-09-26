@@ -43,3 +43,21 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Not pushed to a registry yet, this only proves the image builds and
+      # serves a page. The API address is a placeholder: nothing calls it here.
+      - name: Build image
+        run: docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.example.invalid -t indolegalbench-client:${{ github.sha }} .
+
+      - name: Smoke test image
+        run: |
+          docker run -d --name web -p 3000:3000 indolegalbench-client:${{ github.sha }}
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null http://localhost:3000/login; then
+              echo "Image serves /login"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Container did not serve /login within 60 seconds."
+          docker logs web
+          exit 1
