@@ -1,4 +1,5 @@
-# Production image for the web app, used by the Kubernetes deployment.
+# Production image for the web app, used by the UAT deployment (see
+# docs/DEPLOY.md in the server repo).
 #
 # NEXT_PUBLIC_API_BASE_URL is inlined into the JavaScript at build time, so
 # the image is built for one API address and cannot be pointed elsewhere by
