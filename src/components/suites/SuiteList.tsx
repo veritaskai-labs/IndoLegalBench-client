@@ -1,7 +1,7 @@
 "use client";
 
-import { LoadingState } from "@/components/ui/LoadingState";
-import type { Suite } from "@/types/suite";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";import type { Suite } from "@/types/suite";
+
 
 type Props = {
   status: "loading" | "ready" | "error";
@@ -25,31 +25,33 @@ export function SuiteList({
   onDelete,
   onArchive,
 }: Props) {
-  if (status === "loading") return <LoadingState />;
+  
+  if (status === "loading") {
+    return (
+      <table className="w-full text-left text-sm">
+        <tbody>
+          <LoadingSkeleton variant="table" rows={3} columns={5} />
+        </tbody>
+      </table>
+    );
+  }
 
   if (status === "error") {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-center">
-        <p className="text-sm text-slate-700">Gagal memuat daftar suite.</p>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Coba lagi
-        </button>
-      </div>
+      <ErrorState
+        variant="card"
+        message="Gagal memuat daftar suite."
+        onRetry={onRetry}
+      />
     );
   }
 
   if (suites.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-16 text-center">
-        <p className="text-sm font-medium text-slate-700">Belum ada suite.</p>
-        <p className="text-sm text-slate-500">
-          Buat suite untuk mulai mengelompokkan kasus.
-        </p>
-      </div>
+      <EmptyState
+        title="Belum ada suite"
+        description="Buat suite untuk mulai mengelompokkan kasus."
+      />
     );
   }
 

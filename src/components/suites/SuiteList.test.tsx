@@ -20,8 +20,8 @@ function makeSuite(overrides: Partial<Suite> = {}): Suite {
 }
 
 describe("SuiteList", () => {
-  it("shows a loading indicator while fetching", () => {
-    render(
+    it("shows a loading skeleton while fetching", () => {
+    const { container } = render(
       <SuiteList
         status="loading"
         suites={[]}
@@ -32,8 +32,8 @@ describe("SuiteList", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toBeInTheDocument();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+    expect(screen.queryByRole("row", { name: /Perburuhan/ })).not.toBeInTheDocument();
   });
 
   it("shows an error message with a retry button when the fetch failed", () => {
@@ -50,7 +50,8 @@ describe("SuiteList", () => {
       />,
     );
 
-    expect(screen.getByText(/gagal/i)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("Gagal memuat daftar suite.")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /coba lagi/i }),
     ).toBeInTheDocument();
@@ -68,7 +69,7 @@ describe("SuiteList", () => {
       />,
     );
 
-    expect(screen.getByText(/belum ada suite/i)).toBeInTheDocument();
+    expect(screen.getByText("Belum ada suite")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
