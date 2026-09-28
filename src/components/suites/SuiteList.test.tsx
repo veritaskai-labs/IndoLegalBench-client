@@ -223,4 +223,70 @@ describe("SuiteList", () => {
     ).not.toBeInTheDocument();
   });
 
+
+  describe("Buat kasus link", () => {
+    function renderRow(suite: Suite, canCreateCase: boolean) {
+      render(
+        <SuiteList
+          status="ready"
+          suites={[suite]}
+          canCreateCase={canCreateCase}
+          onRetry={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onArchive={vi.fn()}
+        />,
+      );
+    }
+
+    // Positive
+    it("links an active suite to its new case page for someone who may write cases", () => {
+      renderRow(makeSuite(), true);
+
+      expect(
+        screen.getByRole("link", { name: "Buat kasus di Perburuhan" }),
+      ).toHaveAttribute("href", "/suites/11111111-1111-1111-1111-111111111111/cases/new");
+    });
+
+    // Negative
+    it("hides the link from roles that may not write cases", () => {
+      renderRow(makeSuite(), false);
+
+      expect(
+        screen.queryByRole("link", { name: "Buat kasus di Perburuhan" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("hides the link by default so existing callers stay unchanged", () => {
+      render(
+        <SuiteList
+          status="ready"
+          suites={[makeSuite()]}
+          onRetry={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onArchive={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByRole("link", { name: /Buat kasus/ })).not.toBeInTheDocument();
+    });
+
+    // Corner
+    it("hides the link for an archived suite, which the server would reject", () => {
+      renderRow(makeSuite({ status: "archived" }), true);
+
+      expect(
+        screen.queryByRole("link", { name: "Buat kasus di Perburuhan" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("encodes the suite id in the link", () => {
+      renderRow(makeSuite({ id: "a/b?c" }), true);
+
+      expect(
+        screen.getByRole("link", { name: "Buat kasus di Perburuhan" }),
+      ).toHaveAttribute("href", "/suites/a%2Fb%3Fc/cases/new");
+    });
+  });
 });
