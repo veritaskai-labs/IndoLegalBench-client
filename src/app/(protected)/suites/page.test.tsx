@@ -279,6 +279,47 @@ describe("SuitesPage", () => {
   });
   
 
+  it("closes the create dialog from Batal without reloading", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({ status: "ready", suites: [], reload });
+    render(<SuitesPage />);
+
+    await user.click(screen.getByRole("button", { name: "Buat Suite" }));
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("closes the delete dialog from Batal without reloading", async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    useSuitesMock.mockReturnValue({ status: "ready", suites: [activeSuite], reload });
+    render(<SuitesPage />);
+
+    await user.click(screen.getByRole("button", { name: "Hapus Perburuhan" }));
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("shows an error when unarchiving fails", async () => {
+    const user = userEvent.setup();
+    useSuitesMock.mockReturnValue({
+      status: "ready",
+      suites: [{ ...activeSuite, status: "archived" }],
+      reload: vi.fn(),
+    });
+    apiFetchMock.mockRejectedValue(new Error("network"));
+    render(<SuitesPage />);
+
+    await user.click(screen.getByRole("button", { name: "Aktifkan Perburuhan" }));
+
+    expect(await screen.findByText("Gagal mengaktifkan suite. Coba lagi.")).toBeInTheDocument();
+  });
+
   describe("Buat kasus link", () => {
     function showOneSuite() {
       useSuitesMock.mockReturnValue({
