@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { CaseEditorForm } from "@/components/cases/CaseEditorForm";
+import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { createCase } from "@/lib/cases/caseApi";
@@ -35,9 +36,8 @@ export default function NewCasePage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <header className="flex items-center gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Kasus baru</h1>
-        <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">
-          Draft
-        </span>
+        {/* Kasus baru selalu disimpan server sebagai draf. */}
+        <CaseStatusBadge status="draft" />
       </header>
 
       {saveError !== null && <ErrorState message={saveError} />}
