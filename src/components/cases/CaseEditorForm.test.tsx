@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { CaseFormValues, CaseWritePayload } from "@/lib/cases/caseFormMapping";
+import type { FieldSaveError } from "@/lib/cases/saveError";
 import { CaseEditorForm } from "./CaseEditorForm";
 
 const filled: CaseFormValues = {
@@ -227,5 +228,177 @@ describe("CaseEditorForm", () => {
 
     finish();
     await vi.waitFor(() => expect(save).toBeEnabled());
+  });
+});
+
+describe("CaseEditorForm server errors", () => {
+  // onSubmit resolves with the field error the page mapped from the server
+  // (mapSaveError). The form only places it; it never decides validity.
+  function rejectingWith(error: FieldSaveError) {
+    return vi.fn<(payload: CaseWritePayload) => Promise<FieldSaveError>>(() =>
+      Promise.resolve(error),
+    );
+  }
+
+  async function submitWith(error: FieldSaveError, defaultValues?: CaseFormValues) {
+    const user = userEvent.setup();
+    render(
+      <CaseEditorForm defaultValues={defaultValues} onSubmit={rejectingWith(error)} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    return user;
+  }
+
+  // Positive: AC3
+  it("shows a duplicate case code under ID kasus and marks it invalid", async () => {
+    await submitWith({
+      kind: "field",
+      path: "case_code",
+      message: "Kode kasus 'ILB-1' sudah dipakai di suite 'Perburuhan'",
+      detail: null,
+    });
+
+    const input = screen.getByLabelText("ID kasus");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(
+      "Kode kasus 'ILB-1' sudah dipakai di suite 'Perburuhan'",
+    );
+  });
+
+  it("moves focus to the field the server rejected", async () => {
+    await submitWith({
+      kind: "field",
+      path: "identity.question",
+      message: "Field identity.question wajib diisi",
+      detail: null,
+    });
+
+    expect(screen.getByLabelText("Pertanyaan")).toHaveFocus();
+  });
+
+  // Positive: AC5, the error lands on the exact row only.
+  it("shows a missing pasal on the second legal reference row only", async () => {
+    const twoRefs: CaseFormValues = {
+      ...filled,
+      legal_refs: [filled.legal_refs[0], { ...filled.legal_refs[0], pasal: "" }],
+    };
+    await submitWith(
+      {
+        kind: "field",
+        path: "legal_refs.1.pasal",
+        message: "Field legal_refs[1].pasal wajib diisi",
+        detail: null,
+      },
+      twoRefs,
+    );
+
+    const second = within(refRow(2)).getByLabelText("Pasal");
+    expect(second).toHaveAttribute("aria-invalid", "true");
+    expect(second).toHaveAccessibleDescription("Field legal_refs[1].pasal wajib diisi");
+    expect(within(refRow(1)).getByLabelText("Pasal")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("shows a trap row error on that row", async () => {
+    await submitWith(
+      {
+        kind: "field",
+        path: "traps.0.description",
+        message: "Field traps[0].description wajib diisi",
+        detail: null,
+      },
+      filled,
+    );
+
+    expect(within(trapRow(1)).getByLabelText("Deskripsi")).toHaveAccessibleDescription(
+      "Field traps[0].description wajib diisi",
+    );
+  });
+
+  it("adds the server detail after the Indonesian message", async () => {
+    await submitWith(
+      {
+        kind: "field",
+        path: "legal_refs.0.year",
+        message: "Isian tidak valid.",
+        detail: "Input should be greater than or equal to 1",
+      },
+      filled,
+    );
+
+    expect(within(refRow(1)).getByLabelText("Tahun")).toHaveAccessibleDescription(
+      "Isian tidak valid. (Input should be greater than or equal to 1)",
+    );
+  });
+
+  // Corner: errors that belong to a whole section, not one input.
+  it("shows a whole-list legal reference error in the Rujukan hukum section", async () => {
+    await submitWith({
+      kind: "field",
+      path: "legal_refs",
+      message: "Minimal satu rujukan hukum sampai level pasal",
+      detail: null,
+    });
+
+    const section = screen.getByRole("group", { name: "Rujukan hukum" });
+    expect(within(section).getByText("Minimal satu rujukan hukum sampai level pasal")).toBeInTheDocument();
+  });
+
+  it("shows a split tag error in the Tag dev/test section and marks both radios invalid", async () => {
+    await submitWith({
+      kind: "field",
+      path: "split_tag",
+      message: "Tag dev/test wajib diisi",
+      detail: null,
+    });
+
+    const section = screen.getByRole("group", { name: "Tag dev/test" });
+    expect(within(section).getByText("Tag dev/test wajib diisi")).toBeInTheDocument();
+    for (const radio of within(section).getAllByRole("radio")) {
+      expect(radio).toHaveAttribute("aria-invalid", "true");
+    }
+  });
+
+  it("shows a phrase list error under its textarea", async () => {
+    await submitWith({
+      kind: "field",
+      path: "answer_criteria.must_contain",
+      message: "Isian tidak valid.",
+      detail: null,
+    });
+
+    expect(screen.getByLabelText("Wajib ada")).toHaveAccessibleDescription("Isian tidak valid.");
+  });
+
+  // Corner: repeated submit clears the old server error.
+  it("clears the old server error when the next save succeeds", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi
+      .fn<(payload: CaseWritePayload) => Promise<FieldSaveError | null>>()
+      .mockResolvedValueOnce({
+        kind: "field",
+        path: "case_code",
+        message: "Kode kasus sudah dipakai",
+        detail: null,
+      })
+      .mockResolvedValueOnce(null);
+    render(<CaseEditorForm onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    expect(screen.getByText("Kode kasus sudah dipakai")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(screen.queryByText("Kode kasus sudah dipakai")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("ID kasus")).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  // Negative: nothing is marked invalid before the server says so.
+  it("marks no field invalid before any save", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
   });
 });

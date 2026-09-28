@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -115,6 +115,78 @@ describe("NewCasePage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Gagal menyimpan kasus. Coba lagi.",
     );
+  });
+
+  // Server errors that belong to a field go to the form, not the banner.
+  // Bodies copied from the real server (local stack, 2026-09-29).
+  it("shows 409 CASE_CODE_TAKEN under ID kasus with the owning suite, without a banner", async () => {
+    const user = userEvent.setup();
+    createCaseMock.mockRejectedValue(
+      new ApiError(409, "CASE_CODE_TAKEN", "Kode kasus 'SMOKE-1' sudah dipakai di suite 'test1'"),
+    );
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("ID kasus")).toHaveAccessibleDescription(
+        "Kode kasus 'SMOKE-1' sudah dipakai di suite 'test1'",
+      ),
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("shows a 422 on the exact legal reference row", async () => {
+    const user = userEvent.setup();
+    createCaseMock.mockRejectedValue(
+      new ApiError(
+        422,
+        "FIELD_REQUIRED",
+        "Field legal_refs[0].pasal wajib diisi",
+        "legal_refs[0].pasal",
+      ),
+    );
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    const row = screen.getByRole("group", { name: "Rujukan 1" });
+    await waitFor(() =>
+      expect(within(row).getByLabelText("Pasal")).toHaveAccessibleDescription(
+        "Field legal_refs[0].pasal wajib diisi",
+      ),
+    );
+  });
+
+  it("shows an archived suite as a banner", async () => {
+    const user = userEvent.setup();
+    createCaseMock.mockRejectedValue(new ApiError(422, "SUITE_NOT_ACTIVE", "Suite tidak aktif"));
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Suite sudah diarsipkan, jadi kasus tidak bisa disimpan.",
+    );
+  });
+
+  it("clears the banner when the next save fails on a field instead", async () => {
+    const user = userEvent.setup();
+    createCaseMock
+      .mockRejectedValueOnce(new ApiError(500, "UNKNOWN_ERROR"))
+      .mockRejectedValueOnce(
+        new ApiError(422, "SPLIT_TAG_REQUIRED", "Tag dev/test wajib diisi", "split_tag"),
+      );
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    await screen.findByRole("alert");
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    const tags = screen.getByRole("group", { name: "Tag dev/test" });
+    expect(await within(tags).findByText("Tag dev/test wajib diisi")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   // Corner: retry after a failure
