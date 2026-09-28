@@ -12,6 +12,8 @@ export type SaveError =
   | { kind: "field"; path: CaseFieldPath; message: string; detail: string | null }
   | { kind: "form"; message: string };
 
+export type FieldSaveError = Extract<SaveError, { kind: "field" }>;
+
 export const GENERIC_SAVE_ERROR = "Gagal menyimpan kasus. Coba lagi.";
 
 const FIXED_PATHS = new Map<string, CaseFieldPath>([

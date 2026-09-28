@@ -9,36 +9,67 @@ import {
   emptyTrap,
   type CaseFormValues,
 } from "@/lib/cases/caseFormMapping";
+import type { CaseFieldPath } from "@/lib/cases/saveError";
 import {
   AddRowButton,
+  ErrorText,
   FormSection,
+  invalidProps,
   RowGroup,
   TextAreaField,
   TextField,
 } from "./fields";
 
-type RegisterProps = { register: UseFormRegister<CaseFormValues> };
-type ArrayProps = RegisterProps & { control: Control<CaseFormValues> };
+/** Pesan error server untuk satu path form, atau undefined bila tidak ada. */
+export type ErrorLookup = (path: CaseFieldPath) => string | undefined;
 
-export function IdentitySection({ register }: RegisterProps) {
+type SectionProps = {
+  register: UseFormRegister<CaseFormValues>;
+  errorFor: ErrorLookup;
+};
+type ArrayProps = SectionProps & { control: Control<CaseFormValues> };
+
+export function IdentitySection({ register, errorFor }: SectionProps) {
   return (
     <FormSection title="Identitas">
-      <TextField label="ID kasus" registration={register("case_code")} />
-      <TextField label="Judul" registration={register("identity.title")} />
-      <TextField label="Kategori" registration={register("identity.category")} />
+      <TextField
+        label="ID kasus"
+        registration={register("case_code")}
+        error={errorFor("case_code")}
+      />
+      <TextField
+        label="Judul"
+        registration={register("identity.title")}
+        error={errorFor("identity.title")}
+      />
+      <TextField
+        label="Kategori"
+        registration={register("identity.category")}
+        error={errorFor("identity.category")}
+      />
       <TextAreaField
         label="Pertanyaan"
         rows={4}
         registration={register("identity.question")}
+        error={errorFor("identity.question")}
       />
     </FormSection>
   );
 }
 
-export function LegalRefsSection({ register, control }: ArrayProps) {
+const LEGAL_REF_FIELDS = [
+  { key: "regulation_type", label: "Jenis peraturan", type: "text" },
+  { key: "regulation_number", label: "Nomor", type: "text" },
+  { key: "year", label: "Tahun", type: "number" },
+  { key: "pasal", label: "Pasal", type: "text" },
+  { key: "ayat", label: "Ayat", type: "text" },
+  { key: "huruf", label: "Huruf", type: "text" },
+] as const;
+
+export function LegalRefsSection({ register, control, errorFor }: ArrayProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "legal_refs" });
   return (
-    <FormSection title="Rujukan hukum">
+    <FormSection title="Rujukan hukum" error={errorFor("legal_refs")}>
       {fields.map((field, index) => (
         <RowGroup
           key={field.id}
@@ -47,22 +78,15 @@ export function LegalRefsSection({ register, control }: ArrayProps) {
           onRemove={() => remove(index)}
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <TextField
-              label="Jenis peraturan"
-              registration={register(`legal_refs.${index}.regulation_type`)}
-            />
-            <TextField
-              label="Nomor"
-              registration={register(`legal_refs.${index}.regulation_number`)}
-            />
-            <TextField
-              label="Tahun"
-              type="number"
-              registration={register(`legal_refs.${index}.year`)}
-            />
-            <TextField label="Pasal" registration={register(`legal_refs.${index}.pasal`)} />
-            <TextField label="Ayat" registration={register(`legal_refs.${index}.ayat`)} />
-            <TextField label="Huruf" registration={register(`legal_refs.${index}.huruf`)} />
+            {LEGAL_REF_FIELDS.map(({ key, label, type }) => (
+              <TextField
+                key={key}
+                label={label}
+                type={type}
+                registration={register(`legal_refs.${index}.${key}`)}
+                error={errorFor(`legal_refs.${index}.${key}`)}
+              />
+            ))}
           </div>
         </RowGroup>
       ))}
@@ -71,30 +95,33 @@ export function LegalRefsSection({ register, control }: ArrayProps) {
   );
 }
 
-export function AnswerCriteriaSection({ register }: RegisterProps) {
+export function AnswerCriteriaSection({ register, errorFor }: SectionProps) {
   return (
     <FormSection title="Kriteria jawaban">
       <p className="text-xs text-slate-500">Satu frasa per baris.</p>
       <TextAreaField
         label="Wajib ada"
         registration={register("answer_criteria.must_contain")}
+        error={errorFor("answer_criteria.must_contain")}
       />
       <TextAreaField
         label="Tidak boleh ada"
         registration={register("answer_criteria.must_not_contain")}
+        error={errorFor("answer_criteria.must_not_contain")}
       />
       <TextAreaField
         label="Kesimpulan yang diharapkan"
         registration={register("answer_criteria.expected_conclusion")}
+        error={errorFor("answer_criteria.expected_conclusion")}
       />
     </FormSection>
   );
 }
 
-export function TrapsSection({ register, control }: ArrayProps) {
+export function TrapsSection({ register, control, errorFor }: ArrayProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "traps" });
   return (
-    <FormSection title="Jebakan">
+    <FormSection title="Jebakan" error={errorFor("traps")}>
       {fields.map((field, index) => (
         <RowGroup
           key={field.id}
@@ -105,10 +132,12 @@ export function TrapsSection({ register, control }: ArrayProps) {
           <TextAreaField
             label="Deskripsi"
             registration={register(`traps.${index}.description`)}
+            error={errorFor(`traps.${index}.description`)}
           />
           <TextAreaField
             label="Perilaku model yang diharapkan"
             registration={register(`traps.${index}.expected_model_behavior`)}
+            error={errorFor(`traps.${index}.expected_model_behavior`)}
           />
         </RowGroup>
       ))}
@@ -128,33 +157,40 @@ const SPLIT_TAGS = [
   },
 ] as const;
 
-export function SplitTagSection({ register }: RegisterProps) {
+export function SplitTagSection({ register, errorFor }: SectionProps) {
   const baseId = useId();
+  const errorId = `${baseId}-error`;
+  const error = errorFor("split_tag");
   return (
     <FormSection title="Tag dev/test">
-      {SPLIT_TAGS.map(({ value, hint }) => {
-        const id = `${baseId}-${value}`;
-        return (
-          <div key={value} className="flex items-start gap-2">
-            <input
-              id={id}
-              type="radio"
-              value={value}
-              aria-describedby={`${id}-hint`}
-              {...register("split_tag")}
-              className="mt-1"
-            />
-            <div>
-              <label htmlFor={id} className="text-sm font-medium text-slate-700">
-                {value}
-              </label>
-              <p id={`${id}-hint`} className="text-xs text-slate-500">
-                {hint}
-              </p>
+      {/* aria-invalid berlaku untuk grup radio, bukan tiap radio (ARIA). */}
+      <div role="radiogroup" aria-label="Tag dev/test" {...invalidProps(errorId, error)} className="space-y-4">
+        {SPLIT_TAGS.map(({ value, hint }) => {
+          const id = `${baseId}-${value}`;
+          const hintId = `${id}-hint`;
+          return (
+            <div key={value} className="flex items-start gap-2">
+              <input
+                id={id}
+                type="radio"
+                value={value}
+                {...register("split_tag")}
+                aria-describedby={hintId}
+                className="mt-1"
+              />
+              <div>
+                <label htmlFor={id} className="text-sm font-medium text-slate-700">
+                  {value}
+                </label>
+                <p id={hintId} className="text-xs text-slate-500">
+                  {hint}
+                </p>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+      {error !== undefined && <ErrorText id={errorId} message={error} />}
     </FormSection>
   );
 }

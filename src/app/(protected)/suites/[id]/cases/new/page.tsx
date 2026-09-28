@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { createCase } from "@/lib/cases/caseApi";
 import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
+import { mapSaveError, type FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
 
 export default function NewCasePage() {
@@ -15,14 +16,18 @@ export default function NewCasePage() {
   const { showToast } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  async function handleSubmit(payload: CaseWritePayload) {
+  async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
     setSaveError(null);
     try {
       const created = await createCase(suiteId, payload);
       showToast("Kasus tersimpan sebagai draf");
       router.push(`/cases/${encodeURIComponent(created.id)}/edit`);
-    } catch {
-      setSaveError("Gagal menyimpan kasus. Coba lagi.");
+      return null;
+    } catch (error) {
+      const mapped = mapSaveError(error);
+      if (mapped.kind === "field") return mapped;
+      setSaveError(mapped.message);
+      return null;
     }
   }
 

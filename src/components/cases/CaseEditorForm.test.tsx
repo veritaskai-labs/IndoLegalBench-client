@@ -346,7 +346,8 @@ describe("CaseEditorForm server errors", () => {
     expect(within(section).getByText("Minimal satu rujukan hukum sampai level pasal")).toBeInTheDocument();
   });
 
-  it("shows a split tag error in the Tag dev/test section and marks both radios invalid", async () => {
+  // ARIA puts aria-invalid on the radiogroup, not on each radio.
+  it("shows a split tag error in the Tag dev/test section and marks the radio group invalid", async () => {
     await submitWith({
       kind: "field",
       path: "split_tag",
@@ -354,11 +355,9 @@ describe("CaseEditorForm server errors", () => {
       detail: null,
     });
 
-    const section = screen.getByRole("group", { name: "Tag dev/test" });
-    expect(within(section).getByText("Tag dev/test wajib diisi")).toBeInTheDocument();
-    for (const radio of within(section).getAllByRole("radio")) {
-      expect(radio).toHaveAttribute("aria-invalid", "true");
-    }
+    const radios = screen.getByRole("radiogroup", { name: "Tag dev/test" });
+    expect(radios).toHaveAttribute("aria-invalid", "true");
+    expect(radios).toHaveAccessibleDescription("Tag dev/test wajib diisi");
   });
 
   it("shows a phrase list error under its textarea", async () => {

@@ -2,11 +2,13 @@ import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
 const CONTROL_CLASS =
-  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
+  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 aria-[invalid=true]:border-red-600";
 
 type FieldProps = {
   label: string;
   registration: UseFormRegisterReturn;
+  /** Pesan dari server untuk field ini. */
+  error?: string;
 };
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
@@ -17,16 +19,40 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNod
   );
 }
 
+export function ErrorText({ id, message }: { id?: string; message: string }) {
+  return (
+    <p id={id} className="mt-1 text-xs text-red-700">
+      {message}
+    </p>
+  );
+}
+
+/** Atribut aksesibilitas untuk kontrol yang ditolak server. */
+export function invalidProps(errorId: string, error: string | undefined) {
+  return error === undefined
+    ? {}
+    : { "aria-invalid": true, "aria-describedby": errorId };
+}
+
 export function TextField({
   label,
   registration,
+  error,
   type = "text",
 }: FieldProps & { type?: "text" | "number" }) {
   const id = useId();
+  const errorId = `${id}-error`;
   return (
     <div>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <input id={id} type={type} {...registration} className={CONTROL_CLASS} />
+      <input
+        id={id}
+        type={type}
+        {...registration}
+        {...invalidProps(errorId, error)}
+        className={CONTROL_CLASS}
+      />
+      {error !== undefined && <ErrorText id={errorId} message={error} />}
     </div>
   );
 }
@@ -34,22 +60,41 @@ export function TextField({
 export function TextAreaField({
   label,
   registration,
+  error,
   rows = 3,
 }: FieldProps & { rows?: number }) {
   const id = useId();
+  const errorId = `${id}-error`;
   return (
     <div>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <textarea id={id} rows={rows} {...registration} className={CONTROL_CLASS} />
+      <textarea
+        id={id}
+        rows={rows}
+        {...registration}
+        {...invalidProps(errorId, error)}
+        className={CONTROL_CLASS}
+      />
+      {error !== undefined && <ErrorText id={errorId} message={error} />}
     </div>
   );
 }
 
 /** Kartu satu bagian form. fieldset + legend memberi nama grup untuk pembaca layar. */
-export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+export function FormSection({
+  title,
+  error,
+  children,
+}: {
+  title: string;
+  /** Error untuk bagian ini secara utuh, misalnya daftar rujukan kosong. */
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <fieldset className="rounded-lg border border-slate-200 bg-white p-6">
       <legend className="px-1 text-base font-semibold text-slate-900">{title}</legend>
+      {error !== undefined && <ErrorText message={error} />}
       <div className="mt-2 space-y-4">{children}</div>
     </fieldset>
   );

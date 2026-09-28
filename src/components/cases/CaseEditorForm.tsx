@@ -7,37 +7,65 @@ import {
   type CaseFormValues,
   type CaseWritePayload,
 } from "@/lib/cases/caseFormMapping";
+import type { FieldSaveError } from "@/lib/cases/saveError";
 import {
   AnswerCriteriaSection,
   IdentitySection,
   LegalRefsSection,
   SplitTagSection,
   TrapsSection,
+  type ErrorLookup,
 } from "./sections";
 
 type Props = {
   /** Tanpa nilai berarti kasus baru. */
   defaultValues?: CaseFormValues;
-  /** Page yang memutuskan POST atau PUT; form hanya menyerahkan payload. */
-  onSubmit: (payload: CaseWritePayload) => void | Promise<void>;
+  /**
+   * Page yang memutuskan POST atau PUT; form hanya menyerahkan payload.
+   * Bila server menolak satu field, page mengembalikan error itu agar form menempelkannya.
+   */
+  onSubmit: (payload: CaseWritePayload) => void | Promise<FieldSaveError | null | void>;
 };
 
+function fieldMessage({ message, detail }: FieldSaveError): string {
+  return detail === null ? message : `${message} (${detail})`;
+}
+
 export function CaseEditorForm({ defaultValues, onSubmit }: Props) {
-  const { register, control, handleSubmit, formState } = useForm<CaseFormValues>({
-    defaultValues: defaultValues ?? emptyCaseFormValues(),
+  const { register, control, handleSubmit, formState, getFieldState, setError, clearErrors } =
+    useForm<CaseFormValues>({
+      defaultValues: defaultValues ?? emptyCaseFormValues(),
+    });
+
+  const errorFor: ErrorLookup = (path) => getFieldState(path, formState).error?.message;
+  const sectionProps = { register, errorFor };
+
+  const submit = handleSubmit(async (values) => {
+    const fieldError = await onSubmit(toCaseWritePayload(values));
+    if (fieldError) {
+      setError(
+        fieldError.path,
+        { type: "server", message: fieldMessage(fieldError) },
+        { shouldFocus: true },
+      );
+    }
   });
 
   return (
     <form
       noValidate
-      onSubmit={handleSubmit((values) => onSubmit(toCaseWritePayload(values)))}
+      onSubmit={(event) => {
+        // Error server lama berlaku untuk simpan sebelumnya; server menilai ulang tiap simpan.
+        clearErrors();
+        return submit(event);
+      }}
       className="space-y-6"
     >
-      <IdentitySection register={register} />
-      <LegalRefsSection register={register} control={control} />
-      <AnswerCriteriaSection register={register} />
-      <TrapsSection register={register} control={control} />
-      <SplitTagSection register={register} />
+      <IdentitySection {...sectionProps} />
+      <LegalRefsSection {...sectionProps} control={control} />
+      <AnswerCriteriaSection {...sectionProps} />
+      <TrapsSection {...sectionProps} control={control} />
+      <SplitTagSection {...sectionProps} />
 
       <div className="flex justify-end">
         <button
