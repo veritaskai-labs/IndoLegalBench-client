@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { CaseRead } from "@/types/case";
 import {
   emptyCaseFormValues,
+  fromCaseRead,
   toCaseWritePayload,
   type CaseFormValues,
   type LegalRefFormValues,
@@ -254,5 +256,154 @@ describe("emptyCaseFormValues", () => {
     first.legal_refs[0].pasal = "151";
 
     expect(emptyCaseFormValues().legal_refs[0]?.pasal).toBe("");
+  });
+});
+
+function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
+  return {
+    id: "22222222-2222-2222-2222-222222222222",
+    suite_id: "11111111-1111-1111-1111-111111111111",
+    case_code: "ILB-PT-0142",
+    identity: {
+      title: "Pemberitahuan PHK",
+      question: "Apakah pemberitahuan tertulis wajib?",
+      category: "Ketenagakerjaan",
+    },
+    legal_refs: [
+      {
+        regulation_type: "UU",
+        regulation_number: "13",
+        year: 2003,
+        pasal: "151",
+        ayat: "3",
+        huruf: null,
+      },
+    ],
+    answer_criteria: {
+      must_contain: ["Pasal 151 ayat (3)", "pemberitahuan tertulis"],
+      must_not_contain: [],
+      expected_conclusion: "Wajib.",
+    },
+    traps: [{ description: "Sitasi PP yang dicabut", expected_model_behavior: null }],
+    split_tag: "test",
+    status: "draft",
+    completeness_pct: 86,
+    version: 3,
+    created_at: "2026-09-29T00:00:00Z",
+    updated_at: "2026-09-29T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("fromCaseRead", () => {
+  // Positive
+  it("fills every form field from a saved case", () => {
+    expect(fromCaseRead(savedCase())).toEqual({
+      case_code: "ILB-PT-0142",
+      identity: {
+        title: "Pemberitahuan PHK",
+        question: "Apakah pemberitahuan tertulis wajib?",
+        category: "Ketenagakerjaan",
+      },
+      legal_refs: [
+        {
+          regulation_type: "UU",
+          regulation_number: "13",
+          year: "2003",
+          pasal: "151",
+          ayat: "3",
+          huruf: "",
+        },
+      ],
+      answer_criteria: {
+        must_contain: "Pasal 151 ayat (3)\npemberitahuan tertulis",
+        must_not_contain: "",
+        expected_conclusion: "Wajib.",
+      },
+      traps: [{ description: "Sitasi PP yang dicabut", expected_model_behavior: "" }],
+      split_tag: "test",
+    });
+  });
+
+  it("round-trips: saving an unchanged form sends back the same body", () => {
+    const saved = savedCase();
+
+    expect(toCaseWritePayload(fromCaseRead(saved))).toEqual({
+      case_code: saved.case_code,
+      identity: saved.identity,
+      legal_refs: saved.legal_refs,
+      answer_criteria: saved.answer_criteria,
+      traps: saved.traps,
+      split_tag: saved.split_tag,
+    });
+  });
+
+  // Negative: server-owned fields never reach the form.
+  it("leaves out id, status, version, and other server-owned fields", () => {
+    const values = fromCaseRead(savedCase());
+
+    for (const key of ["id", "suite_id", "status", "completeness_pct", "version", "created_at"]) {
+      expect(values).not.toHaveProperty(key);
+    }
+  });
+
+  // Corner cases
+  it("turns every null into an empty string so inputs stay controlled", () => {
+    const values = fromCaseRead(
+      savedCase({
+        identity: { title: "t", question: "q", category: null },
+        legal_refs: [
+          {
+            regulation_type: "UU",
+            regulation_number: "1",
+            year: null,
+            pasal: "1",
+            ayat: null,
+            huruf: null,
+          },
+        ],
+        answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
+      }),
+    );
+
+    expect(values.identity.category).toBe("");
+    expect(values.legal_refs[0]).toMatchObject({ year: "", ayat: "", huruf: "" });
+    expect(values.answer_criteria).toEqual({
+      must_contain: "",
+      must_not_contain: "",
+      expected_conclusion: "",
+    });
+  });
+
+  it("keeps an empty list of legal references empty instead of adding a blank row", () => {
+    expect(fromCaseRead(savedCase({ legal_refs: [], traps: [] }))).toMatchObject({
+      legal_refs: [],
+      traps: [],
+    });
+  });
+
+  it("treats missing optional answer criteria from the server as empty", () => {
+    const values = fromCaseRead(savedCase({ answer_criteria: {} }));
+
+    expect(values.answer_criteria).toEqual({
+      must_contain: "",
+      must_not_contain: "",
+      expected_conclusion: "",
+    });
+  });
+
+  it("keeps row order", () => {
+    const refs = ["1", "2", "3"].map((pasal) => ({
+      regulation_type: "UU",
+      regulation_number: "1",
+      year: null,
+      pasal,
+      ayat: null,
+      huruf: null,
+    }));
+
+    const values = fromCaseRead(savedCase({ legal_refs: refs }));
+
+    expect(values.legal_refs.map((ref) => ref.pasal)).toEqual(["1", "2", "3"]);
   });
 });
