@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SuiteFormDialog } from "@/components/suites/SuiteFormDialog";
 import { SuiteList } from "@/components/suites/SuiteList";
+import { useAuth } from "@/hooks/useAuth";
 import { useSuites } from "@/hooks/useSuites";
 import type { Suite, SuiteStatus } from "@/types/suite";
 import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
@@ -18,6 +19,10 @@ type DialogState = | { mode: "closed" } | { mode: "create" } | { mode: "edit"; s
 export default function SuitesPage() {
   const [status, setStatus] = useState<SuiteStatus>("active");
   const suites = useSuites(status);
+  const auth = useAuth();
+  const canCreateCase =
+    auth.status === "authenticated" &&
+    (auth.user.role === "author" || auth.user.role === "admin");
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -88,6 +93,7 @@ export default function SuitesPage() {
       <SuiteList
         status={suites.status}
         suites={suites.suites}
+        canCreateCase={canCreateCase}
         onRetry={suites.reload}
         onEdit={(suite) => setDialog({ mode: "edit", suite })}
         onDelete={(suite) => setDialog({ mode: "delete", suite })}

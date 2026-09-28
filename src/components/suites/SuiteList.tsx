@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";import type { Suite } from "@/types/suite";
 
 
 type Props = {
   status: "loading" | "ready" | "error";
   suites: Suite[];
+  /** Hanya author dan admin yang boleh membuat kasus. */
+  canCreateCase?: boolean;
   onRetry: () => void;
   onEdit: (suite: Suite) => void;
   onDelete: (suite: Suite) => void;
@@ -20,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
 export function SuiteList({
   status,
   suites,
+  canCreateCase = false,
   onRetry,
   onEdit,
   onDelete,
@@ -86,6 +90,15 @@ export function SuiteList({
             </td>
             <td className="px-4 py-3">
               <div className="flex gap-3">
+                {canCreateCase && suite.status === "active" && (
+                  <Link
+                    href={`/suites/${encodeURIComponent(suite.id)}/cases/new`}
+                    aria-label={`Buat kasus di ${suite.name}`}
+                    className="text-sm font-medium text-slate-900 hover:underline"
+                  >
+                    Buat kasus
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => onEdit(suite)}
