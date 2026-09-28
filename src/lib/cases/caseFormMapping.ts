@@ -1,7 +1,4 @@
-import type { components } from "@/lib/generated/api";
-
-type CaseWrite = components["schemas"]["CaseWrite"];
-type SplitTag = components["schemas"]["SplitTag"];
+import type { CaseWrite, SplitTag } from "@/types/case";
 
 /** Satu baris rujukan hukum di form. Semua isian berupa string dari input. */
 export type LegalRefFormValues = {

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
 import { createCase } from "@/lib/cases/caseApi";
-import type { components } from "@/lib/generated/api";
+import type { CaseRead } from "@/types/case";
 import NewCasePage from "./page";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
@@ -27,7 +27,7 @@ vi.mock("@/lib/cases/caseApi", () => ({ createCase: vi.fn() }));
 
 const createCaseMock = vi.mocked(createCase);
 
-function createdCase(id: string): components["schemas"]["CaseRead"] {
+function createdCase(id: string): CaseRead {
   return {
     id,
     suite_id: SUITE_ID,
