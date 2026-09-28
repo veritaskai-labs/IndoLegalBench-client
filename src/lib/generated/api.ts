@@ -353,7 +353,10 @@ export interface components {
         SuiteUpdate: {
             /** Name */
             name?: string | null;
-            /** Description */
+            /**
+             * Description
+             * @description Null mengosongkan deskripsi. Kalau field ini tidak dikirim, deskripsi tidak berubah.
+             */
             description?: string | null;
         };
         /** UserCreateRequest */
