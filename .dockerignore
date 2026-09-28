@@ -1,0 +1,16 @@
+# Keep the build context small and free of local state and secrets.
+node_modules
+.next
+out
+build
+coverage
+.git
+.github
+.idea
+.vscode
+.claude
+.env*
+*.tsbuildinfo
+next-env.d.ts
+Dockerfile
+.dockerignore
