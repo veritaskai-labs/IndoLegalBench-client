@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   emptyCaseFormValues,
@@ -25,17 +26,24 @@ type Props = {
    * Bila server menolak satu field, page mengembalikan error itu agar form menempelkannya.
    */
   onSubmit: (payload: CaseWritePayload) => void | Promise<FieldSaveError | null | void>;
+  /** Dipanggil saat form berubah dari bersih ke berisi perubahan, atau sebaliknya. */
+  onDirtyChange?: (dirty: boolean) => void;
 };
 
 function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
-export function CaseEditorForm({ defaultValues, onSubmit }: Props) {
+export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props) {
   const { register, control, handleSubmit, formState, getFieldState, setError, clearErrors } =
     useForm<CaseFormValues>({
       defaultValues: defaultValues ?? emptyCaseFormValues(),
     });
+
+  const { isDirty } = formState;
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const errorFor: ErrorLookup = (path) => getFieldState(path, formState).error?.message;
   const sectionProps = { register, errorFor };
