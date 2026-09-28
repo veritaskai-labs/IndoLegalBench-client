@@ -1,4 +1,4 @@
-import type { CaseWrite, SplitTag } from "@/types/case";
+import type { CaseRead, CaseWrite, SplitTag } from "@/types/case";
 
 /** Satu baris rujukan hukum di form. Semua isian berupa string dari input. */
 export type LegalRefFormValues = {
@@ -111,5 +111,40 @@ export function toCaseWritePayload(values: CaseFormValues): CaseWritePayload {
       expected_model_behavior: optionalText(trap.expected_model_behavior),
     })),
     split_tag: values.split_tag === "" ? null : values.split_tag,
+  };
+}
+
+function textOrEmpty(value: string | null | undefined): string {
+  return value ?? "";
+}
+
+/** Kebalikan toCaseWritePayload: isi form edit dari kasus tersimpan. Field milik server tidak ikut. */
+export function fromCaseRead(saved: CaseRead): CaseFormValues {
+  const criteria = saved.answer_criteria;
+  return {
+    case_code: saved.case_code,
+    identity: {
+      title: saved.identity.title,
+      question: saved.identity.question,
+      category: textOrEmpty(saved.identity.category),
+    },
+    legal_refs: saved.legal_refs.map((ref) => ({
+      regulation_type: ref.regulation_type,
+      regulation_number: ref.regulation_number,
+      year: String(ref.year ?? ""),
+      pasal: ref.pasal,
+      ayat: textOrEmpty(ref.ayat),
+      huruf: textOrEmpty(ref.huruf),
+    })),
+    answer_criteria: {
+      must_contain: (criteria.must_contain ?? []).join("\n"),
+      must_not_contain: (criteria.must_not_contain ?? []).join("\n"),
+      expected_conclusion: textOrEmpty(criteria.expected_conclusion),
+    },
+    traps: saved.traps.map((trap) => ({
+      description: trap.description,
+      expected_model_behavior: textOrEmpty(trap.expected_model_behavior),
+    })),
+    split_tag: saved.split_tag,
   };
 }
