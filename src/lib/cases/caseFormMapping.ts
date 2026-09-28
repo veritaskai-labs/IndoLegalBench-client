@@ -1,0 +1,87 @@
+import type { components } from "@/lib/generated/api";
+
+type CaseWrite = components["schemas"]["CaseWrite"];
+type SplitTag = components["schemas"]["SplitTag"];
+
+/** Satu baris rujukan hukum di form. Semua isian berupa string dari input. */
+export type LegalRefFormValues = {
+  regulation_type: string;
+  regulation_number: string;
+  year: string;
+  pasal: string;
+  ayat: string;
+  huruf: string;
+};
+
+export type TrapFormValues = {
+  description: string;
+  expected_model_behavior: string;
+};
+
+/** Nama field sama dengan path API, jadi error server `legal_refs[0].pasal` bisa langsung ditempel ke form. */
+export type CaseFormValues = {
+  case_code: string;
+  identity: { title: string; question: string; category: string };
+  legal_refs: LegalRefFormValues[];
+  answer_criteria: {
+    /** Satu frasa per baris. */
+    must_contain: string;
+    must_not_contain: string;
+    expected_conclusion: string;
+  };
+  traps: TrapFormValues[];
+  split_tag: SplitTag | "";
+};
+
+/**
+ * Body POST/PUT kasus. split_tag boleh null: radio yang belum dipilih tetap
+ * dikirim supaya server yang menjawab SPLIT_TAG_REQUIRED.
+ */
+export type CaseWritePayload = Omit<CaseWrite, "split_tag"> & {
+  split_tag: SplitTag | null;
+};
+
+function optionalText(value: string): string | null {
+  return value.trim() === "" ? null : value;
+}
+
+function optionalYear(value: string): number | null {
+  return value.trim() === "" ? null : Number(value);
+}
+
+function phraseLines(value: string): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+}
+
+/** Memetakan nilai form ke payload API. Tidak memvalidasi; server yang memutuskan. */
+export function toCaseWritePayload(values: CaseFormValues): CaseWritePayload {
+  return {
+    case_code: values.case_code,
+    identity: {
+      title: values.identity.title,
+      question: values.identity.question,
+      category: optionalText(values.identity.category),
+    },
+    legal_refs: values.legal_refs.map((ref) => ({
+      regulation_type: ref.regulation_type,
+      regulation_number: ref.regulation_number,
+      year: optionalYear(ref.year),
+      pasal: ref.pasal,
+      ayat: optionalText(ref.ayat),
+      huruf: optionalText(ref.huruf),
+    })),
+    answer_criteria: {
+      must_contain: phraseLines(values.answer_criteria.must_contain),
+      must_not_contain: phraseLines(values.answer_criteria.must_not_contain),
+      expected_conclusion: optionalText(values.answer_criteria.expected_conclusion),
+    },
+    traps: values.traps.map((trap) => ({
+      description: trap.description,
+      expected_model_behavior: optionalText(trap.expected_model_behavior),
+    })),
+    split_tag: values.split_tag === "" ? null : values.split_tag,
+  };
+}
