@@ -43,7 +43,7 @@ The [`Dockerfile`](Dockerfile) builds the production image used for deployment.
 argument, not a runtime env var:
 
 ```bash
-docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.legalbench.veritask.ai -t indolegalbench-client .
+docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.indolegalbench.veritask.ai -t indolegalbench-client .
 docker run -p 3000:3000 indolegalbench-client
 ```
 

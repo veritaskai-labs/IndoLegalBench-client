@@ -5,7 +5,7 @@
 # the image is built for one API address and cannot be pointed elsewhere by
 # a runtime env var. Build it with:
 #
-#   docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.legalbench.veritask.ai -t indolegalbench-client .
+#   docker build --build-arg NEXT_PUBLIC_API_BASE_URL=https://api.indolegalbench.veritask.ai -t indolegalbench-client .
 
 FROM node:22-alpine AS deps
 WORKDIR /app
