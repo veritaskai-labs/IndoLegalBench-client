@@ -41,6 +41,37 @@ export type CaseWritePayload = Omit<CaseWrite, "split_tag"> & {
   split_tag: SplitTag | null;
 };
 
+export function emptyLegalRef(): LegalRefFormValues {
+  return {
+    regulation_type: "",
+    regulation_number: "",
+    year: "",
+    pasal: "",
+    ayat: "",
+    huruf: "",
+  };
+}
+
+export function emptyTrap(): TrapFormValues {
+  return { description: "", expected_model_behavior: "" };
+}
+
+/** Nilai awal form buat kasus. Tanpa baris jebakan: baris kosong akan ditolak server. */
+export function emptyCaseFormValues(): CaseFormValues {
+  return {
+    case_code: "",
+    identity: { title: "", question: "", category: "" },
+    legal_refs: [emptyLegalRef()],
+    answer_criteria: {
+      must_contain: "",
+      must_not_contain: "",
+      expected_conclusion: "",
+    },
+    traps: [],
+    split_tag: "",
+  };
+}
+
 function optionalText(value: string): string | null {
   return value.trim() === "" ? null : value;
 }
