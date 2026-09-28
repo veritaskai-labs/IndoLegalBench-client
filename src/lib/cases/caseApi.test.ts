@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, BASE_URL } from "@/lib/apiClient";
-import { createCase } from "./caseApi";
+import { createCase, getCase, updateCase } from "./caseApi";
 import { emptyCaseFormValues, toCaseWritePayload } from "./caseFormMapping";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
@@ -69,5 +69,85 @@ describe("createCase", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       `${BASE_URL}/suites/..%2Fusers%3Fx%3D1/cases`,
     );
+  });
+});
+
+const CASE_ID = "22222222-2222-2222-2222-222222222222";
+
+describe("getCase", () => {
+  // Positive
+  it("reads one case with the session cookie", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { id: CASE_ID, status: "draft" }));
+
+    const saved = await getCase(CASE_ID);
+
+    expect(saved).toEqual({ id: CASE_ID, status: "draft" });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/cases/${CASE_ID}`);
+    expect(init?.method ?? "GET").toBe("GET");
+    expect(init?.credentials).toBe("include");
+  });
+
+  // Negative
+  it("rejects with ApiError on 404", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(404, { code: "NOT_FOUND", message: "Kasus tidak ditemukan" }));
+
+    await expect(getCase(CASE_ID)).rejects.toMatchObject({ status: 404, code: "NOT_FOUND" });
+  });
+
+  // Corner
+  it("encodes the case id so a crafted id cannot reach another endpoint", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(404, { code: "NOT_FOUND" }));
+
+    await expect(getCase("../suites?x=1")).rejects.toBeInstanceOf(ApiError);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/cases/..%2Fsuites%3Fx%3D1`);
+  });
+});
+
+describe("updateCase", () => {
+  // Positive
+  it("puts the payload to the case endpoint and returns the updated case", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { id: CASE_ID, version: 2 }));
+
+    const updated = await updateCase(CASE_ID, payload);
+
+    expect(updated).toEqual({ id: CASE_ID, version: 2 });
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/cases/${CASE_ID}`);
+    expect(init?.method).toBe("PUT");
+    expect(init?.credentials).toBe("include");
+    expect(JSON.parse(String(init?.body))).toEqual(payload);
+  });
+
+  // Negative
+  it("rejects with ApiError carrying the field from a 422", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(422, {
+        code: "FIELD_REQUIRED",
+        message: "Field legal_refs[0].pasal wajib diisi",
+        field: "legal_refs[0].pasal",
+      }),
+    );
+
+    await expect(updateCase(CASE_ID, payload)).rejects.toMatchObject({
+      status: 422,
+      field: "legal_refs[0].pasal",
+    });
+  });
+
+  it("rejects when the network fails", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(updateCase(CASE_ID, payload)).rejects.toThrow("Failed to fetch");
+  });
+
+  // Corner
+  it("encodes the case id in the path", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, {}));
+
+    await updateCase("a/b", payload);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/cases/a%2Fb`);
   });
 });
