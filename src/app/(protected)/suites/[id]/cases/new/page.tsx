@@ -7,9 +7,10 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { createCase } from "@/lib/cases/caseApi";
 import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
+import { decodeRouteParam } from "@/lib/routeParams";
 
 export default function NewCasePage() {
-  const { id: suiteId } = useParams<{ id: string }>();
+  const suiteId = decodeRouteParam(useParams<{ id: string }>().id);
   const router = useRouter();
   const { showToast } = useToast();
   const [saveError, setSaveError] = useState<string | null>(null);
