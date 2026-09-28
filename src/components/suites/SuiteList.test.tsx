@@ -224,6 +224,23 @@ describe("SuiteList", () => {
   });
 
 
+  it("shows a status it does not know as the raw value", () => {
+    // SuiteRead.status is a plain string in the contract, so a new server
+    // status must still render instead of disappearing.
+    render(
+      <SuiteList
+        status="ready"
+        suites={[makeSuite({ status: "locked" })]}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("locked")).toBeInTheDocument();
+  });
+
   describe("Buat kasus link", () => {
     function renderRow(suite: Suite, canCreateCase: boolean) {
       render(
