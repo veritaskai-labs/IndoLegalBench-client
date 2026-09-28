@@ -96,6 +96,7 @@ describe("mapSaveError", () => {
     "identity",
     "legal_refs[0]",
     "legal_refs[0].unknown",
+    "traps[0].unknown",
     "legal_refs[x].pasal",
     "status",
     "",
@@ -103,6 +104,15 @@ describe("mapSaveError", () => {
     const result = mapSaveError(fieldError("FIELD_REQUIRED", serverField, "wajib diisi"));
 
     expect(result).toEqual({ kind: "form", message: "wajib diisi" });
+  });
+
+  it("uses Indonesian copy when a known field comes without a server message", () => {
+    expect(mapSaveError(new ApiError(422, "FIELD_REQUIRED", null, "traps[0].description"))).toEqual({
+      kind: "field",
+      path: "traps.0.description",
+      message: "Isian tidak valid.",
+      detail: null,
+    });
   });
 
   it("uses a generic message when a 422 has neither field nor message", () => {
