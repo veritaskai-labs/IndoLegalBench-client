@@ -9,12 +9,15 @@ import NewCasePage from "./page";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+const { push, params } = vi.hoisted(() => ({
+  push: vi.fn(),
+  params: { id: "" },
+}));
 
 // The page reads the suite id from the URL and navigates after saving;
 // next/navigation has no router outside Next, so both are stubbed.
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ id: SUITE_ID }),
+  useParams: () => params,
   useRouter: () => ({ push }),
 }));
 
@@ -55,6 +58,7 @@ function toast() {
 }
 
 beforeEach(() => {
+  params.id = SUITE_ID;
   push.mockReset();
   createCaseMock.mockReset();
 });
@@ -127,6 +131,17 @@ describe("NewCasePage", () => {
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/cases/case-2/edit"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("decodes the suite id from the URL once, so it is not encoded twice", async () => {
+    const user = userEvent.setup();
+    params.id = "%7Bid%7D";
+    createCaseMock.mockRejectedValue(new ApiError(422, "VALIDATION_ERROR"));
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(createCaseMock.mock.calls[0]?.[0]).toBe("{id}");
   });
 
   it("encodes the created id in the redirect path", async () => {
