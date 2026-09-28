@@ -231,6 +231,58 @@ describe("CaseEditorForm", () => {
   });
 });
 
+describe("CaseEditorForm unsaved changes", () => {
+  // Positive
+  it("reports unsaved changes after the author edits a field", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    render(
+      <CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} onDirtyChange={onDirtyChange} />,
+    );
+
+    await user.type(screen.getByLabelText("Judul"), " baru");
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+  });
+
+  // Negative
+  it("reports no unsaved changes before the author edits anything", () => {
+    const onDirtyChange = vi.fn();
+    render(
+      <CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} onDirtyChange={onDirtyChange} />,
+    );
+
+    expect(onDirtyChange).not.toHaveBeenCalledWith(true);
+  });
+
+  // Corner cases
+  it("reports clean again when the author types the original value back", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    render(
+      <CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} onDirtyChange={onDirtyChange} />,
+    );
+    const code = screen.getByLabelText("ID kasus");
+
+    await user.type(code, "X");
+    await user.type(code, "{backspace}");
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("counts adding a row as an unsaved change", async () => {
+    const user = userEvent.setup();
+    const onDirtyChange = vi.fn();
+    render(
+      <CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} onDirtyChange={onDirtyChange} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+  });
+});
+
 describe("CaseEditorForm server errors", () => {
   // onSubmit resolves with the field error the page mapped from the server
   // (mapSaveError). The form only places it; it never decides validity.
