@@ -25,6 +25,10 @@ export function onForbidden(listener: ForbiddenListener): () => void {
   };
 }
 
+function notifyForbidden(): void {
+  for (const listener of forbiddenListeners) listener();
+}
+
 /** Read JSON error backend: { code, message } */
 async function parseError(response: Response): Promise<ApiError> {
   let code = "UNKNOWN_ERROR";
@@ -50,9 +54,7 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const err = await parseError(response);
-    if (err.status === 403) {
-      for (const listener of forbiddenListeners) listener();
-    }
+    if (err.status === 403) notifyForbidden();
     throw err;
   }
   if (response.status === 204) return undefined as T;
