@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  emptyCaseFormValues,
   toCaseWritePayload,
   type CaseFormValues,
   type LegalRefFormValues,
@@ -235,5 +236,23 @@ describe("toCaseWritePayload", () => {
 
   it("never sends server-owned fields such as status", () => {
     expect(toCaseWritePayload(filledForm())).not.toHaveProperty("status");
+  });
+});
+
+describe("emptyCaseFormValues", () => {
+  it("starts with one blank legal reference row, no traps, and no split tag", () => {
+    const values = emptyCaseFormValues();
+
+    expect(values.legal_refs).toEqual([emptyRef()]);
+    expect(values.traps).toEqual([]);
+    expect(values.split_tag).toBe("");
+    expect(values.case_code).toBe("");
+  });
+
+  it("returns a fresh object each call so one form cannot change another", () => {
+    const first = emptyCaseFormValues();
+    first.legal_refs[0].pasal = "151";
+
+    expect(emptyCaseFormValues().legal_refs[0]?.pasal).toBe("");
   });
 });
