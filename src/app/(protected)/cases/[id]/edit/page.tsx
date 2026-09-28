@@ -8,17 +8,18 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/Toast";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
+import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { updateCase } from "@/lib/cases/caseApi";
 import { fromCaseRead, type CaseWritePayload } from "@/lib/cases/caseFormMapping";
-import { mapSaveError, type FieldSaveError } from "@/lib/cases/saveError";
+import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
 
 export default function EditCasePage() {
   const caseId = decodeRouteParam(useParams<{ id: string }>().id);
   const detail = useCaseDetail(caseId);
   const { showToast } = useToast();
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveError = useSaveErrorBanner();
   const [dirty, setDirty] = useState(false);
   // Kunci baru me-remount form dengan data tersimpan, jadi status dirty ikut bersih.
   const [formKey, setFormKey] = useState(0);
@@ -38,17 +39,14 @@ export default function EditCasePage() {
   const { saved } = detail;
 
   async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
-    setSaveError(null);
+    saveError.clear();
     try {
       detail.replace(await updateCase(caseId, payload));
       setFormKey((key) => key + 1);
       showToast("Perubahan tersimpan");
       return null;
     } catch (error) {
-      const mapped = mapSaveError(error);
-      if (mapped.kind === "field") return mapped;
-      setSaveError(mapped.message);
-      return null;
+      return saveError.handle(error);
     }
   }
 
@@ -62,7 +60,7 @@ export default function EditCasePage() {
         )}
       </header>
 
-      {saveError !== null && <ErrorState message={saveError} />}
+      {saveError.message !== null && <ErrorState message={saveError.message} />}
 
       <CaseEditorForm
         key={formKey}
