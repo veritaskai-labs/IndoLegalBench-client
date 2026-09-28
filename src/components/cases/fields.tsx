@@ -2,7 +2,7 @@ import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
 const CONTROL_CLASS =
-  "mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm";
+  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
 
 type FieldProps = {
   label: string;
