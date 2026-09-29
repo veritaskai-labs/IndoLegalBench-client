@@ -283,6 +283,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/completeness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Indikator kelengkapan satu kasus
+         * @description Return what the case still needs before it can be sent for review.
+         */
+        get: operations["get_completeness_cases__case_id__completeness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -298,6 +318,24 @@ export interface components {
             must_not_contain?: string[];
             /** Expected Conclusion */
             expected_conclusion?: string | null;
+        };
+        /**
+         * CaseCompleteness
+         * @description Indikator kelengkapan satu kasus (SCRUM-107).
+         */
+        CaseCompleteness: {
+            /** Is Complete */
+            is_complete: boolean;
+            /** Ready For Review */
+            ready_for_review: boolean;
+            /** Pct */
+            pct: number;
+            /** Missing */
+            missing: components["schemas"]["CompletenessIssue"][];
+            /** Trap Count */
+            trap_count: number;
+            /** Legal Ref Count */
+            legal_ref_count: number;
         };
         /**
          * CaseIdentity
@@ -407,6 +445,16 @@ export interface components {
             /** Traps */
             traps?: components["schemas"]["Trap"][];
             split_tag: components["schemas"]["SplitTag"];
+        };
+        /**
+         * CompletenessIssue
+         * @description Satu bagian yang belum terisi, dengan pesan untuk ditampilkan editor.
+         */
+        CompletenessIssue: {
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1364,6 +1412,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_completeness_cases__case_id__completeness_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseCompleteness"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
