@@ -67,12 +67,12 @@ export function IdentitySection({ register, errorFor }: SectionProps) {
 }
 
 const LEGAL_REF_FIELDS = [
-  { key: "regulation_type", label: "Jenis peraturan", type: "text" },
-  { key: "regulation_number", label: "Nomor", type: "text" },
-  { key: "year", label: "Tahun", type: "number" },
-  { key: "pasal", label: "Pasal", type: "text" },
-  { key: "ayat", label: "Ayat", type: "text" },
-  { key: "huruf", label: "Huruf", type: "text" },
+  { key: "regulation_type", label: "Jenis peraturan", type: "text", hint: CASE_HELP.regulationType },
+  { key: "regulation_number", label: "Nomor", type: "text", hint: CASE_HELP.regulationNumber },
+  { key: "year", label: "Tahun", type: "number", hint: CASE_HELP.year },
+  { key: "pasal", label: "Pasal", type: "text", hint: CASE_HELP.pasal },
+  { key: "ayat", label: "Ayat", type: "text", hint: CASE_HELP.ayat },
+  { key: "huruf", label: "Huruf", type: "text", hint: CASE_HELP.huruf },
 ] as const;
 
 export function LegalRefsSection({ register, control, errorFor, rowHasError }: ArrayProps) {
@@ -88,10 +88,11 @@ export function LegalRefsSection({ register, control, errorFor, rowHasError }: A
           invalid={rowHasError(`legal_refs.${index}`)}
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            {LEGAL_REF_FIELDS.map(({ key, label, type }) => (
+            {LEGAL_REF_FIELDS.map(({ key, label, type, hint }) => (
               <TextField
                 key={key}
                 label={label}
+                hint={hint}
                 type={type}
                 registration={register(`legal_refs.${index}.${key}`)}
                 error={errorFor(`legal_refs.${index}.${key}`)}
@@ -108,19 +109,21 @@ export function LegalRefsSection({ register, control, errorFor, rowHasError }: A
 export function AnswerCriteriaSection({ register, errorFor }: SectionProps) {
   return (
     <FormSection title="Kriteria jawaban" help={CASE_HELP.answerCriteria}>
-      <p className="text-xs text-slate-500">Satu frasa per baris.</p>
       <TextAreaField
         label="Wajib ada"
+        hint={CASE_HELP.mustContain}
         registration={register("answer_criteria.must_contain")}
         error={errorFor("answer_criteria.must_contain")}
       />
       <TextAreaField
         label="Tidak boleh ada"
+        hint={CASE_HELP.mustNotContain}
         registration={register("answer_criteria.must_not_contain")}
         error={errorFor("answer_criteria.must_not_contain")}
       />
       <TextAreaField
         label="Kesimpulan yang diharapkan"
+        hint={CASE_HELP.expectedConclusion}
         registration={register("answer_criteria.expected_conclusion")}
         error={errorFor("answer_criteria.expected_conclusion")}
       />
@@ -162,11 +165,11 @@ export function TrapsSection({ register, control, errorFor, rowHasError }: Array
 const SPLIT_TAGS = [
   {
     value: "dev",
-    hint: "Untuk pengembangan: boleh dipakai saat menyusun dan menyetel produk.",
+    hint: "Data pengembangan: boleh dipakai saat menyusun dan menyetel produk.",
   },
   {
     value: "test",
-    hint: "Untuk pengujian akhir: disimpan terpisah untuk mengukur hasil.",
+    hint: "Data pengujian akhir: disimpan terpisah, hanya dipakai untuk mengukur hasil.",
   },
 ] as const;
 

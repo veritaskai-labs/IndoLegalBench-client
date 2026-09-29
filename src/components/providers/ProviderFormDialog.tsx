@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { SecretInput } from "@/components/ui/SecretInput";
+import { RequiredMark, SecretInput } from "@/components/ui/SecretInput";
 import { ApiError } from "@/lib/apiClient";
 import { createProduct, updateProduct } from "@/lib/providers/providerApi";
 import {
@@ -124,12 +124,16 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
           </div>
         )}
 
+        <p className="mt-2 text-xs text-slate-500">
+          Isian bertanda <span className="text-red-700">*</span> wajib diisi.
+        </p>
+
         <div className="mt-4 space-y-4">
-          <Labeled id={ids.name} label="Nama" error={errors.name}>
+          <Labeled id={ids.name} label="Nama" required error={errors.name}>
             <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} {...invalid(ids.name, errors.name)} className={INPUT} />
           </Labeled>
 
-          <Labeled id={ids.type} label="Jenis API" error={errors.provider_type}>
+          <Labeled id={ids.type} label="Jenis API" required error={errors.provider_type}>
             <select
               id={ids.type}
               value={providerType}
@@ -146,16 +150,17 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
             </select>
           </Labeled>
 
-          <Labeled id={ids.url} label="URL endpoint" error={errors.base_url}>
+          <Labeled id={ids.url} label="URL endpoint" required error={errors.base_url}>
             <input id={ids.url} type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.contoh.com/v1/chat/completions" {...invalid(ids.url, errors.base_url)} className={INPUT} />
           </Labeled>
 
-          <Labeled id={ids.model} label="Model" error={errors.model_name}>
+          <Labeled id={ids.model} label="Model" required error={errors.model_name}>
             <input id={ids.model} value={modelName} onChange={(e) => setModelName(e.target.value)} {...invalid(ids.model, errors.model_name)} className={INPUT} />
           </Labeled>
 
           <SecretInput
             label="Kredensial"
+            required={!editing}
             value={credential}
             onChange={setCredential}
             error={errors.credential}
@@ -167,11 +172,11 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Labeled id={ids.limit} label="Limit panggilan per menit" error={errors.rate_limit}>
+            <Labeled id={ids.limit} label="Limit panggilan per menit" required error={errors.rate_limit}>
               <input id={ids.limit} type="number" min={1} step={1} inputMode="numeric" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} {...invalid(ids.limit, errors.rate_limit)} className={INPUT} />
             </Labeled>
 
-            <Labeled id={ids.budget} label="Budget per bulan (Rp)" error={errors.budget}>
+            <Labeled id={ids.budget} label="Budget per bulan (Rp)" required error={errors.budget}>
               <input id={ids.budget} inputMode="numeric" value={budget} onChange={(e) => setBudget(formatRupiahInput(e.target.value))} placeholder="1.500.000" {...invalid(ids.budget, errors.budget)} className={INPUT} />
             </Labeled>
           </div>
@@ -193,16 +198,33 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
 const INPUT =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 aria-[invalid=true]:border-red-600";
 
+/** Atribut aksesibilitas untuk field wajib; aria-invalid dan deskripsi error bila ada error. */
 function invalid(id: string, error: string | undefined) {
-  return error ? { "aria-invalid": true, "aria-describedby": `${id}-error` } : {};
+  return {
+    "aria-required": true,
+    ...(error ? { "aria-invalid": true, "aria-describedby": `${id}-error` } : {}),
+  };
 }
 
-function Labeled({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
+function Labeled({
+  id,
+  label,
+  error,
+  required = false,
+  children,
+}: {
+  id: string;
+  label: string;
+  error?: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
-        {label}
-      </label>
+      <div className="flex gap-1 text-sm font-medium text-slate-700">
+        <label htmlFor={id}>{label}</label>
+        {required && <RequiredMark />}
+      </div>
       {children}
       {error && (
         <p id={`${id}-error`} className="mt-1 text-xs text-red-700">
