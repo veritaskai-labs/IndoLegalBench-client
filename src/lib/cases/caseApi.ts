@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { CaseRead } from "@/types/case";
+import type { CaseCompleteness, CaseRead } from "@/types/case";
 import type { CaseWritePayload } from "./caseFormMapping";
 
 /** POST /suites/{suite_id}/cases. Kasus baru selalu disimpan server sebagai draf. */
@@ -25,4 +25,9 @@ export function updateCase(caseId: string, payload: CaseWritePayload): Promise<C
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+/** GET /cases/{case_id}/completeness. Dihitung ulang server dari isi kasus yang tersimpan. */
+export function getCaseCompleteness(caseId: string): Promise<CaseCompleteness> {
+  return apiFetch<CaseCompleteness>(`${casePath(caseId)}/completeness`);
 }
