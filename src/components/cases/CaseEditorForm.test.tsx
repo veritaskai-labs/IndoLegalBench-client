@@ -1,9 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CaseFormValues, CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import type { FieldSaveError } from "@/lib/cases/saveError";
-import { CaseEditorForm } from "./CaseEditorForm";
+import { CASE_HELP } from "@/lib/cases/caseHelpText";
+import { CaseEditorForm, VALIDATE_DELAY_MS } from "./CaseEditorForm";
 
 const filled: CaseFormValues = {
   case_code: "ILB-PT-0142",
@@ -135,19 +136,31 @@ describe("CaseEditorForm", () => {
     });
   });
 
-  // Negative: the form never blocks; the server decides (CONTRIBUTING §6).
-  it("still submits an empty form so the server can answer with its errors", async () => {
+  // Negative: SCRUM-109 checks the contract rules (gen:zod) before sending,
+  // so an empty form never reaches the server. The button stays enabled (AC2).
+  it("does not send an empty form and lists what is missing above the form", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<CaseEditorForm onSubmit={onSubmit} />);
 
-    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    const save = screen.getByRole("button", { name: "Simpan draf" });
+    await user.click(save);
 
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
-      case_code: "",
-      split_tag: null,
-    });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(save).toBeEnabled();
+    const summary = screen.getByRole("alert");
+    expect(summary).toHaveTextContent("Periksa 7 isian berikut sebelum menyimpan:");
+    for (const message of [
+      "ID kasus wajib diisi.",
+      "Judul wajib diisi.",
+      "Pertanyaan wajib diisi.",
+      "Jenis peraturan wajib diisi.",
+      "Nomor peraturan wajib diisi.",
+      "Pasal wajib diisi.",
+      "Pilih tag dev atau test.",
+    ]) {
+      expect(within(summary).getByRole("button", { name: message })).toBeInTheDocument();
+    }
   });
 
   // Corner cases: dynamic rows.
@@ -164,11 +177,18 @@ describe("CaseEditorForm", () => {
   it("removes the middle legal reference row and keeps the others' values", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
-    render(<CaseEditorForm onSubmit={onSubmit} />);
+    const ref = filled.legal_refs[0];
+    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
     await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
-    await user.type(within(refRow(1)).getByLabelText("Pasal"), "1");
+    for (const row of [2, 3]) {
+      await user.type(within(refRow(row)).getByLabelText("Jenis peraturan"), ref.regulation_type);
+      await user.type(within(refRow(row)).getByLabelText("Nomor"), ref.regulation_number);
+    }
+    const firstPasal = within(refRow(1)).getByLabelText("Pasal");
+    await user.clear(firstPasal);
+    await user.type(firstPasal, "1");
     await user.type(within(refRow(2)).getByLabelText("Pasal"), "2");
     await user.type(within(refRow(3)).getByLabelText("Pasal"), "3");
 
@@ -183,16 +203,20 @@ describe("CaseEditorForm", () => {
     expect(pasal).toEqual(["1", "3"]);
   });
 
-  it("lets the author remove the last legal reference row; the server reports it", async () => {
+  it("lets the author remove the last legal reference row, then says one is needed", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
-    render(<CaseEditorForm onSubmit={onSubmit} />);
+    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("button", { name: "Hapus rujukan 1" }));
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(screen.queryByRole("group", { name: "Rujukan 1" })).not.toBeInTheDocument();
-    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ legal_refs: [] });
+    expect(onSubmit).not.toHaveBeenCalled();
+    const section = screen.getByRole("group", { name: "Rujukan hukum" });
+    expect(
+      within(section).getByText("Butuh minimal satu rujukan hukum sampai tingkat pasal."),
+    ).toBeInTheDocument();
   });
 
   it("adds and removes trap rows", async () => {
@@ -217,7 +241,7 @@ describe("CaseEditorForm", () => {
         finish = resolve;
       }),
     );
-    render(<CaseEditorForm onSubmit={onSubmit} />);
+    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} />);
 
     const save = screen.getByRole("button", { name: "Simpan draf" });
     await user.click(save);
@@ -285,7 +309,8 @@ describe("CaseEditorForm unsaved changes", () => {
 
 describe("CaseEditorForm server errors", () => {
   // onSubmit resolves with the field error the page mapped from the server
-  // (mapSaveError). The form only places it; it never decides validity.
+  // (mapSaveError). The form starts valid, so the browser checks pass and
+  // only the server's answer decides what is shown.
   function rejectingWith(error: FieldSaveError) {
     return vi.fn<(payload: CaseWritePayload) => Promise<FieldSaveError>>(() =>
       Promise.resolve(error),
@@ -295,7 +320,7 @@ describe("CaseEditorForm server errors", () => {
   async function submitWith(error: FieldSaveError, defaultValues?: CaseFormValues) {
     const user = userEvent.setup();
     render(
-      <CaseEditorForm defaultValues={defaultValues} onSubmit={rejectingWith(error)} />,
+      <CaseEditorForm defaultValues={defaultValues ?? filled} onSubmit={rejectingWith(error)} />,
     );
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
     return user;
@@ -332,7 +357,7 @@ describe("CaseEditorForm server errors", () => {
   it("shows a missing pasal on the second legal reference row only", async () => {
     const twoRefs: CaseFormValues = {
       ...filled,
-      legal_refs: [filled.legal_refs[0], { ...filled.legal_refs[0], pasal: "" }],
+      legal_refs: [filled.legal_refs[0], { ...filled.legal_refs[0], pasal: "152" }],
     };
     await submitWith(
       {
@@ -435,10 +460,10 @@ describe("CaseEditorForm server errors", () => {
         detail: null,
       })
       .mockResolvedValueOnce(null);
-    render(<CaseEditorForm onSubmit={onSubmit} />);
+    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
-    expect(screen.getByText("Kode kasus sudah dipakai")).toBeInTheDocument();
+    expect(screen.getByLabelText("ID kasus")).toHaveAccessibleDescription("Kode kasus sudah dipakai");
 
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
@@ -446,10 +471,154 @@ describe("CaseEditorForm server errors", () => {
     expect(screen.getByLabelText("ID kasus")).not.toHaveAttribute("aria-invalid", "true");
   });
 
-  // Negative: nothing is marked invalid before the server says so.
+  // Negative: nothing is marked invalid before the author saves or leaves a field.
   it("marks no field invalid before any save", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
     expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
+  });
+});
+
+describe("CaseEditorForm inline validation (SCRUM-109)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Positive: AC2, a draft saves without traps and answer criteria.
+  it("saves a draft that has no traps and no answer criteria yet", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const draft: CaseFormValues = {
+      ...filled,
+      answer_criteria: { must_contain: "", must_not_contain: "", expected_conclusion: "" },
+      traps: [],
+    };
+    render(<CaseEditorForm defaultValues={draft} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("checks a field when the author leaves it, and only that field", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    await user.click(screen.getByLabelText("Judul"));
+    await user.tab();
+
+    expect(await screen.findByText("Judul wajib diisi.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("ID kasus")).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("checks while typing, but only after a short pause", async () => {
+    // fireEvent instead of userEvent: userEvent waits on timers of its own,
+    // which fake timers would freeze.
+    vi.useFakeTimers();
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+    const code = screen.getByLabelText("ID kasus");
+
+    fireEvent.change(code, { target: { value: "-PHK" } });
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS - 1);
+    });
+    expect(code).not.toHaveAttribute("aria-invalid", "true");
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(code).toHaveAttribute("aria-invalid", "true");
+    expect(code).toHaveAccessibleDescription(/^ID kasus diawali huruf atau angka/);
+
+    // Fixing it clears the error after the same pause.
+    fireEvent.change(code, { target: { value: "PHK-1" } });
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS);
+    });
+    expect(code).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("restarts the pause on every keystroke", async () => {
+    vi.useFakeTimers();
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+    const code = screen.getByLabelText("ID kasus");
+
+    fireEvent.change(code, { target: { value: "-" } });
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS - 50);
+    });
+    fireEvent.change(code, { target: { value: "-P" } });
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS - 50);
+    });
+    expect(code).not.toHaveAttribute("aria-invalid", "true");
+
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(code).toHaveAttribute("aria-invalid", "true");
+  });
+
+  // Negative: an empty row the author just added is not an error yet.
+  it("does not flag a new empty trap row before the author touches it", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+    await new Promise((resolve) => setTimeout(resolve, VALIDATE_DELAY_MS + 50));
+
+    expect(trapRow(2)).not.toHaveAttribute("aria-invalid", "true");
+    expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
+  });
+
+  it("highlights only the legal reference row that needs fixing", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const twoRefs: CaseFormValues = {
+      ...filled,
+      legal_refs: [filled.legal_refs[0], { ...filled.legal_refs[0], pasal: "" }],
+    };
+    render(<CaseEditorForm defaultValues={twoRefs} onSubmit={onSubmit} />);
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(refRow(2)).toHaveAttribute("aria-invalid", "true");
+    expect(within(refRow(2)).getByText("Baris ini perlu diperbaiki.")).toBeInTheDocument();
+    expect(refRow(1)).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("moves focus to the field picked from the summary", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm defaultValues={{ ...filled, identity: { ...filled.identity, question: "" } }} onSubmit={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    await user.click(screen.getByLabelText("Judul"));
+    await user.click(within(screen.getByRole("alert")).getByRole("button", { name: "Pertanyaan wajib diisi." }));
+
+    expect(screen.getByLabelText("Pertanyaan")).toHaveFocus();
+  });
+
+  it("removes a fixed field from the summary", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm defaultValues={{ ...filled, identity: { ...filled.identity, title: "" } }} onSubmit={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Judul wajib diisi.");
+
+    await user.type(screen.getByLabelText("Judul"), "Pemberitahuan PHK");
+    await user.tab();
+
+    await vi.waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  // AC6: help text on the fields.
+  it("describes a field with its help text while it has no error", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    expect(screen.getByLabelText("ID kasus")).toHaveAccessibleDescription(CASE_HELP.caseCode);
+    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(CASE_HELP.traps);
   });
 });

@@ -57,6 +57,22 @@ function toast() {
   return screen.getByRole("status", { name: "Notifikasi" });
 }
 
+/**
+ * Isi field yang wajib untuk menyimpan draf, supaya lolos validasi browser
+ * (SCRUM-109) dan yang diuji di sini adalah jawaban server.
+ */
+async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
+  const code = screen.getByLabelText("ID kasus");
+  if ((code as HTMLInputElement).value === "") await user.type(code, "ILB-1");
+  await user.type(screen.getByLabelText("Judul"), "Pemberitahuan PHK");
+  await user.type(screen.getByLabelText("Pertanyaan"), "Wajib?");
+  const ref = within(screen.getByRole("group", { name: "Rujukan 1" }));
+  await user.type(ref.getByLabelText("Jenis peraturan"), "UU");
+  await user.type(ref.getByLabelText("Nomor"), "13");
+  await user.type(ref.getByLabelText("Pasal"), "151");
+  await user.click(screen.getByRole("radio", { name: /dev/ }));
+}
+
 beforeEach(() => {
   params.id = SUITE_ID;
   push.mockReset();
@@ -79,6 +95,7 @@ describe("NewCasePage", () => {
     renderPage();
 
     await user.type(screen.getByLabelText("ID kasus"), "ILB-1");
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(createCaseMock).toHaveBeenCalledTimes(1);
@@ -96,6 +113,7 @@ describe("NewCasePage", () => {
     createCaseMock.mockRejectedValue(new ApiError(500, "UNKNOWN_ERROR"));
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -110,6 +128,7 @@ describe("NewCasePage", () => {
     createCaseMock.mockRejectedValue(new TypeError("Failed to fetch"));
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -126,6 +145,7 @@ describe("NewCasePage", () => {
     );
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     await waitFor(() =>
@@ -149,6 +169,7 @@ describe("NewCasePage", () => {
     );
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     const row = screen.getByRole("group", { name: "Rujukan 1" });
@@ -164,6 +185,7 @@ describe("NewCasePage", () => {
     createCaseMock.mockRejectedValue(new ApiError(422, "SUITE_NOT_ACTIVE", "Suite tidak aktif"));
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -180,6 +202,7 @@ describe("NewCasePage", () => {
       );
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
     await screen.findByRole("alert");
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
@@ -197,6 +220,7 @@ describe("NewCasePage", () => {
       .mockResolvedValueOnce(createdCase("case-2"));
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
     await screen.findByRole("alert");
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
@@ -211,6 +235,7 @@ describe("NewCasePage", () => {
     createCaseMock.mockRejectedValue(new ApiError(422, "VALIDATION_ERROR"));
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(createCaseMock.mock.calls[0]?.[0]).toBe("{id}");
@@ -221,6 +246,7 @@ describe("NewCasePage", () => {
     createCaseMock.mockResolvedValue(createdCase("a/b?c"));
     renderPage();
 
+    await fillRequired(user);
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
 
     expect(push).toHaveBeenCalledWith("/cases/a%2Fb%3Fc/edit");
