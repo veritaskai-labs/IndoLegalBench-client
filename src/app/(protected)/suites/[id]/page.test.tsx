@@ -104,12 +104,26 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     await waitFor(() => {
       expect(within(table).getByText("PHK-001")).toBeInTheDocument();
     });
-    // Scoped to the table: the filter <option>s also contain "In review" / "Approved"
+    // Scoped to the table: the filter <option>s also contain "Dalam tinjauan" / "Disetujui"
     expect(within(table).getByText("PKWT-002")).toBeInTheDocument();
     expect(within(table).getByText("85%")).toBeInTheDocument();
     expect(within(table).getByText("100%")).toBeInTheDocument();
-    expect(within(table).getByText("In review")).toBeInTheDocument();
-    expect(within(table).getByText("Approved")).toBeInTheDocument();
+    expect(within(table).getByText("Dalam tinjauan")).toBeInTheDocument();
+    expect(within(table).getByText("Disetujui")).toBeInTheDocument();
+  });
+
+  it("membuka editor kasus lewat kode kasus maupun klik baris", async () => {
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+    await renderPage();
+
+    const table = await screen.findByRole("table");
+    const link = await within(table).findByRole("link", { name: "PHK-001" });
+    const editPath = "/cases/9c1b3f94-91eb-4c8d-8a07-887e5b2e9871/edit";
+    expect(link).toHaveAttribute("href", editPath);
+
+    fireEvent.click(within(table).getByText("Kompensasi PHK efisiensi perusahaan"));
+    expect(pushMock).toHaveBeenCalledWith(editPath);
   });
 
   it("menampilkan EmptyState dan tombol Tulis Kasus Sekarang di suite aktif", async () => {
@@ -155,7 +169,7 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     await renderPage();
     await screen.findByText("PHK-001");
 
-    fireEvent.click(screen.getByRole("button", { name: "In review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dalam tinjauan" }));
 
     await waitFor(() => {
       expect(casesApi.getCasesForSuite).toHaveBeenCalledWith("suite-123", {
@@ -184,7 +198,7 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
 
     await renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Approved" }));
+    fireEvent.click(screen.getByRole("button", { name: "Disetujui" }));
     await screen.findByText("PKWT-002");
 
     // The first (stale) request finishes last and must not overwrite the table

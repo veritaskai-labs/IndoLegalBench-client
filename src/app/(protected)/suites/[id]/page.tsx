@@ -11,6 +11,7 @@ import {
   type SplitTag,
 } from "@/lib/api/cases";
 import { apiFetch, ApiError } from "@/lib/apiClient";
+import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import type { Suite } from "@/types/suite";
 
 interface PageProps {
@@ -18,18 +19,21 @@ interface PageProps {
 }
 
 const STATUS_BADGES: Record<CaseStatus, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-slate-100 text-slate-700 border-slate-200" },
-  in_review: { label: "In review", className: "bg-amber-50 text-amber-800 border-amber-200" },
-  needs_revision: { label: "Needs revision", className: "bg-rose-50 text-rose-800 border-rose-200" },
-  approved: { label: "Approved", className: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+  draft: { label: CASE_STATUS_LABEL.draft, className: "bg-slate-100 text-slate-700 border-slate-200" },
+  in_review: { label: CASE_STATUS_LABEL.in_review, className: "bg-amber-50 text-amber-800 border-amber-200" },
+  needs_revision: { label: CASE_STATUS_LABEL.needs_revision, className: "bg-rose-50 text-rose-800 border-rose-200" },
+  approved: { label: CASE_STATUS_LABEL.approved, className: "bg-emerald-50 text-emerald-800 border-emerald-200" },
 };
 
 const ALL_STATUSES: { value: CaseStatus; label: string }[] = [
-  { value: "draft", label: "Draft" },
-  { value: "in_review", label: "In review" },
-  { value: "needs_revision", label: "Needs revision" },
-  { value: "approved", label: "Approved" },
+  { value: "draft", label: CASE_STATUS_LABEL.draft },
+  { value: "in_review", label: CASE_STATUS_LABEL.in_review },
+  { value: "needs_revision", label: CASE_STATUS_LABEL.needs_revision },
+  { value: "approved", label: CASE_STATUS_LABEL.approved },
 ];
+
+/** Editor kasus dari SCRUM-108; belum ada halaman /cases/{id} tanpa /edit. */
+const editPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}/edit`;
 
 const completenessColor = (pct: number) =>
   pct === 100 ? "bg-emerald-600" : pct >= 60 ? "bg-teal-600" : "bg-amber-500";
@@ -358,11 +362,11 @@ export default function SuiteDetailPage({ params }: PageProps) {
                       <tr
                         key={item.id}
                         className="hover:bg-slate-50 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/cases/${item.id}`)}
+                        onClick={() => router.push(editPath(item.id))}
                       >
                         <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
                           <Link
-                            href={`/cases/${item.id}`}
+                            href={editPath(item.id)}
                             onClick={(e) => e.stopPropagation()}
                             className="hover:underline"
                           >
