@@ -508,7 +508,9 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     await user.click(screen.getByLabelText("Judul"));
     await user.tab();
 
-    expect(await screen.findByText("Judul wajib diisi.")).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.getByLabelText("Judul")).toHaveAccessibleDescription("Judul wajib diisi."),
+    );
     expect(screen.getByLabelText("Judul")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByLabelText("ID kasus")).not.toHaveAttribute("aria-invalid", "true");
   });
@@ -612,6 +614,43 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     await user.tab();
 
     await vi.waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  // UAT TC_29: the summary does not wait for Simpan.
+  it("shows the summary as soon as a field fails, before saving", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CaseEditorForm onSubmit={onSubmit} />);
+
+    await user.click(screen.getByLabelText("Judul"));
+    await user.tab();
+
+    const summary = await screen.findByRole("alert");
+    expect(summary).toHaveTextContent("Periksa 1 isian berikut sebelum menyimpan:");
+    expect(within(summary).getByRole("button", { name: "Judul wajib diisi." })).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Simpan draf" })).toBeEnabled();
+  });
+
+  // UAT TC_35: what the traps and the dev/test tag mean.
+  it("explains that traps test the precision of the answer and dev/test is a dataset split", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(/ketelitian jawaban model/);
+    expect(screen.getByRole("group", { name: "Tag dev/test" })).toHaveTextContent(
+      /metodologi dataset .* bukan tingkat kesulitan/,
+    );
+  });
+
+  it("gives every legal reference and answer criteria field its own hint", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    for (const label of ["Jenis peraturan", "Nomor", "Tahun", "Pasal", "Ayat", "Huruf"]) {
+      expect(within(refRow(1)).getByLabelText(label)).toHaveAccessibleDescription(/.+/);
+    }
+    for (const label of ["Wajib ada", "Tidak boleh ada", "Kesimpulan yang diharapkan"]) {
+      expect(screen.getByLabelText(label)).toHaveAccessibleDescription(/.+/);
+    }
   });
 
   // AC6: help text on the fields.

@@ -224,6 +224,22 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     expect(dialog.getByText("Budget wajib diisi dan lebih dari Rp 0.")).toBeInTheDocument();
   });
 
+  // UAT TC_52: required fields are marked.
+  it("marks the required fields on the register form", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
+    const dialog = within(screen.getByRole("dialog"));
+
+    expect(dialog.getByText(/wajib diisi\./)).toBeInTheDocument();
+    for (const label of ["Nama", "Jenis API", "URL endpoint", "Model", "Kredensial", "Limit panggilan per menit", "Budget per bulan (Rp)"]) {
+      expect(dialog.getByLabelText(label)).toHaveAttribute("aria-required", "true");
+    }
+  });
+
   it("puts a taken name on the Nama field", async () => {
     const user = userEvent.setup();
     list.mockResolvedValue([]);

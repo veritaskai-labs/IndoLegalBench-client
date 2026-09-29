@@ -85,8 +85,8 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props
   const errorFor: ErrorLookup = (path) => getFieldState(path, formState).error?.message;
   const rowHasError = (row: string) => get(formState.errors, row) !== undefined;
   const sectionProps = { register, errorFor };
-  // Ringkasan baru muncul setelah percobaan simpan, bukan saat baru mulai mengisi.
-  const summary = formState.submitCount > 0 ? flattenErrors(formState.errors) : [];
+  // Ringkasan ikut tampil begitu ada error, sebelum Simpan ditekan (UAT TC_29).
+  const summary = flattenErrors(formState.errors);
 
   const submit = handleSubmit(async (values) => {
     const fieldError = await onSubmit(toCaseWritePayload(values));

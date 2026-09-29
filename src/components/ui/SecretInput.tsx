@@ -11,6 +11,8 @@ type Props = {
   error?: string | null;
   /** Diteruskan ke input, misalnya "new-password" supaya browser tidak mengisi otomatis. */
   autoComplete?: string;
+  /** Tandai wajib: tanda * di sebelah label dan aria-required. */
+  required?: boolean;
 };
 
 /**
@@ -25,6 +27,7 @@ export function SecretInput({
   hint,
   error,
   autoComplete = "new-password",
+  required = false,
 }: Props) {
   const id = useId();
   const [visible, setVisible] = useState(false);
@@ -34,9 +37,10 @@ export function SecretInput({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
-        {label}
-      </label>
+      <div className="flex gap-1 text-sm font-medium text-slate-700">
+        <label htmlFor={id}>{label}</label>
+        {required && <RequiredMark />}
+      </div>
       {hint && (
         <p id={`${id}-hint`} className="mt-0.5 text-xs text-slate-500">
           {hint}
@@ -49,6 +53,7 @@ export function SecretInput({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
+          aria-required={required || undefined}
           spellCheck={false}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
@@ -71,5 +76,14 @@ export function SecretInput({
         </p>
       )}
     </div>
+  );
+}
+
+/** Tanda wajib di luar <label>, jadi nama field tetap bersih; pembaca layar memakai aria-required. */
+export function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="text-red-700">
+      *
+    </span>
   );
 }
