@@ -4,9 +4,11 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { CaseEditorForm } from "@/components/cases/CaseEditorForm";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
+import { CompletenessIndicator } from "@/components/cases/CompletenessIndicator";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/Toast";
+import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
@@ -23,6 +25,8 @@ export default function EditCasePage() {
   const [dirty, setDirty] = useState(false);
   // Kunci baru me-remount form dengan data tersimpan, jadi status dirty ikut bersih.
   const [formKey, setFormKey] = useState(0);
+  // formKey naik tiap simpan berhasil, jadi kelengkapan ikut dihitung ulang server.
+  const completeness = useCaseCompleteness(caseId, formKey);
 
   useUnsavedChangesWarning(dirty);
 
@@ -59,6 +63,8 @@ export default function EditCasePage() {
           <p className="text-xs font-medium text-amber-700">Ada perubahan yang belum disimpan</p>
         )}
       </header>
+
+      <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
 
       {saveError.message !== null && <ErrorState message={saveError.message} />}
 
