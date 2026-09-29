@@ -235,10 +235,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/suites/{suite_id}/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar ringkas kasus di dalam satu suite
+         * @description List the short case summary for one suite.
+         */
+        get: operations["list_cases_suites__suite_id__cases_get"];
+        put?: never;
+        /**
+         * Buat kasus hukum dalam status draft
+         * @description Create a draft case. Authors and admins only.
+         */
+        post: operations["create_case_suites__suite_id__cases_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detail satu kasus
+         * @description Return the full case.
+         */
+        get: operations["get_case_cases__case_id__get"];
+        /**
+         * Ubah kasus
+         * @description Update a case. The service decides who may change split_tag.
+         */
+        put: operations["update_case_cases__case_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AnswerCriteria
+         * @description Phrases the answer must or must not contain, plus an expected conclusion.
+         */
+        AnswerCriteria: {
+            /** Must Contain */
+            must_contain?: string[];
+            /** Must Not Contain */
+            must_not_contain?: string[];
+            /** Expected Conclusion */
+            expected_conclusion?: string | null;
+        };
+        /**
+         * CaseIdentity
+         * @description Title, question, and optional category for one case.
+         */
+        CaseIdentity: {
+            /**
+             * Title
+             * @description Judul pertanyaan
+             */
+            title: string;
+            /**
+             * Question
+             * @description Pertanyaan hukum
+             */
+            question: string;
+            /** Category */
+            category?: string | null;
+        };
+        /**
+         * CaseRead
+         * @description Full case returned by create, read, and update.
+         */
+        CaseRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Suite Id
+             * Format: uuid
+             */
+            suite_id: string;
+            /** Case Code */
+            case_code: string;
+            identity: components["schemas"]["CaseIdentity"];
+            /** Legal Refs */
+            legal_refs: components["schemas"]["LegalRef"][];
+            answer_criteria: components["schemas"]["AnswerCriteria"];
+            /** Traps */
+            traps: components["schemas"]["Trap"][];
+            split_tag: components["schemas"]["SplitTag"];
+            status: components["schemas"]["CaseStatus"];
+            /** Completeness Pct */
+            completeness_pct: number;
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CaseStatus
+         * @description Server-owned lifecycle. Clients do not send this on create or update.
+         * @enum {string}
+         */
+        CaseStatus: "draft" | "in_review" | "needs_revision" | "approved";
+        /**
+         * CaseSummary
+         * @description Short list item. The list endpoint does not return the full body.
+         */
+        CaseSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            split_tag: components["schemas"]["SplitTag"];
+            status: components["schemas"]["CaseStatus"];
+            /** Completeness Pct */
+            completeness_pct: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CaseWrite
+         * @description Body for create and update. The server sets status; clients cannot send it.
+         */
+        CaseWrite: {
+            /**
+             * Case Code
+             * @description Pola sementara, bukan pola final: diawali huruf atau angka, lalu huruf, angka, titik, garis bawah, atau tanda hubung.
+             */
+            case_code: string;
+            identity: components["schemas"]["CaseIdentity"];
+            /**
+             * Legal Refs
+             * @description Minimal satu rujukan, masing-masing sampai level pasal.
+             */
+            legal_refs: components["schemas"]["LegalRef"][];
+            answer_criteria?: components["schemas"]["AnswerCriteria"];
+            /** Traps */
+            traps?: components["schemas"]["Trap"][];
+            split_tag: components["schemas"]["SplitTag"];
+        };
         /** ErrorBody */
         ErrorBody: {
             /** Code */
@@ -248,6 +417,11 @@ export interface components {
              * @example No platform account is mapped to this identity.
              */
             message: string;
+            /**
+             * Field
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].pasal
+             */
+            field?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -262,6 +436,24 @@ export interface components {
             app_env: string;
             /** Database */
             database: string;
+        };
+        /**
+         * LegalRef
+         * @description One citation. regulation_type, regulation_number, and pasal are required.
+         */
+        LegalRef: {
+            /** Regulation Type */
+            regulation_type: string;
+            /** Regulation Number */
+            regulation_number: string;
+            /** Year */
+            year?: number | null;
+            /** Pasal */
+            pasal: string;
+            /** Ayat */
+            ayat?: string | null;
+            /** Huruf */
+            huruf?: string | null;
         };
         /** MeResponse */
         MeResponse: {
@@ -292,6 +484,12 @@ export interface components {
          * @enum {string}
          */
         Role: "author" | "reviewer" | "admin" | "viewer";
+        /**
+         * SplitTag
+         * @description Dataset split stored on a case. Only dev and test are valid.
+         * @enum {string}
+         */
+        SplitTag: "dev" | "test";
         /** SuiteCreate */
         SuiteCreate: {
             /**
@@ -358,6 +556,16 @@ export interface components {
              * @description Null mengosongkan deskripsi. Kalau field ini tidak dikirim, deskripsi tidak berubah.
              */
             description?: string | null;
+        };
+        /**
+         * Trap
+         * @description A known mistake and how the model is expected to handle it.
+         */
+        Trap: {
+            /** Description */
+            description: string;
+            /** Expected Model Behavior */
+            expected_model_behavior?: string | null;
         };
         /** UserCreateRequest */
         UserCreateRequest: {
@@ -949,6 +1157,213 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_cases_suites__suite_id__cases_get: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["CaseStatus"] | null;
+                split_tag?: components["schemas"]["SplitTag"] | null;
+            };
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseSummary"][];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_case_suites__suite_id__cases_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRead"];
+                };
+            };
+            /** @description Bukan pembuat kasus dan bukan admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), beserta nama suite pemilik. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Suite tidak aktif (`SUITE_NOT_ACTIVE`), tag kosong (`SPLIT_TAG_REQUIRED`), pola case_code ditolak (`CASE_CODE_INVALID`), atau field wajib kosong (`field`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_case_cases__case_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRead"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_case_cases__case_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRead"];
+                };
+            };
+            /** @description Bukan pembuat kasus dan bukan admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), beserta nama suite pemilik. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Suite tidak aktif (`SUITE_NOT_ACTIVE`), tag kosong (`SPLIT_TAG_REQUIRED`), pola case_code ditolak (`CASE_CODE_INVALID`), atau field wajib kosong (`field`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
