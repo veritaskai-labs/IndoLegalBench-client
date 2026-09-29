@@ -37,6 +37,10 @@ export default function NewCasePage() {
         <CaseStatusBadge status="draft" />
       </header>
 
+      <p className="text-sm text-slate-500">
+        Indikator kelengkapan muncul setelah draf pertama disimpan.
+      </p>
+
       {saveError.message !== null && <ErrorState message={saveError.message} />}
 
       <CaseEditorForm onSubmit={handleSubmit} />

@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
-import { getCase, updateCase } from "@/lib/cases/caseApi";
-import type { CaseRead } from "@/types/case";
+import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
+import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
@@ -16,10 +16,15 @@ vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // getCase/updateCase have their own request-level tests; here we only care
 // how the page reacts to what they return.
-vi.mock("@/lib/cases/caseApi", () => ({ getCase: vi.fn(), updateCase: vi.fn() }));
+vi.mock("@/lib/cases/caseApi", () => ({
+  getCase: vi.fn(),
+  getCaseCompleteness: vi.fn(),
+  updateCase: vi.fn(),
+}));
 
 const getCaseMock = vi.mocked(getCase);
 const updateCaseMock = vi.mocked(updateCase);
+const completenessMock = vi.mocked(getCaseCompleteness);
 
 function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
   return {
@@ -49,6 +54,21 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
   };
 }
 
+function completeness(overrides: Partial<CaseCompleteness> = {}): CaseCompleteness {
+  return {
+    is_complete: false,
+    ready_for_review: false,
+    pct: 71,
+    missing: [
+      { field: "answer_criteria", message: "Butuh minimal satu kriteria jawaban." },
+      { field: "traps", message: "Butuh minimal satu jebakan sebelum kasus bisa diajukan review." },
+    ],
+    trap_count: 0,
+    legal_ref_count: 1,
+    ...overrides,
+  };
+}
+
 function renderPage() {
   return render(
     <ToastProvider>
@@ -69,6 +89,8 @@ beforeEach(() => {
   params.id = CASE_ID;
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
+  completenessMock.mockReset();
+  completenessMock.mockResolvedValue(completeness());
 });
 
 describe("EditCasePage loading", () => {
@@ -270,5 +292,58 @@ describe("EditCasePage saving", () => {
 
     await waitFor(() => expect(toast()).toHaveTextContent("Perubahan tersimpan"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("EditCasePage completeness (SCRUM-109)", () => {
+  // Positive: AC4, AC7
+  it("shows the completeness the server computed for this case", async () => {
+    getCaseMock.mockResolvedValue(savedCase());
+    renderPage();
+
+    const indicator = await screen.findByRole("region", { name: "Kelengkapan kasus" });
+    expect(await within(indicator).findByText("Kelengkapan 71%")).toBeInTheDocument();
+    expect(within(indicator).getByText(/Jebakan belum ada/)).toBeInTheDocument();
+    expect(completenessMock).toHaveBeenCalledWith(CASE_ID);
+  });
+
+  it("asks the server again after a save, showing the loading state meanwhile", async () => {
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    updateCaseMock.mockResolvedValue(savedCase());
+    let finish: (value: CaseCompleteness) => void = () => undefined;
+    completenessMock
+      .mockResolvedValueOnce(completeness())
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      );
+    renderPage();
+    await screen.findByText("Kelengkapan 71%");
+
+    await user.click(save());
+
+    expect(await screen.findByText("Menghitung kelengkapan…")).toBeInTheDocument();
+    finish(completeness({ pct: 100, is_complete: true, ready_for_review: true, missing: [], trap_count: 1 }));
+    expect(await screen.findByText("Siap diajukan review")).toBeInTheDocument();
+    expect(completenessMock).toHaveBeenCalledTimes(2);
+  });
+
+  // Negative: the editor still works when only the indicator fails.
+  it("keeps the editor usable when the completeness request fails, and retries", async () => {
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    completenessMock
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce(completeness());
+    renderPage();
+
+    expect(await screen.findByText(/Gagal memuat kelengkapan kasus/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Coba lagi" }));
+
+    expect(await screen.findByText("Kelengkapan 71%")).toBeInTheDocument();
   });
 });

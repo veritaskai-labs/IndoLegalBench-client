@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { get, useForm } from "react-hook-form";
 import {
   emptyCaseFormValues,
   toCaseWritePayload,
   type CaseFormValues,
   type CaseWritePayload,
 } from "@/lib/cases/caseFormMapping";
+import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
 import type { FieldSaveError } from "@/lib/cases/saveError";
+import { ErrorSummary } from "./ErrorSummary";
 import {
   AnswerCriteriaSection,
   IdentitySection,
@@ -30,15 +32,50 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
 };
 
+/** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
+export const VALIDATE_DELAY_MS = 300;
+
 function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
 export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props) {
-  const { register, control, handleSubmit, formState, getFieldState, setError, clearErrors } =
-    useForm<CaseFormValues>({
-      defaultValues: defaultValues ?? emptyCaseFormValues(),
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState,
+    getFieldState,
+    setError,
+    clearErrors,
+    setFocus,
+    subscribe,
+    trigger,
+  } = useForm<CaseFormValues>({
+    defaultValues: defaultValues ?? emptyCaseFormValues(),
+    // Aturan dari contract (gen:zod). Jebakan dan kriteria tidak wajib, jadi draf tetap bisa disimpan.
+    resolver: caseFormResolver,
+    mode: "onBlur",
+    reValidateMode: "onBlur",
+  });
+
+  // Validasi saat mengetik, hanya untuk field yang berubah, setelah jeda singkat.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = subscribe({
+      formState: { values: true },
+      callback: ({ name, type }) => {
+        // Hanya ketikan pengguna. Tambah baris kosong tidak boleh langsung memunculkan error.
+        if (name === undefined || type !== "change") return;
+        clearTimeout(timer);
+        timer = setTimeout(() => void trigger(name as Parameters<typeof trigger>[0]), VALIDATE_DELAY_MS);
+      },
     });
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [subscribe, trigger]);
 
   const { isDirty } = formState;
   useEffect(() => {
@@ -46,7 +83,10 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props
   }, [isDirty, onDirtyChange]);
 
   const errorFor: ErrorLookup = (path) => getFieldState(path, formState).error?.message;
+  const rowHasError = (row: string) => get(formState.errors, row) !== undefined;
   const sectionProps = { register, errorFor };
+  // Ringkasan baru muncul setelah percobaan simpan, bukan saat baru mulai mengisi.
+  const summary = formState.submitCount > 0 ? flattenErrors(formState.errors) : [];
 
   const submit = handleSubmit(async (values) => {
     const fieldError = await onSubmit(toCaseWritePayload(values));
@@ -69,10 +109,11 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props
       }}
       className="space-y-6"
     >
+      <ErrorSummary issues={summary} onSelect={(path) => setFocus(path)} />
       <IdentitySection {...sectionProps} />
-      <LegalRefsSection {...sectionProps} control={control} />
+      <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
       <AnswerCriteriaSection {...sectionProps} />
-      <TrapsSection {...sectionProps} control={control} />
+      <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
       <SplitTagSection {...sectionProps} />
 
       <div className="flex justify-end">

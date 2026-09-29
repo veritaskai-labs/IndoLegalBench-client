@@ -99,6 +99,10 @@ describe("SuiteList", () => {
     expect(screen.getByText("Perburuhan")).toBeInTheDocument();
     expect(screen.getByText("Sengketa tanah")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Pertanahan" })).toHaveAttribute(
+      "href",
+      "/suites/22222222-2222-2222-2222-222222222222",
+    );
   });
 
   it("marks an empty suite with a Kosong badge", () => {
