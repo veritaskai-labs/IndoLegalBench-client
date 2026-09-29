@@ -74,7 +74,12 @@ export function SuiteList({
         {suites.map((suite) => (
           <tr key={suite.id} className="border-b border-slate-100">
             <td className="px-4 py-3">
-              <span className="font-medium text-slate-900">{suite.name}</span>
+              <Link
+                href={`/suites/${encodeURIComponent(suite.id)}`}
+                className="font-medium text-slate-900 hover:underline"
+              >
+                {suite.name}
+              </Link>
               {suite.is_empty && (
                 <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
                   Kosong
