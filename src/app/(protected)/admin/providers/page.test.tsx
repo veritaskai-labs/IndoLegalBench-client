@@ -1,0 +1,300 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ApiError } from "@/lib/apiClient";
+import {
+  createProduct,
+  listProducts,
+  setProductActive,
+  testConnection,
+  updateProduct,
+} from "@/lib/providers/providerApi";
+import type { AiProduct } from "@/types/provider";
+import ProvidersPage from "./page";
+
+// providerApi has its own request tests; here only the page's reaction matters.
+vi.mock("@/lib/providers/providerApi", () => ({
+  listProducts: vi.fn(),
+  createProduct: vi.fn(),
+  updateProduct: vi.fn(),
+  setProductActive: vi.fn(),
+  testConnection: vi.fn(),
+}));
+
+const list = vi.mocked(listProducts);
+const create = vi.mocked(createProduct);
+const update = vi.mocked(updateProduct);
+const toggle = vi.mocked(setProductActive);
+const test = vi.mocked(testConnection);
+
+function product(overrides: Partial<AiProduct> = {}): AiProduct {
+  return {
+    id: "11111111-1111-1111-1111-111111111111",
+    name: "DeepSeek",
+    provider_type: "openai_compatible",
+    base_url: "https://api.deepseek.com/chat/completions",
+    model_name: "deepseek-v4-flash",
+    credential_hint: "a1b2",
+    has_credential: true,
+    rate_limit_per_minute: 10,
+    monthly_budget_idr: "1500000.00",
+    is_active: true,
+    last_test_at: null,
+    last_test_status: null,
+    last_test_message: null,
+    created_by: "22222222-2222-2222-2222-222222222222",
+    created_at: "2026-09-29T01:00:00Z",
+    updated_at: "2026-09-29T01:00:00Z",
+    ...overrides,
+  };
+}
+
+function renderPage() {
+  return render(
+    <ToastProvider>
+      <ProvidersPage />
+    </ToastProvider>,
+  );
+}
+
+async function row(name: string) {
+  return (await screen.findByRole("cell", { name })).closest("tr") as HTMLElement;
+}
+
+beforeEach(() => {
+  for (const mock of [list, create, update, toggle, test]) mock.mockReset();
+});
+
+describe("ProvidersPage list", () => {
+  // Positive: every column from the ticket.
+  it("lists active products with type, model, masked key, limit, Rupiah budget and status", async () => {
+    list.mockResolvedValue([product()]);
+    renderPage();
+
+    const cells = within(await row("DeepSeek"));
+    expect(cells.getByText("OpenAI-compatible")).toBeInTheDocument();
+    expect(cells.getByText("deepseek-v4-flash")).toBeInTheDocument();
+    expect(cells.getByLabelText("Kredensial berakhiran a1b2")).toBeInTheDocument();
+    expect(cells.getByText("10")).toBeInTheDocument();
+    expect(cells.getByText(/Rp\s?1\.500\.000/)).toBeInTheDocument();
+    expect(cells.getByText("Aktif")).toBeInTheDocument();
+    expect(cells.getByText("Belum pernah diuji")).toBeInTheDocument();
+    expect(list).toHaveBeenCalledWith(true);
+  });
+
+  it("switches to the Nonaktif tab and asks for inactive products", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValueOnce([product()]).mockResolvedValueOnce([product({ name: "GPT", is_active: false })]);
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+
+    expect(await row("GPT")).toBeInTheDocument();
+    expect(list).toHaveBeenLastCalledWith(false);
+    expect(screen.getByRole("tab", { name: "Nonaktif" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows the last failed test with its reason and time", async () => {
+    list.mockResolvedValue([
+      product({ last_test_status: "failed", last_test_message: "provider returned HTTP 401", last_test_at: "2026-09-29T02:00:00Z" }),
+    ]);
+    renderPage();
+
+    expect(within(await row("DeepSeek")).getByText(/Gagal: provider returned HTTP 401/)).toBeInTheDocument();
+  });
+
+  // Negative / states
+  it("offers to register the first product when the list is empty", async () => {
+    list.mockResolvedValue([]);
+    renderPage();
+
+    expect(await screen.findByText("Belum ada produk AI aktif")).toBeInTheDocument();
+  });
+
+  it("shows an error with a retry that loads again", async () => {
+    const user = userEvent.setup();
+    list.mockRejectedValueOnce(new TypeError("Failed to fetch")).mockResolvedValueOnce([product()]);
+    renderPage();
+
+    expect(await screen.findByText("Gagal memuat produk AI.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /coba lagi/i }));
+
+    expect(await row("DeepSeek")).toBeInTheDocument();
+  });
+});
+
+describe("ProvidersPage connection test (AC3)", () => {
+  it("shows a loading state for that product only, then ok with latency", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product(), product({ id: "33333333-3333-3333-3333-333333333333", name: "Gemini" })]);
+    let finish: (value: { status: "ok"; latency_ms: number }) => void = () => undefined;
+    test.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    renderPage();
+    const deepseek = await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+
+    expect(within(deepseek).getByText(/Menguji koneksi/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Uji koneksi DeepSeek" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Uji koneksi Gemini" })).toBeEnabled();
+
+    finish({ status: "ok", latency_ms: 420 });
+
+    expect(await within(deepseek).findByText(/Berhasil · 420 ms/)).toBeInTheDocument();
+  });
+
+  it("shows the reason inline when the provider rejects the call", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    test.mockResolvedValue({ status: "failed", message: "provider returned HTTP 401 invalid key" });
+    renderPage();
+    const deepseek = await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+
+    expect(await within(deepseek).findByText(/Gagal: provider returned HTTP 401 invalid key/)).toBeInTheDocument();
+  });
+
+  it("says the test could not run when the request itself fails", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    test.mockRejectedValue(new ApiError(500, "internal_error"));
+    renderPage();
+    const deepseek = await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+
+    expect(await within(deepseek).findByText("Uji koneksi tidak bisa dijalankan. Coba lagi.")).toBeInTheDocument();
+  });
+});
+
+describe("ProvidersPage register and edit (AC1, AC2)", () => {
+  async function fillCreate(user: ReturnType<typeof userEvent.setup>) {
+    const dialog = within(screen.getByRole("dialog", { name: "Daftarkan produk AI" }));
+    await user.type(dialog.getByLabelText("Nama"), "Claude");
+    await user.selectOptions(dialog.getByLabelText("Jenis API"), "anthropic_messages");
+    await user.type(dialog.getByLabelText("URL endpoint"), "https://api.anthropic.com/v1/messages");
+    await user.type(dialog.getByLabelText("Model"), "claude-sonnet-5");
+    await user.type(dialog.getByLabelText("Kredensial"), "sk-ant-rahasia-9z9z");
+    await user.type(dialog.getByLabelText("Limit panggilan per menit"), "10");
+    await user.type(dialog.getByLabelText("Budget per bulan (Rp)"), "2500000");
+    return dialog;
+  }
+
+  it("registers a product with a Rupiah budget and reloads the list", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    create.mockResolvedValue(product({ name: "Claude" }));
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
+    const dialog = await fillCreate(user);
+    expect(dialog.getByLabelText("Budget per bulan (Rp)")).toHaveValue("2.500.000");
+    await user.click(dialog.getByRole("button", { name: "Simpan" }));
+
+    expect(create).toHaveBeenCalledWith({
+      name: "Claude",
+      provider_type: "anthropic_messages",
+      base_url: "https://api.anthropic.com/v1/messages",
+      model_name: "claude-sonnet-5",
+      credential: "sk-ant-rahasia-9z9z",
+      rate_limit_per_minute: 10,
+      monthly_budget_idr: "2500000",
+    });
+    expect(await screen.findByText("Produk AI terdaftar")).toBeInTheDocument();
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it("requires limit, budget and a key before sending anything", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
+    const dialog = within(screen.getByRole("dialog"));
+    await user.click(dialog.getByRole("button", { name: "Simpan" }));
+
+    expect(create).not.toHaveBeenCalled();
+    expect(dialog.getByText("Kredensial wajib diisi.")).toBeInTheDocument();
+    expect(dialog.getByText("Limit wajib diisi, bilangan bulat lebih dari 0.")).toBeInTheDocument();
+    expect(dialog.getByText("Budget wajib diisi dan lebih dari Rp 0.")).toBeInTheDocument();
+  });
+
+  it("puts a taken name on the Nama field", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    create.mockRejectedValue(new ApiError(409, "AI_PRODUCT_NAME_TAKEN"));
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
+    const dialog = await fillCreate(user);
+    await user.click(dialog.getByRole("button", { name: "Simpan" }));
+
+    expect(await dialog.findByText("Nama produk sudah dipakai. Pilih nama lain.")).toBeInTheDocument();
+  });
+
+  // AC2: the stored key is never loaded into the form.
+  it("edits without ever holding the old key, and only sends a key when a new one is typed", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    update.mockResolvedValue(product({ rate_limit_per_minute: 30 }));
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Ubah DeepSeek" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Ubah produk AI" }));
+    const key = dialog.getByLabelText("Kredensial");
+
+    expect(key).toHaveValue("");
+    expect(key).toHaveAttribute("type", "password");
+    expect(dialog.getByText(/Kredensial tersimpan \(…a1b2\), isi untuk mengganti/)).toBeInTheDocument();
+
+    const limit = dialog.getByLabelText("Limit panggilan per menit");
+    await user.clear(limit);
+    await user.type(limit, "30");
+    await user.click(dialog.getByRole("button", { name: "Simpan" }));
+
+    expect(update.mock.calls[0]?.[1]).not.toHaveProperty("credential");
+    expect(update.mock.calls[0]?.[1]).toMatchObject({ rate_limit_per_minute: 30, monthly_budget_idr: "1500000" });
+    expect(await within(await row("DeepSeek")).findByText("30")).toBeInTheDocument();
+  });
+});
+
+describe("ProvidersPage activate and deactivate (AC4)", () => {
+  it("asks for confirmation, then moves the product out of the Aktif tab", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    toggle.mockResolvedValue(product({ is_active: false }));
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Nonaktifkan DeepSeek" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Nonaktifkan produk AI" }));
+    expect(dialog.getByText(/Riwayat pengukurannya tetap tersimpan/)).toBeInTheDocument();
+    expect(toggle).not.toHaveBeenCalled();
+
+    await user.click(dialog.getByRole("button", { name: "Nonaktifkan" }));
+
+    expect(toggle).toHaveBeenCalledWith("11111111-1111-1111-1111-111111111111", false);
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "DeepSeek" })).not.toBeInTheDocument());
+    expect(screen.getByText("Produk AI dinonaktifkan")).toBeInTheDocument();
+  });
+
+  it("keeps an inactive product openable for editing", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValueOnce([]).mockResolvedValueOnce([product({ is_active: false })]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await user.click(await screen.findByRole("button", { name: "Ubah DeepSeek" }));
+
+    expect(screen.getByRole("dialog", { name: "Ubah produk AI" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aktifkan DeepSeek" })).toBeInTheDocument();
+  });
+});
