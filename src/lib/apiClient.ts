@@ -4,22 +4,34 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
+    /** Pesan dari server, misalnya nama suite pemilik ID kasus. */
+    readonly serverMessage: string | null = null,
+    /** Lokasi field yang gagal, misalnya legal_refs[0].pasal. */
+    readonly field: string | null = null,
   ) {
     super(code);
     this.name = "ApiError";
   }
 }
 
-/** Read JSON error backend: { code, message } */
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+/** Read JSON error backend: { code, message, field? } */
 async function parseError(response: Response): Promise<ApiError> {
   let code = "UNKNOWN_ERROR";
+  let message: string | null = null;
+  let field: string | null = null;
   try {
     const body = await response.json();
     if (typeof body?.code === "string") code = body.code;
+    message = stringOrNull(body?.message);
+    field = stringOrNull(body?.field);
   } catch {
     // no JSON body
   }
-  return new ApiError(response.status, code);
+  return new ApiError(response.status, code, message, field);
 }
 
 /** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */

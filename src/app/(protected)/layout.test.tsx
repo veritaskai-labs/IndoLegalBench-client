@@ -18,8 +18,9 @@
  * hanya susunan gerbangnya.
  */
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useToast } from "@/components/ui/Toast";
 import type { Me } from "@/types";
 import ProtectedLayout from "./layout";
 
@@ -107,5 +108,33 @@ describe("ProtectedLayout, AC-2 gerbang halaman", () => {
 
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
     expect(screen.queryByText(/suite dan kasus/i)).not.toBeInTheDocument();
+  });
+});
+
+// SCRUM-108: toast milik layout, jadi tetap tampil saat halaman pindah
+// lewat router.push (buat kasus lalu masuk halaman edit).
+function SavePage() {
+  const { showToast } = useToast();
+  return (
+    <button type="button" onClick={() => showToast("Kasus tersimpan sebagai draf")}>
+      simpan
+    </button>
+  );
+}
+
+describe("ProtectedLayout, toast", () => {
+  it("gives every protected page a toast that outlives page navigation", () => {
+    useAuthMock.mockReturnValue({ status: "authenticated", user: PENGGUNA });
+    render(
+      <ProtectedLayout>
+        <SavePage />
+      </ProtectedLayout>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "simpan" }));
+
+    expect(screen.getByRole("status", { name: "Notifikasi" })).toHaveTextContent(
+      "Kasus tersimpan sebagai draf",
+    );
   });
 });
