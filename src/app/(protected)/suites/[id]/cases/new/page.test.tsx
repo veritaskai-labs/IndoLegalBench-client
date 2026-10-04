@@ -25,6 +25,12 @@ vi.mock("next/navigation", () => ({
 // page reacts to its result.
 vi.mock("@/lib/cases/caseApi", () => ({ createCase: vi.fn() }));
 
+// useSuiteName fetches the suite for the breadcrumb label.
+vi.mock("@/lib/apiClient", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/apiClient")>();
+  return { ...actual, apiFetch: vi.fn() };
+});
+
 const createCaseMock = vi.mocked(createCase);
 
 function createdCase(id: string): CaseRead {
@@ -251,4 +257,28 @@ describe("NewCasePage", () => {
 
     expect(push).toHaveBeenCalledWith("/cases/a%2Fb%3Fc/edit");
   });
+  it("shows the breadcrumb down to the new case", async () => {
+    vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
+
+    renderPage();
+
+    const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
+    expect(nav).toHaveTextContent("Suite");
+    expect(nav).toHaveTextContent("Kasus baru");
+    expect(within(nav).getByRole("link", { name: "Suite" })).toHaveAttribute(
+      "href",
+      "/suites",
+    );
+  });
+
+  it("offers a way back to the suite", async () => {
+    vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
+
+    renderPage();
+
+    expect(
+      await screen.findByRole("link", { name: "Kembali ke suite" }),
+    ).toHaveAttribute("href", `/suites/${SUITE_ID}`);
+  });
+
 });

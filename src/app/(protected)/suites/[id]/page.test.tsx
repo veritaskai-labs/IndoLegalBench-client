@@ -256,4 +256,5 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
       "/suites",
     );
   });
+
 });
