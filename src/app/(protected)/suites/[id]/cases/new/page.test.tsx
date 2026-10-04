@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
-import { ApiError } from "@/lib/apiClient";
+import { ApiError, apiFetch } from "@/lib/apiClient";
 import { createCase } from "@/lib/cases/caseApi";
 import type { CaseRead } from "@/types/case";
 import NewCasePage from "./page";
@@ -83,6 +83,7 @@ beforeEach(() => {
   params.id = SUITE_ID;
   push.mockReset();
   createCaseMock.mockReset();
+  vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
 });
 
 describe("NewCasePage", () => {
@@ -258,8 +259,6 @@ describe("NewCasePage", () => {
     expect(push).toHaveBeenCalledWith("/cases/a%2Fb%3Fc/edit");
   });
   it("shows the breadcrumb down to the new case", async () => {
-    vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
-
     renderPage();
 
     const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
@@ -272,13 +271,13 @@ describe("NewCasePage", () => {
   });
 
   it("offers a way back to the suite", async () => {
-    vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
-
     renderPage();
 
     expect(
       await screen.findByRole("link", { name: "Kembali ke suite" }),
     ).toHaveAttribute("href", `/suites/${SUITE_ID}`);
   });
-
+  
 });
+
+
