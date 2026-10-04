@@ -242,4 +242,18 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
 
     expect(await screen.findByText("PHK-001")).toBeInTheDocument();
   });
+
+  it("shows the breadcrumb with the suite name", async () => {
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+    await renderPage();
+
+    const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
+    expect(nav).toHaveTextContent("Suite");
+    expect(nav).toHaveTextContent("Suite Ketenagakerjaan");
+    expect(within(nav).getByRole("link", { name: "Suite" })).toHaveAttribute(
+      "href",
+      "/suites",
+    );
+  });
 });
