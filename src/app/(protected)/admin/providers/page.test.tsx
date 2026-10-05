@@ -96,13 +96,46 @@ describe("ProvidersPage list", () => {
     expect(screen.getByRole("tab", { name: "Nonaktif" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("shows the last failed test with its reason and time", async () => {
+  it("shows the last failed test as a plain reason with a suggested fix, keeping the raw text under Lihat detail", async () => {
     list.mockResolvedValue([
-      product({ last_test_status: "failed", last_test_message: "provider returned HTTP 401", last_test_at: "2026-09-29T02:00:00Z" }),
+      product({
+        last_test_status: "failed",
+        last_test_error_code: "auth_failed",
+        last_test_message: "provider returned HTTP 401",
+        last_test_at: "2026-09-29T02:00:00Z",
+      }),
     ]);
     renderPage();
+    const cells = within(await row("DeepSeek"));
 
-    expect(within(await row("DeepSeek")).getByText(/Gagal: provider returned HTTP 401/)).toBeInTheDocument();
+    expect(cells.getByText("Gagal: API key ditolak penyedia.")).toBeInTheDocument();
+    expect(cells.getByText(/Periksa kembali API key/)).toBeInTheDocument();
+    expect(cells.getByText("Lihat detail")).toBeInTheDocument();
+    expect(cells.getByText("provider returned HTTP 401")).not.toBeVisible();
+  });
+
+  // The server does not send a code until SCRUM-133 lands.
+  it("falls back to a generic reason when the server sends no error code", async () => {
+    list.mockResolvedValue([
+      product({ last_test_status: "failed", last_test_message: "could not connect", last_test_at: "2026-09-29T02:00:00Z" }),
+    ]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getByText(/penyebabnya belum bisa kami kenali/)).toBeInTheDocument();
+    expect(cells.getByText("could not connect")).toBeInTheDocument();
+  });
+
+  it("hides Lihat detail when there is no raw message", async () => {
+    list.mockResolvedValue([
+      product({ last_test_status: "failed", last_test_error_code: "timeout", last_test_message: null, last_test_at: "2026-09-29T02:00:00Z" }),
+    ]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getByText(/15 detik/)).toBeInTheDocument();
+    expect(cells.queryByText("Lihat detail")).not.toBeInTheDocument();
+    expect(cells.queryByText(/tanpa keterangan/)).not.toBeInTheDocument();
   });
 
   // Negative / states
@@ -145,16 +178,30 @@ describe("ProvidersPage connection test (AC3)", () => {
     expect(await within(deepseek).findByText(/Berhasil · 420 ms/)).toBeInTheDocument();
   });
 
-  it("shows the reason inline when the provider rejects the call", async () => {
+  it("shows the reason and fix inline when the provider rejects the call", async () => {
     const user = userEvent.setup();
     list.mockResolvedValue([product()]);
-    test.mockResolvedValue({ status: "failed", message: "provider returned HTTP 401 invalid key" });
+    test.mockResolvedValue({ status: "failed", error_code: "auth_failed", message: "provider returned HTTP 401 invalid key" });
     renderPage();
     const deepseek = await row("DeepSeek");
 
     await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
 
-    expect(await within(deepseek).findByText(/Gagal: provider returned HTTP 401 invalid key/)).toBeInTheDocument();
+    expect(await within(deepseek).findByText("Gagal: API key ditolak penyedia.")).toBeInTheDocument();
+    expect(within(deepseek).queryByText(/^Gagal: provider returned/)).not.toBeInTheDocument();
+  });
+
+  it("opens the raw provider message from Lihat detail", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    test.mockResolvedValue({ status: "failed", error_code: "auth_failed", message: "provider returned HTTP 401 invalid key" });
+    renderPage();
+    const deepseek = await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+    await user.click(await within(deepseek).findByText("Lihat detail"));
+
+    expect(within(deepseek).getByText("provider returned HTTP 401 invalid key")).toBeVisible();
   });
 
   it("says the test could not run when the request itself fails", async () => {
