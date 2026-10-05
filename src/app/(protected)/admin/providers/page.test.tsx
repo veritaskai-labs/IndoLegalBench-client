@@ -108,8 +108,8 @@ describe("ProvidersPage list", () => {
     renderPage();
     const cells = within(await row("DeepSeek"));
 
-    expect(cells.getByText("Gagal: API key ditolak penyedia.")).toBeInTheDocument();
-    expect(cells.getByText(/Periksa kembali API key/)).toBeInTheDocument();
+    expect(cells.getByText("Gagal: Akses ditolak karena API key tidak valid atau sudah tidak berlaku.")).toBeInTheDocument();
+    expect(cells.getByText(/kolom Kredensial/)).toBeInTheDocument();
     expect(cells.getByText("Lihat detail")).toBeInTheDocument();
     expect(cells.getByText("provider returned HTTP 401")).not.toBeVisible();
   });
@@ -122,7 +122,7 @@ describe("ProvidersPage list", () => {
     renderPage();
     const cells = within(await row("DeepSeek"));
 
-    expect(cells.getByText(/penyebabnya belum bisa kami kenali/)).toBeInTheDocument();
+    expect(cells.getByText(/sebab yang belum kami kenali/)).toBeInTheDocument();
     expect(cells.getByText("could not connect")).toBeInTheDocument();
   });
 
@@ -187,7 +187,7 @@ describe("ProvidersPage connection test (AC3)", () => {
 
     await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
 
-    expect(await within(deepseek).findByText("Gagal: API key ditolak penyedia.")).toBeInTheDocument();
+    expect(await within(deepseek).findByText("Gagal: Akses ditolak karena API key tidak valid atau sudah tidak berlaku.")).toBeInTheDocument();
     expect(within(deepseek).queryByText(/^Gagal: provider returned/)).not.toBeInTheDocument();
   });
 
@@ -213,7 +213,7 @@ describe("ProvidersPage connection test (AC3)", () => {
 
     await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
 
-    expect(await within(deepseek).findByText("Uji koneksi tidak bisa dijalankan. Coba lagi.")).toBeInTheDocument();
+    expect(await within(deepseek).findByText("Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.")).toBeInTheDocument();
   });
 });
 
