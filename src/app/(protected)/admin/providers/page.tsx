@@ -6,6 +6,7 @@ import { ToggleActiveDialog } from "@/components/providers/ToggleActiveDialog";
 import { CredentialHint } from "@/components/ui/CredentialHint";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
+import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
 import { formatDateTime, formatRupiah, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
 import type { AiProduct } from "@/types/provider";
@@ -93,6 +94,7 @@ export default function ProvidersPage() {
         last_test_at: new Date().toISOString(),
         last_test_status: result.status,
         last_test_message: result.status === "ok" ? null : (result.message ?? null),
+        last_test_error_code: result.status === "ok" ? null : (result.error_code ?? null),
       });
     } catch {
       setResults((all) => ({
@@ -304,10 +306,18 @@ function LastTest({ product, testing, live }: { product: AiProduct; testing: boo
       </span>
     );
   }
+  const failure = describeConnectionFailure(product.last_test_error_code);
   return (
-    <span className="text-red-700">
-      Gagal: {product.last_test_message ?? "tanpa keterangan"}
-      <span className="block text-slate-400">{when}</span>
-    </span>
+    <div className="space-y-1">
+      <p className="text-red-700">Gagal: {failure.title}</p>
+      {failure.hint && <p className="text-slate-600">{failure.hint}</p>}
+      {product.last_test_message && (
+        <details className="text-slate-500">
+          <summary className="cursor-pointer hover:text-slate-700">Lihat detail</summary>
+          <p className="mt-1 font-mono break-words">{product.last_test_message}</p>
+        </details>
+      )}
+      <p className="text-slate-400">{when}</p>
+    </div>
   );
 }
