@@ -94,4 +94,14 @@ describe("DeleteProductDialog (SCRUM-134 #2)", () => {
     expect(onClose).toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
   });
+
+  // Security: an admin typed the name, but it is still shown back as text.
+  it("shows markup in the product name as plain text", () => {
+    const name = '<img src=x onerror="alert(1)">';
+    render(<DeleteProductDialog product={{ ...product, name }} onClose={vi.fn()} onDone={vi.fn()} />);
+
+    const dialog = screen.getByRole("dialog", { name: "Hapus produk AI" });
+    expect(dialog).toHaveTextContent(`Hapus ${name}?`);
+    expect(dialog.querySelector("img")).toBeNull();
+  });
 });

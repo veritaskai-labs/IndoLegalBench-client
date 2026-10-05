@@ -141,6 +141,19 @@ describe("ProvidersPage list", () => {
     expect(cells.queryByText(/tanpa keterangan/)).not.toBeInTheDocument();
   });
 
+  // Security: the raw message comes from a third-party provider, so it must stay text.
+  it("shows markup in the raw provider message as plain text, never as HTML", async () => {
+    const payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
+    list.mockResolvedValue([
+      product({ last_test_status: "failed", last_test_error_code: "invalid_response", last_test_message: payload, last_test_at: "2026-09-29T02:00:00Z" }),
+    ]);
+    renderPage();
+    const deepseekRow = await row("DeepSeek");
+
+    expect(within(deepseekRow).getByText(payload)).toBeInTheDocument();
+    expect(deepseekRow.querySelector("img, script")).toBeNull();
+  });
+
   // Negative / states
   it("offers to register the first product when the list is empty", async () => {
     list.mockResolvedValue([]);
