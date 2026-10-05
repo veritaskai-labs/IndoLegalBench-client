@@ -22,7 +22,8 @@ type ListState = { status: "loading" } | { status: "ready"; products: AiProduct[
 /** Hasil uji koneksi terakhir di sesi ini; latency hanya ada di balasan, tidak disimpan server. */
 type LiveResult =
   | { status: "ok"; latencyMs: number }
-  | { status: "failed"; message: string }
+  /** Alasan gagal dibaca dari last_test_message dan last_test_error_code milik produk. */
+  | { status: "failed" }
   /** Permintaan uji koneksi sendiri gagal (jaringan, server); hasil tersimpan tidak berubah. */
   | { status: "error" };
 
@@ -87,7 +88,7 @@ export default function ProvidersPage() {
       const live: LiveResult =
         result.status === "ok"
           ? { status: "ok", latencyMs: result.latency_ms ?? 0 }
-          : { status: "failed", message: result.message ?? "Uji koneksi gagal." };
+          : { status: "failed" };
       setResults((all) => ({ ...all, [product.id]: live }));
       replaceRow({
         ...product,
