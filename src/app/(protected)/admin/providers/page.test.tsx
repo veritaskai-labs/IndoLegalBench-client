@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
 import {
   createProduct,
+  deleteProduct,
   listProducts,
   setProductActive,
   testConnection,
@@ -20,6 +21,7 @@ vi.mock("@/lib/providers/providerApi", () => ({
   updateProduct: vi.fn(),
   setProductActive: vi.fn(),
   testConnection: vi.fn(),
+  deleteProduct: vi.fn(),
 }));
 
 const list = vi.mocked(listProducts);
@@ -27,6 +29,7 @@ const create = vi.mocked(createProduct);
 const update = vi.mocked(updateProduct);
 const toggle = vi.mocked(setProductActive);
 const test = vi.mocked(testConnection);
+const remove = vi.mocked(deleteProduct);
 
 function product(overrides: Partial<AiProduct> = {}): AiProduct {
   return {
@@ -63,7 +66,7 @@ async function row(name: string) {
 }
 
 beforeEach(() => {
-  for (const mock of [list, create, update, toggle, test]) mock.mockReset();
+  for (const mock of [list, create, update, toggle, test, remove]) mock.mockReset();
 });
 
 describe("ProvidersPage list", () => {
@@ -359,5 +362,53 @@ describe("ProvidersPage activate and deactivate (AC4)", () => {
 
     expect(screen.getByRole("dialog", { name: "Ubah produk AI" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Aktifkan DeepSeek" })).toBeInTheDocument();
+  });
+});
+
+describe("ProvidersPage delete (SCRUM-134 #2)", () => {
+  it("confirms first, then removes only that product from the list with a toast", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product(), product({ id: "33333333-3333-3333-3333-333333333333", name: "Gemini" })]);
+    remove.mockResolvedValue(undefined);
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Hapus DeepSeek" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Hapus produk AI" }));
+    expect(remove).not.toHaveBeenCalled();
+
+    await user.click(dialog.getByRole("button", { name: "Hapus produk" }));
+
+    expect(remove).toHaveBeenCalledWith("11111111-1111-1111-1111-111111111111");
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "DeepSeek" })).not.toBeInTheDocument());
+    expect(screen.getByRole("cell", { name: "Gemini" })).toBeInTheDocument();
+    expect(screen.getByText("DeepSeek dihapus")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("offers Hapus on the Nonaktif tab too", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValueOnce([]).mockResolvedValueOnce([product({ is_active: false })]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+
+    expect(await screen.findByRole("button", { name: "Hapus DeepSeek" })).toBeInTheDocument();
+  });
+
+  // Negative
+  it("keeps the product when the admin cancels", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Hapus DeepSeek" }));
+    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Batal" }));
+
+    expect(remove).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "DeepSeek" })).toBeInTheDocument();
   });
 });
