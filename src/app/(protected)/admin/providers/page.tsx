@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { DeleteProductDialog } from "@/components/providers/DeleteProductDialog";
 import { ProviderFormDialog } from "@/components/providers/ProviderFormDialog";
 import { ToggleActiveDialog } from "@/components/providers/ToggleActiveDialog";
 import { CredentialHint } from "@/components/ui/CredentialHint";
@@ -15,7 +16,8 @@ type Dialog =
   | { mode: "closed" }
   | { mode: "create" }
   | { mode: "edit"; product: AiProduct }
-  | { mode: "toggle"; product: AiProduct };
+  | { mode: "toggle"; product: AiProduct }
+  | { mode: "delete"; product: AiProduct };
 
 type ListState = { status: "loading" } | { status: "ready"; products: AiProduct[] } | { status: "error" };
 
@@ -78,6 +80,12 @@ export default function ProvidersPage() {
               .map((item) => (item.id === saved.id ? saved : item))
               .filter((item) => item.is_active === active),
           },
+    );
+  }
+
+  function removeRow(productId: string) {
+    setList((current) =>
+      current.status !== "ready" ? current : { status: "ready", products: current.products.filter((item) => item.id !== productId) },
     );
   }
 
@@ -190,6 +198,7 @@ export default function ProvidersPage() {
                     onTest={() => runTest(product)}
                     onEdit={() => setDialog({ mode: "edit", product })}
                     onToggle={() => setDialog({ mode: "toggle", product })}
+                    onDelete={() => setDialog({ mode: "delete", product })}
                   />
                 ))}
             </tbody>
@@ -221,6 +230,18 @@ export default function ProvidersPage() {
           }}
         />
       )}
+
+      {dialog.mode === "delete" && (
+        <DeleteProductDialog
+          product={dialog.product}
+          onClose={() => setDialog({ mode: "closed" })}
+          onDone={() => {
+            setDialog({ mode: "closed" });
+            showToast(`${dialog.product.name} dihapus`);
+            removeRow(dialog.product.id);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -232,6 +253,7 @@ function ProductRow({
   onTest,
   onEdit,
   onToggle,
+  onDelete,
 }: {
   product: AiProduct;
   testing: boolean;
@@ -239,6 +261,7 @@ function ProductRow({
   onTest: () => void;
   onEdit: () => void;
   onToggle: () => void;
+  onDelete: () => void;
 }) {
   return (
     <tr className="align-top">
@@ -283,6 +306,9 @@ function ProductRow({
             className={product.is_active ? "text-red-700 hover:underline" : "text-slate-900 hover:underline"}
           >
             {product.is_active ? "Nonaktifkan" : "Aktifkan"}
+          </button>
+          <button type="button" onClick={onDelete} aria-label={`Hapus ${product.name}`} className="text-red-700 hover:underline">
+            Hapus
           </button>
         </div>
       </td>
