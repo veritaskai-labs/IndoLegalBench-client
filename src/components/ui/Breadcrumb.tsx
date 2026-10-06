@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment } from "react";
 
 export type BreadcrumbItem = {
   /** Teks yang tampil. null saat nama masih dimuat. */
@@ -32,13 +31,13 @@ export function Breadcrumb({ items }: Props) {
           const text = item.label ?? "…";
 
           return (
-            <Fragment key={`${item.label ?? "loading"}-${index}`}>
-              {index > 0 && (
-                <li aria-hidden="true" className="text-slate-400">
-                  ›
-                </li>
+          <li key={`${item.label ?? "loading"}-${index}`} className="flex items-center gap-2">
+            {index > 0 && (
+              <span aria-hidden="true" className="text-slate-400">
+                ›
+                </span>
               )}
-              <li className="max-w-xs truncate">
+              <span className="max-w-xs truncate">
                 {isLast ? (
                   <span aria-current="page" className="text-slate-700">
                     {text}
@@ -58,8 +57,8 @@ export function Breadcrumb({ items }: Props) {
                 ) : (
                   <span>{text}</span>
                 )}
-              </li>
-            </Fragment>
+              </span>
+            </li>
           );
         })}
       </ol>
