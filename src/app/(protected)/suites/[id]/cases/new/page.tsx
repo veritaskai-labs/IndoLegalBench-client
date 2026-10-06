@@ -13,6 +13,8 @@ import { decodeRouteParam } from "@/lib/routeParams";
 import Link from "next/link";
 import { Breadcrumb } from "@/components/ui";
 import { useSuiteName } from "@/hooks/useSuiteName";
+import { useState } from "react";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 
 
 export default function NewCasePage() {
@@ -22,6 +24,16 @@ export default function NewCasePage() {
   const saveError = useSaveErrorBanner();
   const suiteName = useSuiteName(suiteId);
   const suitePath = `/suites/${encodeURIComponent(suiteId)}`;
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChangesWarning(dirty);
+  
+  
+  function leaveTo(path: string) {
+    if (dirty && !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")) {
+      return;
+    }
+    router.push(path);
+  }
 
   async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
     saveError.clear();
@@ -36,11 +48,11 @@ export default function NewCasePage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">  
       <Breadcrumb
         items={[
-          { label: "Suite", href: "/suites" },
-          { label: suiteName, href: suitePath },
+          { label: "Suite", onClick: () => leaveTo("/suites") },
+          { label: suiteName, onClick: () => leaveTo(suitePath) },
           { label: "Kasus baru" },
         ]}
       />
@@ -50,13 +62,14 @@ export default function NewCasePage() {
         {/* Kasus baru selalu disimpan server sebagai draf. */}
         <CaseStatusBadge status="draft" />
       </header>
-
-      <Link
-        href={suitePath}
-        className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800"
+      
+      <button
+      type="button"
+      onClick={() => leaveTo(suitePath)}
+      className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
       >
         Kembali ke suite
-      </Link>
+      </button>
 
       <p className="text-sm text-slate-500">
         Indikator kelengkapan muncul setelah draf pertama disimpan.
@@ -64,7 +77,8 @@ export default function NewCasePage() {
 
       {saveError.message !== null && <ErrorState message={saveError.message} />}
 
-      <CaseEditorForm onSubmit={handleSubmit} />
+      <CaseEditorForm onSubmit={handleSubmit} onDirtyChange={setDirty} />
+
     </div>
   );
 }
