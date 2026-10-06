@@ -69,4 +69,22 @@ describe("Breadcrumb", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("Suite")).toBeInTheDocument();
   });
+
+  it("keeps each separator inside its item, so a wrap never starts with one", () => {
+    const { container } = render(
+      <Breadcrumb
+        items={[
+          { label: "Suite", href: "/suites" },
+          { label: "Hukum Ketenagakerjaan", href: "/suites/abc" },
+          { label: "KTK-001" },
+        ]}
+      />,
+    );
+
+    const items = container.querySelectorAll("li");
+    expect(items).toHaveLength(3);
+    expect(items[1]).toHaveTextContent("›");
+    expect(items[2]).toHaveTextContent("›");
+  });
+
 });

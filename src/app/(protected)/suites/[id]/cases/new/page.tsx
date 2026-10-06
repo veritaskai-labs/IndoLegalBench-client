@@ -10,7 +10,6 @@ import { createCase } from "@/lib/cases/caseApi";
 import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
-import Link from "next/link";
 import { Breadcrumb } from "@/components/ui";
 import { useSuiteName } from "@/hooks/useSuiteName";
 import { useState } from "react";
