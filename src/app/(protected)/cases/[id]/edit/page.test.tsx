@@ -147,6 +147,15 @@ describe("EditCasePage loading", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Kasus tidak ditemukan.");
     expect(screen.queryByRole("button", { name: "Coba lagi" })).not.toBeInTheDocument();
   });
+  
+  it("offers a way back to the suites list when the case is not found", async () => {
+    getCaseMock.mockRejectedValue(new ApiError(404, "not_found"));
+    renderPage();
+
+    expect(
+      await screen.findByRole("link", { name: "Kembali ke Suites" }),
+    ).toHaveAttribute("href", "/suites");
+  });
 
   it("offers a retry when loading fails for another reason, and loads on retry", async () => {
     const user = userEvent.setup();
