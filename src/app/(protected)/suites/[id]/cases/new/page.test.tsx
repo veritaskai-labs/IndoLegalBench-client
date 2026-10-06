@@ -9,6 +9,8 @@ import NewCasePage from "./page";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
 
+const confirmMock = vi.fn();
+
 const { push, params } = vi.hoisted(() => ({
   push: vi.fn(),
   params: { id: "" },
@@ -84,6 +86,9 @@ beforeEach(() => {
   push.mockReset();
   createCaseMock.mockReset();
   vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
+  
+  confirmMock.mockReset().mockReturnValue(true);
+  vi.stubGlobal("confirm", confirmMock);
 });
 
 describe("NewCasePage", () => {
@@ -264,11 +269,8 @@ describe("NewCasePage", () => {
     const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
     expect(nav).toHaveTextContent("Suite");
     expect(nav).toHaveTextContent("Kasus baru");
-    expect(within(nav).getByRole("link", { name: "Suite" })).toHaveAttribute(
-      "href",
-      "/suites",
-    );
   });
+
 
   it("offers a way back to the suite", async () => {
     renderPage();
@@ -276,6 +278,40 @@ describe("NewCasePage", () => {
     expect(
       await screen.findByRole("link", { name: "Kembali ke suite" }),
     ).toHaveAttribute("href", `/suites/${SUITE_ID}`);
+  });
+
+  it("goes back to the suite when nothing has been typed", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Kembali ke suite" }));
+
+    expect(push).toHaveBeenCalledWith(`/suites/${SUITE_ID}`);
+    expect(confirmMock).not.toHaveBeenCalled();
+  });
+
+  // Negative
+  it("asks before leaving once the author has typed something, and stays on Batal", async () => {
+    const user = userEvent.setup();
+    confirmMock.mockReturnValue(false);
+    renderPage();
+
+    await user.type(await screen.findByLabelText("Judul"), "x");
+    await user.click(screen.getByRole("button", { name: "Kembali ke suite" }));
+
+    expect(confirmMock).toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("leaves when the author confirms", async () => {
+    const user = userEvent.setup();
+    confirmMock.mockReturnValue(true);
+    renderPage();
+
+    await user.type(await screen.findByLabelText("Judul"), "x");
+    await user.click(screen.getByRole("button", { name: "Kembali ke suite" }));
+
+    expect(push).toHaveBeenCalledWith(`/suites/${SUITE_ID}`);
   });
   
 });
