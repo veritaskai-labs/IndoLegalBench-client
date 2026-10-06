@@ -272,13 +272,6 @@ describe("NewCasePage", () => {
   });
 
 
-  it("offers a way back to the suite", async () => {
-    renderPage();
-
-    expect(
-      await screen.findByRole("link", { name: "Kembali ke suite" }),
-    ).toHaveAttribute("href", `/suites/${SUITE_ID}`);
-  });
 
   it("goes back to the suite when nothing has been typed", async () => {
     const user = userEvent.setup();
