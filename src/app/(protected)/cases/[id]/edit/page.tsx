@@ -18,6 +18,7 @@ import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
 import { Breadcrumb } from "@/components/ui";
 import { useSuiteName } from "@/hooks/useSuiteName";
+import Link from "next/link";
 
 export default function EditCasePage() {
   const caseId = decodeRouteParam(useParams<{ id: string }>().id);
@@ -38,12 +39,16 @@ export default function EditCasePage() {
 
   if (detail.status === "error") {
     return detail.notFound ? (
-      <ErrorState variant="card" message="Kasus tidak ditemukan." />
+      <div className="space-y-4">
+        <ErrorState variant="card" message="Kasus tidak ditemukan." />
+        <Link href="/suites" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+          Kembali ke Suites
+        </Link>
+      </div>
     ) : (
       <ErrorState variant="card" message="Gagal memuat kasus." onRetry={detail.reload} />
     );
   }
-
   const { saved } = detail;
   
   const suitePath = `/suites/${encodeURIComponent(saved.suite_id)}`;
