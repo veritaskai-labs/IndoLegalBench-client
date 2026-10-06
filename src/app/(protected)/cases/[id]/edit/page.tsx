@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { CaseEditorForm } from "@/components/cases/CaseEditorForm";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
@@ -16,6 +16,9 @@ import { updateCase } from "@/lib/cases/caseApi";
 import { fromCaseRead, type CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
+import { Breadcrumb } from "@/components/ui";
+import { useSuiteName } from "@/hooks/useSuiteName";
+import Link from "next/link";
 
 export default function EditCasePage() {
   const caseId = decodeRouteParam(useParams<{ id: string }>().id);
@@ -27,6 +30,8 @@ export default function EditCasePage() {
   const [formKey, setFormKey] = useState(0);
   // formKey naik tiap simpan berhasil, jadi kelengkapan ikut dihitung ulang server.
   const completeness = useCaseCompleteness(caseId, formKey);
+  const router = useRouter();
+  const suiteName = useSuiteName( detail.status === "ready" ? detail.saved.suite_id : null);
 
   useUnsavedChangesWarning(dirty);
 
@@ -34,13 +39,26 @@ export default function EditCasePage() {
 
   if (detail.status === "error") {
     return detail.notFound ? (
-      <ErrorState variant="card" message="Kasus tidak ditemukan." />
+      <div className="space-y-4">
+        <ErrorState variant="card" message="Kasus tidak ditemukan." />
+        <Link href="/suites" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+          Kembali ke Suites
+        </Link>
+      </div>
     ) : (
       <ErrorState variant="card" message="Gagal memuat kasus." onRetry={detail.reload} />
     );
   }
-
   const { saved } = detail;
+  
+  const suitePath = `/suites/${encodeURIComponent(saved.suite_id)}`;
+
+  function leaveTo(path: string) {
+    if (dirty && !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")) {
+      return;
+    }
+    router.push(path);
+  }
 
   async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
     saveError.clear();
@@ -56,6 +74,14 @@ export default function EditCasePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "Suite", onClick: () => leaveTo("/suites") },
+          { label: suiteName, onClick: () => leaveTo(suitePath) },
+          { label: saved.case_code },
+        ]}
+      />
+
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold text-slate-900">{saved.case_code}</h1>
         <CaseStatusBadge status={saved.status} />
@@ -64,8 +90,16 @@ export default function EditCasePage() {
         )}
       </header>
 
-      <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
+      <button
+        type="button"
+        onClick={() => leaveTo(suitePath)}
+        className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
+      >
+        Kembali ke suite
+      </button>
 
+      <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
+      
       {saveError.message !== null && <ErrorState message={saveError.message} />}
 
       <CaseEditorForm

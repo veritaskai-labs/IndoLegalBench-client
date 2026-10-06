@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoadingSkeleton, EmptyState, ErrorState } from "@/components/ui";
+import { LoadingSkeleton, EmptyState, ErrorState, Breadcrumb } from "@/components/ui";
 import {
   getCasesForSuite,
   type CaseSummary,
@@ -202,13 +202,10 @@ export default function SuiteDetailPage({ params }: PageProps) {
       {/* Header suite */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-            <Link href="/suites" className="hover:text-slate-800 transition-colors">
-              Suites
-            </Link>
-            <span>/</span>
-            <span className="text-slate-700 truncate max-w-xs">{suite?.name ?? "…"}</span>
-          </div>
+          <div className="mb-1">
+            <Breadcrumb
+            items={[{ label: "Suite", href: "/suites" },{ label: suite?.name ?? null },]}/>
+            </div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">
               {suite?.name ?? "Memuat suite…"}

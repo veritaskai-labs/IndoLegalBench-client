@@ -2,12 +2,14 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
-import { ApiError } from "@/lib/apiClient";
+import { ApiError, apiFetch } from "@/lib/apiClient";
 import { createCase } from "@/lib/cases/caseApi";
 import type { CaseRead } from "@/types/case";
 import NewCasePage from "./page";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
+
+const confirmMock = vi.fn();
 
 const { push, params } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -24,6 +26,12 @@ vi.mock("next/navigation", () => ({
 // createCase has its own request-level tests. Here we only care how the
 // page reacts to its result.
 vi.mock("@/lib/cases/caseApi", () => ({ createCase: vi.fn() }));
+
+// useSuiteName fetches the suite for the breadcrumb label.
+vi.mock("@/lib/apiClient", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/apiClient")>();
+  return { ...actual, apiFetch: vi.fn() };
+});
 
 const createCaseMock = vi.mocked(createCase);
 
@@ -77,6 +85,10 @@ beforeEach(() => {
   params.id = SUITE_ID;
   push.mockReset();
   createCaseMock.mockReset();
+  vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
+  
+  confirmMock.mockReset().mockReturnValue(true);
+  vi.stubGlobal("confirm", confirmMock);
 });
 
 describe("NewCasePage", () => {
@@ -251,4 +263,50 @@ describe("NewCasePage", () => {
 
     expect(push).toHaveBeenCalledWith("/cases/a%2Fb%3Fc/edit");
   });
+  it("shows the breadcrumb down to the new case", async () => {
+    renderPage();
+
+    const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
+    expect(nav).toHaveTextContent("Suite");
+    expect(nav).toHaveTextContent("Kasus baru");
+  });
+
+
+
+  it("goes back to the suite when nothing has been typed", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Kembali ke suite" }));
+
+    expect(push).toHaveBeenCalledWith(`/suites/${SUITE_ID}`);
+    expect(confirmMock).not.toHaveBeenCalled();
+  });
+
+  // Negative
+  it("asks before leaving once the author has typed something, and stays on Batal", async () => {
+    const user = userEvent.setup();
+    confirmMock.mockReturnValue(false);
+    renderPage();
+
+    await user.type(await screen.findByLabelText("Judul"), "x");
+    await user.click(screen.getByRole("button", { name: "Kembali ke suite" }));
+
+    expect(confirmMock).toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("leaves when the author confirms", async () => {
+    const user = userEvent.setup();
+    confirmMock.mockReturnValue(true);
+    renderPage();
+
+    await user.type(await screen.findByLabelText("Judul"), "x");
+    await user.click(screen.getByRole("button", { name: "Kembali ke suite" }));
+
+    expect(push).toHaveBeenCalledWith(`/suites/${SUITE_ID}`);
+  });
+  
 });
+
+
