@@ -1,0 +1,83 @@
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { CaseEditorForm } from "@/components/cases/CaseEditorForm";
+import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { useToast } from "@/components/ui/Toast";
+import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
+import { createCase } from "@/lib/cases/caseApi";
+import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
+import type { FieldSaveError } from "@/lib/cases/saveError";
+import { decodeRouteParam } from "@/lib/routeParams";
+import { Breadcrumb } from "@/components/ui";
+import { useSuiteName } from "@/hooks/useSuiteName";
+import { useState } from "react";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
+
+
+export default function NewCasePage() {
+  const suiteId = decodeRouteParam(useParams<{ id: string }>().id);
+  const router = useRouter();
+  const { showToast } = useToast();
+  const saveError = useSaveErrorBanner();
+  const suiteName = useSuiteName(suiteId);
+  const suitePath = `/suites/${encodeURIComponent(suiteId)}`;
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChangesWarning(dirty);
+  
+  
+  function leaveTo(path: string) {
+    if (dirty && !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")) {
+      return;
+    }
+    router.push(path);
+  }
+
+  async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
+    saveError.clear();
+    try {
+      const created = await createCase(suiteId, payload);
+      showToast("Kasus tersimpan sebagai draf");
+      router.push(`/cases/${encodeURIComponent(created.id)}/edit`);
+      return null;
+    } catch (error) {
+      return saveError.handle(error);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">  
+      <Breadcrumb
+        items={[
+          { label: "Suite", onClick: () => leaveTo("/suites") },
+          { label: suiteName, onClick: () => leaveTo(suitePath) },
+          { label: "Kasus baru" },
+        ]}
+      />
+
+      <header className="flex items-center gap-3">
+        <h1 className="text-xl font-semibold text-slate-900">Kasus baru</h1>
+        {/* Kasus baru selalu disimpan server sebagai draf. */}
+        <CaseStatusBadge status="draft" />
+      </header>
+      
+      <button
+      type="button"
+      onClick={() => leaveTo(suitePath)}
+      className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
+      >
+        Kembali ke suite
+      </button>
+
+      <p className="text-sm text-slate-500">
+        Indikator kelengkapan muncul setelah draf pertama disimpan.
+      </p>
+
+      {saveError.message !== null && <ErrorState message={saveError.message} />}
+
+      <CaseEditorForm onSubmit={handleSubmit} onDirtyChange={setDirty} />
+
+    </div>
+  );
+}
