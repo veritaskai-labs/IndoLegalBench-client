@@ -563,6 +563,55 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     expect(code).toHaveAttribute("aria-invalid", "true");
   });
 
+  // Corner: simpan sebelum jeda validasi selesai. Validasi yang tertunda tidak boleh
+  // menghapus error dari server (penyebab test "clears the banner…" di halaman kasus baru flaky).
+  it("keeps the server error when the field changed just before saving", async () => {
+    vi.useFakeTimers();
+    const duplicate: FieldSaveError = {
+      kind: "field",
+      path: "case_code",
+      message: "Kode kasus 'PHK-2' sudah dipakai di suite 'Perburuhan'",
+      detail: null,
+    };
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn(() => Promise.resolve(duplicate))} />);
+    const code = screen.getByLabelText("ID kasus");
+
+    fireEvent.change(code, { target: { value: "PHK-2" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Simpan draf" }));
+    });
+    expect(code).toHaveAccessibleDescription(duplicate.message);
+
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS);
+    });
+    expect(code).toHaveAttribute("aria-invalid", "true");
+    expect(code).toHaveAccessibleDescription(duplicate.message);
+  });
+
+  // Guard: perubahan sesudah simpan tetap divalidasi ulang setelah jeda, seperti biasa.
+  it("still re-checks a field the author changes after the server rejected it", async () => {
+    vi.useFakeTimers();
+    const duplicate: FieldSaveError = {
+      kind: "field",
+      path: "case_code",
+      message: "Kode kasus 'PHK-2' sudah dipakai di suite 'Perburuhan'",
+      detail: null,
+    };
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn(() => Promise.resolve(duplicate))} />);
+    const code = screen.getByLabelText("ID kasus");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Simpan draf" }));
+    });
+    expect(code).toHaveAccessibleDescription(duplicate.message);
+
+    fireEvent.change(code, { target: { value: "PHK-3" } });
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS);
+    });
+    expect(code).not.toHaveAttribute("aria-invalid", "true");
+  });
+
   // Negative: an empty row the author just added is not an error yet.
   it("does not flag a new empty trap row before the author touches it", async () => {
     const user = userEvent.setup();
