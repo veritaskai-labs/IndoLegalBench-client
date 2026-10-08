@@ -22,8 +22,9 @@ export const CASE_HELP = {
   mustContain: "Frasa yang wajib ada di jawaban yang benar. Satu frasa per baris.",
   mustNotContain: "Frasa yang menandakan jawaban salah bila muncul. Satu frasa per baris.",
   expectedConclusion: "Kesimpulan hukum yang seharusnya dicapai jawaban.",
+  // SCRUM-131: contoh pasal masih draf, tunggu konfirmasi tim legal (SA-1).
   traps:
-    "Jebakan adalah skenario yang menguji ketelitian jawaban model: detail yang mudah terlewat atau godaan untuk salah, misalnya memakai aturan yang sudah dicabut. Minimal satu sebelum kasus diajukan review.",
+    "Opsional. Jebakan adalah jawaban yang tampak benar tapi sebenarnya keliru, untuk menguji ketelitian model. Contoh: model menjawab dengan pasal yang sudah dicabut atau diubah oleh peraturan yang lebih baru, misalnya mengutip Pasal 164 UU 13/2003 untuk PHK karena efisiensi, padahal pasal itu sudah dihapus UU Cipta Kerja. Kasus tetap bisa diajukan review tanpa jebakan.",
   trapDescription: "Kesalahan apa yang ingin dipancing dari model, dan di bagian mana ia biasanya keliru.",
   trapBehavior: "Opsional. Apa yang seharusnya dilakukan model saat menghadapi jebakan ini.",
   splitTag:
