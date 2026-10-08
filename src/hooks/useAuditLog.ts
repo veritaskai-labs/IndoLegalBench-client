@@ -10,18 +10,19 @@ export type AuditQuery = {
   to: string | null;
   entity_type?: AuditEntityType;
   actor_id?: string;
+  case_id?: string;
 };
 
 export type AuditState =
   | { status: "loading" }
   | { status: "ready"; entries: AuditEntry[]; total: number; size: number }
-  | { status: "error" };
+  | { status: "error"; status_code?: number };
 
 const EMPTY: AuditQuery = { from: null, to: null };
 
 
-export function useAuditLog(today: Date) {
-  const [query, setQuery] = useState<AuditQuery>(EMPTY);
+export function useAuditLog(today: Date, initial?: Partial<AuditQuery>) {
+  const [query, setQuery] = useState<AuditQuery>({ ...EMPTY, ...initial });
   const [page, setPage] = useState(1);
   const [state, setState] = useState<AuditState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -33,6 +34,7 @@ export function useAuditLog(today: Date) {
     to: range.to,
     entity_type: query.entity_type,
     actor_id: query.actor_id,
+    case_id: query.case_id,
     page,
   };
 
@@ -52,8 +54,13 @@ export function useAuditLog(today: Date) {
           total: result.total,
           size: result.size,
         });
-      } catch {
-        if (!cancelled) setState({ status: "error" });
+      } catch (error) {
+        if (!cancelled) {
+          setState({
+            status: "error",
+            status_code: (error as { status?: number })?.status,
+          });
+        }
       }
     }
 
