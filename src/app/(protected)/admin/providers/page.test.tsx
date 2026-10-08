@@ -141,7 +141,7 @@ describe("ProvidersPage list", () => {
     expect(cells.queryByText(/tanpa keterangan/)).not.toBeInTheDocument();
   });
 
-  // Security: the raw message comes from a third-party provider, so it must stay text.
+  // The raw message is third-party text, so it must never render as HTML.
   it("shows markup in the raw provider message as plain text, never as HTML", async () => {
     const payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
     list.mockResolvedValue([

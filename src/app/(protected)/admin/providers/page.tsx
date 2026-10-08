@@ -24,7 +24,7 @@ type ListState = { status: "loading" } | { status: "ready"; products: AiProduct[
 /** Hasil uji koneksi terakhir di sesi ini; latency hanya ada di balasan, tidak disimpan server. */
 type LiveResult =
   | { status: "ok"; latencyMs: number }
-  /** Alasan gagal dibaca dari last_test_message dan last_test_error_code milik produk. */
+  /** Alasan gagal dibaca dari field last_test_* milik produk. */
   | { status: "failed" }
   /** Permintaan uji koneksi sendiri gagal (jaringan, server); hasil tersimpan tidak berubah. */
   | { status: "error" };

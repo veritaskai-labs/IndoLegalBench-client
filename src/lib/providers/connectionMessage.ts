@@ -1,10 +1,4 @@
-/**
- * Pesan uji koneksi untuk Admin (SCRUM-134 #1). Server mengirim kode kategori;
- * pesan mentah dari penyedia hanya muncul di "Lihat detail".
- *
- * TODO(SCRUM-133): daftar kode ini usulan FE dan belum disepakati BE.
- * Samakan dengan enum di OpenAPI begitu tersedia.
- */
+/** TODO(SCRUM-133): samakan dengan enum ConnectionTestErrorCategory. */
 export const CONNECTION_ERROR_CODES = [
   "auth_failed",
   "not_found",

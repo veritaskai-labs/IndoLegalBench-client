@@ -50,7 +50,7 @@ describe("providerApi", () => {
     ]);
   });
 
-  // TODO(SCRUM-133): the soft delete endpoint is not on the server yet; path and method are the FE proposal.
+  // TODO(SCRUM-133): DELETE path and method are still the FE proposal.
   it("deletes with DELETE on the encoded id", async () => {
     await deleteProduct("a/b");
 

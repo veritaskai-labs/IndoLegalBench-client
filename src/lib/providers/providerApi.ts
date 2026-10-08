@@ -30,10 +30,7 @@ export function setProductActive(productId: string, active: boolean): Promise<Ai
   });
 }
 
-/**
- * Soft delete: produk hilang dari kedua tab, riwayat pengukuran tetap di server.
- * TODO(SCRUM-133): endpoint belum ada di server; path dan method masih usulan FE.
- */
+/** Soft delete. TODO(SCRUM-133): path dan method masih usulan FE. */
 export function deleteProduct(productId: string): Promise<void> {
   return apiFetch<void>(productPath(productId), { method: "DELETE" });
 }
