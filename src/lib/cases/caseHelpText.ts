@@ -17,8 +17,9 @@ export const CASE_HELP = {
   regulationNumber: "Nomor peraturan persis seperti di judulnya, misalnya 13.",
   year: "Opsional. Tahun peraturan diundangkan, misalnya 2003.",
   pasal: "Wajib. Rujukan harus sampai tingkat pasal, misalnya 151.",
-  ayat: "Opsional. Ayat di dalam pasal, misalnya 3.",
-  huruf: "Opsional. Huruf di dalam ayat, misalnya b.",
+  // Label kolomnya sudah menyebut "(opsional)" (SCRUM-131).
+  ayat: "Ayat di dalam pasal.",
+  huruf: "Huruf di dalam ayat.",
   mustContain: "Frasa yang wajib ada di jawaban yang benar. Satu frasa per baris.",
   mustNotContain: "Frasa yang menandakan jawaban salah bila muncul. Satu frasa per baris.",
   expectedConclusion: "Kesimpulan hukum yang seharusnya dicapai jawaban.",
@@ -29,4 +30,26 @@ export const CASE_HELP = {
   trapBehavior: "Opsional. Apa yang seharusnya dilakukan model saat menghadapi jebakan ini.",
   splitTag:
     "Tag menentukan metodologi dataset (pembagian data dev dan test), bukan tingkat kesulitan kasus.",
+} as const;
+
+/**
+ * Contoh isian yang tampil di kolom kosong (SCRUM-131, masukan UAT #4).
+ * Hanya contoh bentuk isian, bukan materi uji.
+ */
+export const CASE_PLACEHOLDER = {
+  caseCode: "PHK-001",
+  title: "PHK sepihak tanpa pesangon",
+  category: "Ketenagakerjaan",
+  question: "Apakah perusahaan wajib membayar pesangon jika …?",
+  regulationType: "UU",
+  regulationNumber: "13",
+  year: "2003",
+  pasal: "156",
+  ayat: "2",
+  huruf: "a",
+  mustContain: "pesangon",
+  mustNotContain: "tidak berhak atas pesangon",
+  expectedConclusion: "Pekerja berhak atas pesangon.",
+  trapDescription: "Model mengutip pasal yang sudah dicabut.",
+  trapBehavior: "Menyebut aturan yang berlaku sekarang.",
 } as const;
