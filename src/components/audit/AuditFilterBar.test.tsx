@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { AuditActor } from "@/lib/audit/auditApi";
@@ -39,12 +39,12 @@ describe("AuditFilterBar", () => {
   });
 
   // Positive
-  it("hands over the new start date", async () => {
+  it("hands over the new start date", () => {
     const { onChange } = setup();
 
-    const from = screen.getByLabelText("Dari tanggal");
-    await userEvent.clear(from);
-    await userEvent.type(from, "2026-09-01");
+    fireEvent.change(screen.getByLabelText("Dari tanggal"), {
+      target: { value: "2026-09-01" },
+    });
 
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ from: "2026-09-01" }));
   });

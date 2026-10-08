@@ -2,7 +2,6 @@
 
 import { formatWib } from "@/lib/audit/formatWib";
 import type { AuditEntry } from "@/types/audit";
-import { entityLabel } from "@/lib/audit/entityLabels";
 
 const ENTITY_LABEL: Record<string, string> = {
   case: "Kasus",
