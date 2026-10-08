@@ -47,6 +47,17 @@ describe("LoginPage, AC-1 jalan masuk lewat SSO", () => {
     expect(href).toMatch(/\/auth\/login$/);
   });
 
+  it("keeps the self-service link as a placeholder until the Zitadel URL is decided", async () => {
+    // Dipindahkan dari PR #13 (SCRUM-94). Begitu URL self-service Zitadel diputuskan,
+    // test ini harus ikut diubah supaya link-nya tidak lupa diisi.
+    await renderLogin();
+
+    expect(screen.getByRole("link", { name: "Lupa kata sandi atau masalah MFA" })).toHaveAttribute(
+      "href",
+      "#",
+    );
+  });
+
   it("never asks for a password, the platform does not hold one", async () => {
     // Cerminan test backend test_ac6_tidak_ada_kolom_kata_sandi_di_database.
     // Identitas sepenuhnya milik Zitadel, jadi tidak boleh ada satu pun

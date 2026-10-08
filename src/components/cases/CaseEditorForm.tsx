@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { get, useForm } from "react-hook-form";
 import {
   emptyCaseFormValues,
@@ -60,19 +60,23 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props
   });
 
   // Validasi saat mengetik, hanya untuk field yang berubah, setelah jeda singkat.
+  // Timer disimpan di ref supaya submit bisa membatalkannya.
+  const validateTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = subscribe({
       formState: { values: true },
       callback: ({ name, type }) => {
         // Hanya ketikan pengguna. Tambah baris kosong tidak boleh langsung memunculkan error.
         if (name === undefined || type !== "change") return;
-        clearTimeout(timer);
-        timer = setTimeout(() => void trigger(name as Parameters<typeof trigger>[0]), VALIDATE_DELAY_MS);
+        clearTimeout(validateTimer.current);
+        validateTimer.current = setTimeout(
+          () => void trigger(name as Parameters<typeof trigger>[0]),
+          VALIDATE_DELAY_MS,
+        );
       },
     });
     return () => {
-      clearTimeout(timer);
+      clearTimeout(validateTimer.current);
       unsubscribe();
     };
   }, [subscribe, trigger]);
@@ -103,6 +107,9 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props
     <form
       noValidate
       onSubmit={(event) => {
+        // Submit memvalidasi seluruh form. Validasi tertunda yang menyala sesudahnya
+        // akan menghapus error dari server untuk field itu (SCRUM-131).
+        clearTimeout(validateTimer.current);
         // Error server lama berlaku untuk simpan sebelumnya; server menilai ulang tiap simpan.
         clearErrors();
         return submit(event);
