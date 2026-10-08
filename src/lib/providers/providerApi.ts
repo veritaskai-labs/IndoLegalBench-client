@@ -30,7 +30,7 @@ export function setProductActive(productId: string, active: boolean): Promise<Ai
   });
 }
 
-/** Soft delete. TODO(SCRUM-133): path dan method masih usulan FE. */
+/** Soft delete: produk hilang dari daftar, riwayat tetap di server. */
 export function deleteProduct(productId: string): Promise<void> {
   return apiFetch<void>(productPath(productId), { method: "DELETE" });
 }

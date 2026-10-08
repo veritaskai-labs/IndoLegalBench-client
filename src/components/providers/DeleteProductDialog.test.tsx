@@ -58,7 +58,7 @@ describe("DeleteProductDialog (SCRUM-134 #2)", () => {
     expect(screen.getByRole("button", { name: "Hapus produk" })).toBeEnabled();
   });
 
-  // TODO(SCRUM-133): assumes the server answers 404 for a product that is already gone.
+  // The contract answers 204 on success and 404 when it is already gone.
   it("says the product is already gone when the server answers 404", async () => {
     const user = userEvent.setup();
     remove.mockRejectedValue(new ApiError(404, "not_found"));

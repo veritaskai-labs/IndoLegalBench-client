@@ -23,7 +23,6 @@ export function DeleteProductDialog({ product, onClose, onDone }: Props) {
       await deleteProduct(product.id);
       onDone();
     } catch (err) {
-      // TODO(SCRUM-133): 404 untuk produk yang sudah terhapus masih usulan FE.
       setError(
         err instanceof ApiError && err.status === 404
           ? "Produk ini sudah tidak ada, mungkin sudah dihapus admin lain. Muat ulang halaman untuk melihat daftar terbaru."
