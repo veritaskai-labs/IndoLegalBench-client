@@ -1,15 +1,16 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listAuditLogs } from "@/lib/audit/auditApi";
+import { listAuditLogs, listAuditActors } from "@/lib/audit/auditApi";
 import type { AuditEntry, AuditPage } from "@/types/audit";
 import AuditPageComponent from "./page";
 
 vi.mock("@/lib/audit/auditApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/audit/auditApi")>();
-  return { ...actual, listAuditLogs: vi.fn() };
+  return { ...actual, listAuditLogs: vi.fn(), listAuditActors: vi.fn() };
 });
 const list = vi.mocked(listAuditLogs);
+const listActors = vi.mocked(listAuditActors);
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
   return {
@@ -36,6 +37,10 @@ function page(items: AuditEntry[], total = items.length): AuditPage {
 
 beforeEach(() => {
   list.mockReset();
+  listActors.mockReset();
+  listActors.mockResolvedValue([
+    { id: "u2", name: "Roben", email: "r@veritask.test", role: "reviewer", is_active: false },
+  ]);
 });
 
 describe("AuditPage (SCRUM-141)", () => {
@@ -139,5 +144,32 @@ describe("AuditPage (SCRUM-141)", () => {
     await user.click(screen.getByRole("button", { name: /coba lagi/i }));
 
     expect(await screen.findByText("ILB-PT-0142")).toBeInTheDocument();
+  });
+
+  it("asks again with the chosen actor", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue(page([]));
+    render(<AuditPageComponent />);
+    await screen.findByRole("option", { name: "Roben (nonaktif)" });
+
+    await user.selectOptions(screen.getByLabelText("Pelaku"), "u2");
+
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ actor_id: "u2" })),
+    );
+  });
+
+  it("asks again with the chosen date range", async () => {
+    list.mockResolvedValue(page([]));
+    render(<AuditPageComponent />);
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText("Dari tanggal"), {
+      target: { value: "2026-09-01" },
+    });
+
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ from: "2026-09-01" })),
+    );
   });
 });
