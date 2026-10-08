@@ -107,4 +107,25 @@ describe("useAuditLog", () => {
       entries: [expect.objectContaining({id: 2 })],
     });
   });
+
+  
+  it("starts with the filter it was given", async () => {
+    list.mockResolvedValue(page([]));
+
+    renderHook(() => useAuditLog(TODAY, { case_id: "c9" }));
+
+    await waitFor(() =>
+      expect(list).toHaveBeenCalledWith(expect.objectContaining({ case_id: "c9", page: 1 })),
+    );
+  });
+
+  // Negative
+  it("keeps the status code when the request is refused", async () => {
+    list.mockRejectedValueOnce(Object.assign(new Error("forbidden"), { status: 403 }));
+
+    const { result } = renderHook(() => useAuditLog(TODAY));
+
+    await waitFor(() => expect(result.current.state.status).toBe("error"));
+    expect(result.current.state).toMatchObject({ status: "error", status_code: 403 });
+  });
 });
