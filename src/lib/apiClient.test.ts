@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, apiFetch } from "./apiClient";
+import { ApiError, apiFetch, onForbidden } from "./apiClient";
 
 /** Fake response, cukup yang dipakai apiFetch */
 function fakeResponse(status: number, body?: unknown) {
@@ -15,11 +15,19 @@ function fakeResponse(status: number, body?: unknown) {
 
 const fetchMock = vi.fn();
 
+/** Unsubscribe functions from onForbidden, cleaned up after each test so listeners don't leak between tests. */
+const unsubscribers: Array<() => void> = [];
+
+function listenForbidden(listener: () => void) {
+  unsubscribers.push(onForbidden(listener));
+}
+
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
 });
 
 afterEach(() => {
+  while (unsubscribers.length > 0) unsubscribers.pop()?.();
   vi.unstubAllGlobals();
   fetchMock.mockReset();
 });
@@ -77,19 +85,63 @@ describe("apiFetch", () => {
       code: "UNKNOWN_ERROR",
     });
   });
+});
 
-    it("redirects to /forbidden and still throws on 403", async () => {
-    const location = { href: "" };
-    vi.stubGlobal("location", location);
-
-    fetchMock.mockResolvedValue(
-      fakeResponse(403, { code: "FORBIDDEN" }),
-    );
+describe("onForbidden", () => {
+  it("notifies the listener on 403 and still throws", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
 
     await expect(apiFetch("/admin/users")).rejects.toMatchObject({
       status: 403,
+      code: "FORBIDDEN",
     });
 
-    expect(location.href).toBe("/forbidden");
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies every subscribed listener", async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    listenForbidden(first);
+    listenForbidden(second);
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await apiFetch("/admin/users").catch(() => undefined);
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops notifying after unsubscribe", async () => {
+    const listener = vi.fn();
+    const unsubscribe = onForbidden(listener);
+    unsubscribe();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await apiFetch("/admin/users").catch(() => undefined);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("does not notify on 401", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(401, { code: "UNAUTHENTICATED" }));
+
+    await apiFetch("/me").catch(() => undefined);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("does not notify on success", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(200, {}));
+
+    await apiFetch("/me");
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });
