@@ -636,10 +636,43 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
   it("explains that traps test the precision of the answer and dev/test is a dataset split", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(/ketelitian jawaban model/);
+    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(/menguji ketelitian model/);
     expect(screen.getByRole("group", { name: "Tag dev/test" })).toHaveTextContent(
       /metodologi dataset .* bukan tingkat kesulitan/,
     );
+  });
+
+  // SCRUM-131, AC4 (revisi) dan AC6, masukan UAT #11 dan #12.
+  it("says traps are optional and a case without traps can still be submitted for review", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Jebakan" });
+    expect(traps).toHaveTextContent(/^Jebakan\s*Opsional\./);
+    expect(traps).toHaveTextContent(/tetap bisa diajukan review tanpa jebakan/);
+  });
+
+  it("explains a trap with a real example: an answer that looks right but cites a revoked article", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Jebakan" });
+    expect(traps).toHaveTextContent(/tampak benar tapi sebenarnya keliru/);
+    expect(traps).toHaveTextContent(/pasal yang sudah dicabut/);
+  });
+
+  // Negative: aturan lama (minimal satu jebakan) tidak boleh muncul lagi.
+  it("no longer tells the Author that at least one trap is required", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("group", { name: "Jebakan" })).not.toHaveTextContent(/minimal satu/i);
+  });
+
+  // Corner: kasus baru belum punya baris jebakan, bantuan tetap terlihat.
+  it("shows the trap help on a new case that has no trap rows yet", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Jebakan" });
+    expect(within(traps).queryByRole("group")).not.toBeInTheDocument();
+    expect(traps).toHaveTextContent(/Opsional\..*tetap bisa diajukan review tanpa jebakan/);
   });
 
   it("gives every legal reference and answer criteria field its own hint", () => {
