@@ -361,5 +361,6 @@ describe("SuitesPage", () => {
         screen.queryByRole("link", { name: "Buat kasus di Perburuhan" }),
       ).not.toBeInTheDocument();
     });
+
   });
 });
