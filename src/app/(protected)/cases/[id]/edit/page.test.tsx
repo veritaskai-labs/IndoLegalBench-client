@@ -57,7 +57,7 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
     traps: [],
     split_tag: "dev",
     status: "draft",
-    completeness_pct: 71,
+    completeness_pct: 83,
     version: 1,
     created_at: "2026-09-29T00:00:00Z",
     updated_at: "2026-09-29T00:00:00Z",
@@ -69,11 +69,8 @@ function completeness(overrides: Partial<CaseCompleteness> = {}): CaseCompletene
   return {
     is_complete: false,
     ready_for_review: false,
-    pct: 71,
-    missing: [
-      { field: "answer_criteria", message: "Butuh minimal satu kriteria jawaban." },
-      { field: "traps", message: "Butuh minimal satu jebakan sebelum kasus bisa diajukan review." },
-    ],
+    pct: 83,
+    missing: [{ field: "answer_criteria", message: "Butuh minimal satu kriteria jawaban." }],
     trap_count: 0,
     legal_ref_count: 1,
     ...overrides,
@@ -326,8 +323,9 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
     renderPage();
 
     const indicator = await screen.findByRole("region", { name: "Kelengkapan kasus" });
-    expect(await within(indicator).findByText("Kelengkapan 71%")).toBeInTheDocument();
-    expect(within(indicator).getByText(/Jebakan belum ada/)).toBeInTheDocument();
+    expect(await within(indicator).findByText("Kelengkapan 83%")).toBeInTheDocument();
+    expect(within(indicator).getByText("Butuh minimal satu kriteria jawaban.")).toBeInTheDocument();
+    expect(within(indicator).queryByText(/Jebakan belum ada/)).not.toBeInTheDocument();
     expect(completenessMock).toHaveBeenCalledWith(CASE_ID);
   });
 
@@ -344,7 +342,7 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
         }),
       );
     renderPage();
-    await screen.findByText("Kelengkapan 71%");
+    await screen.findByText("Kelengkapan 83%");
 
     await user.click(save());
 
@@ -368,7 +366,7 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
 
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
 
-    expect(await screen.findByText("Kelengkapan 71%")).toBeInTheDocument();
+    expect(await screen.findByText("Kelengkapan 83%")).toBeInTheDocument();
   });
 
   describe("EditCasePage navigation (SCRUM-128)", () => {

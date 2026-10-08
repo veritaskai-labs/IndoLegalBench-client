@@ -4,16 +4,16 @@ import { describe, expect, it, vi } from "vitest";
 import type { CaseCompleteness } from "@/types/case";
 import { CompletenessIndicator } from "./CompletenessIndicator";
 
+// Server sebelum SCRUM-130 masih mengirim bagian ini; indikator tidak boleh menyaringnya.
 const TRAPS_MISSING = "Butuh minimal satu jebakan sebelum kasus bisa diajukan review.";
 
 function completeness(overrides: Partial<CaseCompleteness> = {}): CaseCompleteness {
   return {
     is_complete: false,
     ready_for_review: false,
-    pct: 57,
+    pct: 67,
     missing: [
       { field: "answer_criteria", message: "Butuh minimal satu kriteria jawaban." },
-      { field: "traps", message: TRAPS_MISSING },
       { field: "split_tag", message: "Tag dev atau test wajib dipilih." },
     ],
     trap_count: 0,
@@ -31,20 +31,42 @@ describe("CompletenessIndicator", () => {
   it("shows the percentage as a progress bar and lists what is missing", () => {
     renderReady(completeness());
 
-    expect(screen.getByText("Kelengkapan 57%")).toBeInTheDocument();
+    expect(screen.getByText("Kelengkapan 67%")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Kelengkapan kasus" })).toHaveAttribute(
       "aria-valuenow",
-      "57",
+      "67",
     );
     expect(screen.getByText("Butuh minimal satu kriteria jawaban.")).toBeInTheDocument();
     expect(screen.getByText("Tag dev atau test wajib dipilih.")).toBeInTheDocument();
   });
 
-  it("warns that there is no trap yet, once, instead of repeating it in the list", () => {
-    renderReady(completeness());
+  // Positive: AC4 (revisi), jebakan opsional.
+  it("shows the Siap diajukan review badge for a ready case without traps", () => {
+    renderReady(
+      completeness({ pct: 100, is_complete: true, ready_for_review: true, missing: [], trap_count: 0 }),
+    );
 
-    expect(screen.getByText(/^Jebakan belum ada\./)).toBeInTheDocument();
-    expect(screen.queryByText(TRAPS_MISSING)).not.toBeInTheDocument();
+    expect(screen.getByText("Siap diajukan review")).toBeInTheDocument();
+    expect(screen.queryByText(/Jebakan belum ada/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Belum lengkap:")).not.toBeInTheDocument();
+  });
+
+  // Negative: tidak ada lagi peringatan jebakan, apa pun isi daftarnya.
+  it("does not warn about missing traps while other parts are missing", () => {
+    renderReady(completeness({ trap_count: 0 }));
+
+    expect(screen.queryByText(/Jebakan belum ada/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/minimal satu jebakan/)).not.toBeInTheDocument();
+  });
+
+  // Corner: aturan ada di server, jadi kekurangan yang dikirim server tampil apa adanya.
+  it("lists every missing part the server reports, without filtering any field", () => {
+    const missing = [...completeness().missing, { field: "traps", message: TRAPS_MISSING }];
+    renderReady(completeness({ missing }));
+
+    expect(screen.getAllByRole("listitem").map((item) => item.textContent)).toEqual(
+      missing.map(({ message }) => message),
+    );
   });
 
   it("shows the Siap diajukan review badge when the case is ready", () => {

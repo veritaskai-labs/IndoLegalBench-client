@@ -111,4 +111,32 @@ describe("AuthDoneHandler", () => {
     expect(screen.getByText("Akun Anda telah dinonaktifkan")).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+    
+  it("shows a generic failure when the profile has no role field", async () => {
+    mockFetchOnce({ ok: true, body: {} });
+    render(<AuthDoneHandler />);
+    await waitFor(() =>
+      expect(screen.getByText("Gagal memproses login")).toBeInTheDocument(),
+    );
+  });
+
+  it("ignores the failure when the request was aborted because the page unmounted", async () => {
+    let rejectFetch!: (reason: unknown) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((_, reject) => {
+            rejectFetch = reject;
+          }),
+      ),
+    );
+
+    const { unmount } = render(<AuthDoneHandler />);
+    unmount(); // cleanup aborts the controller while /me is still pending
+    rejectFetch(new DOMException("The operation was aborted.", "AbortError"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
 });

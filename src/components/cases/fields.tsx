@@ -2,7 +2,7 @@ import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
 const CONTROL_CLASS =
-  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 aria-[invalid=true]:border-red-600";
+  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 aria-[invalid=true]:border-red-600";
 
 type FieldProps = {
   label: string;
@@ -11,6 +11,8 @@ type FieldProps = {
   error?: string;
   /** Teks bantuan singkat di bawah label. */
   hint?: string;
+  /** Contoh isian di dalam kolom kosong, misalnya "156". */
+  placeholder?: string;
 };
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
@@ -55,6 +57,7 @@ export function TextField({
   registration,
   error,
   hint,
+  placeholder,
   type = "text",
 }: FieldProps & { type?: "text" | "number" }) {
   const id = useId();
@@ -66,6 +69,7 @@ export function TextField({
       <input
         id={id}
         type={type}
+        placeholder={placeholder}
         {...registration}
         {...describedBy(id, hint, error)}
         className={CONTROL_CLASS}
@@ -80,6 +84,7 @@ export function TextAreaField({
   registration,
   error,
   hint,
+  placeholder,
   rows = 3,
 }: FieldProps & { rows?: number }) {
   const id = useId();
@@ -91,6 +96,7 @@ export function TextAreaField({
       <textarea
         id={id}
         rows={rows}
+        placeholder={placeholder}
         {...registration}
         {...describedBy(id, hint, error)}
         className={CONTROL_CLASS}
