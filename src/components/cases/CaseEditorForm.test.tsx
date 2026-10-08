@@ -177,20 +177,11 @@ describe("CaseEditorForm", () => {
   it("removes the middle legal reference row and keeps the others' values", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    // Mulai dari tiga baris: yang diuji penghapusan baris tengah, bukan mengetik.
+    // Mengetik huruf demi huruf di sini dulu membuat test ini timeout saat suite penuh berjalan.
     const ref = filled.legal_refs[0];
-    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} />);
-
-    await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
-    await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
-    for (const row of [2, 3]) {
-      await user.type(within(refRow(row)).getByLabelText("Jenis peraturan"), ref.regulation_type);
-      await user.type(within(refRow(row)).getByLabelText("Nomor"), ref.regulation_number);
-    }
-    const firstPasal = within(refRow(1)).getByLabelText("Pasal");
-    await user.clear(firstPasal);
-    await user.type(firstPasal, "1");
-    await user.type(within(refRow(2)).getByLabelText("Pasal"), "2");
-    await user.type(within(refRow(3)).getByLabelText("Pasal"), "3");
+    const legal_refs = ["1", "2", "3"].map((pasal) => ({ ...ref, pasal }));
+    render(<CaseEditorForm defaultValues={{ ...filled, legal_refs }} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("button", { name: "Hapus rujukan 2" }));
 
