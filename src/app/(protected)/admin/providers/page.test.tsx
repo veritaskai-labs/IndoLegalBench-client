@@ -343,6 +343,30 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     expect(update.mock.calls[0]?.[1]).toMatchObject({ rate_limit_per_minute: 30, monthly_budget_idr: "1500000" });
     expect(await within(await row("DeepSeek")).findByText("30")).toBeInTheDocument();
   });
+
+  // Only the unmount on close drops a typed key; nothing else does.
+  it("drops a typed key on close, so it cannot reach another product", async () => {
+    const user = userEvent.setup();
+    const gemini = product({
+      id: "33333333-3333-3333-3333-333333333333",
+      name: "Gemini",
+      credential_hint: "9z9z",
+    });
+    list.mockResolvedValue([product(), gemini]);
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Ubah DeepSeek" }));
+    const first = within(screen.getByRole("dialog", { name: "Ubah produk AI" }));
+    await user.type(first.getByLabelText("Kredensial"), "sk-deepseek-rahasia-1");
+    await user.click(first.getByRole("button", { name: "Batal" }));
+
+    await user.click(screen.getByRole("button", { name: "Ubah Gemini" }));
+    const second = within(screen.getByRole("dialog", { name: "Ubah produk AI" }));
+
+    expect(second.getByLabelText("Kredensial")).toHaveValue("");
+    expect(second.getByText(/…9z9z/)).toBeInTheDocument();
+  });
 });
 
 describe("ProvidersPage activate and deactivate (AC4)", () => {
