@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, BASE_URL } from "@/lib/apiClient";
 import type { AuditFilter, AuditPage, ExportFormat } from "@/types/audit";
 import type { components } from "@/lib/generated/api";
 export type AuditActor = components["schemas"]["UserResponse"];
@@ -34,5 +34,5 @@ export function listAuditLogs(filter: AuditFilter): Promise<AuditPage> {
 export function auditExportUrl(filter: AuditFilter, format: ExportFormat): string {
   const q = toQuery(filter);
   q.set("format", format);
-  return `${BASE}/export?${q}`;
+  return `${BASE_URL}${BASE}/export?${q}`;
 }
