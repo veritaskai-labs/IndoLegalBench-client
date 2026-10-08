@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONNECTION_ERROR_CODES, describeConnectionFailure } from "./connectionMessage";
+import { CONNECTION_ERROR_CATEGORIES, describeConnectionFailure } from "./connectionMessage";
 
 /** Partisi ruang input: satu describe per kelas kategori milik server. */
 describe("describeConnectionFailure", () => {
@@ -45,7 +45,9 @@ describe("describeConnectionFailure", () => {
   });
 
   describe("tanpa kategori, atau kategori yang belum dikenali klien", () => {
-    it.each([null, undefined, "", "SOMETHING_NEW"])("falls back for %j", (code) => {
+    const bukanKategori = [null, undefined, "", "SOMETHING_NEW", "toString", "constructor"];
+
+    it.each(bukanKategori)("falls back for %j", (code) => {
       expect(describeConnectionFailure(code)).toEqual({
         title: "Uji koneksi gagal dengan kode yang belum dikenali aplikasi ini.",
         hint: "Buka Lihat detail untuk pesan asli dari penyedia.",
@@ -54,7 +56,7 @@ describe("describeConnectionFailure", () => {
   });
 
   it("has a title and hint for every category, with no raw English left", () => {
-    for (const code of CONNECTION_ERROR_CODES) {
+    for (const code of CONNECTION_ERROR_CATEGORIES) {
       const { title, hint } = describeConnectionFailure(code);
 
       expect(title).not.toMatch(/provider|connection|failed/i);
@@ -64,7 +66,7 @@ describe("describeConnectionFailure", () => {
   });
 
   it("handles exactly the five categories the server sends, no leftovers", () => {
-    expect([...CONNECTION_ERROR_CODES].sort()).toEqual([
+    expect([...CONNECTION_ERROR_CATEGORIES].sort()).toEqual([
       "access_denied",
       "model_not_found",
       "timeout",

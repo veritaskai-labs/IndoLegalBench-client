@@ -1,17 +1,9 @@
-/** Kategori gagal uji koneksi; enum-nya di ConnectionTestErrorCategory. */
-export const CONNECTION_ERROR_CODES = [
-  "access_denied",
-  "model_not_found",
-  "timeout",
-  "unreachable",
-  "unknown",
-] as const;
-
-export type ConnectionErrorCode = (typeof CONNECTION_ERROR_CODES)[number];
+import type { ConnectionErrorCategory } from "@/types/provider";
 
 export type ConnectionFailure = { title: string; hint: string | null };
 
-const MESSAGES: Record<ConnectionErrorCode, ConnectionFailure> = {
+/** Record memaksa tiap kategori kontrak punya pesannya sendiri. */
+const MESSAGES: Record<ConnectionErrorCategory, ConnectionFailure> = {
   access_denied: {
     title: "Akses ditolak karena API key tidak valid atau sudah tidak berlaku.",
     hint: "Salin ulang API key dari akun penyedia, lalu tempel di kolom Kredensial lewat tombol Ubah.",
@@ -40,10 +32,14 @@ const FALLBACK: ConnectionFailure = {
   hint: "Buka Lihat detail untuk pesan asli dari penyedia.",
 };
 
-function isKnownCode(code: string): code is ConnectionErrorCode {
-  return (CONNECTION_ERROR_CODES as readonly string[]).includes(code);
+/** Diturunkan dari MESSAGES, jadi tidak ada daftar kedua yang bisa basi. */
+export const CONNECTION_ERROR_CATEGORIES = Object.keys(MESSAGES) as ConnectionErrorCategory[];
+
+/** hasOwn, bukan `in`: "toString" bukan kategori meski ada di prototipe. */
+function isKnownCategory(code: string): code is ConnectionErrorCategory {
+  return Object.hasOwn(MESSAGES, code);
 }
 
 export function describeConnectionFailure(code: string | null | undefined): ConnectionFailure {
-  return code && isKnownCode(code) ? MESSAGES[code] : FALLBACK;
+  return code && isKnownCategory(code) ? MESSAGES[code] : FALLBACK;
 }

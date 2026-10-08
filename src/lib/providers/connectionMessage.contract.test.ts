@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CONNECTION_ERROR_CODES } from "./connectionMessage";
+import { CONNECTION_ERROR_CATEGORIES } from "./connectionMessage";
 
 /** Kontrak yang di-commit, hasil `npm run gen:api` dari openapi.json server. */
 const BERKAS_KONTRAK = resolve(process.cwd(), "contract/openapi.json");
@@ -31,7 +31,7 @@ function kategoriDariKontrak(kontrak: Kontrak): string[] {
 describe("kategori error koneksi mengikuti kontrak", () => {
   it("mengikuti enum server, tidak lebih dan tidak kurang", () => {
     const dariKontrak = [...kategoriDariKontrak(bacaKontrak())].sort();
-    const ditanganiFrontend = [...CONNECTION_ERROR_CODES].sort();
+    const ditanganiFrontend = [...CONNECTION_ERROR_CATEGORIES].sort();
 
     expect(ditanganiFrontend).toEqual(dariKontrak);
   });
