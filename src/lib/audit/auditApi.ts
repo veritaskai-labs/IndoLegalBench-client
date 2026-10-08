@@ -1,28 +1,32 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { AuditFilter, AuditPage } from "@/types/audit";
+import type { AuditFilter, AuditPage, ExportFormat } from "@/types/audit";
 
 const BASE = "/audit-logs";
 
 /**
- * TODO(SCRUM-140): nama query param masih mengikuti deskripsi subtask,
- * belum dikonfirmasi lewat OpenAPI.
+ * Tanggal dari input date dikirim sebagai date-time. BE menganggap waktu
+ * tanpa zona sebagai WIB, dan `to` inklusif — jadi batas atas harus akhir
+ * hari, bukan tengah malam, supaya catatan di hari itu tidak hilang.
  */
-
-function toQuery(filter: AuditFilter): string {
-  const params = new URLSearchParams({
-    from: filter.from,
-    to: filter.to,
-    page: String(filter.page),
-  });
-  if (filter.entity_type) params.set("entity_type", filter.entity_type);
-  if (filter.actor_id) params.set("actor_id", filter.actor_id);
-  return params.toString();
+function toQuery(filter: AuditFilter): URLSearchParams {
+  const q = new URLSearchParams();
+  q.set("from", `${filter.from}T00:00:00`);
+  q.set("to", `${filter.to}T23:59:59`);
+  q.set("page", String(filter.page));
+  if (filter.size) q.set("size", String(filter.size));
+  if (filter.entity_type) q.set("entity_type", filter.entity_type);
+  if (filter.actor_id) q.set("actor_id", filter.actor_id);
+  if (filter.case_id) q.set("case_id", filter.case_id);
+  return q;
 }
 
 export function listAuditLogs(filter: AuditFilter): Promise<AuditPage> {
   return apiFetch<AuditPage>(`${BASE}?${toQuery(filter)}`);
 }
 
-export function auditExportUrl(filter: AuditFilter, format: "csv" | "pdf"): string {
-  return `${BASE}/export?${toQuery(filter)}&format=${format}`;
+/** Server yang membuat filenya. Tautan dibuka langsung oleh browser. */
+export function auditExportUrl(filter: AuditFilter, format: ExportFormat): string {
+  const q = toQuery(filter);
+  q.set("format", format);
+  return `${BASE}/export?${q}`;
 }

@@ -9,17 +9,21 @@ const list = vi.mocked(listAuditLogs);
 
 const TODAY = new Date("2026-10-06T00:00:00Z");
 
-function entry(id: string): AuditEntry {
+function entry(id: number): AuditEntry {
   return {
     id,
     occurred_at: "2026-10-06T03:30:00Z",
     actor_user_id: "u1",
+    actor_name: "Herdayani",
+    actor_role: "author",
     action: "case.updated",
     entity_type: "case",
     entity_id: "c1",
+    case_id: "c1",
     before: null,
     after: null,
     reason: null,
+    request_id: null,
   };
 }
 
@@ -34,7 +38,7 @@ beforeEach(() => {
 describe("useAuditLog", () => {
   // Positive
   it("starts loading, then hands over the entries it received", async () => {
-    list.mockResolvedValue(page([entry("a1")]));
+    list.mockResolvedValue(page([entry(1)]));
 
     const { result } = renderHook(() => useAuditLog(TODAY));
 
@@ -77,7 +81,7 @@ describe("useAuditLog", () => {
     const { result } = renderHook(() => useAuditLog(TODAY));
     await waitFor(() => expect(result.current.state.status).toBe("error"));
 
-    list.mockResolvedValueOnce(page([entry("a1")]));
+    list.mockResolvedValueOnce(page([entry(1)]));
     act(() => result.current.reload());
 
     await waitFor(() => expect(result.current.state.status).toBe("ready"));
@@ -88,19 +92,19 @@ describe("useAuditLog", () => {
     let resolveFirst!: (value: AuditPage) => void;
     list
       .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
-      .mockResolvedValueOnce(page([entry("new")]));
+      .mockResolvedValueOnce(page([entry(2)]));
 
     const { result } = renderHook(() => useAuditLog(TODAY));
     act(() => result.current.setFilter({ entity_type: "user" }));
     await waitFor(() => expect(result.current.state.status).toBe("ready"));
 
     await act(async () => {
-      resolveFirst(page([entry("stale")]));
+      resolveFirst(page([entry(3)]));
     });
 
     expect(result.current.state).toMatchObject({
       status: "ready",
-      entries: [expect.objectContaining({ id: "new" })],
+      entries: [expect.objectContaining({id: 2 })],
     });
   });
 });

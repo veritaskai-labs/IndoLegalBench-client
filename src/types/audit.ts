@@ -1,22 +1,26 @@
-/**
- * PLACEHOLDER BE
- * TODO(SCRUM-140): endpoint audit belum ada di OpenAPI server.
- * Nama field mengikuti tabel deskripsi SCRUM-140.
- * Setelah BE merge, `npm run gen:api` lalu sesuaikan tipe ini.
- */
-
-export type AuditEntityType = "case" | "case_version" | "review" | "suite" | "ai_product" | "user";
+/** Sesuai AuditEntityType di openapi.json. */
+export type AuditEntityType =
+  | "case"
+  | "case_version"
+  | "review"
+  | "suite"
+  | "ai_product"
+  | "user";
 
 export type AuditEntry = {
-  id: string;
+  id: number;
   occurred_at: string;
-  actor_user_id: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  actor_role: string | null;
   action: string;
   entity_type: AuditEntityType;
   entity_id: string;
+  case_id: string | null;
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   reason: string | null;
+  request_id: string | null;
 };
 
 export type AuditPage = {
@@ -31,5 +35,9 @@ export type AuditFilter = {
   to: string;
   entity_type?: AuditEntityType;
   actor_id?: string;
+  case_id?: string;
   page: number;
+  size?: number;
 };
+
+export type ExportFormat = "csv" | "pdf";

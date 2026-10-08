@@ -2,6 +2,7 @@
 
 import { formatWib } from "@/lib/audit/formatWib";
 import type { AuditEntry } from "@/types/audit";
+import { entityLabel } from "@/lib/audit/entityLabels";
 
 const ENTITY_LABEL: Record<string, string> = {
   case: "Kasus",
@@ -36,7 +37,7 @@ export function AuditTable({ entries, onRowClick }: Props) {
             className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
           >
             <td className="py-3 px-4 text-slate-600">{formatWib(item.occurred_at)}</td>
-            <td className="py-3 px-4 text-slate-900">{item.actor_user_id}</td>
+            <td className="py-3 px-4 text-slate-900">{item.actor_name ?? "Sistem"}</td>
             <td className="py-3 px-4 font-mono text-xs text-slate-700">{item.action}</td>
             <td className="py-3 px-4 text-slate-700">
               {ENTITY_LABEL[item.entity_type] ?? item.entity_type}{" "}

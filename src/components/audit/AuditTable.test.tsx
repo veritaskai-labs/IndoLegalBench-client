@@ -6,15 +6,19 @@ import { AuditTable } from "./AuditTable";
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
   return {
-    id: "a1",
+    id: 1,
     occurred_at: "2026-10-06T03:30:00Z",
     actor_user_id: "u1",
+    actor_name: "Herdayani",
+    actor_role: "author",
     action: "case.updated",
     entity_type: "case",
     entity_id: "c1",
+    case_id: "c1",
     before: null,
     after: null,
     reason: null,
+    request_id: null,
     ...overrides,
   };
 }
@@ -26,7 +30,7 @@ describe("AuditTable", () => {
 
     const row = screen.getByRole("row", { name: /case.updated/ });
     expect(row).toHaveTextContent("6 Okt 2026, 10:30 WIB");
-    expect(row).toHaveTextContent("u1");
+    expect(row).toHaveTextContent("Herdayani");
     expect(row).toHaveTextContent("Kasus");
     expect(row).toHaveTextContent("c1");
   });
@@ -73,5 +77,15 @@ describe("AuditTable", () => {
     render(<AuditTable entries={[]} onRowClick={vi.fn()} />);
 
     expect(screen.getAllByRole("row")).toHaveLength(1);
+  });
+  
+  it("says the system did it when there is no actor", () => {
+    render(
+    <AuditTable
+    entries={[entry({ actor_user_id: null, actor_name: null })]}
+    onRowClick={vi.fn()}
+    />,
+  );
+  expect(screen.getByRole("row", { name: /case.updated/ })).toHaveTextContent("Sistem");
   });
 });

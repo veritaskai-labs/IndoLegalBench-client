@@ -6,15 +6,19 @@ import { AuditDetailPanel } from "./AuditDetailPanel";
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
   return {
-    id: "a1",
+    id: 1,
     occurred_at: "2026-10-06T03:30:00Z",
     actor_user_id: "u1",
+    actor_name: "Herdayani",
+    actor_role: "author",
     action: "case.updated",
     entity_type: "case",
     entity_id: "ILB-PT-0142",
+    case_id: "ILB-PT-0142",
     before: { title: "Judul lama" },
     after: { title: "Judul baru" },
     reason: "Pasal yang dirujuk sudah dicabut",
+    request_id: null,
     ...overrides,
   };
 }
