@@ -18,7 +18,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // A 403 from any API call on a protected page sends the user to /forbidden.
   // apiFetch only reports it, the redirect lives here, next to the other auth redirects.
-  useEffect(() => onForbidden(() => router.replace("/forbidden")), [router]);
+  // Only once the session is known, so a 403 while /me loads cannot race the /login redirect.
+  const authenticated = auth.status === "authenticated";
+  useEffect(() => {
+    if (!authenticated) return;
+    return onForbidden(() => router.replace("/forbidden"));
+  }, [authenticated, router]);
 
   if (auth.status !== "authenticated") return <LoadingState />;
   return <>{children}</>;
