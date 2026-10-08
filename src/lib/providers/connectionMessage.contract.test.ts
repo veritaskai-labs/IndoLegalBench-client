@@ -21,15 +21,15 @@ function kategoriDariKontrak(kontrak: Kontrak): string[] {
   const skema = kontrak.components?.schemas?.ConnectionTestErrorCategory;
   if (!skema?.enum) {
     throw new Error(
-      "ConnectionTestErrorCategory belum ada di contract/openapi.json. " +
-        "Menunggu SCRUM-133 merge, lalu jalankan npm run gen:api.",
+      "ConnectionTestErrorCategory tidak ada di contract/openapi.json. " +
+        "Segarkan kontrak dari server lalu jalankan npm run gen:api.",
     );
   }
   return skema.enum;
 }
 
 describe("kategori error koneksi mengikuti kontrak", () => {
-  it.fails("mengikuti enum server, merah sampai SCRUM-133 merge", () => {
+  it("mengikuti enum server, tidak lebih dan tidak kurang", () => {
     const dariKontrak = [...kategoriDariKontrak(bacaKontrak())].sort();
     const ditanganiFrontend = [...CONNECTION_ERROR_CODES].sort();
 

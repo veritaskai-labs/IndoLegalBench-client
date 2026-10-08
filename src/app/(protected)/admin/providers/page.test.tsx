@@ -46,6 +46,7 @@ function product(overrides: Partial<AiProduct> = {}): AiProduct {
     last_test_at: null,
     last_test_status: null,
     last_test_message: null,
+    last_test_error_category: null,
     created_by: "22222222-2222-2222-2222-222222222222",
     created_at: "2026-09-29T01:00:00Z",
     updated_at: "2026-09-29T01:00:00Z",
