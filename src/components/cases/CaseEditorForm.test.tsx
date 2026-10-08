@@ -695,6 +695,8 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
     const traps = screen.getByRole("group", { name: "Jebakan" });
+    // Review Rafa di PR #23: jebakan adalah skenario yang memancing jawaban keliru, bukan jawabannya sendiri.
+    expect(traps).toHaveTextContent(/Jebakan adalah skenario yang memancing jawaban/);
     expect(traps).toHaveTextContent(/tampak benar tapi sebenarnya keliru/);
     expect(traps).toHaveTextContent(/pasal yang sudah dicabut/);
   });
