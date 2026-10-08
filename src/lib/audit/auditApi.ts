@@ -1,7 +1,13 @@
 import { apiFetch } from "@/lib/apiClient";
 import type { AuditFilter, AuditPage, ExportFormat } from "@/types/audit";
+import type { components } from "@/lib/generated/api";
+export type AuditActor = components["schemas"]["UserResponse"];
 
 const BASE = "/audit-logs";
+
+export function listAuditActors(): Promise<AuditActor[]> {
+  return apiFetch<AuditActor[]>("/admin/users");
+}
 
 /**
  * Tanggal dari input date dikirim sebagai date-time. BE menganggap waktu
