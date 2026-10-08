@@ -6,7 +6,7 @@
  */
 export const CASE_HELP = {
   identity: "Identitas membuat kasus mudah dicari dan dirujuk di laporan.",
-  caseCode: "Kode unik kasus, misalnya PHK-001. Huruf, angka, titik, garis bawah, atau tanda hubung.",
+  caseCode: "Kode unik kasus. Huruf, angka, titik, garis bawah, atau tanda hubung.",
   title: "Ringkasan singkat persoalan hukumnya.",
   category: "Opsional. Bidang hukum, misalnya ketenagakerjaan.",
   question: "Pertanyaan persis seperti yang akan dikirim ke produk AI.",
@@ -14,9 +14,9 @@ export const CASE_HELP = {
   answerCriteria:
     "Dipakai untuk menilai jawaban. Isi minimal satu: frasa wajib, frasa terlarang, atau kesimpulan.",
   regulationType: "Jenis peraturan, misalnya UU, PP, Perpres, atau Permen.",
-  regulationNumber: "Nomor peraturan persis seperti di judulnya, misalnya 13.",
-  year: "Opsional. Tahun peraturan diundangkan, misalnya 2003.",
-  pasal: "Wajib. Rujukan harus sampai tingkat pasal, misalnya 151.",
+  regulationNumber: "Nomor peraturan persis seperti di judulnya.",
+  year: "Opsional. Tahun peraturan diundangkan.",
+  pasal: "Wajib. Rujukan harus sampai tingkat pasal.",
   // Label kolomnya sudah menyebut "(opsional)" (SCRUM-131).
   ayat: "Ayat di dalam pasal.",
   huruf: "Huruf di dalam ayat.",
