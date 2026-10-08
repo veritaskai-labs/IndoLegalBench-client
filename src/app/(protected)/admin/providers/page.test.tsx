@@ -103,7 +103,7 @@ describe("ProvidersPage list", () => {
     list.mockResolvedValue([
       product({
         last_test_status: "failed",
-        last_test_error_code: "auth_failed",
+        last_test_error_category: "access_denied",
         last_test_message: "provider returned HTTP 401",
         last_test_at: "2026-09-29T02:00:00Z",
       }),
@@ -117,21 +117,21 @@ describe("ProvidersPage list", () => {
     expect(cells.getByText("provider returned HTTP 401")).not.toBeVisible();
   });
 
-  // The server does not send a code until SCRUM-133 lands.
-  it("falls back to a generic reason when the server sends no error code", async () => {
+  // A product tested before SCRUM-133 has no category stored.
+  it("falls back to a generic reason when the product has no category", async () => {
     list.mockResolvedValue([
       product({ last_test_status: "failed", last_test_message: "could not connect", last_test_at: "2026-09-29T02:00:00Z" }),
     ]);
     renderPage();
     const cells = within(await row("DeepSeek"));
 
-    expect(cells.getByText(/sebab yang belum kami kenali/)).toBeInTheDocument();
+    expect(cells.getByText(/belum dikenali aplikasi ini/)).toBeInTheDocument();
     expect(cells.getByText("could not connect")).toBeInTheDocument();
   });
 
   it("hides Lihat detail when there is no raw message", async () => {
     list.mockResolvedValue([
-      product({ last_test_status: "failed", last_test_error_code: "timeout", last_test_message: null, last_test_at: "2026-09-29T02:00:00Z" }),
+      product({ last_test_status: "failed", last_test_error_category: "timeout", last_test_message: null, last_test_at: "2026-09-29T02:00:00Z" }),
     ]);
     renderPage();
     const cells = within(await row("DeepSeek"));
@@ -145,7 +145,7 @@ describe("ProvidersPage list", () => {
   it("shows markup in the raw provider message as plain text, never as HTML", async () => {
     const payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
     list.mockResolvedValue([
-      product({ last_test_status: "failed", last_test_error_code: "invalid_response", last_test_message: payload, last_test_at: "2026-09-29T02:00:00Z" }),
+      product({ last_test_status: "failed", last_test_error_category: "unknown", last_test_message: payload, last_test_at: "2026-09-29T02:00:00Z" }),
     ]);
     renderPage();
     const deepseekRow = await row("DeepSeek");
@@ -197,7 +197,7 @@ describe("ProvidersPage connection test (AC3)", () => {
   it("shows the reason and fix inline when the provider rejects the call", async () => {
     const user = userEvent.setup();
     list.mockResolvedValue([product()]);
-    test.mockResolvedValue({ status: "failed", error_code: "auth_failed", message: "provider returned HTTP 401 invalid key" });
+    test.mockResolvedValue({ status: "failed", error_category: "access_denied", message: "provider returned HTTP 401 invalid key" });
     renderPage();
     const deepseek = await row("DeepSeek");
 
@@ -210,7 +210,7 @@ describe("ProvidersPage connection test (AC3)", () => {
   it("opens the raw provider message from Lihat detail", async () => {
     const user = userEvent.setup();
     list.mockResolvedValue([product()]);
-    test.mockResolvedValue({ status: "failed", error_code: "auth_failed", message: "provider returned HTTP 401 invalid key" });
+    test.mockResolvedValue({ status: "failed", error_category: "access_denied", message: "provider returned HTTP 401 invalid key" });
     renderPage();
     const deepseek = await row("DeepSeek");
 

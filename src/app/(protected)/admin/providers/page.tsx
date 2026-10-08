@@ -103,7 +103,8 @@ export default function ProvidersPage() {
         last_test_at: new Date().toISOString(),
         last_test_status: result.status,
         last_test_message: result.status === "ok" ? null : (result.message ?? null),
-        last_test_error_code: result.status === "ok" ? null : (result.error_code ?? null),
+        last_test_error_category:
+          result.status === "ok" ? null : (result.error_category ?? null),
       });
     } catch {
       setResults((all) => ({
@@ -333,7 +334,7 @@ function LastTest({ product, testing, live }: { product: AiProduct; testing: boo
       </span>
     );
   }
-  const failure = describeConnectionFailure(product.last_test_error_code);
+  const failure = describeConnectionFailure(product.last_test_error_category);
   return (
     <div className="space-y-1">
       <p className="text-red-700">Gagal: {failure.title}</p>
