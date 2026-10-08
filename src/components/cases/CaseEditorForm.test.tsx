@@ -678,7 +678,7 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
   it("gives every legal reference and answer criteria field its own hint", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    for (const label of ["Jenis peraturan", "Nomor", "Tahun", "Pasal", "Ayat", "Huruf"]) {
+    for (const label of ["Jenis peraturan", "Nomor", "Tahun", "Pasal", "Ayat (opsional)", "Huruf (opsional)"]) {
       expect(within(refRow(1)).getByLabelText(label)).toHaveAccessibleDescription(/.+/);
     }
     for (const label of ["Wajib ada", "Tidak boleh ada", "Kesimpulan yang diharapkan"]) {
@@ -692,5 +692,79 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
 
     expect(screen.getByLabelText("ID kasus")).toHaveAccessibleDescription(CASE_HELP.caseCode);
     expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(CASE_HELP.traps);
+  });
+});
+
+describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
+  // Positive: masukan UAT #4, contoh isian dari tiket.
+  it("shows an example in every legal reference field", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const ref = within(refRow(1));
+    expect(ref.getByLabelText("Jenis peraturan")).toHaveAttribute("placeholder", "UU");
+    expect(ref.getByLabelText("Nomor")).toHaveAttribute("placeholder", "13");
+    expect(ref.getByLabelText("Tahun")).toHaveAttribute("placeholder", "2003");
+    expect(ref.getByLabelText("Pasal")).toHaveAttribute("placeholder", "156");
+    expect(ref.getByLabelText("Ayat (opsional)")).toHaveAttribute("placeholder", "2");
+    expect(ref.getByLabelText("Huruf (opsional)")).toHaveAttribute("placeholder", "a");
+  });
+
+  it("gives every input in the editor a non-empty placeholder, trap rows included", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+
+    const inputs = [...screen.getAllByRole("textbox"), ...screen.getAllByRole("spinbutton")];
+    expect(inputs).toHaveLength(15);
+    for (const input of inputs) {
+      expect(input.getAttribute("placeholder") ?? "", input.id).not.toBe("");
+    }
+  });
+
+  // Positive: masukan UAT #10, ayat dan huruf opsional.
+  it("labels ayat and huruf as optional without repeating it in their hints", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const ref = within(refRow(1));
+    for (const label of ["Ayat (opsional)", "Huruf (opsional)"]) {
+      expect(ref.getByLabelText(label)).toHaveAccessibleDescription(/.+/);
+      expect(ref.getByLabelText(label)).not.toHaveAccessibleDescription(/opsional/i);
+    }
+  });
+
+  // Negative: kolom wajib tidak ikut diberi label opsional.
+  it("does not mark the required reference fields as optional", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const ref = within(refRow(1));
+    for (const label of ["Jenis peraturan", "Nomor", "Pasal"]) {
+      expect(ref.getByLabelText(label)).toBeInTheDocument();
+      expect(ref.queryByLabelText(new RegExp(`^${label}.*opsional`, "i"))).not.toBeInTheDocument();
+    }
+  });
+
+  // Corner: baris rujukan yang baru ditambah juga punya contoh.
+  it("shows the examples on a newly added reference row", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
+
+    expect(within(refRow(2)).getByLabelText("Pasal")).toHaveAttribute("placeholder", "156");
+    expect(within(refRow(2)).getByLabelText("Huruf (opsional)")).toHaveAttribute("placeholder", "a");
+  });
+
+  // Corner: placeholder hanya contoh, tidak ikut terkirim sebagai isi.
+  it("does not send a placeholder as a value when an optional field is left empty", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    render(<CaseEditorForm defaultValues={{ ...filled, identity: { ...filled.identity, category: "" } }} onSubmit={onSubmit} />);
+
+    expect(within(refRow(1)).getByLabelText("Huruf (opsional)")).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const payload = onSubmit.mock.calls[0]?.[0];
+    expect(payload?.legal_refs[0]?.huruf).toBeNull();
+    expect(payload?.identity.category).toBeNull();
   });
 });
