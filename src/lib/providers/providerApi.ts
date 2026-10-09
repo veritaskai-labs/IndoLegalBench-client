@@ -30,6 +30,11 @@ export function setProductActive(productId: string, active: boolean): Promise<Ai
   });
 }
 
+/** Soft delete: produk hilang dari daftar, riwayat tetap di server. */
+export function deleteProduct(productId: string): Promise<void> {
+  return apiFetch<void>(productPath(productId), { method: "DELETE" });
+}
+
 /** Selalu 200: gagal koneksi dijawab `{status: "failed", message}`, bukan error HTTP. */
 export function testConnection(productId: string): Promise<ConnectionTest> {
   return apiFetch<ConnectionTest>(`${productPath(productId)}/test-connection`, {
