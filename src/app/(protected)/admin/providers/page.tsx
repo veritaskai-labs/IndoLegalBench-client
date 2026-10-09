@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { DeleteProductDialog } from "@/components/providers/DeleteProductDialog";
 import { ProviderFormDialog } from "@/components/providers/ProviderFormDialog";
 import { ToggleActiveDialog } from "@/components/providers/ToggleActiveDialog";
 import { CredentialHint } from "@/components/ui/CredentialHint";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
+import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
 import { formatDateTime, formatRupiah, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
 import type { AiProduct } from "@/types/provider";
@@ -14,14 +16,16 @@ type Dialog =
   | { mode: "closed" }
   | { mode: "create" }
   | { mode: "edit"; product: AiProduct }
-  | { mode: "toggle"; product: AiProduct };
+  | { mode: "toggle"; product: AiProduct }
+  | { mode: "delete"; product: AiProduct };
 
 type ListState = { status: "loading" } | { status: "ready"; products: AiProduct[] } | { status: "error" };
 
 /** Hasil uji koneksi terakhir di sesi ini; latency hanya ada di balasan, tidak disimpan server. */
 type LiveResult =
   | { status: "ok"; latencyMs: number }
-  | { status: "failed"; message: string }
+  /** Alasan gagal dibaca dari field last_test_* milik produk. */
+  | { status: "failed" }
   /** Permintaan uji koneksi sendiri gagal (jaringan, server); hasil tersimpan tidak berubah. */
   | { status: "error" };
 
@@ -79,6 +83,12 @@ export default function ProvidersPage() {
     );
   }
 
+  function removeRow(productId: string) {
+    setList((current) =>
+      current.status !== "ready" ? current : { status: "ready", products: current.products.filter((item) => item.id !== productId) },
+    );
+  }
+
   async function runTest(product: AiProduct) {
     setTesting((ids) => new Set(ids).add(product.id));
     try {
@@ -86,13 +96,15 @@ export default function ProvidersPage() {
       const live: LiveResult =
         result.status === "ok"
           ? { status: "ok", latencyMs: result.latency_ms ?? 0 }
-          : { status: "failed", message: result.message ?? "Uji koneksi gagal." };
+          : { status: "failed" };
       setResults((all) => ({ ...all, [product.id]: live }));
       replaceRow({
         ...product,
         last_test_at: new Date().toISOString(),
         last_test_status: result.status,
         last_test_message: result.status === "ok" ? null : (result.message ?? null),
+        last_test_error_category:
+          result.status === "ok" ? null : (result.error_category ?? null),
       });
     } catch {
       setResults((all) => ({
@@ -187,6 +199,7 @@ export default function ProvidersPage() {
                     onTest={() => runTest(product)}
                     onEdit={() => setDialog({ mode: "edit", product })}
                     onToggle={() => setDialog({ mode: "toggle", product })}
+                    onDelete={() => setDialog({ mode: "delete", product })}
                   />
                 ))}
             </tbody>
@@ -218,6 +231,18 @@ export default function ProvidersPage() {
           }}
         />
       )}
+
+      {dialog.mode === "delete" && (
+        <DeleteProductDialog
+          product={dialog.product}
+          onClose={() => setDialog({ mode: "closed" })}
+          onDone={() => {
+            setDialog({ mode: "closed" });
+            showToast(`${dialog.product.name} dihapus`);
+            removeRow(dialog.product.id);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -229,6 +254,7 @@ function ProductRow({
   onTest,
   onEdit,
   onToggle,
+  onDelete,
 }: {
   product: AiProduct;
   testing: boolean;
@@ -236,6 +262,7 @@ function ProductRow({
   onTest: () => void;
   onEdit: () => void;
   onToggle: () => void;
+  onDelete: () => void;
 }) {
   return (
     <tr className="align-top">
@@ -281,6 +308,9 @@ function ProductRow({
           >
             {product.is_active ? "Nonaktifkan" : "Aktifkan"}
           </button>
+          <button type="button" onClick={onDelete} aria-label={`Hapus ${product.name}`} className="text-red-700 hover:underline">
+            Hapus
+          </button>
         </div>
       </td>
     </tr>
@@ -290,7 +320,7 @@ function ProductRow({
 function LastTest({ product, testing, live }: { product: AiProduct; testing: boolean; live: LiveResult | undefined }) {
   if (testing) return <span className="text-slate-500">Menguji koneksi, bisa sampai 15 detik…</span>;
   if (live?.status === "error") {
-    return <span className="text-red-700">Uji koneksi tidak bisa dijalankan. Coba lagi.</span>;
+    return <span className="text-red-700">Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.</span>;
   }
   if (product.last_test_status === null || product.last_test_at === null) {
     return <span className="text-slate-400">Belum pernah diuji</span>;
@@ -304,10 +334,18 @@ function LastTest({ product, testing, live }: { product: AiProduct; testing: boo
       </span>
     );
   }
+  const failure = describeConnectionFailure(product.last_test_error_category);
   return (
-    <span className="text-red-700">
-      Gagal: {product.last_test_message ?? "tanpa keterangan"}
-      <span className="block text-slate-400">{when}</span>
-    </span>
+    <div className="space-y-1">
+      <p className="text-red-700">Gagal: {failure.title}</p>
+      {failure.hint && <p className="text-slate-600">{failure.hint}</p>}
+      {product.last_test_message && (
+        <details className="text-slate-500">
+          <summary className="cursor-pointer hover:text-slate-700">Lihat detail</summary>
+          <p className="mt-1 font-mono break-words">{product.last_test_message}</p>
+        </details>
+      )}
+      <p className="text-slate-400">{when}</p>
+    </div>
   );
 }
