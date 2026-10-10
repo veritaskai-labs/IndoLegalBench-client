@@ -5,17 +5,13 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
 import { listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
-import type { Role } from "@/types";
+import { session } from "@/test/authMock";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 
-const { params, push, session } = vi.hoisted(() => ({
-  params: { id: "" },
-  push: vi.fn(),
-  session: { role: "author" as Role },
-}));
+const { params, push } = vi.hoisted(() => ({ params: { id: "" }, push: vi.fn() }));
 const confirmMock = vi.fn();
 
 // The page reads the case id from the URL and navigates back to the suite;
@@ -40,12 +36,7 @@ vi.mock("@/lib/cases/caseApi", () => ({
 }));
 
 // Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({
-    status: "authenticated",
-    user: { id: "u1", name: "Aileen", email: "a@veritask.id", role: session.role },
-  }),
-}));
+vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 
 vi.mock("@/lib/cases/versionApi", () => ({ startCaseVersion: vi.fn(), listCaseVersions: vi.fn() }));
 
