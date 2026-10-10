@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
-import { startCaseVersion } from "@/lib/cases/versionApi";
+import { listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
 import type { Role } from "@/types";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
@@ -47,10 +47,11 @@ vi.mock("@/hooks/useAuth", () => ({
   }),
 }));
 
-vi.mock("@/lib/cases/versionApi", () => ({ startCaseVersion: vi.fn() }));
+vi.mock("@/lib/cases/versionApi", () => ({ startCaseVersion: vi.fn(), listCaseVersions: vi.fn() }));
 
 const getCaseMock = vi.mocked(getCase);
 const startVersionMock = vi.mocked(startCaseVersion);
+const listVersionsMock = vi.mocked(listCaseVersions);
 const updateCaseMock = vi.mocked(updateCase);
 const completenessMock = vi.mocked(getCaseCompleteness);
 
@@ -114,6 +115,7 @@ beforeEach(() => {
   params.id = CASE_ID;
   session.role = "author";
   startVersionMock.mockReset();
+  listVersionsMock.mockReset();
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
   completenessMock.mockReset();
@@ -553,5 +555,105 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     // Assert
     expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Judul")).toBeEnabled();
+  });
+});
+
+describe("EditCasePage version history tab (SCRUM-138)", () => {
+  const historyTab = () => screen.getByRole("tab", { name: "Riwayat versi" });
+
+  // Positive: AC2
+  it("opens the version history from the tab", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    listVersionsMock.mockResolvedValue([
+      {
+        version_no: 1,
+        status: "approved",
+        author: { id: "u1", name: "Aileen" },
+        created_at: "2026-10-03T07:05:00Z",
+        changed: [],
+      },
+    ]);
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(historyTab());
+
+    // Assert
+    expect(await screen.findByRole("row", { name: /Versi 1/ })).toBeInTheDocument();
+    expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID);
+    expect(screen.getByRole("tab", { name: "Riwayat versi" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  // Edge: the history is only requested when somebody looks at it.
+  it("does not ask for the history until the tab is opened", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Assert
+    expect(listVersionsMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("tab", { name: "Editor" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  // Edge: switching tabs must not throw away what the author typed.
+  it("keeps unsaved edits when the author looks at the history and comes back", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    listVersionsMock.mockResolvedValue([]);
+    renderPage();
+    const title = await screen.findByLabelText("Judul");
+    await user.clear(title);
+    await user.type(title, "Judul belum disimpan");
+
+    // Act
+    await user.click(historyTab());
+    await screen.findByText("Belum ada riwayat versi");
+    await user.click(screen.getByRole("tab", { name: "Editor" }));
+
+    // Assert
+    expect(screen.getByLabelText("Judul")).toHaveValue("Judul belum disimpan");
+    expect(screen.getByText("Ada perubahan yang belum disimpan")).toBeInTheDocument();
+  });
+
+  // Negative
+  it("shows the error inside the tab without breaking the editor", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    listVersionsMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(historyTab());
+
+    // Assert
+    expect(await screen.findByRole("alert")).toHaveTextContent("Gagal memuat riwayat versi.");
+    await user.click(screen.getByRole("tab", { name: "Editor" }));
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+  });
+
+  // Edge: every role may read the history (the server allows it).
+  it.each(["author", "reviewer", "admin", "viewer"] as const)("lets the %s open the history", async (role) => {
+    // Arrange
+    const user = userEvent.setup();
+    session.role = role;
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    listVersionsMock.mockResolvedValue([]);
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(historyTab());
+
+    // Assert
+    expect(await screen.findByText("Belum ada riwayat versi")).toBeInTheDocument();
   });
 });

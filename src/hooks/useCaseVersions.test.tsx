@@ -52,6 +52,21 @@ describe("useCaseVersions", () => {
     expect(listMock).toHaveBeenCalledWith("case-1");
   });
 
+  // Edge: the server sends the lowest number first, the page wants the newest on top.
+  it("orders the versions newest first", async () => {
+    // Arrange
+    listMock.mockResolvedValue([version(1), version(3), version(2)]);
+
+    // Act
+    const { result } = renderHook(() => useCaseVersions("case-1"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    // Assert
+    expect(result.current).toMatchObject({
+      versions: [{ version_no: 3 }, { version_no: 2 }, { version_no: 1 }],
+    });
+  });
+
   // Edge: an empty history is a valid answer, not an error.
   it("stays ready when the case has no versions", async () => {
     // Arrange
