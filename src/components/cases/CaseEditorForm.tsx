@@ -30,6 +30,7 @@ type Props = {
   onSubmit: (payload: CaseWritePayload) => void | Promise<FieldSaveError | null | void>;
   /** Dipanggil saat form berubah dari bersih ke berisi perubahan, atau sebaliknya. */
   onDirtyChange?: (dirty: boolean) => void;
+  readOnly?: boolean;
 };
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
@@ -39,7 +40,8 @@ function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
-export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props) {
+export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnly }: Props) {
+  void readOnly;
   const {
     register,
     control,

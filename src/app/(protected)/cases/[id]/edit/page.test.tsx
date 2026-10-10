@@ -4,12 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
+import { startCaseVersion } from "@/lib/cases/versionApi";
+import type { Role } from "@/types";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 
-const { params, push } = vi.hoisted(() => ({ params: { id: "" }, push: vi.fn() }));
+const { params, push, session } = vi.hoisted(() => ({
+  params: { id: "" },
+  push: vi.fn(),
+  session: { role: "author" as Role },
+}));
 const confirmMock = vi.fn();
 
 // The page reads the case id from the URL and navigates back to the suite;
@@ -33,7 +39,18 @@ vi.mock("@/lib/cases/caseApi", () => ({
   updateCase: vi.fn(),
 }));
 
+// Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    status: "authenticated",
+    user: { id: "u1", name: "Aileen", email: "a@veritask.id", role: session.role },
+  }),
+}));
+
+vi.mock("@/lib/cases/versionApi", () => ({ startCaseVersion: vi.fn() }));
+
 const getCaseMock = vi.mocked(getCase);
+const startVersionMock = vi.mocked(startCaseVersion);
 const updateCaseMock = vi.mocked(updateCase);
 const completenessMock = vi.mocked(getCaseCompleteness);
 
@@ -95,6 +112,8 @@ function save() {
 
 beforeEach(() => {
   params.id = CASE_ID;
+  session.role = "author";
+  startVersionMock.mockReset();
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
   completenessMock.mockReset();
@@ -424,3 +443,115 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
 
 });
 
+describe("EditCasePage locked versions (SCRUM-138)", () => {
+  const startButton = () => screen.getByRole("button", { name: "Edit (buat versi baru)" });
+
+  // Positive: AC1 and AC6
+  it("locks an approved case and offers to start a new version that will be reviewed again", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    const notice = await screen.findByRole("region", { name: "Versi terkunci" });
+
+    // Assert
+    expect(notice).toHaveTextContent("ditinjau ulang");
+    expect(startButton()).toBeEnabled();
+    expect(screen.getByLabelText("Judul")).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Simpan draf" })).not.toBeInTheDocument();
+  });
+
+  it("fills the editor from the new draft, not from the approved case, and unlocks it", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    startVersionMock.mockResolvedValue(
+      savedCase({
+        status: "draft",
+        version: 2,
+        identity: { title: "Judul draf versi 2", question: "Wajib?", category: null },
+      }),
+    );
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+
+    // Act
+    await user.click(startButton());
+
+    // Assert
+    expect(startVersionMock).toHaveBeenCalledWith(CASE_ID);
+    expect(await screen.findByLabelText("Judul")).toHaveValue("Judul draf versi 2");
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+    expect(screen.getByText("Draft")).toBeInTheDocument();
+    expect(save()).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
+    expect(toast()).toHaveTextContent("Versi baru dibuat");
+    expect(getCaseMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Negative
+  it("keeps the case locked and shows the reason when a version is already in progress", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    startVersionMock.mockRejectedValue(new ApiError(409, "VERSION_IN_PROGRESS"));
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+
+    // Act
+    await user.click(startButton());
+
+    // Assert
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Sudah ada versi baru yang sedang dikerjakan atau ditinjau.",
+    );
+    expect(screen.getByLabelText("Judul")).toBeDisabled();
+  });
+
+  it.each(["reviewer", "viewer"] as const)(
+    "shows the approved case without a start button to the %s",
+    async (role) => {
+      // Arrange
+      session.role = role;
+      getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+      // Act
+      renderPage();
+      await screen.findByRole("region", { name: "Versi terkunci" });
+
+      // Assert
+      expect(screen.queryByRole("button", { name: "Edit (buat versi baru)" })).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Judul")).toBeDisabled();
+    },
+  );
+
+  // Edge: a case in review is read only too, but cannot be forked.
+  it("locks a case in review without offering a new version", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "in_review" }));
+
+    // Act
+    renderPage();
+    const notice = await screen.findByRole("region", { name: "Versi terkunci" });
+
+    // Assert
+    expect(notice).toHaveTextContent("sedang ditinjau");
+    expect(screen.queryByRole("button", { name: "Edit (buat versi baru)" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toBeDisabled();
+  });
+
+  // Edge: drafts keep working exactly as before.
+  it("shows neither the notice nor a lock on a draft", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Assert
+    expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+  });
+});

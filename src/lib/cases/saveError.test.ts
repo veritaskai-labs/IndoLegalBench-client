@@ -140,6 +140,20 @@ describe("mapSaveError", () => {
     });
   });
 
+  it("tells the author to start a new version when the saved version is locked", () => {
+    // Arrange
+    const error = new ApiError(409, "VERSION_LOCKED", "Version is approved");
+
+    // Act
+    const result = mapSaveError(error);
+
+    // Assert
+    expect(result).toEqual({
+      kind: "form",
+      message: "Versi yang sudah disetujui tidak bisa diubah. Buat versi baru dulu.",
+    });
+  });
+
   it("explains a missing suite or case at form level", () => {
     expect(mapSaveError(new ApiError(404, "NOT_FOUND"))).toEqual({
       kind: "form",
