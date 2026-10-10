@@ -114,20 +114,58 @@ describe("VersionCompareView", () => {
     );
   });
 
-  // Edge: the same version on both sides is allowed and the server answers it.
-  it("can compare a version with itself and says nothing changed", async () => {
+  // Negative: comparing a version with itself shows nothing, so the button is off and says why.
+  it("disables the button and explains when both sides are the same version", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<VersionCompareView caseId="case-1" versions={versions} />);
+
+    // Act
+    await user.selectOptions(screen.getByLabelText("Versi A"), "3");
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Bandingkan" })).toBeDisabled();
+    expect(screen.getByText("Pilih dua versi yang berbeda untuk dibandingkan.")).toBeInTheDocument();
+  });
+
+  it("does not ask the server when the same version is chosen on both sides", async () => {
     // Arrange
     const user = userEvent.setup();
     compareMock.mockResolvedValue(comparison([]));
     render(<VersionCompareView caseId="case-1" versions={versions} />);
-    await user.selectOptions(screen.getByLabelText("Versi A"), "3");
+    await user.selectOptions(screen.getByLabelText("Versi B"), "2");
 
     // Act
     await pressCompare(user);
 
     // Assert
-    expect(compareMock).toHaveBeenCalledWith("case-1", 3, 3);
-    expect(await screen.findByRole("status")).toHaveTextContent("Tidak ada bagian yang berubah");
+    expect(compareMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  // Positive: choosing a different version again turns the button back on.
+  it("enables the button and drops the hint once the two sides differ again", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<VersionCompareView caseId="case-1" versions={versions} />);
+    await user.selectOptions(screen.getByLabelText("Versi A"), "3");
+
+    // Act
+    await user.selectOptions(screen.getByLabelText("Versi A"), "1");
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Bandingkan" })).toBeEnabled();
+    expect(screen.queryByText("Pilih dua versi yang berbeda untuk dibandingkan.")).not.toBeInTheDocument();
+  });
+
+  // Edge: the two newest versions differ, so nothing is blocked when the view opens.
+  it("shows no hint and an enabled button when the view opens", () => {
+    // Arrange / Act
+    render(<VersionCompareView caseId="case-1" versions={versions} />);
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Bandingkan" })).toBeEnabled();
+    expect(screen.queryByText("Pilih dua versi yang berbeda untuk dibandingkan.")).not.toBeInTheDocument();
   });
 
   // Edge: exactly two versions.
