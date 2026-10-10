@@ -140,6 +140,43 @@ describe("mapSaveError", () => {
     });
   });
 
+  // Positive: a new draft of an approved case keeps its case code; the server answers 409.
+  it("puts 409 CASE_CODE_LOCKED on the case_code field with the server message", () => {
+    // Arrange
+    const error = new ApiError(
+      409,
+      "CASE_CODE_LOCKED",
+      "Kode kasus tidak bisa diubah setelah ada versi yang disetujui",
+    );
+
+    // Act
+    const result = mapSaveError(error);
+
+    // Assert
+    expect(result).toEqual({
+      kind: "field",
+      path: "case_code",
+      message: "Kode kasus tidak bisa diubah setelah ada versi yang disetujui",
+      detail: null,
+    });
+  });
+
+  it("uses an Indonesian message for CASE_CODE_LOCKED without a server message", () => {
+    // Arrange
+    const error = new ApiError(409, "CASE_CODE_LOCKED");
+
+    // Act
+    const result = mapSaveError(error);
+
+    // Assert
+    expect(result).toEqual({
+      kind: "field",
+      path: "case_code",
+      message: "ID kasus tidak bisa diubah setelah kasus pernah disetujui.",
+      detail: null,
+    });
+  });
+
   it("tells the author to start a new version when the saved version is locked", () => {
     // Arrange
     const error = new ApiError(409, "VERSION_LOCKED", "Version is approved");
