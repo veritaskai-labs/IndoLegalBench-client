@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
 import { listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
 import { session } from "@/test/authMock";
+import { makeSummary } from "@/test/versionFixtures";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
 
@@ -437,7 +438,13 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
 });
 
 describe("EditCasePage locked versions (SCRUM-138)", () => {
-  const startButton = () => screen.getByRole("button", { name: "Edit (buat versi baru)" });
+  const startButton = () => screen.findByRole("button", { name: "Edit (buat versi baru)" });
+  const noStartButton = () => screen.queryByRole("button", { name: "Edit (buat versi baru)" });
+
+  // Version 1 was written by the signed-in user (id u1), so the author is the creator.
+  beforeEach(() => {
+    listVersionsMock.mockResolvedValue([makeSummary(1), makeSummary(2)]);
+  });
 
   // Positive: AC1 and AC6
   it("locks an approved case and offers to start a new version that will be reviewed again", async () => {
@@ -450,7 +457,7 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
 
     // Assert
     expect(notice).toHaveTextContent("ditinjau ulang");
-    expect(startButton()).toBeEnabled();
+    expect(await startButton()).toBeEnabled();
     expect(screen.getByLabelText("Judul")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Simpan draf" })).not.toBeInTheDocument();
   });
@@ -470,7 +477,7 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     await screen.findByRole("region", { name: "Versi terkunci" });
 
     // Act
-    await user.click(startButton());
+    await user.click(await startButton());
 
     // Assert
     expect(startVersionMock).toHaveBeenCalledWith(CASE_ID);
@@ -493,13 +500,63 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     await screen.findByRole("region", { name: "Versi terkunci" });
 
     // Act
-    await user.click(startButton());
+    await user.click(await startButton());
 
     // Assert
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Sudah ada versi baru yang sedang dikerjakan atau ditinjau.",
     );
     expect(screen.getByLabelText("Judul")).toBeDisabled();
+  });
+
+  // Negative: the server only lets the creator or an admin fork, so another author gets no button.
+  it("keeps the case locked without a start button for an author who did not create it", async () => {
+    // Arrange
+    listVersionsMock.mockResolvedValue([
+      makeSummary(1, { author: { id: "u2", name: "Penulis lain" } }),
+      makeSummary(2, { author: { id: "u1", name: "Aileen" } }),
+    ]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+    await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
+
+    // Assert
+    expect(noStartButton()).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toBeDisabled();
+  });
+
+  // Positive: an admin may fork any approved case, so no history lookup is needed.
+  it("offers the start button to an admin without asking who created the case", async () => {
+    // Arrange
+    session.role = "admin";
+    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+
+    // Assert
+    expect(await startButton()).toBeEnabled();
+    expect(listVersionsMock).not.toHaveBeenCalled();
+  });
+
+  // Edge: if the creator cannot be told, the button stays hidden and the server remains the gate.
+  it("keeps the button hidden for an author when the history cannot be read", async () => {
+    // Arrange
+    listVersionsMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+    await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
+
+    // Assert
+    expect(noStartButton()).not.toBeInTheDocument();
   });
 
   it.each(["reviewer", "viewer"] as const)(

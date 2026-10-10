@@ -24,30 +24,51 @@ describe("isCaseEditable", () => {
 });
 
 describe("canStartNewVersion", () => {
-  // Positive
-  it.each(["author", "admin"] as const)("lets the %s start a version of an approved case", (role) => {
+  // Positive: the server lets the creator or an admin start a version.
+  it("lets an admin start a version of an approved case, creator or not", () => {
     // Arrange / Act
-    const allowed = canStartNewVersion(role, "approved");
+    const asNonCreator = canStartNewVersion("admin", "approved", false);
+    const asCreator = canStartNewVersion("admin", "approved", true);
+
+    // Assert
+    expect(asNonCreator).toBe(true);
+    expect(asCreator).toBe(true);
+  });
+
+  it("lets the author who created the case start a version", () => {
+    // Arrange / Act
+    const allowed = canStartNewVersion("author", "approved", true);
 
     // Assert
     expect(allowed).toBe(true);
   });
 
-  // Negative
-  it.each(["reviewer", "viewer"] as const)("does not offer the button to the %s", (role) => {
+  // Negative: another author would only get a 403 from the server.
+  it("does not offer the button to an author who did not create the case", () => {
     // Arrange / Act
-    const allowed = canStartNewVersion(role, "approved");
+    const allowed = canStartNewVersion("author", "approved", false);
 
     // Assert
     expect(allowed).toBe(false);
   });
+
+  it.each(["reviewer", "viewer"] as const)(
+    "does not offer the button to the %s, even if the case is theirs",
+    (role) => {
+      // Arrange / Act
+      const allowed = canStartNewVersion(role, "approved", true);
+
+      // Assert
+      expect(allowed).toBe(false);
+    },
+  );
 
   // Edge: only an approved case has a version to copy.
   it.each(["draft", "in_review", "needs_revision"] as const)(
     "does not offer the button on a %s case, even to an admin",
     (status: CaseStatus) => {
       // Arrange / Act
-      const allowed = canStartNewVersion("admin", status);
+      const allowed = canStartNewVersion("admin", status, true);
 
       // Assert
       expect(allowed).toBe(false);
@@ -60,7 +81,7 @@ describe("canStartNewVersion", () => {
     const role: Role | null = null;
 
     // Act
-    const allowed = canStartNewVersion(role, "approved");
+    const allowed = canStartNewVersion(role, "approved", true);
 
     // Assert
     expect(allowed).toBe(false);

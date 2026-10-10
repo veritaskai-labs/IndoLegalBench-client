@@ -16,6 +16,7 @@ export function isCaseEditable(status: CaseStatus): boolean {
  * Tombol "Edit (buat versi baru)" hanya untuk kasus yang disetujui.
  * Ini hanya menentukan tampilan tombol; server tetap yang memutuskan boleh atau tidak.
  */
-export function canStartNewVersion(role: Role | null, status: CaseStatus): boolean {
+export function canStartNewVersion(role: Role | null, status: CaseStatus, isCreator?: boolean): boolean {
+  void isCreator;
   return status === "approved" && role !== null && START_VERSION_ROLES.includes(role);
 }
