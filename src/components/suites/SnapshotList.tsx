@@ -9,12 +9,12 @@ type Props = {
   page: number;
   onPageChange: (page: number) => void;
   onRetry: () => void;
-  selectedId?: string | null;
-  onSelect?: (snapshotId: string) => void;
+  selectedId: string | null;
+  onSelect: (snapshotId: string) => void;
 };
 
 /** Daftar snapshot per timestamp. Hanya menampilkan; datanya datang dari useSnapshots. */
-export function SnapshotList({ state, page, onPageChange, onRetry }: Props) {
+export function SnapshotList({ state, page, onPageChange, onRetry, selectedId, onSelect }: Props) {
   if (state.status === "loading") return <LoadingState label="Memuat snapshot…" />;
 
   if (state.status === "error") {
@@ -39,6 +39,7 @@ export function SnapshotList({ state, page, onPageChange, onRetry }: Props) {
       <ul className="divide-y divide-slate-100 rounded border border-slate-200 bg-white">
         {items.map((snapshot) => {
           const label = snapshotLabel(snapshot.created_at);
+          const selected = snapshot.id === selectedId;
           return (
             <li key={snapshot.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div>
@@ -47,6 +48,15 @@ export function SnapshotList({ state, page, onPageChange, onRetry }: Props) {
                   Oleh {snapshot.author.name} · {snapshot.case_count} kasus
                 </p>
               </div>
+              <button
+                type="button"
+                aria-label={`${selected ? "Tutup" : "Lihat"} isi ${label}`}
+                aria-expanded={selected}
+                onClick={() => onSelect(snapshot.id)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {selected ? "Tutup isi" : "Lihat isi"}
+              </button>
             </li>
           );
         })}

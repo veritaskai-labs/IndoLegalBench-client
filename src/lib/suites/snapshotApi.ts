@@ -16,7 +16,7 @@ export function listSnapshots(suiteId: string, page: number, size: number): Prom
   return apiFetch<SnapshotPage>(`${snapshotsPath(suiteId)}?${query.toString()}`);
 }
 
+/** GET /snapshots/{snapshot_id}. Isi kasus yang dibekukan, bukan kasus yang sekarang. */
 export function getSnapshot(snapshotId: string): Promise<SnapshotRead> {
-  void snapshotId;
-  return Promise.resolve({} as SnapshotRead);
+  return apiFetch<SnapshotRead>(`/snapshots/${encodeURIComponent(snapshotId)}`);
 }

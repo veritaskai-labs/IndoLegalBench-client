@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSnapshots } from "@/hooks/useSnapshots";
 import { canCreateSnapshot } from "@/lib/suites/permissions";
 import { CreateSnapshotDialog } from "./CreateSnapshotDialog";
+import { SnapshotDetail } from "./SnapshotDetail";
 import { SnapshotList } from "./SnapshotList";
 
 /** Bagian snapshot di halaman suite. Semua peran bisa melihat; tombol buat snapshot hanya untuk Admin. */
@@ -12,6 +13,7 @@ export function SnapshotSection({ suiteId }: { suiteId: string }) {
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
   const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [created, setCreated] = useState(false);
   const snapshots = useSnapshots(suiteId, page);
@@ -50,7 +52,13 @@ export function SnapshotSection({ suiteId }: { suiteId: string }) {
         page={page}
         onPageChange={setPage}
         onRetry={snapshots.reload}
+        selectedId={selectedId}
+        onSelect={(id) => setSelectedId((current) => (current === id ? null : id))}
       />
+
+      {selectedId !== null && (
+        <SnapshotDetail key={selectedId} snapshotId={selectedId} onClose={() => setSelectedId(null)} />
+      )}
 
       {dialogOpen && (
         <CreateSnapshotDialog
