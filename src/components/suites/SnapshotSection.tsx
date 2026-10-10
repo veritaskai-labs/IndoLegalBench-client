@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSnapshots } from "@/hooks/useSnapshots";
 import { canCreateSnapshot } from "@/lib/suites/permissions";
 import { CreateSnapshotDialog } from "./CreateSnapshotDialog";
+import { SnapshotList } from "./SnapshotList";
 
-/** Bagian snapshot di halaman suite. Tombol buat snapshot hanya untuk Admin. */
+/** Bagian snapshot di halaman suite. Semua peran bisa melihat; tombol buat snapshot hanya untuk Admin. */
 export function SnapshotSection({ suiteId }: { suiteId: string }) {
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
+  const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [created, setCreated] = useState(false);
-
-  if (!canCreateSnapshot(role)) return null;
+  const snapshots = useSnapshots(suiteId, page);
 
   return (
     <section aria-label="Snapshot" className="space-y-3 border-t border-slate-200 pt-5">
@@ -20,19 +22,21 @@ export function SnapshotSection({ suiteId }: { suiteId: string }) {
         <div>
           <h2 className="text-sm font-semibold text-slate-900">Snapshot</h2>
           <p className="text-xs text-slate-500">
-            Bekukan kasus yang sudah disetujui sebagai penanda rilis.
+            Kasus yang sudah disetujui, dibekukan pada satu waktu sebagai penanda rilis.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setCreated(false);
-            setDialogOpen(true);
-          }}
-          className="rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-        >
-          Buat snapshot
-        </button>
+        {canCreateSnapshot(role) && (
+          <button
+            type="button"
+            onClick={() => {
+              setCreated(false);
+              setDialogOpen(true);
+            }}
+            className="rounded-md bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+          >
+            Buat snapshot
+          </button>
+        )}
       </div>
 
       {created && (
@@ -41,6 +45,13 @@ export function SnapshotSection({ suiteId }: { suiteId: string }) {
         </p>
       )}
 
+      <SnapshotList
+        state={snapshots}
+        page={page}
+        onPageChange={setPage}
+        onRetry={snapshots.reload}
+      />
+
       {dialogOpen && (
         <CreateSnapshotDialog
           suiteId={suiteId}
@@ -48,6 +59,9 @@ export function SnapshotSection({ suiteId }: { suiteId: string }) {
           onCreated={() => {
             setDialogOpen(false);
             setCreated(true);
+            // Snapshot baru ada di halaman pertama (terbaru dulu).
+            setPage(1);
+            snapshots.reload();
           }}
         />
       )}

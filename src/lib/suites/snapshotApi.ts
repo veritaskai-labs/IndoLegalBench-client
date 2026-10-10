@@ -10,9 +10,8 @@ export function createSnapshot(suiteId: string): Promise<SnapshotRead> {
   return apiFetch<SnapshotRead>(snapshotsPath(suiteId), { method: "POST" });
 }
 
+/** GET /suites/{suite_id}/snapshots. Terbaru dulu; page mulai dari 1, size paling banyak 100. */
 export function listSnapshots(suiteId: string, page: number, size: number): Promise<SnapshotPage> {
-  void suiteId;
-  void page;
-  void size;
-  return Promise.resolve({} as SnapshotPage);
+  const query = new URLSearchParams({ page: String(page), size: String(size) });
+  return apiFetch<SnapshotPage>(`${snapshotsPath(suiteId)}?${query.toString()}`);
 }
