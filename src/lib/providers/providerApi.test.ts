@@ -3,6 +3,7 @@ import { apiFetch } from "@/lib/apiClient";
 import { formatRupiah, formatRupiahInput, parseRupiahInput } from "./format";
 import {
   createProduct,
+  deleteProduct,
   listProducts,
   setProductActive,
   testConnection,
@@ -47,6 +48,12 @@ describe("providerApi", () => {
       "/admin/providers/p1/deactivate",
       "/admin/providers/p1/test-connection",
     ]);
+  });
+
+  it("deletes with DELETE on the encoded id", async () => {
+    await deleteProduct("a/b");
+
+    expect(fetchMock).toHaveBeenCalledWith("/admin/providers/a%2Fb", { method: "DELETE" });
   });
 });
 

@@ -14,6 +14,25 @@ export class ApiError extends Error {
   }
 }
 
+type ForbiddenListener = () => void;
+
+const forbiddenListeners = new Set<ForbiddenListener>();
+
+/**
+ * Subscribe to 403 responses from apiFetch. Returns an unsubscribe function.
+ * This module only reports the event; navigation stays in the UI (AuthGuard).
+ */
+export function onForbidden(listener: ForbiddenListener): () => void {
+  forbiddenListeners.add(listener);
+  return () => {
+    forbiddenListeners.delete(listener);
+  };
+}
+
+function notifyForbidden(): void {
+  for (const listener of forbiddenListeners) listener();
+}
+
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
@@ -47,9 +66,7 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const err = await parseError(response);
-    if (err.status === 403 && typeof window !== "undefined") {
-      window.location.href = "/forbidden";
-    }
+    if (err.status === 403) notifyForbidden();
     throw err;
   }
   if (response.status === 204) return undefined as T;

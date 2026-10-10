@@ -177,20 +177,11 @@ describe("CaseEditorForm", () => {
   it("removes the middle legal reference row and keeps the others' values", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    // Mulai dari tiga baris: yang diuji penghapusan baris tengah, bukan mengetik.
+    // Mengetik huruf demi huruf di sini dulu membuat test ini timeout saat suite penuh berjalan.
     const ref = filled.legal_refs[0];
-    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} />);
-
-    await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
-    await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
-    for (const row of [2, 3]) {
-      await user.type(within(refRow(row)).getByLabelText("Jenis peraturan"), ref.regulation_type);
-      await user.type(within(refRow(row)).getByLabelText("Nomor"), ref.regulation_number);
-    }
-    const firstPasal = within(refRow(1)).getByLabelText("Pasal");
-    await user.clear(firstPasal);
-    await user.type(firstPasal, "1");
-    await user.type(within(refRow(2)).getByLabelText("Pasal"), "2");
-    await user.type(within(refRow(3)).getByLabelText("Pasal"), "3");
+    const legal_refs = ["1", "2", "3"].map((pasal) => ({ ...ref, pasal }));
+    render(<CaseEditorForm defaultValues={{ ...filled, legal_refs }} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("button", { name: "Hapus rujukan 2" }));
 
@@ -563,6 +554,55 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     expect(code).toHaveAttribute("aria-invalid", "true");
   });
 
+  // Corner: simpan sebelum jeda validasi selesai. Validasi yang tertunda tidak boleh
+  // menghapus error dari server (penyebab test "clears the banner…" di halaman kasus baru flaky).
+  it("keeps the server error when the field changed just before saving", async () => {
+    vi.useFakeTimers();
+    const duplicate: FieldSaveError = {
+      kind: "field",
+      path: "case_code",
+      message: "Kode kasus 'PHK-2' sudah dipakai di suite 'Perburuhan'",
+      detail: null,
+    };
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn(() => Promise.resolve(duplicate))} />);
+    const code = screen.getByLabelText("ID kasus");
+
+    fireEvent.change(code, { target: { value: "PHK-2" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Simpan draf" }));
+    });
+    expect(code).toHaveAccessibleDescription(duplicate.message);
+
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS);
+    });
+    expect(code).toHaveAttribute("aria-invalid", "true");
+    expect(code).toHaveAccessibleDescription(duplicate.message);
+  });
+
+  // Guard: perubahan sesudah simpan tetap divalidasi ulang setelah jeda, seperti biasa.
+  it("still re-checks a field the author changes after the server rejected it", async () => {
+    vi.useFakeTimers();
+    const duplicate: FieldSaveError = {
+      kind: "field",
+      path: "case_code",
+      message: "Kode kasus 'PHK-2' sudah dipakai di suite 'Perburuhan'",
+      detail: null,
+    };
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn(() => Promise.resolve(duplicate))} />);
+    const code = screen.getByLabelText("ID kasus");
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Simpan draf" }));
+    });
+    expect(code).toHaveAccessibleDescription(duplicate.message);
+
+    fireEvent.change(code, { target: { value: "PHK-3" } });
+    await act(async () => {
+      vi.advanceTimersByTime(VALIDATE_DELAY_MS);
+    });
+    expect(code).not.toHaveAttribute("aria-invalid", "true");
+  });
+
   // Negative: an empty row the author just added is not an error yet.
   it("does not flag a new empty trap row before the author touches it", async () => {
     const user = userEvent.setup();
@@ -636,16 +676,51 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
   it("explains that traps test the precision of the answer and dev/test is a dataset split", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(/ketelitian jawaban model/);
+    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(/menguji ketelitian model/);
     expect(screen.getByRole("group", { name: "Tag dev/test" })).toHaveTextContent(
       /metodologi dataset .* bukan tingkat kesulitan/,
     );
   });
 
+  // SCRUM-131, AC4 (revisi) dan AC6, masukan UAT #11 dan #12.
+  it("says traps are optional and a case without traps can still be submitted for review", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Jebakan" });
+    expect(traps).toHaveTextContent(/^Jebakan\s*Opsional\./);
+    expect(traps).toHaveTextContent(/tetap bisa diajukan review tanpa jebakan/);
+  });
+
+  it("explains a trap with a real example: an answer that looks right but cites a revoked article", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Jebakan" });
+    // Review Rafa di PR #23: jebakan adalah skenario yang memancing jawaban keliru, bukan jawabannya sendiri.
+    expect(traps).toHaveTextContent(/Jebakan adalah skenario yang memancing jawaban/);
+    expect(traps).toHaveTextContent(/tampak benar tapi sebenarnya keliru/);
+    expect(traps).toHaveTextContent(/pasal yang sudah dicabut/);
+  });
+
+  // Negative: aturan lama (minimal satu jebakan) tidak boleh muncul lagi.
+  it("no longer tells the Author that at least one trap is required", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    expect(screen.getByRole("group", { name: "Jebakan" })).not.toHaveTextContent(/minimal satu/i);
+  });
+
+  // Corner: kasus baru belum punya baris jebakan, bantuan tetap terlihat.
+  it("shows the trap help on a new case that has no trap rows yet", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Jebakan" });
+    expect(within(traps).queryByRole("group")).not.toBeInTheDocument();
+    expect(traps).toHaveTextContent(/Opsional\..*tetap bisa diajukan review tanpa jebakan/);
+  });
+
   it("gives every legal reference and answer criteria field its own hint", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    for (const label of ["Jenis peraturan", "Nomor", "Tahun", "Pasal", "Ayat", "Huruf"]) {
+    for (const label of ["Jenis peraturan", "Nomor", "Tahun", "Pasal", "Ayat (opsional)", "Huruf (opsional)"]) {
       expect(within(refRow(1)).getByLabelText(label)).toHaveAccessibleDescription(/.+/);
     }
     for (const label of ["Wajib ada", "Tidak boleh ada", "Kesimpulan yang diharapkan"]) {
@@ -659,5 +734,79 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
 
     expect(screen.getByLabelText("ID kasus")).toHaveAccessibleDescription(CASE_HELP.caseCode);
     expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(CASE_HELP.traps);
+  });
+});
+
+describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
+  // Positive: masukan UAT #4, contoh isian dari tiket.
+  it("shows an example in every legal reference field", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const ref = within(refRow(1));
+    expect(ref.getByLabelText("Jenis peraturan")).toHaveAttribute("placeholder", "UU");
+    expect(ref.getByLabelText("Nomor")).toHaveAttribute("placeholder", "13");
+    expect(ref.getByLabelText("Tahun")).toHaveAttribute("placeholder", "2003");
+    expect(ref.getByLabelText("Pasal")).toHaveAttribute("placeholder", "156");
+    expect(ref.getByLabelText("Ayat (opsional)")).toHaveAttribute("placeholder", "2");
+    expect(ref.getByLabelText("Huruf (opsional)")).toHaveAttribute("placeholder", "a");
+  });
+
+  it("gives every input in the editor a non-empty placeholder, trap rows included", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+
+    const inputs = [...screen.getAllByRole("textbox"), ...screen.getAllByRole("spinbutton")];
+    expect(inputs).toHaveLength(15);
+    for (const input of inputs) {
+      expect(input.getAttribute("placeholder") ?? "", input.id).not.toBe("");
+    }
+  });
+
+  // Positive: masukan UAT #10, ayat dan huruf opsional.
+  it("labels ayat and huruf as optional without repeating it in their hints", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const ref = within(refRow(1));
+    for (const label of ["Ayat (opsional)", "Huruf (opsional)"]) {
+      expect(ref.getByLabelText(label)).toHaveAccessibleDescription(/.+/);
+      expect(ref.getByLabelText(label)).not.toHaveAccessibleDescription(/opsional/i);
+    }
+  });
+
+  // Negative: kolom wajib tidak ikut diberi label opsional.
+  it("does not mark the required reference fields as optional", () => {
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+
+    const ref = within(refRow(1));
+    for (const label of ["Jenis peraturan", "Nomor", "Pasal"]) {
+      expect(ref.getByLabelText(label)).toBeInTheDocument();
+      expect(ref.queryByLabelText(new RegExp(`^${label}.*opsional`, "i"))).not.toBeInTheDocument();
+    }
+  });
+
+  // Corner: baris rujukan yang baru ditambah juga punya contoh.
+  it("shows the examples on a newly added reference row", async () => {
+    const user = userEvent.setup();
+    render(<CaseEditorForm onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "+ Tambah rujukan" }));
+
+    expect(within(refRow(2)).getByLabelText("Pasal")).toHaveAttribute("placeholder", "156");
+    expect(within(refRow(2)).getByLabelText("Huruf (opsional)")).toHaveAttribute("placeholder", "a");
+  });
+
+  // Corner: placeholder hanya contoh, tidak ikut terkirim sebagai isi.
+  it("does not send a placeholder as a value when an optional field is left empty", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    render(<CaseEditorForm defaultValues={{ ...filled, identity: { ...filled.identity, category: "" } }} onSubmit={onSubmit} />);
+
+    expect(within(refRow(1)).getByLabelText("Huruf (opsional)")).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const payload = onSubmit.mock.calls[0]?.[0];
+    expect(payload?.legal_refs[0]?.huruf).toBeNull();
+    expect(payload?.identity.category).toBeNull();
   });
 });

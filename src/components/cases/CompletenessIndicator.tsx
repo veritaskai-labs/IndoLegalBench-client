@@ -30,10 +30,8 @@ export function CompletenessIndicator(props: Props) {
     );
   }
 
-  const { pct, missing, trap_count, ready_for_review } = props.completeness;
-  const noTraps = trap_count === 0;
-  // Kekurangan jebakan sudah punya peringatannya sendiri di atas daftar.
-  const rest = noTraps ? missing.filter(({ field }) => field !== "traps") : missing;
+  // Jebakan opsional (AC4 revisi, SCRUM-130); daftar kekurangan tampil apa adanya dari server.
+  const { pct, missing, ready_for_review } = props.completeness;
 
   return (
     <section aria-label="Kelengkapan kasus" className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -60,17 +58,11 @@ export function CompletenessIndicator(props: Props) {
         />
       </div>
 
-      {noTraps && (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Jebakan belum ada. Kasus butuh minimal satu jebakan sebelum bisa diajukan review.
-        </p>
-      )}
-
-      {rest.length > 0 && (
+      {missing.length > 0 && (
         <div>
           <p className="text-xs font-medium text-slate-700">Belum lengkap:</p>
           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-slate-600">
-            {rest.map(({ field, message }) => (
+            {missing.map(({ field, message }) => (
               <li key={field}>{message}</li>
             ))}
           </ul>

@@ -332,7 +332,8 @@ export interface paths {
         get: operations["get_product_admin_providers__product_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Hapus produk AI (soft delete) */
+        delete: operations["delete_product_admin_providers__product_id__delete"];
         options?: never;
         head?: never;
         /** Ubah produk AI */
@@ -445,6 +446,7 @@ export interface components {
             last_test_status: components["schemas"]["LastTestStatus"] | null;
             /** Last Test Message */
             last_test_message: string | null;
+            last_test_error_category: components["schemas"]["ConnectionTestErrorCategory"] | null;
             /**
              * Created By
              * Format: uuid
@@ -627,6 +629,15 @@ export interface components {
             message: string;
         };
         /**
+         * ConnectionTestErrorCategory
+         * @description Kategori kegagalan uji koneksi yang mudah dipahami Admin.
+         *
+         *     Nilai ini disimpan di last_test_error_category dan dikembalikan di
+         *     ConnectionTestRead agar frontend tidak perlu mem-parsing pesan mentah.
+         * @enum {string}
+         */
+        ConnectionTestErrorCategory: "access_denied" | "model_not_found" | "timeout" | "unreachable" | "unknown";
+        /**
          * ConnectionTestRead
          * @description Hasil uji koneksi. Kredensial tidak pernah ada di sini.
          */
@@ -640,6 +651,7 @@ export interface components {
             latency_ms?: number | null;
             /** Message */
             message?: string | null;
+            error_category?: components["schemas"]["ConnectionTestErrorCategory"] | null;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -806,7 +818,7 @@ export interface components {
         };
         /**
          * Trap
-         * @description A known mistake and how the model is expected to handle it.
+         * @description An optionally included known mistake and how the model is expected to handle it.
          */
         Trap: {
             /** Description */
@@ -1747,6 +1759,44 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AiProductRead"];
                 };
+            };
+            /** @description Produk AI tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_product_admin_providers__product_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Produk AI tidak ditemukan. */
             404: {
