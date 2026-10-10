@@ -108,6 +108,8 @@ beforeEach(() => {
   session.role = "author";
   startVersionMock.mockReset();
   listVersionsMock.mockReset();
+  // An author on an approved case reads the history to learn who created it.
+  listVersionsMock.mockResolvedValue([]);
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
   completenessMock.mockReset();

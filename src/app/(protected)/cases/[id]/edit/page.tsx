@@ -13,13 +13,14 @@ import { LockedVersionNotice } from "@/components/cases/LockedVersionNotice";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
+import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { useStartNewVersion } from "@/hooks/useStartNewVersion";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { updateCase } from "@/lib/cases/caseApi";
 import { fromCaseRead, type CaseWritePayload } from "@/lib/cases/caseFormMapping";
-import { canStartNewVersion, isCaseEditable } from "@/lib/cases/permissions";
+import { isCaseEditable } from "@/lib/cases/permissions";
 import type { CaseRead } from "@/types/case";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
@@ -40,7 +41,8 @@ export default function EditCasePage() {
   const completeness = useCaseCompleteness(caseId, formKey);
   const router = useRouter();
   const auth = useAuth();
-  const role = auth.status === "authenticated" ? auth.user.role : null;
+  const user = auth.status === "authenticated" ? auth.user : null;
+  const canStart = useCanStartNewVersion(caseId, user, detail.status === "ready" ? detail.saved.status : null);
   // Form diisi dari draf hasil POST, bukan GET: GET masih mengembalikan versi yang disetujui.
   const startVersion = useStartNewVersion(caseId, (draft: CaseRead) => {
     detail.replace(draft);
@@ -132,7 +134,7 @@ export default function EditCasePage() {
         {!editable && (
           <LockedVersionNotice
             approved={saved.status === "approved"}
-            canStart={canStartNewVersion(role, saved.status)}
+            canStart={canStart}
             pending={startVersion.pending}
             error={startVersion.error}
             onStart={startVersion.start}
