@@ -80,6 +80,14 @@ export function mapSaveError(error: unknown): SaveError {
       detail: null,
     };
   }
+  if (error.code === "CASE_CODE_LOCKED") {
+    return {
+      kind: "field",
+      path: "case_code",
+      message: error.serverMessage ?? "ID kasus tidak bisa diubah setelah kasus pernah disetujui.",
+      detail: null,
+    };
+  }
   if (error.code === "VERSION_LOCKED") {
     return { kind: "form", message: VERSION_LOCKED_MESSAGE };
   }
