@@ -3,16 +3,29 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SuiteDetailPage from "./page";
 import * as casesApi from "@/lib/api/cases";
+import { listSnapshots } from "@/lib/suites/snapshotApi";
+import { makeSnapshotPage } from "@/test/snapshotFixtures";
 import { ApiError, apiFetch } from "@/lib/apiClient";
+import { session } from "@/test/authMock";
 import type { Suite } from "@/types/suite";
 
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+
+// Who is signed in decides whether the snapshot button is offered; null means still loading.
+vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
 vi.mock("@/lib/api/cases");
+
+// The snapshot section loads its own list; these tests only care that it is mounted.
+vi.mock("@/lib/suites/snapshotApi", () => ({
+  listSnapshots: vi.fn(),
+  getSnapshot: vi.fn(),
+  createSnapshot: vi.fn(),
+}));
 
 // Keep the real ApiError, mock only apiFetch (used for GET /suites/{id})
 vi.mock("@/lib/apiClient", async (importOriginal) => {
@@ -68,7 +81,9 @@ async function renderPage(id = "suite-123") {
 describe("SuiteDetailPage (SCRUM-110)", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    session.role = null;
     vi.mocked(apiFetch).mockResolvedValue(activeSuite);
+    vi.mocked(listSnapshots).mockResolvedValue(makeSnapshotPage([]));
   });
 
   it("menampilkan skeleton saat data kasus sedang dimuat", async () => {
@@ -257,4 +272,33 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     );
   });
 
+  // SCRUM-138, AC5: the suite page carries the snapshot section.
+  it("offers the admin a button to create a snapshot", async () => {
+    session.role = "admin";
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+    await renderPage();
+
+    expect(await screen.findByRole("button", { name: "Buat snapshot" })).toBeInTheDocument();
+  });
+
+  it("does not offer the snapshot button to a viewer", async () => {
+    session.role = "viewer";
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+    await renderPage();
+
+    await screen.findByRole("table");
+    expect(screen.queryByRole("button", { name: "Buat snapshot" })).not.toBeInTheDocument();
+  });
+
+  it("lists the snapshots of the suite for a viewer", async () => {
+    session.role = "viewer";
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+    await renderPage();
+
+    expect(await screen.findByText("Belum ada snapshot")).toBeInTheDocument();
+    expect(listSnapshots).toHaveBeenCalledWith("suite-123", 1, 10);
+  });
 });

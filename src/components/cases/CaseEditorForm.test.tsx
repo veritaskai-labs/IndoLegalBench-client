@@ -809,4 +809,31 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
     expect(payload?.legal_refs[0]?.huruf).toBeNull();
     expect(payload?.identity.category).toBeNull();
   });
+
+  // Locked versions (SCRUM-138, AC1): the wording is shown but cannot be changed.
+  it("disables every field and hides the save button when read only", () => {
+    // Arrange
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} readOnly />);
+
+    // Act
+    const title = screen.getByLabelText("Judul");
+
+    // Assert
+    expect(title).toBeDisabled();
+    expect(title).toHaveValue("Pemberitahuan PHK");
+    expect(screen.getByRole("button", { name: "+ Tambah rujukan" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Simpan draf" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the fields enabled and the save button visible by default", () => {
+    // Arrange
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    // Act
+    const title = screen.getByLabelText("Judul");
+
+    // Assert
+    expect(title).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Simpan draf" })).toBeEnabled();
+  });
 });
