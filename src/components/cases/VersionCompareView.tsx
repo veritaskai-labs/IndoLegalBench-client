@@ -8,6 +8,8 @@ import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import type { VersionSummary } from "@/types/caseVersion";
 import { VersionCompareResult } from "./VersionCompareResult";
 
+const SAME_VERSION_HINT_ID = "compare-same-version-hint";
+
 const SELECT_CLASS =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
 
@@ -45,6 +47,8 @@ export function VersionCompareView({ caseId, versions }: { caseId: string; versi
   const [a, setA] = useState(versions[1]?.version_no ?? versions[0]?.version_no ?? 0);
   const [b, setB] = useState(versions[0]?.version_no ?? 0);
   const comparison = useVersionCompare(caseId);
+  // Satu versi dengan dirinya sendiri tidak pernah menunjukkan perubahan, jadi tidak dikirim ke server.
+  const sameVersion = a === b;
 
   if (versions.length < 2) {
     return <p className="text-xs text-slate-500">Perlu minimal dua versi untuk dibandingkan.</p>;
@@ -64,12 +68,19 @@ export function VersionCompareView({ caseId, versions }: { caseId: string; versi
         <button
           type="button"
           onClick={() => void comparison.compare(a, b)}
-          disabled={comparison.status === "loading"}
+          disabled={comparison.status === "loading" || sameVersion}
+          aria-describedby={sameVersion ? SAME_VERSION_HINT_ID : undefined}
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
         >
           Bandingkan
         </button>
       </div>
+
+      {sameVersion && (
+        <p id={SAME_VERSION_HINT_ID} className="text-xs text-slate-500">
+          Pilih dua versi yang berbeda untuk dibandingkan.
+        </p>
+      )}
 
       {comparison.status === "loading" && <LoadingState label="Membandingkan versi…" />}
       {comparison.status === "error" && (
