@@ -12,7 +12,10 @@ type CaseVersionsState =
 
 type UseCaseVersions = CaseVersionsState & { reload: () => void };
 
-/** Riwayat versi satu kasus untuk tab "Riwayat versi". Daftar kosong tetap status ready. */
+/**
+ * Riwayat versi satu kasus untuk tab "Riwayat versi", versi terbaru di atas
+ * (server mengirim nomor terkecil dulu). Daftar kosong tetap status ready.
+ */
 export function useCaseVersions(caseId: string): UseCaseVersions {
   const [state, setState] = useState<CaseVersionsState>({ status: "loading" });
   const [nonce, setNonce] = useState(0);
@@ -27,7 +30,9 @@ export function useCaseVersions(caseId: string): UseCaseVersions {
 
     listCaseVersions(caseId)
       .then((versions) => {
-        if (!cancelled) setState({ status: "ready", versions });
+        if (!cancelled) {
+          setState({ status: "ready", versions: [...versions].sort((a, b) => b.version_no - a.version_no) });
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) setState({ status: "error", message: mapVersionError(error, "history") });
