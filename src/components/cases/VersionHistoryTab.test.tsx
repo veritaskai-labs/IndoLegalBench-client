@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import { listCaseVersions } from "@/lib/cases/versionApi";
+import { makeSummary } from "@/test/versionFixtures";
 import type { VersionSummary } from "@/types/caseVersion";
 import { VersionHistoryTab } from "./VersionHistoryTab";
 
@@ -10,16 +11,7 @@ vi.mock("@/lib/cases/versionApi", () => ({ listCaseVersions: vi.fn() }));
 
 const listMock = vi.mocked(listCaseVersions);
 
-function version(overrides: Partial<VersionSummary> = {}): VersionSummary {
-  return {
-    version_no: 1,
-    status: "approved",
-    author: { id: "u1", name: "Aileen" },
-    created_at: "2026-10-03T07:05:00Z",
-    changed: [],
-    ...overrides,
-  };
-}
+const version = (overrides: Partial<VersionSummary> = {}) => makeSummary(1, overrides);
 
 beforeEach(() => {
   listMock.mockReset();
@@ -73,6 +65,31 @@ describe("VersionHistoryTab", () => {
 
     // Assert
     expect(await screen.findByText("Versi pertama")).toBeInTheDocument();
+  });
+
+  // AC4: the compare section only makes sense with two versions.
+  it("offers to compare versions once the case has two or more", async () => {
+    // Arrange
+    listMock.mockResolvedValue([version({ version_no: 1 }), version({ version_no: 2 })]);
+
+    // Act
+    render(<VersionHistoryTab caseId="case-1" />);
+
+    // Assert
+    expect(await screen.findByRole("region", { name: "Bandingkan versi" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bandingkan" })).toBeEnabled();
+  });
+
+  it("explains that a single version cannot be compared", async () => {
+    // Arrange
+    listMock.mockResolvedValue([version({ version_no: 1 })]);
+
+    // Act
+    render(<VersionHistoryTab caseId="case-1" />);
+
+    // Assert
+    expect(await screen.findByText("Perlu minimal dua versi untuk dibandingkan.")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Bandingkan versi" })).not.toBeInTheDocument();
   });
 
   // Loading
