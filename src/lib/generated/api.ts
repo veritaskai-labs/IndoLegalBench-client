@@ -391,6 +391,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/suites/{suite_id}/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar snapshot satu suite
+         * @description List snapshots, newest first.
+         *
+         *     Author, Reviewer, Admin, and Viewer. SCRUM-138 shows this list to Viewer.
+         *     Creating a snapshot stays Admin only.
+         */
+        get: operations["list_snapshots_suites__suite_id__snapshots_get"];
+        put?: never;
+        /**
+         * Bekukan suite sebagai snapshot
+         * @description Freeze the approved cases. No request body and no name.
+         */
+        post: operations["create_snapshot_suites__suite_id__snapshots_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/snapshots/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Isi satu snapshot
+         * @description Return the frozen items. The body is the stored copy.
+         *
+         *     Author, Reviewer, Admin, and Viewer. SCRUM-138 shows this page to Viewer.
+         *     Creating a snapshot stays Admin only.
+         */
+        get: operations["get_snapshot_snapshots__snapshot_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Riwayat versi satu kasus
+         * @description List every stored version, oldest number first.
+         *
+         *     Author, Reviewer, Admin, and Viewer. SCRUM-138 shows this history to
+         *     Viewer, and a Reviewer needs it while a new version is in review.
+         */
+        get: operations["list_case_versions_cases__case_id__versions_get"];
+        put?: never;
+        /**
+         * Buat versi draf dari kasus yang sudah disetujui
+         * @description Copy the approved wording into a new draft. No request body.
+         */
+        post: operations["start_case_version_cases__case_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/versions/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bandingkan dua nomor versi
+         * @description Diff two version numbers of one case. The diff is computed on request.
+         *
+         *     Author, Reviewer, Admin, and Viewer. SCRUM-138 shows this compare to
+         *     Viewer, and a Reviewer needs it while a new version is in review.
+         */
+        get: operations["compare_case_versions_cases__case_id__versions_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -868,6 +968,162 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * ActorRead
+         * @description Who wrote a version, or who froze a suite snapshot.
+         */
+        ActorRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** Page[SnapshotSummary] */
+        Page_SnapshotSummary_: {
+            /** Items */
+            items: components["schemas"]["SnapshotSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
+        /**
+         * SnapshotItemRead
+         * @description One frozen case. body is the copy taken at snapshot time.
+         */
+        SnapshotItemRead: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Case Version Id
+             * Format: uuid
+             */
+            case_version_id: string;
+            /** Body */
+            body: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * SnapshotRead
+         * @description GET /snapshots/{id} and the body of POST /suites/{id}/snapshots.
+         */
+        SnapshotRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Suite Id
+             * Format: uuid
+             */
+            suite_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            author: components["schemas"]["ActorRead"];
+            /** Items */
+            items: components["schemas"]["SnapshotItemRead"][];
+        };
+        /**
+         * SnapshotSummary
+         * @description One row of GET /suites/{id}/snapshots. Items are on the detail route.
+         */
+        SnapshotSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            author: components["schemas"]["ActorRead"];
+            /** Case Count */
+            case_count: number;
+        };
+        /**
+         * VersionCompare
+         * @description GET /cases/{id}/versions/compare. a and b are version numbers.
+         */
+        VersionCompare: {
+            a: components["schemas"]["VersionSide"];
+            b: components["schemas"]["VersionSide"];
+            /** Changed */
+            changed: string[];
+        };
+        /**
+         * VersionSections
+         * @description One version split into the eight SCRUM-137 sections.
+         *
+         *     The dotted names are the API keys. See app/modules/cases/sections.py.
+         */
+        VersionSections: {
+            /** Identity.Title */
+            "identity.title": string;
+            /** Identity.Question */
+            "identity.question": string;
+            /** Category */
+            category?: string | null;
+            /** Case Code */
+            case_code: string;
+            /** Split Tag */
+            split_tag: string;
+            /** Legal Refs */
+            legal_refs: unknown[];
+            /** Answer Criteria */
+            answer_criteria: {
+                [key: string]: unknown;
+            };
+            /** Traps */
+            traps: unknown[];
+        };
+        /**
+         * VersionSide
+         * @description One side of a compare. sections uses the eight section names.
+         */
+        VersionSide: {
+            /** Version No */
+            version_no: number;
+            status: components["schemas"]["CaseStatus"];
+            author: components["schemas"]["ActorRead"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            sections: components["schemas"]["VersionSections"];
+        };
+        /**
+         * VersionSummary
+         * @description One row of GET /cases/{id}/versions.
+         */
+        VersionSummary: {
+            /** Version No */
+            version_no: number;
+            status: components["schemas"]["CaseStatus"];
+            author: components["schemas"]["ActorRead"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Changed */
+            changed: string[];
         };
     };
     responses: never;
@@ -1972,6 +2228,272 @@ export interface operations {
                 };
             };
             /** @description Produk AI tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_snapshots_suites__suite_id__snapshots_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_SnapshotSummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_snapshot_suites__suite_id__snapshots_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suite_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotRead"];
+                };
+            };
+            /** @description Bukan admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Suite tidak punya kasus approved (`NOTHING_TO_SNAPSHOT`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_snapshot_snapshots__snapshot_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotRead"];
+                };
+            };
+            /** @description Snapshot tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_case_versions_cases__case_id__versions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionSummary"][];
+                };
+            };
+            /** @description Kasus tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_case_version_cases__case_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRead"];
+                };
+            };
+            /** @description Bukan pembuat kasus dan bukan admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Suite tidak aktif (`SUITE_NOT_ACTIVE`), tag kosong (`SPLIT_TAG_REQUIRED`), pola case_code ditolak (`CASE_CODE_INVALID`), atau field wajib kosong (`field`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    compare_case_versions_cases__case_id__versions_compare_get: {
+        parameters: {
+            query: {
+                /** @description Nomor versi pertama */
+                a: number;
+                /** @description Nomor versi kedua */
+                b: number;
+            };
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionCompare"];
+                };
+            };
+            /** @description Kasus atau nomor versi tidak ditemukan. */
             404: {
                 headers: {
                     [name: string]: unknown;
