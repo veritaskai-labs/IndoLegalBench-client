@@ -84,7 +84,11 @@ export function VersionCompareView({ caseId, versions }: { caseId: string; versi
 
       {comparison.status === "loading" && <LoadingState label="Membandingkan versi…" />}
       {comparison.status === "error" && (
-        <ErrorState variant="card" message={comparison.message} onRetry={() => void comparison.compare(a, b)} />
+        <ErrorState
+          variant="card"
+          message={comparison.message}
+          onRetry={sameVersion ? undefined : () => void comparison.compare(a, b)}
+        />
       )}
       {comparison.status === "ready" && <VersionCompareResult result={comparison.result} />}
     </section>
