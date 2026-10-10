@@ -1,47 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { listCaseVersions } from "@/lib/cases/versionApi";
 import { mapVersionError } from "@/lib/cases/versionErrors";
 import type { VersionSummary } from "@/types/caseVersion";
+import { useAsyncResource } from "./useAsyncResource";
 
-type CaseVersionsState =
-  | { status: "loading" }
-  | { status: "ready"; versions: VersionSummary[] }
-  | { status: "error"; message: string };
+const historyMessage = (error: unknown) => mapVersionError(error, "history");
 
-type UseCaseVersions = CaseVersionsState & { reload: () => void };
+/** Server mengirim nomor terkecil dulu; halaman ingin yang terbaru di atas. */
+const newestFirst = (versions: VersionSummary[]) =>
+  [...versions].sort((a, b) => b.version_no - a.version_no);
 
-/**
- * Riwayat versi satu kasus untuk tab "Riwayat versi", versi terbaru di atas
- * (server mengirim nomor terkecil dulu). Daftar kosong tetap status ready.
- */
-export function useCaseVersions(caseId: string): UseCaseVersions {
-  const [state, setState] = useState<CaseVersionsState>({ status: "loading" });
-  const [nonce, setNonce] = useState(0);
+/** Riwayat versi satu kasus untuk tab "Riwayat versi". Daftar kosong tetap status ready. */
+export function useCaseVersions(caseId: string) {
+  const { reload, ...resource } = useAsyncResource(
+    caseId,
+    () => listCaseVersions(caseId).then(newestFirst),
+    historyMessage,
+  );
 
-  const reload = useCallback(() => {
-    setState({ status: "loading" });
-    setNonce((n) => n + 1);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    listCaseVersions(caseId)
-      .then((versions) => {
-        if (!cancelled) {
-          setState({ status: "ready", versions: [...versions].sort((a, b) => b.version_no - a.version_no) });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setState({ status: "error", message: mapVersionError(error, "history") });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [caseId, nonce]);
-
-  return { ...state, reload };
+  if (resource.status === "ready") return { status: "ready" as const, versions: resource.data, reload };
+  return { ...resource, reload };
 }
