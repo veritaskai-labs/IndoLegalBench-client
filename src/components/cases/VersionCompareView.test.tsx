@@ -143,6 +143,42 @@ describe("VersionCompareView", () => {
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
+  // Negative: the retry button of an earlier error must not send the same version on both sides.
+  it("offers no retry for an earlier error once both sides are the same version", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    compareMock.mockRejectedValue(new ApiError(404, "VERSION_NOT_FOUND"));
+    render(<VersionCompareView caseId="case-1" versions={versions} />);
+    await pressCompare(user);
+    await screen.findByRole("button", { name: "Coba lagi" });
+
+    // Act
+    await user.selectOptions(screen.getByLabelText("Versi A"), "3");
+
+    // Assert
+    expect(screen.queryByRole("button", { name: "Coba lagi" })).not.toBeInTheDocument();
+    expect(compareMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("brings the retry back after a different version is chosen again", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    compareMock.mockRejectedValueOnce(new ApiError(404, "VERSION_NOT_FOUND"));
+    compareMock.mockResolvedValueOnce(comparison([]));
+    render(<VersionCompareView caseId="case-1" versions={versions} />);
+    await pressCompare(user);
+    await screen.findByRole("button", { name: "Coba lagi" });
+    await user.selectOptions(screen.getByLabelText("Versi A"), "3");
+
+    // Act
+    await user.selectOptions(screen.getByLabelText("Versi A"), "1");
+    await user.click(screen.getByRole("button", { name: "Coba lagi" }));
+
+    // Assert
+    expect(compareMock).toHaveBeenCalledTimes(2);
+    expect(compareMock).toHaveBeenLastCalledWith("case-1", 1, 3);
+  });
+
   // Positive: choosing a different version again turns the button back on.
   it("enables the button and drops the hint once the two sides differ again", async () => {
     // Arrange
