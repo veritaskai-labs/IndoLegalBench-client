@@ -150,7 +150,7 @@ export default function EditCasePage() {
 
       {tab === "history" && (
         <div role="tabpanel" id={panelId("history")} aria-labelledby={tabId("history")}>
-          <VersionHistoryTab caseId={caseId} />
+          <VersionHistoryTab key={caseId} caseId={caseId} />
         </div>
       )}
     </div>
