@@ -23,6 +23,7 @@ vi.mock("@/lib/api/cases");
 // The snapshot section loads its own list; these tests only care that it is mounted.
 vi.mock("@/lib/suites/snapshotApi", () => ({
   listSnapshots: vi.fn(),
+  getSnapshot: vi.fn(),
   createSnapshot: vi.fn(),
 }));
 

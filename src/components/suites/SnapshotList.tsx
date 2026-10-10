@@ -9,6 +9,8 @@ type Props = {
   page: number;
   onPageChange: (page: number) => void;
   onRetry: () => void;
+  selectedId?: string | null;
+  onSelect?: (snapshotId: string) => void;
 };
 
 /** Daftar snapshot per timestamp. Hanya menampilkan; datanya datang dari useSnapshots. */

@@ -14,6 +14,8 @@ function renderList(state: SnapshotsState, overrides: Partial<Parameters<typeof 
       page={1}
       onPageChange={noop}
       onRetry={noop}
+      selectedId={null}
+      onSelect={noop}
       {...overrides}
     />,
   );
@@ -37,6 +39,32 @@ describe("SnapshotList", () => {
     expect(within(rows[0]).getByText("Snapshot 04 Okt 2026, 15.30 WIB")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Oleh Adra · 5 kasus")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Snapshot 03 Okt 2026, 14.05 WIB")).toBeInTheDocument();
+  });
+
+  it("asks to open the contents of the chosen snapshot", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderList({ status: "ready", page: makeSnapshotPage([makeSnapshotSummary({ id: "s1" })]) }, { onSelect });
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Lihat isi Snapshot 03 Okt 2026, 14.05 WIB" }));
+
+    // Assert
+    expect(onSelect).toHaveBeenCalledWith("s1");
+  });
+
+  it("marks the open snapshot and offers to close it", () => {
+    // Arrange / Act
+    renderList(
+      { status: "ready", page: makeSnapshotPage([makeSnapshotSummary({ id: "s1" })]) },
+      { selectedId: "s1" },
+    );
+
+    // Assert
+    const button = screen.getByRole("button", { name: "Tutup isi Snapshot 03 Okt 2026, 14.05 WIB" });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(button).toHaveTextContent("Tutup isi");
   });
 
   // States
@@ -130,7 +158,7 @@ describe("SnapshotList", () => {
     const { rerender } = renderList(state, { page: 1 });
     const first = disabled();
     rerender(
-      <SnapshotList state={state} page={2} onPageChange={noop} onRetry={noop} />,
+      <SnapshotList state={state} page={2} onPageChange={noop} onRetry={noop} selectedId={null} onSelect={noop} />,
     );
     const last = disabled();
 

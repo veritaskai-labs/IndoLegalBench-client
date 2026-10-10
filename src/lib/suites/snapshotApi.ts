@@ -15,3 +15,8 @@ export function listSnapshots(suiteId: string, page: number, size: number): Prom
   const query = new URLSearchParams({ page: String(page), size: String(size) });
   return apiFetch<SnapshotPage>(`${snapshotsPath(suiteId)}?${query.toString()}`);
 }
+
+export function getSnapshot(snapshotId: string): Promise<SnapshotRead> {
+  void snapshotId;
+  return Promise.resolve({} as SnapshotRead);
+}

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BASE_URL } from "@/lib/apiClient";
-import { createSnapshot, listSnapshots } from "./snapshotApi";
+import { createSnapshot, getSnapshot, listSnapshots } from "./snapshotApi";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -119,5 +119,44 @@ describe("listSnapshots", () => {
 
     // Assert
     expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/suites/a%2Fb%3Fc/snapshots?page=1&size=10`);
+  });
+});
+
+describe("getSnapshot", () => {
+  // Positive
+  it("gets one snapshot by id", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(200, { id: "snap-1", items: [] }));
+
+    // Act
+    const snapshot = await getSnapshot("snap-1");
+
+    // Assert
+    expect(snapshot).toEqual({ id: "snap-1", items: [] });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/snapshots/snap-1`);
+  });
+
+  // Negative
+  it("rejects with status 404 when the snapshot does not exist", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(404, { code: "SNAPSHOT_NOT_FOUND", message: "none" }));
+
+    // Act
+    const failure = getSnapshot("snap-9");
+
+    // Assert
+    await expect(failure).rejects.toMatchObject({ status: 404, code: "SNAPSHOT_NOT_FOUND" });
+  });
+
+  // Edge
+  it("encodes the snapshot id in the path", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(200, {}));
+
+    // Act
+    await getSnapshot("a/b");
+
+    // Assert
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/snapshots/a%2Fb`);
   });
 });

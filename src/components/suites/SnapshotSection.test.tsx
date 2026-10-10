@@ -2,9 +2,14 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
-import { createSnapshot, listSnapshots } from "@/lib/suites/snapshotApi";
+import { createSnapshot, getSnapshot, listSnapshots } from "@/lib/suites/snapshotApi";
 import { session } from "@/test/authMock";
-import { makeSnapshot, makeSnapshotPage, makeSnapshotSummary } from "@/test/snapshotFixtures";
+import {
+  makeSnapshot,
+  makeSnapshotItem,
+  makeSnapshotPage,
+  makeSnapshotSummary,
+} from "@/test/snapshotFixtures";
 import { SnapshotSection } from "./SnapshotSection";
 
 // Who is signed in decides whether the button is offered.
@@ -13,10 +18,12 @@ vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 vi.mock("@/lib/suites/snapshotApi", () => ({
   createSnapshot: vi.fn(),
   listSnapshots: vi.fn(),
+  getSnapshot: vi.fn(),
 }));
 
 const createMock = vi.mocked(createSnapshot);
 const listMock = vi.mocked(listSnapshots);
+const getMock = vi.mocked(getSnapshot);
 
 const openDialog = (user: ReturnType<typeof userEvent.setup>) =>
   user.click(screen.getByRole("button", { name: "Buat snapshot" }));
@@ -28,6 +35,7 @@ const confirm = (user: ReturnType<typeof userEvent.setup>) =>
 beforeEach(() => {
   session.role = "admin";
   createMock.mockReset();
+  getMock.mockReset();
   listMock.mockReset();
   listMock.mockResolvedValue(makeSnapshotPage([]));
 });
@@ -124,7 +132,7 @@ describe("SnapshotSection", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
-  // AC5: the list of snapshots.
+  // AC5: the list and what a snapshot contains.
   it("lists the snapshots of the suite, newest first as the server sends them", async () => {
     // Arrange
     listMock.mockResolvedValue(
@@ -144,6 +152,41 @@ describe("SnapshotSection", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("Snapshot 04 Okt 2026, 15.30 WIB");
     expect(rows[1]).toHaveTextContent("Snapshot 03 Okt 2026, 14.05 WIB");
+  });
+
+  it("opens the contents of a snapshot and closes them again", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    listMock.mockResolvedValue(makeSnapshotPage([makeSnapshotSummary({ id: "s1" })]));
+    getMock.mockResolvedValue(makeSnapshot({ id: "s1", items: [makeSnapshotItem()] }));
+    render(<SnapshotSection suiteId="suite-1" />);
+    await screen.findByText("Snapshot 03 Okt 2026, 14.05 WIB");
+
+    // Act
+    await user.click(screen.getByRole("button", { name: /^Lihat isi/ }));
+    const opened = await screen.findByRole("region", { name: "Isi Snapshot 03 Okt 2026, 14.05 WIB" });
+    await user.click(within(opened).getByRole("button", { name: "Tutup" }));
+
+    // Assert
+    expect(getMock).toHaveBeenCalledWith("s1");
+    expect(screen.queryByRole("region", { name: /^Isi Snapshot/ })).not.toBeInTheDocument();
+  });
+
+  it("closes the contents when the same snapshot is chosen again", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    listMock.mockResolvedValue(makeSnapshotPage([makeSnapshotSummary({ id: "s1" })]));
+    getMock.mockResolvedValue(makeSnapshot({ id: "s1", items: [makeSnapshotItem()] }));
+    render(<SnapshotSection suiteId="suite-1" />);
+    await screen.findByText("Snapshot 03 Okt 2026, 14.05 WIB");
+    await user.click(screen.getByRole("button", { name: /^Lihat isi/ }));
+    await screen.findByRole("region", { name: /^Isi Snapshot/ });
+
+    // Act
+    await user.click(screen.getByRole("button", { name: /^Tutup isi/ }));
+
+    // Assert
+    expect(screen.queryByRole("region", { name: /^Isi Snapshot/ })).not.toBeInTheDocument();
   });
 
   it("shows the new snapshot in the list after one is created", async () => {
@@ -180,5 +223,22 @@ describe("SnapshotSection", () => {
 
     // Assert
     expect(await screen.findByText("Snapshot 03 Okt 2026, 14.05 WIB")).toBeInTheDocument();
+  });
+
+  // Edge: a viewer can open the contents too.
+  it("lets a viewer open the contents of a snapshot", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    session.role = "viewer";
+    listMock.mockResolvedValue(makeSnapshotPage([makeSnapshotSummary({ id: "s1" })]));
+    getMock.mockResolvedValue(makeSnapshot({ id: "s1", items: [makeSnapshotItem()] }));
+    render(<SnapshotSection suiteId="suite-1" />);
+    await screen.findByText("Snapshot 03 Okt 2026, 14.05 WIB");
+
+    // Act
+    await user.click(screen.getByRole("button", { name: /^Lihat isi/ }));
+
+    // Assert
+    expect(await screen.findByRole("region", { name: /^Isi Snapshot/ })).toBeInTheDocument();
   });
 });
