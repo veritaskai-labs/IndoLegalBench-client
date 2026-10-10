@@ -8,12 +8,17 @@ import { CompletenessIndicator } from "@/components/cases/CompletenessIndicator"
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/Toast";
+import { LockedVersionNotice } from "@/components/cases/LockedVersionNotice";
+import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
+import { useStartNewVersion } from "@/hooks/useStartNewVersion";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { updateCase } from "@/lib/cases/caseApi";
 import { fromCaseRead, type CaseWritePayload } from "@/lib/cases/caseFormMapping";
+import { canStartNewVersion, isCaseEditable } from "@/lib/cases/permissions";
+import type { CaseRead } from "@/types/case";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
 import { Breadcrumb } from "@/components/ui";
@@ -31,6 +36,14 @@ export default function EditCasePage() {
   // formKey naik tiap simpan berhasil, jadi kelengkapan ikut dihitung ulang server.
   const completeness = useCaseCompleteness(caseId, formKey);
   const router = useRouter();
+  const auth = useAuth();
+  const role = auth.status === "authenticated" ? auth.user.role : null;
+  // Form diisi dari draf hasil POST, bukan GET: GET masih mengembalikan versi yang disetujui.
+  const startVersion = useStartNewVersion(caseId, (draft: CaseRead) => {
+    detail.replace(draft);
+    setFormKey((key) => key + 1);
+    showToast("Versi baru dibuat. Perubahan akan ditinjau ulang sebelum berlaku");
+  });
   const suiteName = useSuiteName( detail.status === "ready" ? detail.saved.suite_id : null);
 
   useUnsavedChangesWarning(dirty);
@@ -50,6 +63,7 @@ export default function EditCasePage() {
     );
   }
   const { saved } = detail;
+  const editable = isCaseEditable(saved.status);
   
   const suitePath = `/suites/${encodeURIComponent(saved.suite_id)}`;
 
@@ -102,11 +116,22 @@ export default function EditCasePage() {
       
       {saveError.message !== null && <ErrorState message={saveError.message} />}
 
+      {!editable && (
+        <LockedVersionNotice
+          approved={saved.status === "approved"}
+          canStart={canStartNewVersion(role, saved.status)}
+          pending={startVersion.pending}
+          error={startVersion.error}
+          onStart={startVersion.start}
+        />
+      )}
+
       <CaseEditorForm
         key={formKey}
         defaultValues={fromCaseRead(saved)}
         onSubmit={handleSubmit}
         onDirtyChange={setDirty}
+        readOnly={!editable}
       />
     </div>
   );

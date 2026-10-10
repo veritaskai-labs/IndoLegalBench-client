@@ -2,11 +2,14 @@ import { ApiError } from "@/lib/apiClient";
 
 export type VersionAction = "fork" | "history" | "compare";
 
+/** Dipakai juga oleh pesan simpan kasus, supaya kalimatnya satu. */
+export const VERSION_LOCKED_MESSAGE = "Versi yang sudah disetujui tidak bisa diubah. Buat versi baru dulu.";
+
 /** Kode 409 dari server yang artinya sudah jelas, apa pun aksinya. */
 const CODE_MESSAGE: Record<string, string> = {
   VERSION_IN_PROGRESS: "Sudah ada versi baru yang sedang dikerjakan atau ditinjau.",
   NO_APPROVED_VERSION: "Kasus ini belum punya versi yang disetujui, jadi belum bisa dibuatkan versi baru.",
-  VERSION_LOCKED: "Versi yang sudah disetujui tidak bisa diubah. Buat versi baru dulu.",
+  VERSION_LOCKED: VERSION_LOCKED_MESSAGE,
 };
 
 const FORBIDDEN_MESSAGE: Record<VersionAction, string> = {
