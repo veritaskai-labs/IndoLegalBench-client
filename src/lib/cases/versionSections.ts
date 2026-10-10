@@ -16,6 +16,16 @@ const SECTION_LABEL: Record<keyof VersionSections, string> = {
   traps: "Jebakan",
 };
 
+type SectionKey = keyof VersionSections;
+
+export const SECTION_KEYS: SectionKey[] = [];
+
+export function sectionLines(name: SectionKey, sections: VersionSections): string[] {
+  void name;
+  void sections;
+  return [];
+}
+
 /** Label satu bagian. Nama yang belum dikenal (server lebih baru dari client) tampil apa adanya. */
 export function sectionLabel(name: string): string {
   return Object.hasOwn(SECTION_LABEL, name) ? SECTION_LABEL[name as keyof VersionSections] : name;
