@@ -11,3 +11,9 @@ export function mapCreateSnapshotError(error: unknown): string {
   }
   return "Gagal membuat snapshot. Coba lagi.";
 }
+
+export function mapSnapshotLoadError(error: unknown, target: "list" | "detail"): string {
+  void error;
+  void target;
+  return "";
+}

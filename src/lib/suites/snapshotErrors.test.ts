@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
-import { mapCreateSnapshotError } from "./snapshotErrors";
+import { mapCreateSnapshotError, mapSnapshotLoadError } from "./snapshotErrors";
 
 describe("mapCreateSnapshotError", () => {
   // Positive: one message per known failure.
@@ -71,5 +71,51 @@ describe("mapCreateSnapshotError", () => {
 
     // Assert
     expect(message).toContain("belum punya kasus yang disetujui");
+  });
+});
+
+describe("mapSnapshotLoadError", () => {
+  // Positive
+  it.each([
+    ["list", 404, "Suite tidak ditemukan."],
+    ["detail", 404, "Snapshot tidak ditemukan."],
+    ["list", 403, "Anda tidak memiliki izin untuk melihat snapshot."],
+    ["detail", 403, "Anda tidak memiliki izin untuk melihat snapshot."],
+  ] as const)("explains a %s request that returns %i", (target, status, expected) => {
+    // Arrange
+    const error = new ApiError(status, "ANY");
+
+    // Act
+    const message = mapSnapshotLoadError(error, target);
+
+    // Assert
+    expect(message).toBe(expected);
+  });
+
+  // Negative
+  it.each([
+    ["list", "Gagal memuat daftar snapshot."],
+    ["detail", "Gagal memuat isi snapshot."],
+  ] as const)("uses the default message for a %s request that fails otherwise", (target, expected) => {
+    // Arrange
+    const error = new ApiError(500, "INTERNAL_ERROR");
+
+    // Act
+    const message = mapSnapshotLoadError(error, target);
+
+    // Assert
+    expect(message).toBe(expected);
+  });
+
+  // Edge: a network failure is not an ApiError.
+  it("uses the default message when the error is not an ApiError", () => {
+    // Arrange
+    const error = new TypeError("Failed to fetch");
+
+    // Act
+    const message = mapSnapshotLoadError(error, "list");
+
+    // Assert
+    expect(message).toBe("Gagal memuat daftar snapshot.");
   });
 });

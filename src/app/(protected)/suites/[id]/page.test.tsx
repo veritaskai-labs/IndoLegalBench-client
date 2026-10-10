@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SuiteDetailPage from "./page";
 import * as casesApi from "@/lib/api/cases";
+import { listSnapshots } from "@/lib/suites/snapshotApi";
+import { makeSnapshotPage } from "@/test/snapshotFixtures";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { session } from "@/test/authMock";
 import type { Suite } from "@/types/suite";
@@ -17,6 +19,12 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/api/cases");
+
+// The snapshot section loads its own list; these tests only care that it is mounted.
+vi.mock("@/lib/suites/snapshotApi", () => ({
+  listSnapshots: vi.fn(),
+  createSnapshot: vi.fn(),
+}));
 
 // Keep the real ApiError, mock only apiFetch (used for GET /suites/{id})
 vi.mock("@/lib/apiClient", async (importOriginal) => {
@@ -74,6 +82,7 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     vi.resetAllMocks();
     session.role = null;
     vi.mocked(apiFetch).mockResolvedValue(activeSuite);
+    vi.mocked(listSnapshots).mockResolvedValue(makeSnapshotPage([]));
   });
 
   it("menampilkan skeleton saat data kasus sedang dimuat", async () => {
@@ -280,5 +289,15 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
 
     await screen.findByRole("table");
     expect(screen.queryByRole("button", { name: "Buat snapshot" })).not.toBeInTheDocument();
+  });
+
+  it("lists the snapshots of the suite for a viewer", async () => {
+    session.role = "viewer";
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+    await renderPage();
+
+    expect(await screen.findByText("Belum ada snapshot")).toBeInTheDocument();
+    expect(listSnapshots).toHaveBeenCalledWith("suite-123", 1, 10);
   });
 });
