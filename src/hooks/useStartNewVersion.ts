@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 import { startCaseVersion } from "@/lib/cases/versionApi";
 import { mapVersionError } from "@/lib/cases/versionErrors";
 import type { CaseRead } from "@/types/case";
+import { useAsyncAction } from "./useAsyncAction";
+
+const forkMessage = (error: unknown) => mapVersionError(error, "fork");
 
 /**
  * Membuat versi baru dari kasus yang disetujui. Draf yang dikembalikan server
@@ -11,25 +14,7 @@ import type { CaseRead } from "@/types/case";
  * bukan dari GET kasus yang masih mengembalikan versi yang disetujui.
  */
 export function useStartNewVersion(caseId: string, onStarted: (draft: CaseRead) => void) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Ref, bukan state: klik kedua bisa masuk sebelum render ulang menonaktifkan tombol.
-  const inFlight = useRef(false);
-
-  const start = useCallback(async () => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    setPending(true);
-    setError(null);
-    try {
-      onStarted(await startCaseVersion(caseId));
-    } catch (failure) {
-      setError(mapVersionError(failure, "fork"));
-    } finally {
-      inFlight.current = false;
-      setPending(false);
-    }
-  }, [caseId, onStarted]);
-
-  return { start, pending, error };
+  const action = useCallback(() => startCaseVersion(caseId), [caseId]);
+  const { run, pending, error } = useAsyncAction(action, onStarted, forkMessage);
+  return { start: run, pending, error };
 }
