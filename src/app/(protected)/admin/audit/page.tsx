@@ -35,7 +35,6 @@ export default function AuditPage() {
     to: range.to,
     entity_type: query.entity_type,
     actor_id: query.actor_id,
-    page,
   };
 
   const lastPage = state.status === "ready" ? Math.ceil(state.total / state.size) : 1;
@@ -67,18 +66,12 @@ export default function AuditPage() {
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <AuditFilterBar
-          value={{
-            from: range.from,
-            to: range.to,
-            entity_type: query.entity_type,
-            actor_id: query.actor_id,
-            page,
-          }}
-          actors={actors}
-          minDate={limit.from}
-          maxDate={limit.to}
-          onChange={setFilter}
-        />
+        value={{ ...exportFilter, page }}
+         actors={actors}
+         minDate={limit.from}
+         maxDate={limit.to}
+         onChange={setFilter}
+         />
       </section>
 
       {state.status === "error" ? (
