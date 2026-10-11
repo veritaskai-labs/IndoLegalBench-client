@@ -75,4 +75,12 @@ describe("AuditDetailPanel", () => {
     );
     expect(container.querySelector("img")).toBeNull();
   });
+
+  it("shows the actor name, not the id", () => {
+    render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("dialog", { name: "Detail catatan audit" })).toHaveTextContent(
+      "Herdayani",
+    );
+  });
 });

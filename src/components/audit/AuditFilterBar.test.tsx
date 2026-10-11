@@ -74,4 +74,5 @@ describe("AuditFilterBar", () => {
 
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ actor_id: undefined }));
   });
+  
 });

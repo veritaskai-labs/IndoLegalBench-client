@@ -24,7 +24,6 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
   return (
     <div
       role="dialog"
-      aria-modal="true"
       aria-label="Detail catatan audit"
       className="rounded-lg border border-slate-200 bg-white p-6"
     >
@@ -32,7 +31,7 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
         <div>
           <h2 className="text-base font-semibold text-slate-900">{entry.action}</h2>
           <p className="mt-1 text-xs text-slate-500">
-            {formatWib(entry.occurred_at)} · {entry.actor_user_id} · {entry.entity_id}
+            {formatWib(entry.occurred_at)} · {entry.actor_name ?? "Sistem"} · {entry.entity_id}
           </p>
         </div>
         <button
