@@ -25,3 +25,11 @@ export function compareCaseVersions(
   const query = new URLSearchParams({ a: String(a), b: String(b) });
   return apiFetch<VersionCompare>(`${versionsPath(caseId)}/compare?${query.toString()}`);
 }
+
+/**
+ * GET /cases/{case_id}/versions/current. Versi yang sedang dikerjakan (draf, ditinjau, atau perlu
+ * revisi), bukan yang berlaku. Hanya pembuat kasus atau admin; 404 NO_OPEN_VERSION bila tidak ada.
+ */
+export function getOpenCaseVersion(caseId: string): Promise<CaseRead> {
+  return apiFetch<CaseRead>(`${versionsPath(caseId)}/current`);
+}
