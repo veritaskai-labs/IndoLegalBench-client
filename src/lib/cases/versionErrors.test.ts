@@ -27,6 +27,7 @@ describe("mapVersionError", () => {
     ["fork", "Anda tidak memiliki izin untuk membuat versi baru kasus ini."],
     ["history", "Anda tidak memiliki izin untuk melihat riwayat versi kasus ini."],
     ["compare", "Anda tidak memiliki izin untuk membandingkan versi kasus ini."],
+    ["open", "Anda tidak memiliki izin untuk melihat draf versi baru kasus ini."],
   ] as const)("explains a 403 for %s", (action, expected) => {
     // Arrange
     const error = new ApiError(403, "FORBIDDEN");
@@ -117,5 +118,28 @@ describe("mapVersionError", () => {
 
     // Assert
     expect(message).toBe("Versi yang sudah disetujui tidak bisa diubah. Buat versi baru dulu.");
+  });
+
+  // Negative: the open-draft lookup has its own fallback and 404 wording.
+  it("falls back to a retry message when the open draft cannot be loaded", () => {
+    // Arrange
+    const error = new ApiError(500, "INTERNAL_ERROR");
+
+    // Act
+    const message = mapVersionError(error, "open");
+
+    // Assert
+    expect(message).toBe("Gagal memuat draf versi baru. Coba lagi.");
+  });
+
+  it("says the case is missing when the open draft lookup returns 404", () => {
+    // Arrange
+    const error = new ApiError(404, "not_found");
+
+    // Act
+    const message = mapVersionError(error, "open");
+
+    // Assert
+    expect(message).toBe("Kasus tidak ditemukan.");
   });
 });
