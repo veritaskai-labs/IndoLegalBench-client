@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
-import { listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
+import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
 import { session } from "@/test/authMock";
 import { makeSummary } from "@/test/versionFixtures";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
@@ -39,11 +39,16 @@ vi.mock("@/lib/cases/caseApi", () => ({
 // Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 
-vi.mock("@/lib/cases/versionApi", () => ({ startCaseVersion: vi.fn(), listCaseVersions: vi.fn() }));
+vi.mock("@/lib/cases/versionApi", () => ({
+  startCaseVersion: vi.fn(),
+  listCaseVersions: vi.fn(),
+  getOpenCaseVersion: vi.fn(),
+}));
 
 const getCaseMock = vi.mocked(getCase);
 const startVersionMock = vi.mocked(startCaseVersion);
 const listVersionsMock = vi.mocked(listCaseVersions);
+const openDraftMock = vi.mocked(getOpenCaseVersion);
 const updateCaseMock = vi.mocked(updateCase);
 const completenessMock = vi.mocked(getCaseCompleteness);
 
@@ -110,6 +115,9 @@ beforeEach(() => {
   listVersionsMock.mockReset();
   // An author on an approved case reads the history to learn who created it.
   listVersionsMock.mockResolvedValue([]);
+  // Most cases have no draft open: the server answers 404 NO_OPEN_VERSION.
+  openDraftMock.mockReset();
+  openDraftMock.mockRejectedValue(new ApiError(404, "NO_OPEN_VERSION"));
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
   completenessMock.mockReset();
@@ -492,7 +500,7 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     expect(getCaseMock).toHaveBeenCalledTimes(1);
   });
 
-  // Negative
+  // Negative: a draft can still appear after the lookup, for example when someone else starts it.
   it("keeps the case locked and shows the reason when a version is already in progress", async () => {
     // Arrange
     const user = userEvent.setup();
@@ -605,6 +613,166 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     // Assert
     expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Judul")).toBeEnabled();
+  });
+});
+
+describe("EditCasePage reopening the draft (SCRUM-138)", () => {
+  const startButton = () => screen.findByRole("button", { name: "Edit (buat versi baru)" });
+  const noStartButton = () => screen.queryByRole("button", { name: "Edit (buat versi baru)" });
+  const draftOf = (title: string) =>
+    savedCase({
+      status: "draft",
+      version: 2,
+      identity: { title, question: "Wajib?", category: null },
+    });
+
+  // Version 1 was written by the signed-in user (id u1), so the author is the creator.
+  beforeEach(() => {
+    listVersionsMock.mockResolvedValue([makeSummary(1), makeSummary(2)]);
+  });
+
+  // Positive: the reported bug. GET returns the approved case, the draft comes from its own endpoint.
+  it("opens the draft the creator already started instead of the locked approved case", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(draftOf("Judul draf versi 2"));
+
+    // Act
+    renderPage();
+
+    // Assert: the approved text shows first, then the editor switches to the draft.
+    expect(await screen.findByDisplayValue("Judul draf versi 2")).toBeEnabled();
+    expect(screen.getByText("Draft")).toBeInTheDocument();
+    expect(save()).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
+    expect(noStartButton()).not.toBeInTheDocument();
+    expect(openDraftMock).toHaveBeenCalledWith(CASE_ID);
+  });
+
+  it("opens the draft for an admin without asking who created the case", async () => {
+    // Arrange
+    session.role = "admin";
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(draftOf("Judul draf versi 2"));
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(await screen.findByDisplayValue("Judul draf versi 2")).toBeEnabled();
+    expect(listVersionsMock).not.toHaveBeenCalled();
+  });
+
+  it("saves the reopened draft as a normal edit", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(draftOf("Judul draf versi 2"));
+    updateCaseMock.mockResolvedValue(draftOf("Judul hasil sunting"));
+    renderPage();
+    const title = await screen.findByDisplayValue("Judul draf versi 2");
+
+    // Act
+    await user.clear(title);
+    await user.type(title, "Judul hasil sunting");
+    await user.click(save());
+
+    // Assert
+    await waitFor(() => expect(updateCaseMock).toHaveBeenCalledTimes(1));
+    expect(updateCaseMock.mock.calls[0]?.[0]).toBe(CASE_ID);
+    expect(updateCaseMock.mock.calls[0]?.[1].identity.title).toBe("Judul hasil sunting");
+    expect(await screen.findByLabelText("Judul")).toHaveValue("Judul hasil sunting");
+    expect(toast()).toHaveTextContent("Perubahan tersimpan");
+    expect(startVersionMock).not.toHaveBeenCalled();
+  });
+
+  // Edge: no draft yet, so the approved case stays locked with the start button.
+  it("keeps the approved case locked with the start button when there is no draft", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+
+    // Assert
+    expect(await startButton()).toBeEnabled();
+    expect(screen.getByLabelText("Judul")).toBeDisabled();
+    expect(openDraftMock).toHaveBeenCalledWith(CASE_ID);
+  });
+
+  // Edge: clicking before the lookup ends would answer 409 VERSION_IN_PROGRESS.
+  it("does not offer the start button until the draft lookup has finished", async () => {
+    // Arrange
+    let finishLookup!: (error: unknown) => void;
+    openDraftMock.mockReturnValue(
+      new Promise((_, reject) => {
+        finishLookup = reject;
+      }),
+    );
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+    await waitFor(() => expect(openDraftMock).toHaveBeenCalledWith(CASE_ID));
+
+    // Act
+    expect(noStartButton()).not.toBeInTheDocument();
+    finishLookup(new ApiError(404, "NO_OPEN_VERSION"));
+
+    // Assert
+    expect(await startButton()).toBeEnabled();
+  });
+
+  // Negative: every 403 sends the user to /forbidden, so an author who is not the creator is not asked.
+  it("does not ask for the draft of an author who did not create the case", async () => {
+    // Arrange
+    listVersionsMock.mockResolvedValue([
+      makeSummary(1, { author: { id: "u2", name: "Penulis lain" } }),
+    ]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("region", { name: "Versi terkunci" });
+    await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
+
+    // Assert
+    expect(openDraftMock).not.toHaveBeenCalled();
+    expect(noStartButton()).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toBeDisabled();
+  });
+
+  // Edge: GET already returns the open version when nothing is approved yet.
+  it("does not look for a draft on a case that is not approved", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
+
+    // Act
+    renderPage();
+    await screen.findByLabelText("Judul");
+
+    // Assert
+    expect(openDraftMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+  });
+
+  // Negative: if the lookup fails the page must not guess, and must offer a retry.
+  it("shows why the draft could not be loaded, hides the start button, and retries", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR"));
+    openDraftMock.mockResolvedValueOnce(draftOf("Judul draf versi 2"));
+    renderPage();
+
+    // Act
+    const alert = await screen.findByRole("alert");
+
+    // Assert
+    expect(alert).toHaveTextContent("Gagal memuat draf versi baru. Coba lagi.");
+    expect(noStartButton()).not.toBeInTheDocument();
+    await user.click(within(alert).getByRole("button", { name: /coba lagi/i }));
+    expect(await screen.findByDisplayValue("Judul draf versi 2")).toBeEnabled();
   });
 });
 
