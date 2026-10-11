@@ -57,4 +57,12 @@ describe("clampDateRange (SCRUM-80 AC7)", () => {
       clamped: false,
     });
   });
+it("uses the WIB date, not the UTC one, in the early morning", () => {
+  // 01:00 WIB tanggal 11 Okt
+  const range = clampDateRange(null, null, new Date("2026-10-10T18:00:00Z"));
+
+  expect(range.to).toBe("2026-10-11");
+  expect(range.from).toBe("2026-07-13");
+});
+
 });
