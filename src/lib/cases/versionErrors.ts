@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 
-export type VersionAction = "fork" | "history" | "compare";
+export type VersionAction = "fork" | "history" | "compare" | "open";
 
 /** Dipakai juga oleh pesan simpan kasus, supaya kalimatnya satu. */
 export const VERSION_LOCKED_MESSAGE = "Versi yang sudah disetujui tidak bisa diubah. Buat versi baru dulu.";
@@ -16,6 +16,7 @@ const FORBIDDEN_MESSAGE: Record<VersionAction, string> = {
   fork: "Anda tidak memiliki izin untuk membuat versi baru kasus ini.",
   history: "Anda tidak memiliki izin untuk melihat riwayat versi kasus ini.",
   compare: "Anda tidak memiliki izin untuk membandingkan versi kasus ini.",
+  open: "Anda tidak memiliki izin untuk melihat draf versi baru kasus ini.",
 };
 
 const CASE_NOT_FOUND = "Kasus tidak ditemukan.";
@@ -24,12 +25,14 @@ const NOT_FOUND_MESSAGE: Record<VersionAction, string> = {
   fork: CASE_NOT_FOUND,
   history: CASE_NOT_FOUND,
   compare: "Salah satu versi yang dipilih tidak ditemukan.",
+  open: CASE_NOT_FOUND,
 };
 
 const DEFAULT_MESSAGE: Record<VersionAction, string> = {
   fork: "Gagal membuat versi baru. Coba lagi.",
   history: "Gagal memuat riwayat versi.",
   compare: "Gagal membandingkan versi. Coba lagi.",
+  open: "Gagal memuat draf versi baru. Coba lagi.",
 };
 
 /**
