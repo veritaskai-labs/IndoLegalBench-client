@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
+import { useOpenDraft } from "@/hooks/useOpenDraft";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { useStartNewVersion } from "@/hooks/useStartNewVersion";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
@@ -43,6 +44,14 @@ export default function EditCasePage() {
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
   const canStart = useCanStartNewVersion(caseId, user, detail.status === "ready" ? detail.saved.status : null);
+  // GET masih mengembalikan versi yang disetujui walau draf sudah ada, jadi draf dicari lewat
+  // endpoint sendiri. Hanya untuk yang boleh membuat versi baru: server menjawab 403 untuk yang lain.
+  const openDraft = useOpenDraft(caseId, canStart, (draft: CaseRead) => {
+    detail.replace(draft);
+    setFormKey((key) => key + 1);
+  });
+  // Tombol baru muncul setelah pencarian selesai tanpa draf, kalau tidak klik akan dijawab 409.
+  const canOfferStart = canStart && openDraft.status === "ready";
   // Form diisi dari draf hasil POST, bukan GET: GET masih mengembalikan versi yang disetujui.
   const startVersion = useStartNewVersion(caseId, (draft: CaseRead) => {
     detail.replace(draft);
@@ -131,10 +140,14 @@ export default function EditCasePage() {
       
         {saveError.message !== null && <ErrorState message={saveError.message} />}
 
+        {openDraft.status === "error" && (
+          <ErrorState message={openDraft.message} onRetry={openDraft.reload} />
+        )}
+
         {!editable && (
           <LockedVersionNotice
             approved={saved.status === "approved"}
-            canStart={canStart}
+            canStart={canOfferStart}
             pending={startVersion.pending}
             error={startVersion.error}
             onStart={startVersion.start}
