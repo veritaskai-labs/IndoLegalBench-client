@@ -1,4 +1,3 @@
-/** Catatan audit dihapus setelah 90 hari, jadi filter di luar itu tidak ada gunanya. */
 export const RETENTION_DAYS = 90;
 
 export type DateRange = {
@@ -7,8 +6,10 @@ export type DateRange = {
   clamped: boolean;
 };
 
+const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
+
 function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return new Date(date.getTime() + WIB_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 function shiftDays(date: Date, days: number): Date {
@@ -17,13 +18,9 @@ function shiftDays(date: Date, days: number): Date {
   return next;
 }
 
-export function clampDateRange(
-  from: string | null,
-  to: string | null,
-  today: Date,): DateRange {
-    
-    const earliest = toIsoDate(shiftDays(today, -RETENTION_DAYS));
-    const latest = toIsoDate(today);
+export function clampDateRange(from: string | null, to: string | null, today: Date): DateRange {
+  const earliest = toIsoDate(shiftDays(today, -RETENTION_DAYS));
+  const latest = toIsoDate(today);
 
   let start = from ?? earliest;
   let end = to ?? latest;
