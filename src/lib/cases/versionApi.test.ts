@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, BASE_URL } from "@/lib/apiClient";
-import { compareCaseVersions, listCaseVersions, startCaseVersion } from "./versionApi";
+import {
+  compareCaseVersions,
+  getOpenCaseVersion,
+  listCaseVersions,
+  startCaseVersion,
+} from "./versionApi";
 
 const CASE_ID = "11111111-1111-1111-1111-111111111111";
 
@@ -162,5 +167,63 @@ describe("compareCaseVersions", () => {
     // Assert
     expect(result).toEqual({ changed: [] });
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("a=2&b=2");
+  });
+});
+
+describe("getOpenCaseVersion", () => {
+  // Positive
+  it("gets the open draft from the current versions endpoint", async () => {
+    // Arrange
+    const draft = { id: CASE_ID, status: "draft", version: 2 };
+    fetchMock.mockResolvedValue(jsonResponse(200, draft));
+
+    // Act
+    const result = await getOpenCaseVersion(CASE_ID);
+
+    // Assert
+    expect(result).toEqual(draft);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/cases/${CASE_ID}/versions/current`);
+    expect(init?.method).toBeUndefined();
+    expect(init?.credentials).toBe("include");
+  });
+
+  // Negative: the case has no draft or review open, so the approved version is all there is.
+  it("rejects with NO_OPEN_VERSION when the case has no open version", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(
+      jsonResponse(404, { code: "NO_OPEN_VERSION", message: "Tidak ada versi terbuka" }),
+    );
+
+    // Act
+    const failure = getOpenCaseVersion(CASE_ID);
+
+    // Assert
+    await expect(failure).rejects.toMatchObject({ status: 404, code: "NO_OPEN_VERSION" });
+    await expect(failure).rejects.toBeInstanceOf(ApiError);
+  });
+
+  // Negative: only the creator or an admin may read someone's unfinished draft.
+  it("rejects with status 403 for someone who is not the creator or an admin", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(403, { code: "FORBIDDEN", message: "Bukan pembuat" }));
+
+    // Act
+    const failure = getOpenCaseVersion(CASE_ID);
+
+    // Assert
+    await expect(failure).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+
+  // Edge: an id with reserved characters must not change the route.
+  it("encodes the case id in the path", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(200, {}));
+
+    // Act
+    await getOpenCaseVersion("a/b?c");
+
+    // Assert
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/cases/a%2Fb%3Fc/versions/current`);
   });
 });
