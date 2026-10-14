@@ -23,7 +23,7 @@ describe("Design System Cards", () => {
       );
 
       expect(screen.getByText("ILB-PT-0142")).toBeInTheDocument();
-      expect(screen.getByText("In review")).toBeInTheDocument();
+      expect(screen.getByText("Dalam tinjauan")).toBeInTheDocument();
 
       const openBtn = screen.getByRole("button", { name: "Buka" });
       fireEvent.click(openBtn);
@@ -43,7 +43,7 @@ describe("Design System Cards", () => {
           updatedAt="Hari ini"
         />
       );
-      expect(screen.getByText("Approved")).toHaveClass("text-emerald-800");
+      expect(screen.getByText("Disetujui")).toHaveClass("text-emerald-800");
 
       rerender(
         <CaseCard
@@ -57,7 +57,7 @@ describe("Design System Cards", () => {
           updatedAt="Hari ini"
         />
       );
-      expect(screen.getByText("Needs revision")).toHaveClass("text-rose-800");
+      expect(screen.getByText("Perlu revisi")).toHaveClass("text-rose-800");
     });
   });
 
