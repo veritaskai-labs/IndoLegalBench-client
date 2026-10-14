@@ -18,3 +18,13 @@ export function canStartNewVersion(role: Role | null, status: CaseStatus, isCrea
   if (status !== "approved" || role === null) return false;
   return role === "admin" || (role === "author" && isCreator);
 }
+
+/**
+ * Catatan peninjau hanya tampil pada kasus yang perlu revisi, dan hanya untuk admin atau author
+ * yang membuat kasusnya: server menjawab 403 untuk yang lain, dan setiap 403 memindahkan pengguna
+ * ke /forbidden. Ini hanya menentukan tampilan; server tetap yang memutuskan boleh atau tidak.
+ */
+export function canReadReviewFeedback(role: Role | null, status: CaseStatus, isCreator: boolean): boolean {
+  if (status !== "needs_revision" || role === null) return false;
+  return role === "admin" || (role === "author" && isCreator);
+}
