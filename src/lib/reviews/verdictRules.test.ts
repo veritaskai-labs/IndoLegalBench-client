@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { makeVerdictResult, makeVerdictView } from "@/test/reviewFixtures";
+import { makeSlot, makeVerdictResult, makeVerdictView } from "@/test/reviewFixtures";
 import {
   buildVerdictBody,
   canSubmitVerdict,
   isReviewerRole,
   otherReviewerIsBlind,
   reviewBlocker,
+  revisionRequestsFirst,
   submittedVerdict,
 } from "./verdictRules";
 
@@ -287,5 +288,68 @@ describe("isReviewerRole", () => {
 
     // Assert
     expect(result).toBe(false);
+  });
+});
+
+describe("revisionRequestsFirst", () => {
+  const revise = makeSlot({
+    assignment_id: "r",
+    reviewer: { id: "r", name: "Revisi" },
+    verdict: makeVerdictView({ decision: "revise", comment: "Perbaiki" }),
+  });
+  const approve = makeSlot({
+    assignment_id: "a",
+    reviewer: { id: "a", name: "Setuju" },
+    verdict: makeVerdictView({ decision: "approve" }),
+  });
+  const pending = makeSlot({ assignment_id: "p", reviewer: { id: "p", name: "Belum" }, verdict: null });
+
+  // Positive: the author acts on a revision request, so it comes first.
+  it("puts the revision requests first, then the approvals, then the reviewers with no verdict", () => {
+    // Arrange
+    const slots = [pending, approve, revise];
+
+    // Act
+    const sorted = revisionRequestsFirst(slots);
+
+    // Assert
+    expect(sorted.map((slot) => slot.reviewer.name)).toEqual(["Revisi", "Setuju", "Belum"]);
+  });
+
+  // Edge: reviewers in the same group keep the order the server sent.
+  it("keeps the server's order inside a group", () => {
+    // Arrange
+    const second = makeSlot({
+      assignment_id: "r2",
+      reviewer: { id: "r2", name: "Revisi kedua" },
+      verdict: makeVerdictView({ decision: "revise", comment: "Juga" }),
+    });
+
+    // Act
+    const sorted = revisionRequestsFirst([revise, approve, second]);
+
+    // Assert
+    expect(sorted.map((slot) => slot.reviewer.name)).toEqual(["Revisi", "Revisi kedua", "Setuju"]);
+  });
+
+  // Edge: the list that came from the server is not changed.
+  it("does not change the list it was given", () => {
+    // Arrange
+    const slots = [approve, revise];
+
+    // Act
+    revisionRequestsFirst(slots);
+
+    // Assert
+    expect(slots.map((slot) => slot.reviewer.name)).toEqual(["Setuju", "Revisi"]);
+  });
+
+  // Edge
+  it("returns an empty list for no reviewers", () => {
+    // Arrange / Act
+    const sorted = revisionRequestsFirst([]);
+
+    // Assert
+    expect(sorted).toEqual([]);
   });
 });
