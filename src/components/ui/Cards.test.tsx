@@ -146,4 +146,21 @@ describe("Design System Cards", () => {
       expect(screen.getByText("key encrypted")).toBeInTheDocument();
     });
   });
+  it("labels the status the same way as the rest of the app", () => {
+      render(
+        <CaseCard
+          id="ILB-03"
+          title="Kasus 3"
+          status="in_review"
+          axis="akurasi"
+          tag="dev"
+          version="v1"
+          author="Budi"
+          updatedAt="Hari ini"
+        />
+      );
+
+      expect(screen.getByText("Dalam tinjauan")).toBeInTheDocument();
+    });
+
 });
