@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
 import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
+import { submitForReview } from "@/lib/cases/submitApi";
 import { session } from "@/test/authMock";
 import { makeSummary } from "@/test/versionFixtures";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
@@ -39,6 +40,8 @@ vi.mock("@/lib/cases/caseApi", () => ({
 // Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 
+vi.mock("@/lib/cases/submitApi", () => ({ submitForReview: vi.fn() }));
+
 vi.mock("@/lib/cases/versionApi", () => ({
   startCaseVersion: vi.fn(),
   listCaseVersions: vi.fn(),
@@ -51,6 +54,7 @@ const listVersionsMock = vi.mocked(listCaseVersions);
 const openDraftMock = vi.mocked(getOpenCaseVersion);
 const updateCaseMock = vi.mocked(updateCase);
 const completenessMock = vi.mocked(getCaseCompleteness);
+const submitMock = vi.mocked(submitForReview);
 
 function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
   return {
@@ -873,5 +877,57 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
 
     // Assert
     expect(await screen.findByText("Belum ada riwayat versi")).toBeInTheDocument();
+  });
+
+  it("submits the case for review and shows the new status", async () => {
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
+    completenessMock.mockResolvedValue({
+      is_complete: true,
+      ready_for_review: true,
+      pct: 100,
+      missing: [],
+      trap_count: 1,
+      legal_ref_count: 1,
+    } as CaseCompleteness);
+    submitMock.mockResolvedValue({
+      case_id: CASE_ID,
+      version: 1,
+      status: "in_review",
+      round_no: 1,
+      round_status: "awaiting_assignment",
+    });
+
+    render(
+      <ToastProvider>
+        <EditCasePage />
+      </ToastProvider>,
+    );
+    await screen.findByText("ILB-PT-0142");
+
+    await user.click(screen.getByRole("button", { name: "Ajukan review" }));
+
+    expect(submitMock).toHaveBeenCalledWith(CASE_ID);
+    expect(await screen.findByText("Dalam tinjauan")).toBeInTheDocument();
+  });
+
+  it("keeps the submit button disabled while the case is not ready", async () => {
+    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
+    completenessMock.mockResolvedValue({
+      is_complete: false,
+      ready_for_review: false,
+      pct: 60,
+      missing: [{ field: "traps", message: "Belum ada jebakan" }],
+      trap_count: 0,
+      legal_ref_count: 1,
+    } as CaseCompleteness);
+
+    render(
+      <ToastProvider>
+        <EditCasePage />
+      </ToastProvider>,
+    );
+
+    expect(await screen.findByRole("button", { name: "Ajukan review" })).toBeDisabled();
   });
 });
