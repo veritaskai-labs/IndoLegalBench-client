@@ -10,13 +10,18 @@ import type {
 
 export type ReviewBlocker = "not_reviewer" | "is_author";
 
+/** Satu-satunya tempat yang menentukan siapa yang menilai kasus: hanya peran reviewer. null berarti belum ada sesi. */
+export function isReviewerRole(role: Role | null): boolean {
+  return role === "reviewer";
+}
+
 /**
  * Kenapa pengguna tidak boleh menilai kasus ini, atau null bila boleh. Dicek di client karena setiap
  * 403 dari server memindahkan pengguna ke /forbidden, padahal alasannya layak dijelaskan di halaman.
  * Peran dicek lebih dulu: pesan "Anda penulisnya" tidak berarti bagi admin.
  */
 export function reviewBlocker(user: { id: string; role: Role }, authorId: string): ReviewBlocker | null {
-  if (user.role !== "reviewer") return "not_reviewer";
+  if (!isReviewerRole(user.role)) return "not_reviewer";
   if (user.id === authorId) return "is_author";
   return null;
 }

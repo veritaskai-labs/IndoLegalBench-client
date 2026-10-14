@@ -3,6 +3,7 @@ import { makeVerdictResult, makeVerdictView } from "@/test/reviewFixtures";
 import {
   buildVerdictBody,
   canSubmitVerdict,
+  isReviewerRole,
   otherReviewerIsBlind,
   reviewBlocker,
   submittedVerdict,
@@ -257,5 +258,34 @@ describe("submittedVerdict", () => {
 
     // Assert
     expect(Object.keys(shown ?? {}).sort()).toEqual(["comment", "decision", "submitted_at"]);
+  });
+});
+
+describe("isReviewerRole", () => {
+  // Positive
+  it("is true for the reviewer role", () => {
+    // Arrange / Act
+    const result = isReviewerRole("reviewer");
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  // Negative: the server answers 403 to every other role.
+  it.each(["admin", "author", "viewer"] as const)("is false for the %s role", (role) => {
+    // Arrange / Act
+    const result = isReviewerRole(role);
+
+    // Assert
+    expect(result).toBe(false);
+  });
+
+  // Edge: no session yet.
+  it("is false while there is no session", () => {
+    // Arrange / Act
+    const result = isReviewerRole(null);
+
+    // Assert
+    expect(result).toBe(false);
   });
 });

@@ -13,7 +13,7 @@ import { useAssignedReview } from "@/hooks/useAssignedReview";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseReview } from "@/hooks/useCaseReview";
 import { BLOCKER_MESSAGE } from "@/lib/reviews/reviewLabels";
-import { reviewBlocker, submittedVerdict } from "@/lib/reviews/verdictRules";
+import { isReviewerRole, reviewBlocker, submittedVerdict } from "@/lib/reviews/verdictRules";
 import { decodeRouteParam } from "@/lib/routeParams";
 import type { AssignedReview, VerdictResult } from "@/types/review";
 
@@ -66,7 +66,7 @@ export default function ReviewAssignmentPage() {
   const assignmentId = decodeRouteParam(useParams<{ assignmentId: string }>().assignmentId);
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
-  const isReviewer = user?.role === "reviewer";
+  const isReviewer = isReviewerRole(user?.role ?? null);
   const found = useAssignedReview(assignmentId, isReviewer);
 
   if (user === null) return <LoadingState />;

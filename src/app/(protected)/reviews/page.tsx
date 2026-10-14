@@ -6,11 +6,12 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAssignedReviews } from "@/hooks/useAssignedReviews";
 import { useAuth } from "@/hooks/useAuth";
+import { isReviewerRole } from "@/lib/reviews/verdictRules";
 
 /** Antrean tinjauan reviewer. Peran lain tidak memanggil server: jawabannya 403 dan itu melempar ke /forbidden. */
 export default function ReviewsPage() {
   const auth = useAuth();
-  const isReviewer = auth.status === "authenticated" && auth.user.role === "reviewer";
+  const isReviewer = isReviewerRole(auth.status === "authenticated" ? auth.user.role : null);
   const queue = useAssignedReviews(isReviewer);
 
   if (auth.status !== "authenticated") return <LoadingState />;
