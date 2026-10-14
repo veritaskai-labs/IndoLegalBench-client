@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/types";
 import type { CaseStatus } from "@/types/case";
-import { canReadReviewFeedback, canStartNewVersion, isCaseEditable } from "./permissions";
+import { canReadReviewFeedback, canStartNewVersion, isAdminOrCreator, isCaseEditable } from "./permissions";
 
 describe("isCaseEditable", () => {
   // Positive: the server accepts a save only for these two statuses.
@@ -145,6 +145,57 @@ describe("canReadReviewFeedback", () => {
 
     // Act
     const allowed = canReadReviewFeedback(role, "needs_revision", true);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+});
+
+describe("isAdminOrCreator", () => {
+  // Positive
+  it("is true for an admin, creator or not", () => {
+    // Arrange / Act
+    const asNonCreator = isAdminOrCreator("admin", false);
+    const asCreator = isAdminOrCreator("admin", true);
+
+    // Assert
+    expect(asNonCreator).toBe(true);
+    expect(asCreator).toBe(true);
+  });
+
+  it("is true for the author who created the case", () => {
+    // Arrange / Act
+    const allowed = isAdminOrCreator("author", true);
+
+    // Assert
+    expect(allowed).toBe(true);
+  });
+
+  // Negative
+  it("is false for an author who did not create the case", () => {
+    // Arrange / Act
+    const allowed = isAdminOrCreator("author", false);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Negative: being the creator means nothing for a role that is not an author.
+  it.each(["reviewer", "viewer"] as const)("is false for the %s role even when marked as creator", (role: Role) => {
+    // Arrange / Act
+    const allowed = isAdminOrCreator(role, true);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: the session is still loading or has ended.
+  it("is false when the role is unknown", () => {
+    // Arrange
+    const role: Role | null = null;
+
+    // Act
+    const allowed = isAdminOrCreator(role, true);
 
     // Assert
     expect(allowed).toBe(false);
