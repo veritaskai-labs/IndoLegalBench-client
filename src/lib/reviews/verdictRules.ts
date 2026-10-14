@@ -55,3 +55,20 @@ export function submittedVerdict(result: VerdictResult | null, fromQueue: Verdic
   if (result === null) return fromQueue;
   return { decision: result.decision, comment: result.comment, submitted_at: result.submitted_at };
 }
+
+/** Urutan penilaian untuk Author: yang meminta revisi dulu, lalu yang menyetujui, lalu yang belum ada penilaiannya. */
+function attentionRank(slot: Pick<ReviewerSlot, "verdict">): number {
+  if (slot.verdict === null) return 2;
+  return slot.verdict.decision === "revise" ? 0 : 1;
+}
+
+/**
+ * Peninjau yang meminta revisi didahulukan, karena itu yang harus ditindaklanjuti Author. Urutan dari
+ * server dipertahankan di dalam tiap kelompok, dan daftar yang diberikan tidak diubah.
+ */
+export function revisionRequestsFirst<T extends Pick<ReviewerSlot, "verdict">>(slots: readonly T[]): T[] {
+  return slots
+    .map((slot, index) => ({ slot, index }))
+    .sort((a, b) => attentionRank(a.slot) - attentionRank(b.slot) || a.index - b.index)
+    .map(({ slot }) => slot);
+}
