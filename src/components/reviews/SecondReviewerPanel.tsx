@@ -1,7 +1,6 @@
-import { formatWib } from "@/lib/datetime/formatWib";
-import { VERDICT_LABEL } from "@/lib/reviews/reviewLabels";
 import { otherReviewerIsBlind } from "@/lib/reviews/verdictRules";
 import type { CaseReview, ReviewerSlot } from "@/types/review";
+import { VerdictSummary } from "./VerdictSummary";
 
 type Props = {
   review: CaseReview;
@@ -34,16 +33,8 @@ function SecondReviewerBody({ slot, review }: { slot: ReviewerSlot; review: Case
 
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-slate-900">{name}</p>
-      <p className="text-sm text-slate-900">{VERDICT_LABEL[slot.verdict.decision]}</p>
-      {slot.verdict.comment === null ? (
-        <p className="text-sm text-slate-500">Tanpa komentar</p>
-      ) : (
-        <p className="whitespace-pre-wrap text-sm text-slate-800">{slot.verdict.comment}</p>
-      )}
-      {slot.verdict.submitted_at !== null && (
-        <p className="text-xs text-slate-500">{formatWib(slot.verdict.submitted_at)}</p>
-      )}
+      <p className="text-sm text-slate-500">{name}</p>
+      <VerdictSummary verdict={slot.verdict} />
     </div>
   );
 }
