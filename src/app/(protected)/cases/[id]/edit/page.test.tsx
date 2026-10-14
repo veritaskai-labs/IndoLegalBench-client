@@ -903,7 +903,8 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
         <EditCasePage />
       </ToastProvider>,
     );
-    await screen.findByText("ILB-PT-0142");
+    
+    await screen.findByRole("button", { name: "Ajukan review" });
 
     await user.click(screen.getByRole("button", { name: "Ajukan review" }));
 

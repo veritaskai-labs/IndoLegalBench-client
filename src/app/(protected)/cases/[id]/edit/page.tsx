@@ -10,6 +10,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/Toast";
 import { CaseTabs, panelId, tabId, type CaseTab } from "@/components/cases/CaseTabs";
 import { LockedVersionNotice } from "@/components/cases/LockedVersionNotice";
+import { SubmitReviewButton } from "@/components/cases/SubmitReviewButton";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
@@ -137,6 +138,18 @@ export default function EditCasePage() {
         className="space-y-6"
       >
         <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
+        
+        {editable && completeness.status === "ready" && (
+          <SubmitReviewButton
+          caseId={caseId}
+          ready={completeness.completeness.ready_for_review}
+          onSubmitted={(result) => {
+            detail.replace({ ...saved, status: result.status });
+            setFormKey((key) => key + 1);
+            showToast("Kasus diajukan untuk direview");
+            }}
+          />
+        )}
       
         {saveError.message !== null && <ErrorState message={saveError.message} />}
 
