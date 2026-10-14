@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/types";
 import type { CaseStatus } from "@/types/case";
-import { canStartNewVersion, isCaseEditable } from "./permissions";
+import { canReadReviewFeedback, canStartNewVersion, isCaseEditable } from "./permissions";
 
 describe("isCaseEditable", () => {
   // Positive: the server accepts a save only for these two statuses.
@@ -82,6 +82,69 @@ describe("canStartNewVersion", () => {
 
     // Act
     const allowed = canStartNewVersion(role, "approved", true);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+});
+
+describe("canReadReviewFeedback", () => {
+  // Positive: the server lets the author who created the case and an admin read the review.
+  it("lets an admin read the feedback on a case that needs revision, creator or not", () => {
+    // Arrange / Act
+    const asNonCreator = canReadReviewFeedback("admin", "needs_revision", false);
+    const asCreator = canReadReviewFeedback("admin", "needs_revision", true);
+
+    // Assert
+    expect(asNonCreator).toBe(true);
+    expect(asCreator).toBe(true);
+  });
+
+  it("lets the author who created the case read the feedback", () => {
+    // Arrange / Act
+    const allowed = canReadReviewFeedback("author", "needs_revision", true);
+
+    // Assert
+    expect(allowed).toBe(true);
+  });
+
+  // Negative: the server answers 403 here and a 403 sends the user to /forbidden.
+  it("does not let an author who did not create the case read the feedback", () => {
+    // Arrange / Act
+    const allowed = canReadReviewFeedback("author", "needs_revision", false);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Negative
+  it.each(["reviewer", "viewer"] as const)("does not show the feedback to the %s role", (role: Role) => {
+    // Arrange / Act
+    const allowed = canReadReviewFeedback(role, "needs_revision", true);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: there is feedback to act on only after a revision was asked for.
+  it.each(["draft", "in_review", "approved"] as const)(
+    "does not show the feedback on a %s case, even to an admin",
+    (status: CaseStatus) => {
+      // Arrange / Act
+      const allowed = canReadReviewFeedback("admin", status, true);
+
+      // Assert
+      expect(allowed).toBe(false);
+    },
+  );
+
+  // Edge: the session is still loading or has ended.
+  it("does not show the feedback when the role is unknown", () => {
+    // Arrange
+    const role: Role | null = null;
+
+    // Act
+    const allowed = canReadReviewFeedback(role, "needs_revision", true);
 
     // Assert
     expect(allowed).toBe(false);
