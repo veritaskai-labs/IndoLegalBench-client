@@ -1,5 +1,12 @@
 import type { Role } from "@/types";
-import type { ReviewerSlot, RoundStatus, VerdictDecision, VerdictWrite } from "@/types/review";
+import type {
+  ReviewerSlot,
+  RoundStatus,
+  VerdictDecision,
+  VerdictResult,
+  VerdictView,
+  VerdictWrite,
+} from "@/types/review";
 
 export type ReviewBlocker = "not_reviewer" | "is_author";
 
@@ -32,4 +39,14 @@ export function buildVerdictBody(decision: VerdictDecision, comment: string): Ve
  */
 export function otherReviewerIsBlind(slot: Pick<ReviewerSlot, "verdict">, roundStatus: RoundStatus): boolean {
   return slot.verdict === null && roundStatus !== "decided";
+}
+
+/**
+ * Penilaian yang ditampilkan di halaman. Balasan dari pengiriman lebih baru daripada antrean yang
+ * dipakai membuka halaman, jadi didahulukan; selain itu penilaian yang sudah ada di antrean. Hanya
+ * keputusan, komentar, dan waktu yang diambil: status round milik round, bukan milik penilaian.
+ */
+export function submittedVerdict(result: VerdictResult | null, fromQueue: VerdictView | null): VerdictView | null {
+  if (result === null) return fromQueue;
+  return { decision: result.decision, comment: result.comment, submitted_at: result.submitted_at };
 }
