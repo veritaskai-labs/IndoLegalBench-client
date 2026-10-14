@@ -30,6 +30,8 @@ type Props = {
   onSubmit: (payload: CaseWritePayload) => void | Promise<FieldSaveError | null | void>;
   /** Dipanggil saat form berubah dari bersih ke berisi perubahan, atau sebaliknya. */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Versi terkunci: semua kolom dinonaktifkan dan tombol simpan disembunyikan. */
+  readOnly?: boolean;
 };
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
@@ -39,7 +41,7 @@ function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
-export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props) {
+export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnly = false }: Props) {
   const {
     register,
     control,
@@ -117,21 +119,26 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange }: Props
       className="space-y-6"
     >
       <ErrorSummary issues={summary} onSelect={(path) => setFocus(path)} />
-      <IdentitySection {...sectionProps} />
-      <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
-      <AnswerCriteriaSection {...sectionProps} />
-      <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
-      <SplitTagSection {...sectionProps} />
+      {/* fieldset disabled menonaktifkan semua kolom dan tombol tambah baris di dalamnya sekaligus. */}
+      <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-6 border-0 p-0">
+        <IdentitySection {...sectionProps} />
+        <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
+        <AnswerCriteriaSection {...sectionProps} />
+        <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
+        <SplitTagSection {...sectionProps} />
+      </fieldset>
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={formState.isSubmitting}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          Simpan draf
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={formState.isSubmitting}
+            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          >
+            Simpan draf
+          </button>
+        </div>
+      )}
     </form>
   );
 }

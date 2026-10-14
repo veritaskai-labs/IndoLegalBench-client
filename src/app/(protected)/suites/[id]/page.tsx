@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/cases";
 import { apiFetch, ApiError } from "@/lib/apiClient";
 import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
+import { SnapshotSection } from "@/components/suites/SnapshotSection";
 import type { Suite } from "@/types/suite";
 
 interface PageProps {
@@ -407,6 +408,8 @@ export default function SuiteDetailPage({ params }: PageProps) {
           </div>
         </div>
       )}
+
+      <SnapshotSection suiteId={suiteId} />
     </div>
   );
 }
