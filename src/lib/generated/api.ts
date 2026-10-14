@@ -360,6 +360,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajukan kasus untuk direview
+         * @description PBI-6 AC1. The version becomes in_review and a new review round is created.
+         */
+        post: operations["submit_for_review_cases__case_id__submit_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cases/{case_id}/versions/compare": {
         parameters: {
             query?: never;
@@ -765,6 +785,21 @@ export interface components {
             category?: string | null;
         };
         /**
+         * CaseNotReadyBody
+         * @description 422 CASE_NOT_READY: every section that blocks the submission.
+         */
+        CaseNotReadyBody: {
+            /**
+             * Code
+             * @example CASE_NOT_READY
+             */
+            code: string;
+            /** Message */
+            message: string;
+            /** Missing */
+            missing: components["schemas"]["CompletenessIssue"][];
+        };
+        /**
          * CaseRead
          * @description Full case returned by create, read, and update.
          */
@@ -1002,6 +1037,33 @@ export interface components {
          * @enum {string}
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
+        /**
+         * ReviewSubmission
+         * @description POST /cases/{id}/submit-review. The version now waits for reviewers.
+         */
+        ReviewSubmission: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Version
+             * @description Nomor versi yang diajukan
+             */
+            version: number;
+            status: components["schemas"]["CaseStatus"];
+            /**
+             * Round No
+             * @description 1 untuk pengajuan pertama, naik setiap pengajuan ulang
+             */
+            round_no: number;
+            /**
+             * Round Status
+             * @description awaiting_assignment sampai dua reviewer terpasang (SCRUM-144)
+             */
+            round_status: string;
+        };
         /**
          * Role
          * @enum {string}
@@ -2240,6 +2302,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    submit_for_review_cases__case_id__submit_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSubmission"];
+                };
+            };
+            /** @description Bukan Author atau bukan penulis kasus ini. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Versi sedang ditinjau atau sudah disetujui (`VERSION_NOT_SUBMITTABLE`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kelengkapan belum 100%, tag kosong, atau rujukan hukum belum lengkap (`CASE_NOT_READY`, daftar di `missing`). Suite tidak aktif (`SUITE_NOT_ACTIVE`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseNotReadyBody"];
                 };
             };
         };
