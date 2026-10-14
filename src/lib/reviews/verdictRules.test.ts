@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { makeVerdictResult, makeVerdictView } from "@/test/reviewFixtures";
 import {
   buildVerdictBody,
   canSubmitVerdict,
   otherReviewerIsBlind,
   reviewBlocker,
+  submittedVerdict,
 } from "./verdictRules";
 
 const REVIEWER_ID = "11111111-1111-1111-1111-111111111111";
@@ -199,5 +201,61 @@ describe("otherReviewerIsBlind", () => {
 
     // Assert
     expect(blind).toBe(false);
+  });
+});
+
+describe("submittedVerdict", () => {
+  // Positive: the reply to the send is newer than the queue the page was opened from.
+  it("prefers the result of the send over the verdict in the queue", () => {
+    // Arrange
+    const result = makeVerdictResult({
+      decision: "revise",
+      comment: "Pasal salah",
+      submitted_at: "2026-10-14T05:00:00Z",
+    });
+    const fromQueue = makeVerdictView({ decision: "approve", comment: null });
+
+    // Act
+    const shown = submittedVerdict(result, fromQueue);
+
+    // Assert
+    expect(shown).toEqual({
+      decision: "revise",
+      comment: "Pasal salah",
+      submitted_at: "2026-10-14T05:00:00Z",
+    });
+  });
+
+  // Positive: a verdict sent earlier still shows when the page is opened again.
+  it("falls back to the verdict the queue already holds", () => {
+    // Arrange
+    const fromQueue = makeVerdictView({ decision: "approve", comment: "Sesuai" });
+
+    // Act
+    const shown = submittedVerdict(null, fromQueue);
+
+    // Assert
+    expect(shown).toBe(fromQueue);
+  });
+
+  // Negative: nothing sent yet, so the form stays.
+  it("is null when nothing was sent", () => {
+    // Arrange / Act
+    const shown = submittedVerdict(null, null);
+
+    // Assert
+    expect(shown).toBeNull();
+  });
+
+  // Edge: the round fields of the result belong to the round, not to the verdict.
+  it("keeps only the decision, comment and time of the result", () => {
+    // Arrange
+    const result = makeVerdictResult({ round_status: "decided", round_decision: "approved" });
+
+    // Act
+    const shown = submittedVerdict(result, null);
+
+    // Assert
+    expect(Object.keys(shown ?? {}).sort()).toEqual(["comment", "decision", "submitted_at"]);
   });
 });
