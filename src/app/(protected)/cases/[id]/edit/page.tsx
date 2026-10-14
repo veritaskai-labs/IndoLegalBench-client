@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import { CaseTabs, panelId, tabId, type CaseTab } from "@/components/cases/CaseTabs";
 import { LockedVersionNotice } from "@/components/cases/LockedVersionNotice";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
+import { ReviewerFeedbackGate } from "@/components/reviews/ReviewerFeedbackGate";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
@@ -136,6 +137,8 @@ export default function EditCasePage() {
         hidden={tab !== "editor"}
         className="space-y-6"
       >
+        <ReviewerFeedbackGate caseId={caseId} user={user} status={saved.status} />
+
         <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
       
         {saveError.message !== null && <ErrorState message={saveError.message} />}
