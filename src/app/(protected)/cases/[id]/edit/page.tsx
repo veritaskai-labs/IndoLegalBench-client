@@ -15,6 +15,7 @@ import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
+import { useCanSubmitForReview } from "@/hooks/useCanSubmitForReview";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useOpenDraft } from "@/hooks/useOpenDraft";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
@@ -45,6 +46,8 @@ export default function EditCasePage() {
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
   const canStart = useCanStartNewVersion(caseId, user, detail.status === "ready" ? detail.saved.status : null);
+    // Server hanya menerima pengajuan dari penulis kasus; tombol mengikuti aturan yang sama.
+  const canSubmit = useCanSubmitForReview(caseId, user, detail.status === "ready" ? detail.saved.status : null);
   // GET masih mengembalikan versi yang disetujui walau draf sudah ada, jadi draf dicari lewat
   // endpoint sendiri. Hanya untuk yang boleh membuat versi baru: server menjawab 403 untuk yang lain.
   const openDraft = useOpenDraft(caseId, canStart, (draft: CaseRead) => {
@@ -139,7 +142,7 @@ export default function EditCasePage() {
       >
         <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
         
-        {editable && completeness.status === "ready" && (
+        {canSubmit && completeness.status === "ready" && (
           <SubmitReviewButton
           caseId={caseId}
           ready={completeness.completeness.ready_for_review}
