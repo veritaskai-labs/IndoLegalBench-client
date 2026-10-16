@@ -32,6 +32,12 @@ type Props = {
   inputRef?: Ref<HTMLInputElement>;
 };
 
+/** Indeks opsi yang disorot setelah satu panah. Berputar di ujung, dan -1 berarti belum ada. */
+function stepActive(key: "ArrowDown" | "ArrowUp", current: number, count: number): number {
+  if (key === "ArrowDown") return (current + 1) % count;
+  return current <= 0 ? count - 1 : current - 1;
+}
+
 function statusMessage(total: number, matches: number): string | undefined {
   if (total === 0) return "Belum ada jenis peraturan yang tersedia.";
   if (matches === 0) return "Jenis peraturan tidak ditemukan.";
@@ -91,19 +97,18 @@ export function RegulationTypeSelect({
     close();
   }
 
+  /** Panah pertama pada daftar tertutup hanya membukanya, panah berikutnya memindahkan sorotan. */
+  function moveHighlight(key: "ArrowDown" | "ArrowUp") {
+    if (!open) setOpen(true);
+    else if (visible.length > 0) setActiveIndex(stepActive(key, activeIndex, visible.length));
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     switch (event.key) {
       case "ArrowDown":
-        event.preventDefault();
-        if (!open) setOpen(true);
-        else if (visible.length > 0) setActiveIndex((activeIndex + 1) % visible.length);
-        break;
       case "ArrowUp":
         event.preventDefault();
-        if (!open) setOpen(true);
-        else if (visible.length > 0) {
-          setActiveIndex(activeIndex <= 0 ? visible.length - 1 : activeIndex - 1);
-        }
+        moveHighlight(event.key);
         break;
       case "Enter":
         // Saat terbuka, Enter hanya untuk memilih: jangan ikut mengirim form.
