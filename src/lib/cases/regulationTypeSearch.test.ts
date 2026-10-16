@@ -53,12 +53,12 @@ describe("searchRegulationTypes", () => {
     expect(codes(result)).toEqual(["surat_edaran"]);
   });
 
-  it("matches the abbreviation", () => {
+  it("matches the abbreviation, with a word that only starts with it after it", () => {
     // Act
     const result = searchRegulationTypes(TYPES, "perda");
 
-    // Assert
-    expect(codes(result)).toEqual(["perda"]);
+    // Assert: "perda" also starts the word "perdagangan", which ranks lower
+    expect(codes(result)).toEqual(["perda", "peraturan_menteri_perdagangan"]);
   });
 
   it("matches the code", () => {
