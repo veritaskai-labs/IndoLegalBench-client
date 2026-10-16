@@ -34,4 +34,13 @@ describe("navForRole", () => {
       "Konteks",
     ]);
   });
+  it("offers the review monitoring page to the admin only", () => {
+    const hrefs = (role: Role) =>
+      navForRole(role).flatMap((group) => group.items.map((item) => item.href));
+
+    expect(hrefs("admin")).toContain("/admin/reviews");
+    expect(hrefs("reviewer")).not.toContain("/admin/reviews");
+    expect(hrefs("author")).not.toContain("/admin/reviews");
+    expect(hrefs("viewer")).not.toContain("/admin/reviews");
+  });
 });
