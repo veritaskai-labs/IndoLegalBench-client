@@ -1,13 +1,7 @@
+import type { components } from "@/lib/generated/api";
+
 /**
- * Satu jenis peraturan dari GET /regulation-types. Bentuknya mengikuti yang dijanjikan server
- * (PBI-21), diurutkan menurut urutan di server. Diganti dengan tipe hasil generate begitu
- * endpoint itu masuk ke kontrak.
+ * Satu jenis peraturan dari GET /regulation-types: kode yang dikirim ke server (tidak pernah
+ * berubah), label, singkatan bila ada (mis. "UU" atau "Permen"), dan apakah masih aktif.
  */
-export interface RegulationType {
-  /** Kode yang dikirim ke server, bukan label. Tidak pernah berubah. */
-  code: string;
-  label: string;
-  /** Mis. "UU" atau "Permen". Banyak jenis tidak punya. */
-  singkatan: string | null;
-  is_active: boolean;
-}
+export type RegulationType = components["schemas"]["RegulationTypeRead"];

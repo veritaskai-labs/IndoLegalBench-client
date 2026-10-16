@@ -66,6 +66,7 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
       {
         kind: "structured",
         free_text: null,
+        display_text: "Pasal 151 UU 13/2003",
         links: [
           {
             form: "pasal",

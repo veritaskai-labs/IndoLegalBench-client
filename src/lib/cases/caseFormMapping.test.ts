@@ -458,6 +458,7 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
       {
         kind: "structured",
         free_text: null,
+        display_text: "Pasal 151 ayat (3) UU 13/2003",
         links: [savedLink()],
       },
     ],
@@ -521,7 +522,8 @@ describe("fromCaseRead", () => {
     const saved = savedCase();
     // A blank optional link field comes back as an empty string, which the server reads as null.
     const legalRefs = saved.legal_refs.map((ref) => ({
-      ...ref,
+      kind: ref.kind,
+      free_text: ref.free_text,
       links: ref.links.map((link) => ({
         ...link,
         about: link.about ?? "",
@@ -557,6 +559,7 @@ describe("fromCaseRead", () => {
           {
             kind: "structured",
             free_text: null,
+            display_text: "Pasal 151 ayat (3) UU 13/2003",
             links: [
               savedLink({
                 year: null,
@@ -615,6 +618,7 @@ describe("fromCaseRead", () => {
         {
           kind: "structured",
           free_text: null,
+          display_text: "Pasal 156 UU 13",
           links: [savedLink({ year: null, pasal: "156" })],
         },
       ],
@@ -639,6 +643,7 @@ describe("fromCaseRead", () => {
         {
           kind: "free_text",
           free_text: "Peraturan Gubernur Kuno Nomor 5 Tahun 2001, Pasal 3",
+          display_text: "Peraturan Gubernur Kuno Nomor 5 Tahun 2001, Pasal 3",
           links: [],
         },
       ],
@@ -664,6 +669,7 @@ describe("fromCaseRead", () => {
         {
           kind: "structured",
           free_text: null,
+          display_text: "Pasal 28D UU 13/2003",
           links: [savedLink({ pasal: "28D" })],
         },
       ],
@@ -683,6 +689,7 @@ describe("fromCaseRead", () => {
         {
           kind: "structured",
           free_text: null,
+          display_text: "Pasal 156 UU 13/2003 jo. Pasal II Angka 5 UU 6/2023",
           links: [
             savedLink({ pasal: "156", ayat: null }),
             savedLink({
@@ -712,7 +719,7 @@ describe("fromCaseRead", () => {
   it("does not add a link to a structured reference that has none", () => {
     // Arrange
     const saved = savedCase({
-      legal_refs: [{ kind: "structured", free_text: null, links: [] }],
+      legal_refs: [{ kind: "structured", free_text: null, display_text: "", links: [] }],
     });
 
     // Act
@@ -726,6 +733,7 @@ describe("fromCaseRead", () => {
     const refs = ["1", "2", "3"].map((pasal) => ({
       kind: "structured" as const,
       free_text: null,
+      display_text: `Pasal ${pasal} UU 13/2003`,
       links: [savedLink({ pasal })],
     }));
 
