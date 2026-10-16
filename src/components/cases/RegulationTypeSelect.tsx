@@ -189,9 +189,7 @@ export function RegulationTypeSelect({
         </ul>
       )}
       {message !== undefined && (
-        <p role="status" className="mt-1 text-xs text-slate-500">
-          {message}
-        </p>
+        <output className="mt-1 block text-xs text-slate-500">{message}</output>
       )}
       {error !== undefined && <ErrorText id={`${id}-error`} message={error} />}
     </div>
