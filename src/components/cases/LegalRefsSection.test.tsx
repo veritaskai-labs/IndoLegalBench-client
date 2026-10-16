@@ -438,3 +438,25 @@ describe("LegalRefsSection", () => {
     expect(screen.getByLabelText("Pasal")).toHaveAttribute("placeholder", "156");
   });
 });
+
+describe("LegalRefsSection errors about the structure of a reference", () => {
+  it("shows an error about the form of a reference at the form select", () => {
+    // Arrange + Act
+    render(<Host errors={{ "legal_refs.0.kind": "Field legal_refs[0].kind wajib diisi" }} />);
+
+    // Assert
+    expect(screen.getByRole("combobox", { name: "Bentuk rujukan" })).toHaveAccessibleDescription(
+      expect.stringContaining("Field legal_refs[0].kind wajib diisi"),
+    );
+  });
+
+  it("shows an error about a reference that has no links at the form select", () => {
+    // Arrange + Act
+    render(<Host errors={{ "legal_refs.0.links": "Field legal_refs[0].links wajib diisi" }} />);
+
+    // Assert
+    expect(screen.getByRole("combobox", { name: "Bentuk rujukan" })).toHaveAccessibleDescription(
+      expect.stringContaining("Field legal_refs[0].links wajib diisi"),
+    );
+  });
+});
