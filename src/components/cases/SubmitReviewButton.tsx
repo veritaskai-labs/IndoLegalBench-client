@@ -9,10 +9,11 @@ import { mapSubmitError, submitBlockers } from "@/lib/cases/submitErrors";
 type Props = {
   caseId: string;
   ready: boolean;
+  dirty?: boolean;
   onSubmitted: (result: ReviewSubmission) => void;
 };
 
-export function SubmitReviewButton({ caseId, ready, onSubmitted }: Props) {
+export function SubmitReviewButton({ caseId, ready, dirty = false, onSubmitted }: Props) {
   const [blockers, setBlockers] = useState<MissingSection[]>([]);
 
   const action = useCallback(() => submitForReview(caseId), [caseId]);
@@ -26,14 +27,18 @@ export function SubmitReviewButton({ caseId, ready, onSubmitted }: Props) {
 
   return (
     <div>
-      <button
+        <button
         type="button"
         onClick={run}
-        disabled={!ready || pending}
+        disabled={!ready || dirty || pending}
         className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-      >
+        >
         {pending ? "Mengajukan…" : "Ajukan review"}
-      </button>
+        </button>
+
+      {dirty && (
+        <p className="mt-2 text-xs text-amber-700">Simpan perubahan dulu sebelum mengajukan.</p>
+      )}
 
       {error !== null && (
         <div role="alert" className="mt-2 rounded-md bg-red-50 p-3 text-xs text-red-800">

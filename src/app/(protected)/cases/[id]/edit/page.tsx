@@ -146,12 +146,14 @@ export default function EditCasePage() {
           <SubmitReviewButton
           caseId={caseId}
           ready={completeness.completeness.ready_for_review}
+          dirty={dirty}
           onSubmitted={(result) => {
-            detail.replace({ ...saved, status: result.status });
-            setFormKey((key) => key + 1);
-            showToast("Kasus diajukan untuk direview");
-            }}
-          />
+            // Status diambil dari balasan server, bukan ditebak.
+          detail.replace({ ...saved, status: result.status });
+          setFormKey((key) => key + 1);
+          showToast("Kasus diajukan untuk direview");
+          }}
+        />
         )}
       
         {saveError.message !== null && <ErrorState message={saveError.message} />}
