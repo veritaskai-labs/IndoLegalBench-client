@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+  type Ref,
+} from "react";
 import { searchRegulationTypes } from "@/lib/cases/regulationTypeSearch";
 import type { RegulationType } from "@/types/regulationType";
 import { CONTROL_CLASS, describedBy, ErrorText, FieldLabel, HintText } from "./fields";
@@ -20,6 +28,8 @@ type Props = {
   hint?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Ref ke elemen input, supaya form bisa memindahkan fokus ke field ini saat ada error. */
+  inputRef?: Ref<HTMLInputElement>;
 };
 
 function statusMessage(total: number, matches: number): string | undefined {
@@ -46,6 +56,7 @@ export function RegulationTypeSelect({
   hint,
   placeholder,
   disabled = false,
+  inputRef,
 }: Props) {
   const id = useId();
   const listId = `${id}-list`;
@@ -120,6 +131,7 @@ export function RegulationTypeSelect({
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {hint !== undefined && <HintText id={`${id}-hint`} text={hint} />}
       <input
+        ref={inputRef}
         id={id}
         type="text"
         role="combobox"
