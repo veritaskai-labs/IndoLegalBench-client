@@ -3,6 +3,8 @@ import type { CaseStatus } from "@/types/case";
 
 /** Server hanya menerima PUT untuk status ini; status lain terkunci. */
 const EDITABLE_STATUSES: readonly CaseStatus[] = ["draft", "needs_revision"];
+const SUBMITTABLE_STATUSES: readonly CaseStatus[] = ["draft", "needs_revision"];
+
 
 /** Form hanya bisa diedit untuk draf dan perlu revisi. */
 export function isCaseEditable(status: CaseStatus): boolean {
@@ -17,4 +19,9 @@ export function isCaseEditable(status: CaseStatus): boolean {
 export function canStartNewVersion(role: Role | null, status: CaseStatus, isCreator: boolean): boolean {
   if (status !== "approved" || role === null) return false;
   return role === "admin" || (role === "author" && isCreator);
+}
+
+export function canSubmitForReview(role: Role | null, status: CaseStatus, isCreator: boolean): boolean {
+  if (role === null || !SUBMITTABLE_STATUSES.includes(status)) return false;
+  return role === "author" && isCreator;
 }
