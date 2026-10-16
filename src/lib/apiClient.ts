@@ -1,5 +1,6 @@
 export const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-export type MissingSection = { field: string; message: string };
+import type { components } from "@/lib/generated/api";
+export type MissingSection = components["schemas"]["CompletenessIssue"];
 
 export class ApiError extends Error {
   constructor(
@@ -60,6 +61,7 @@ async function parseError(response: Response): Promise<ApiError> {
     field = stringOrNull(body?.field);
     missing = missingSections(body?.missing);
   } catch {
+    //bukan JSON: halaman error HTML, balasan kosong, atau koneksi terputus.
   }
   return new ApiError(response.status, code, message, field, missing);
 }
