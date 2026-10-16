@@ -298,6 +298,21 @@ describe("changeRefMode", () => {
     expect(result.links[1]).toEqual(second);
   });
 
+  it("starts one empty link when a structured reference has none", () => {
+    // Arrange
+    const ref = structuredRef();
+
+    // Act
+    const result = changeRefMode(ref, "name_only");
+
+    // Assert
+    expect(result).toEqual({
+      kind: "structured",
+      free_text: "",
+      links: [emptyLink("name_only")],
+    });
+  });
+
   it("changes nothing when the mode is the same", () => {
     // Arrange
     const ref = structuredRef(filledLink());
