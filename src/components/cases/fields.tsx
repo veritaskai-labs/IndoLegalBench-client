@@ -106,6 +106,48 @@ export function TextAreaField({
   );
 }
 
+/** Pilihan satu nilai dari daftar kecil. Terkendali: nilai dan perubahan dikelola pemanggil. */
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  error,
+  hint,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly { value: string; label: string }[];
+  error?: string;
+  hint?: string;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  return (
+    <div>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      {hint !== undefined && <HintText id={`${id}-hint`} text={hint} />}
+      <select
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        {...describedBy(id, hint, error)}
+        className={CONTROL_CLASS}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {error !== undefined && <ErrorText id={`${id}-error`} message={error} />}
+    </div>
+  );
+}
+
 /** Kartu satu bagian form. fieldset + legend memberi nama grup untuk pembaca layar. */
 export function FormSection({
   title,
