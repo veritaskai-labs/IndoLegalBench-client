@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { EmptyState, LoadingSkeleton } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { describeCaseHistoryError } from "@/lib/audit/caseHistoryError";
 import type { AuditEntry } from "@/types/audit";
 import { AuditDetailPanel } from "./AuditDetailPanel";
 import { AuditTable } from "./AuditTable";
@@ -13,7 +14,7 @@ type Props = {
 
 export function CaseAuditHistory({ caseId }: Props) {
   const [today] = useState(() => new Date());
-  const { state } = useAuditLog(today, { case_id: caseId });
+  const { state, reload } = useAuditLog(today, { case_id: caseId });
   const [selected, setSelected] = useState<AuditEntry | null>(null);
 
   if (state.status === "loading") {
@@ -21,7 +22,10 @@ export function CaseAuditHistory({ caseId }: Props) {
   }
 
   if (state.status === "error") {
-    return null;
+    const { message, canRetry } = describeCaseHistoryError(state.status_code);
+    return (
+      <ErrorState variant="card" message={message} onRetry={canRetry ? reload : undefined} />
+    );
   }
 
   if (state.entries.length === 0) {
