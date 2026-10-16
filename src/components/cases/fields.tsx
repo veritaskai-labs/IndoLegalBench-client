@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
-const CONTROL_CLASS =
+export const CONTROL_CLASS =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 aria-[invalid=true]:border-red-600";
 
 type FieldProps = {
@@ -15,7 +15,7 @@ type FieldProps = {
   placeholder?: string;
 };
 
-function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
+export function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
   return (
     <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700">
       {children}
@@ -38,7 +38,7 @@ export function invalidProps(errorId: string, error: string | undefined) {
     : { "aria-invalid": true, "aria-describedby": errorId };
 }
 
-function HintText({ id, text }: { id: string; text: string }) {
+export function HintText({ id, text }: { id: string; text: string }) {
   return (
     <p id={id} className="mt-0.5 text-xs text-slate-500">
       {text}
@@ -47,7 +47,7 @@ function HintText({ id, text }: { id: string; text: string }) {
 }
 
 /** Saat ada error, pembaca layar cukup membacakan error-nya; bantuan tetap terlihat. */
-function describedBy(id: string, hint: string | undefined, error: string | undefined) {
+export function describedBy(id: string, hint: string | undefined, error: string | undefined) {
   if (error !== undefined) return invalidProps(`${id}-error`, error);
   return hint === undefined ? {} : { "aria-describedby": `${id}-hint` };
 }
