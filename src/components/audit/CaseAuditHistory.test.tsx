@@ -1,0 +1,60 @@
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { listAuditLogs } from "@/lib/audit/auditApi";
+import { makeAuditEntry, makeAuditPage } from "@/test/auditFixtures";
+import { CaseAuditHistory } from "./CaseAuditHistory";
+
+vi.mock("@/lib/audit/auditApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/audit/auditApi")>();
+  return { ...actual, listAuditLogs: vi.fn() };
+});
+const list = vi.mocked(listAuditLogs);
+
+beforeEach(() => {
+  list.mockReset();
+});
+
+describe("CaseAuditHistory", () => {
+  describe("saat riwayat dimuat", () => {
+    it("shows a loading state and asks only for this case", () => {
+      list.mockReturnValue(new Promise(() => {}));
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(screen.getByRole("status")).toBeInTheDocument();
+      expect(list).toHaveBeenCalledWith(expect.objectContaining({ case_id: "case-1" }));
+    });
+  });
+
+  describe("kasus tanpa catatan", () => {
+    it("says there is no history yet instead of an empty table", async () => {
+      list.mockResolvedValue(makeAuditPage([]));
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(await screen.findByText("Belum ada riwayat")).toBeInTheDocument();
+      expect(screen.getByText("Belum ada perubahan tercatat untuk kasus ini.")).toBeInTheDocument();
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("kasus dengan catatan", () => {
+    it("lists who did what, with the 90 day retention note", async () => {
+      list.mockResolvedValue(
+        makeAuditPage([
+          makeAuditEntry({ id: 1, actor_name: "Herdayani", action: "case.updated" }),
+          makeAuditEntry({ id: 2, actor_name: "Roben", action: "case.submitted" }),
+        ]),
+      );
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(
+        await screen.findByText("Catatan disimpan 90 hari, lalu dihapus otomatis."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
+      expect(screen.getByText("Herdayani")).toBeInTheDocument();
+      expect(screen.getByText("case.submitted")).toBeInTheDocument();
+    });
+  });
+});
