@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { RegulationType } from "@/types/regulationType";
 import { MAX_VISIBLE_OPTIONS, RegulationTypeSelect } from "./RegulationTypeSelect";
@@ -415,5 +415,48 @@ describe("RegulationTypeSelect", () => {
     // Assert
     expect(combobox()).not.toHaveAttribute("aria-describedby");
     expect(combobox()).not.toHaveAttribute("aria-invalid");
+  });
+});
+
+describe("RegulationTypeSelect input ref", () => {
+  // Positive: the form focuses the field by name when its error is picked in the summary.
+  it("hands the input element to the ref it is given", () => {
+    // Arrange
+    const ref = createRef<HTMLInputElement>();
+
+    // Act
+    render(
+      <RegulationTypeSelect
+        label="Jenis peraturan"
+        types={TYPES}
+        value=""
+        onChange={vi.fn()}
+        inputRef={ref}
+      />,
+    );
+
+    // Assert
+    expect(ref.current).toBe(screen.getByRole("combobox", { name: "Jenis peraturan" }));
+  });
+
+  it("accepts a callback ref too", () => {
+    // Arrange
+    const received: (HTMLInputElement | null)[] = [];
+
+    // Act
+    render(
+      <RegulationTypeSelect
+        label="Jenis peraturan"
+        types={TYPES}
+        value=""
+        onChange={vi.fn()}
+        inputRef={(element) => {
+          received.push(element);
+        }}
+      />,
+    );
+
+    // Assert
+    expect(received[0]).toBe(screen.getByRole("combobox", { name: "Jenis peraturan" }));
   });
 });

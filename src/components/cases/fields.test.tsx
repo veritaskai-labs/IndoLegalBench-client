@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
-import { TextAreaField, TextField } from "./fields";
+import { SelectField, TextAreaField, TextField } from "./fields";
 
 // Registrasi palsu: field ini tidak butuh form sungguhan untuk diuji.
 function registration(name: string): UseFormRegisterReturn {
@@ -44,5 +45,111 @@ describe("TextAreaField", () => {
     render(<TextAreaField label="Deskripsi" registration={registration("description")} />);
 
     expect(screen.getByLabelText("Deskripsi")).not.toHaveAttribute("placeholder");
+  });
+});
+
+describe("SelectField", () => {
+  const OPTIONS = [
+    { value: "name_only", label: "Nama Peraturan saja" },
+    { value: "pasal", label: "Pasal" },
+    { value: "pasal_angka", label: "Pasal + Angka" },
+  ];
+
+  // Positive
+  it("is a select named by its label, with every option and the current value chosen", () => {
+    // Arrange
+    render(
+      <SelectField label="Bentuk rujukan" value="pasal" options={OPTIONS} onChange={vi.fn()} />,
+    );
+
+    // Act
+    const select = screen.getByRole("combobox", { name: "Bentuk rujukan" });
+
+    // Assert
+    expect(select).toHaveValue("pasal");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Nama Peraturan saja",
+      "Pasal",
+      "Pasal + Angka",
+    ]);
+  });
+
+  it("calls onChange with the value of the chosen option", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SelectField label="Bentuk rujukan" value="pasal" options={OPTIONS} onChange={onChange} />,
+    );
+
+    // Act
+    await user.selectOptions(screen.getByLabelText("Bentuk rujukan"), "pasal_angka");
+
+    // Assert
+    expect(onChange).toHaveBeenCalledExactlyOnceWith("pasal_angka");
+  });
+
+  // Negative
+  it("cannot be changed when disabled", () => {
+    // Arrange + Act
+    render(
+      <SelectField
+        label="Bentuk rujukan"
+        value="pasal"
+        options={OPTIONS}
+        onChange={vi.fn()}
+        disabled
+      />,
+    );
+
+    // Assert
+    expect(screen.getByLabelText("Bentuk rujukan")).toBeDisabled();
+  });
+
+  // Corner
+  it("ties the hint to the select", () => {
+    // Arrange + Act
+    render(
+      <SelectField
+        label="Bentuk rujukan"
+        value="pasal"
+        options={OPTIONS}
+        onChange={vi.fn()}
+        hint="Pilih seberapa dalam rujukan ini."
+      />,
+    );
+
+    // Assert
+    expect(screen.getByLabelText("Bentuk rujukan")).toHaveAccessibleDescription(
+      "Pilih seberapa dalam rujukan ini.",
+    );
+  });
+
+  it("marks the select invalid and ties the error to it", () => {
+    // Arrange + Act
+    render(
+      <SelectField
+        label="Bentuk rujukan"
+        value="pasal"
+        options={OPTIONS}
+        onChange={vi.fn()}
+        error="Bentuk rujukan wajib dipilih."
+      />,
+    );
+
+    // Assert
+    const select = screen.getByLabelText("Bentuk rujukan");
+    expect(select).toHaveAttribute("aria-invalid", "true");
+    expect(select).toHaveAccessibleDescription("Bentuk rujukan wajib dipilih.");
+  });
+
+  it("has no description when it has no hint and no error", () => {
+    // Arrange + Act
+    render(
+      <SelectField label="Bentuk rujukan" value="pasal" options={OPTIONS} onChange={vi.fn()} />,
+    );
+
+    // Assert
+    expect(screen.getByLabelText("Bentuk rujukan")).not.toHaveAttribute("aria-describedby");
   });
 });
