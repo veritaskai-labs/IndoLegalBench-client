@@ -59,17 +59,36 @@ function valueAt(data: unknown, path: readonly PropertyKey[]): unknown {
   );
 }
 
+function tooSmallMessage(
+  issue: z.core.$ZodIssueTooSmall,
+  path: CaseFieldPath,
+  label: string,
+  data: unknown,
+): string {
+  if (path === "legal_refs") return "Butuh minimal satu rujukan hukum.";
+  if (issue.origin !== "string") return `${label} minimal ${issue.minimum}.`;
+  return valueAt(data, issue.path) === ""
+    ? `${label} wajib diisi.`
+    : `${label} minimal ${issue.minimum} karakter.`;
+}
+
+function invalidTypeMessage(
+  issue: z.core.$ZodIssueInvalidType,
+  label: string,
+  data: unknown,
+): string {
+  // Field yang tidak dikirim (mis. tahun kosong) wajib diisi, bukan salah tipe.
+  if (valueAt(data, issue.path) === undefined) return `${label} wajib diisi.`;
+  return issue.expected === "number" || issue.expected === "int"
+    ? `${label} harus bilangan bulat.`
+    : `${label} wajib diisi.`;
+}
+
 function messageFor(issue: z.core.$ZodIssue, path: CaseFieldPath, data: unknown): string {
   const label = labelFor(path);
   switch (issue.code) {
     case "too_small":
-      if (path === "legal_refs") return "Butuh minimal satu rujukan hukum.";
-      if (issue.origin === "string") {
-        return valueAt(data, issue.path) === ""
-          ? `${label} wajib diisi.`
-          : `${label} minimal ${issue.minimum} karakter.`;
-      }
-      return `${label} minimal ${issue.minimum}.`;
+      return tooSmallMessage(issue, path, label, data);
     case "too_big":
       return issue.origin === "string"
         ? `${label} maksimal ${issue.maximum} karakter.`
@@ -79,11 +98,7 @@ function messageFor(issue: z.core.$ZodIssue, path: CaseFieldPath, data: unknown)
     case "invalid_value":
       return path === "split_tag" ? "Pilih tag dev atau test." : `${label} tidak valid.`;
     case "invalid_type":
-      // Field yang tidak dikirim (mis. tahun kosong) wajib diisi, bukan salah tipe.
-      if (valueAt(data, issue.path) === undefined) return `${label} wajib diisi.`;
-      return issue.expected === "number" || issue.expected === "int"
-        ? `${label} harus bilangan bulat.`
-        : `${label} wajib diisi.`;
+      return invalidTypeMessage(issue, label, data);
     default:
       return `${label} tidak valid.`;
   }
