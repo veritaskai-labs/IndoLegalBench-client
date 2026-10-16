@@ -1,6 +1,9 @@
 import type { CompletenessState } from "@/hooks/useCaseCompleteness";
 
-type Props = CompletenessState & { onRetry: () => void };
+type Props = CompletenessState & { 
+  onRetry: () => void;
+  submittable?: boolean;
+ };
 
 /**
  * Kelengkapan kasus di kepala editor (SCRUM-109, AC4 dan AC7). Angka dan
@@ -37,7 +40,7 @@ export function CompletenessIndicator(props: Props) {
     <section aria-label="Kelengkapan kasus" className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center gap-3">
         <p className="text-sm font-medium text-slate-900">Kelengkapan {pct}%</p>
-        {ready_for_review && (
+        {props.submittable !== false && ready_for_review && (
           <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
             Siap diajukan review
           </span>

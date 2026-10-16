@@ -140,7 +140,8 @@ export default function EditCasePage() {
         hidden={tab !== "editor"}
         className="space-y-6"
       >
-        <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
+        
+        <CompletenessIndicator {...completeness} submittable={editable} onRetry={completeness.reload} />
         
         {canSubmit && completeness.status === "ready" && (
           <SubmitReviewButton
