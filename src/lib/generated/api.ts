@@ -650,6 +650,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/regulation-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar jenis peraturan (JDIH BPK) untuk rujukan hukum
+         * @description Return the regulation types ordered by urutan, active ones unless asked otherwise.
+         */
+        get: operations["list_regulation_types_regulation_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1168,7 +1188,7 @@ export interface components {
         };
         /**
          * LegalRefRead
-         * @description One citation as stored.
+         * @description One citation as returned, written in legal style by the server (AC6).
          */
         LegalRefRead: {
             /**
@@ -1183,6 +1203,11 @@ export interface components {
             free_text?: string | null;
             /** Links */
             links: components["schemas"]["LegalRefLinkRead"][];
+            /**
+             * Display Text
+             * @description Ditulis server, misalnya "Pasal 156 UU 13/2003 jo. Pasal II Angka 5 UU 6/2023"
+             */
+            display_text: string;
         };
         /**
          * LegalRefWrite
@@ -1257,6 +1282,20 @@ export interface components {
          * @enum {string}
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
+        /**
+         * RegulationTypeRead
+         * @description Satu jenis peraturan untuk dropdown editor (AC2).
+         */
+        RegulationTypeRead: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Singkatan */
+            singkatan: string | null;
+            /** Is Active */
+            is_active: boolean;
+        };
         /**
          * ReviewCopy
          * @description One version as a reviewer reads it (PBI-6, SCRUM-145).
@@ -3426,6 +3465,56 @@ export interface operations {
             };
             /** @description Catatan tidak ditemukan */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_regulation_types_regulation_types_get: {
+        parameters: {
+            query?: {
+                /** @description Sertakan jenis nonaktif, untuk label rujukan lama yang masih memakainya. */
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegulationTypeRead"][];
+                };
+            };
+            /** @description Belum login. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Peran tidak dikenal. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
