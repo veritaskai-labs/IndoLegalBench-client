@@ -925,4 +925,33 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
 
     expect(await screen.findByRole("button", { name: "Ajukan review" })).toBeDisabled();
   });
+
+  // Negative: the server only accepts the submission from the author who wrote the case,
+  // so the reviewer must not see an enabled button and learn that on click.
+  it("does not offer the button to the reviewer", async () => {
+    session.role = "reviewer";
+    renderPage();
+    await screen.findByText("Siap diajukan review");
+
+    expect(noSubmitButton()).not.toBeInTheDocument();
+  });
+
+  // Negative: version 1 was written by somebody else.
+  it("does not offer the button to an author who did not write the case", async () => {
+    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    renderPage();
+    await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
+
+    expect(noSubmitButton()).not.toBeInTheDocument();
+  });
+
+  // Negative: a case already in review cannot be submitted again (409 VERSION_NOT_SUBMITTABLE).
+  it("does not offer the button on a case that is already in review", async () => {
+    getCaseMock.mockResolvedValue(savedCase({ status: "in_review" }));
+    renderPage();
+    await screen.findByText("Dalam tinjauan");
+
+    expect(noSubmitButton()).not.toBeInTheDocument();
+  });
+
 });
