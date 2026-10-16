@@ -85,4 +85,20 @@ describe("SubmitReviewButton", () => {
 
     expect(submit).toHaveBeenCalledTimes(1);
   });
+  it("refuses to submit while there are unsaved changes", async () => {
+    const user = userEvent.setup();
+
+    render(<SubmitReviewButton caseId="c1" ready dirty onSubmitted={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Ajukan review" }));
+
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByText("Simpan perubahan dulu sebelum mengajukan.")).toBeInTheDocument();
+  });
+
+  // Corner: tanpa perubahan tertunda, petunjuk itu tidak muncul.
+  it("does not show the save hint when nothing is pending", () => {
+    render(<SubmitReviewButton caseId="c1" ready onSubmitted={vi.fn()} />);
+
+    expect(screen.queryByText("Simpan perubahan dulu sebelum mengajukan.")).not.toBeInTheDocument();
+  });
 });

@@ -953,5 +953,16 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
 
     expect(noSubmitButton()).not.toBeInTheDocument();
   });
+  // Corner: kelengkapan dihitung dari data tersimpan, jadi tombol bisa aktif
+  // padahal form kotor — dan pengajuan akan mengirim versi tersimpan.
+  it("holds the button while the editor has unsaved changes", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Ajukan review" });
 
+    await user.type(await screen.findByLabelText("Judul"), "!");
+
+    expect(submitButton()).toBeDisabled();
+    expect(screen.getByText("Simpan perubahan dulu sebelum mengajukan.")).toBeInTheDocument();
+  });
 });
