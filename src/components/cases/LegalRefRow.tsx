@@ -91,7 +91,12 @@ export function LegalRefRow({
         </div>
       ) : (
         ref.links.map((link, linkIndex) => (
-          <div key={linkIndex} className="space-y-3">
+          <div
+            // Link belum bisa ditambah, dihapus, atau diurutkan ulang di sini (itu SCRUM-162), jadi
+            // posisinya identitas yang stabil. Pakai id dari useFieldArray begitu daftar bisa berubah.
+            key={linkIndex} // NOSONAR
+            className="space-y-3"
+          >
             {linkIndex > 0 && (
               <>
                 <p className="text-sm font-medium text-slate-700">

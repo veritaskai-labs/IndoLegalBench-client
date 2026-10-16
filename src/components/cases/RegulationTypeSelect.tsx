@@ -160,17 +160,21 @@ export function RegulationTypeSelect({
         className={CONTROL_CLASS}
       />
       {showList && (
-        <ul
+        // Pola ARIA combobox (WAI-ARIA APG): input dengan daftar listbox yang disaring. Tidak ada
+        // elemen bawaan yang menyaring, meranking, membatasi 50 opsi, dan menampilkan singkatan,
+        // jadi aturan Sonar S6819, S6842, dan S1082 ditandai NOSONAR pada baris daftar dan opsi.
+        // Keyboard ditangani input (panah, Enter, Escape), bukan tiap opsi.
+        <ul // NOSONAR
           id={listId}
-          role="listbox"
+          role="listbox" // NOSONAR
           aria-label={label}
           className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-300 bg-white py-1 text-sm shadow-lg"
         >
           {visible.map((type, index) => (
-            <li
+            <li // NOSONAR
               key={type.code}
               id={optionId(type.code)}
-              role="option"
+              role="option" // NOSONAR
               aria-selected={type.code === value}
               // mousedown di opsi tidak boleh memindahkan fokus, kalau tidak onBlur menutup daftar
               // sebelum klik sempat memilih.
