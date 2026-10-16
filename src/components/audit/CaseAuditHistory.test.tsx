@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/apiClient";
 import { listAuditLogs } from "@/lib/audit/auditApi";
 import { makeAuditEntry, makeAuditPage } from "@/test/auditFixtures";
 import { CaseAuditHistory } from "./CaseAuditHistory";
@@ -94,6 +95,44 @@ describe("CaseAuditHistory", () => {
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(screen.getByRole("table")).toBeInTheDocument();
+    });
+  });
+
+  describe("riwayat gagal dimuat", () => {
+    it("says the reviewer is not assigned and offers no retry on 403", async () => {
+      list.mockRejectedValue(new ApiError(403, "FORBIDDEN"));
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(
+        await screen.findByText("Anda tidak ditugaskan untuk mereview kasus ini."),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Coba lagi" })).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ["a server error", new ApiError(500, "INTERNAL_ERROR")],
+      ["a dropped connection", new TypeError("Failed to fetch")],
+    ])("offers a retry after %s", async (_, error) => {
+      list.mockRejectedValue(error);
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(await screen.findByText("Gagal memuat riwayat kasus.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
+    });
+
+    it("loads the history again when the reader retries", async () => {
+      list
+        .mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR"))
+        .mockResolvedValueOnce(makeAuditPage([]));
+      const user = userEvent.setup();
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      await user.click(await screen.findByRole("button", { name: "Coba lagi" }));
+
+      expect(await screen.findByText("Belum ada riwayat")).toBeInTheDocument();
+      expect(list).toHaveBeenCalledTimes(2);
     });
   });
 });
