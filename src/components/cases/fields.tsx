@@ -15,7 +15,10 @@ type FieldProps = {
   placeholder?: string;
 };
 
-export function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
+export function FieldLabel({
+  htmlFor,
+  children,
+}: Readonly<{ htmlFor: string; children: ReactNode }>) {
   return (
     <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700">
       {children}
@@ -38,7 +41,7 @@ export function invalidProps(errorId: string, error: string | undefined) {
     : { "aria-invalid": true, "aria-describedby": errorId };
 }
 
-export function HintText({ id, text }: { id: string; text: string }) {
+export function HintText({ id, text }: Readonly<{ id: string; text: string }>) {
   return (
     <p id={id} className="mt-0.5 text-xs text-slate-500">
       {text}
