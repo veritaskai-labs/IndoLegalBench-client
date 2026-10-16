@@ -20,3 +20,6 @@ export function useRegulationTypes() {
     return { status: "ready" as const, types: resource.data, reload };
   return { ...resource, reload };
 }
+
+/** Bentuk hasil hook, untuk komponen yang menerimanya sebagai props. */
+export type RegulationTypesResource = ReturnType<typeof useRegulationTypes>;
