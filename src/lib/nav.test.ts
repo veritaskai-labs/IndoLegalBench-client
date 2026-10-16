@@ -26,7 +26,7 @@ describe("navForRole", () => {
   });
 
   it("gives admin every page", () => {
-    expect(labels("admin")).toHaveLength(8);
+    expect(labels("admin")).toHaveLength(9);
   });
 
   it("drops groups left empty for the role", () => {
