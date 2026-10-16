@@ -965,4 +965,15 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     expect(submitButton()).toBeDisabled();
     expect(screen.getByText("Simpan perubahan dulu sebelum mengajukan.")).toBeInTheDocument();
   });
+  // AC1: setelah diajukan, kartu kelengkapan tidak lagi mengajak mengajukan.
+  it("stops calling the case ready once it has been submitted", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Ajukan review" });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText("Dalam tinjauan")).toBeInTheDocument();
+    expect(screen.queryByText("Siap diajukan review")).not.toBeInTheDocument();
+  });
 });

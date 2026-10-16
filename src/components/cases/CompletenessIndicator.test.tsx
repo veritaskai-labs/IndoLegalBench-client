@@ -111,4 +111,26 @@ describe("CompletenessIndicator", () => {
     expect(screen.getByText("Kelengkapan 0%")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
   });
+  // "Siap diajukan review" hanya bermakna selama kasusnya masih bisa diajukan;
+  // setelah diajukan atau disetujui, kalimat itu menyesatkan.
+  it("drops the ready badge once the case can no longer be submitted", () => {
+    render(
+      <CompletenessIndicator
+        status="ready"
+        completeness={{
+          is_complete: true,
+          ready_for_review: true,
+          pct: 100,
+          missing: [],
+          trap_count: 1,
+          legal_ref_count: 1,
+        }}
+        submittable={false}
+        onRetry={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Kelengkapan 100%")).toBeInTheDocument();
+    expect(screen.queryByText("Siap diajukan review")).not.toBeInTheDocument();
+  });
 });
