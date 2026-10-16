@@ -126,6 +126,7 @@ beforeEach(() => {
   updateCaseMock.mockReset();
   completenessMock.mockReset();
   completenessMock.mockResolvedValue(completeness());
+  submitMock.mockReset();
   push.mockReset();
   vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
   confirmMock.mockReset().mockReturnValue(true);
@@ -812,6 +813,7 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
   // Edge: the history is only requested when somebody looks at it.
   it("does not ask for the history until the tab is opened", async () => {
     // Arrange
+    session.role = "reviewer";
     getCaseMock.mockResolvedValue(savedCase());
 
     // Act
@@ -878,56 +880,48 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
     // Assert
     expect(await screen.findByText("Belum ada riwayat versi")).toBeInTheDocument();
   });
+});
 
+describe("EditCasePage submit for review (SCRUM-148)", () => {
+  const submitButton = () => screen.getByRole("button", { name: "Ajukan review" });
+  const noSubmitButton = () => screen.queryByRole("button", { name: "Ajukan review" });
+
+  const SUBMITTED = {
+    case_id: CASE_ID,
+    version: 1,
+    status: "in_review" as const,
+    round_no: 1,
+    round_status: "awaiting_assignment",
+  };
+
+  const ready = () =>
+    completeness({ pct: 100, is_complete: true, ready_for_review: true, missing: [], trap_count: 1 });
+
+  // Version 1 was written by the signed-in user (id u1), so the author is the creator.
+  beforeEach(() => {
+    listVersionsMock.mockResolvedValue([makeSummary(1)]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
+    completenessMock.mockResolvedValue(ready());
+    submitMock.mockResolvedValue(SUBMITTED);
+  });
+
+  // Positive: AC1
   it("submits the case for review and shows the new status", async () => {
     const user = userEvent.setup();
-    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
-    completenessMock.mockResolvedValue({
-      is_complete: true,
-      ready_for_review: true,
-      pct: 100,
-      missing: [],
-      trap_count: 1,
-      legal_ref_count: 1,
-    } as CaseCompleteness);
-    submitMock.mockResolvedValue({
-      case_id: CASE_ID,
-      version: 1,
-      status: "in_review",
-      round_no: 1,
-      round_status: "awaiting_assignment",
-    });
-
-    render(
-      <ToastProvider>
-        <EditCasePage />
-      </ToastProvider>,
-    );
-    
+    renderPage();
     await screen.findByRole("button", { name: "Ajukan review" });
 
-    await user.click(screen.getByRole("button", { name: "Ajukan review" }));
+    await user.click(submitButton());
 
     expect(submitMock).toHaveBeenCalledWith(CASE_ID);
     expect(await screen.findByText("Dalam tinjauan")).toBeInTheDocument();
+    expect(toast()).toHaveTextContent("Kasus diajukan untuk direview");
   });
 
-  it("keeps the submit button disabled while the case is not ready", async () => {
-    getCaseMock.mockResolvedValue(savedCase({ status: "draft" }));
-    completenessMock.mockResolvedValue({
-      is_complete: false,
-      ready_for_review: false,
-      pct: 60,
-      missing: [{ field: "traps", message: "Belum ada jebakan" }],
-      trap_count: 0,
-      legal_ref_count: 1,
-    } as CaseCompleteness);
-
-    render(
-      <ToastProvider>
-        <EditCasePage />
-      </ToastProvider>,
-    );
+  // AC1: the button only opens once the server says the case is ready.
+  it("keeps the button disabled while the case is not ready", async () => {
+    completenessMock.mockResolvedValue(completeness());
+    renderPage();
 
     expect(await screen.findByRole("button", { name: "Ajukan review" })).toBeDisabled();
   });
