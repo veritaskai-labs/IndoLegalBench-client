@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { EmptyState, LoadingSkeleton } from "@/components/ui";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import type { AuditEntry } from "@/types/audit";
+import { AuditDetailPanel } from "./AuditDetailPanel";
 import { AuditTable } from "./AuditTable";
 
 type Props = {
@@ -12,6 +14,7 @@ type Props = {
 export function CaseAuditHistory({ caseId }: Props) {
   const [today] = useState(() => new Date());
   const { state } = useAuditLog(today, { case_id: caseId });
+  const [selected, setSelected] = useState<AuditEntry | null>(null);
 
   if (state.status === "loading") {
     return <LoadingSkeleton variant="lines" rows={3} />;
@@ -36,8 +39,9 @@ export function CaseAuditHistory({ caseId }: Props) {
         Catatan disimpan 90 hari, lalu dihapus otomatis.
       </p>
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <AuditTable entries={state.entries} onRowClick={() => undefined} />
+        <AuditTable entries={state.entries} onRowClick={setSelected} />
       </div>
+      {selected && <AuditDetailPanel entry={selected} onClose={() => setSelected(null)} />}
     </>
   );
 }
