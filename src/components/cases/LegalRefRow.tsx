@@ -51,7 +51,7 @@ export function LegalRefRow({
   regulationTypes,
   onUpdate,
   onRemove,
-}: Props) {
+}: Readonly<Props>) {
   // Saat baris dihapus, satu render berlalu sebelum daftar ikut menyusut.
   const ref: LegalRefFormValues | undefined = useWatch({ control, name: `legal_refs.${index}` });
   if (ref === undefined) return null;

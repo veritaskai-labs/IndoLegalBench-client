@@ -57,7 +57,7 @@ export function RegulationTypeSelect({
   placeholder,
   disabled = false,
   inputRef,
-}: Props) {
+}: Readonly<Props>) {
   const id = useId();
   const listId = `${id}-list`;
   const optionId = useCallback((code: string) => `${id}-option-${code}`, [id]);

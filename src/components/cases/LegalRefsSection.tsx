@@ -26,7 +26,7 @@ export function LegalRefsSection({
   errorFor,
   rowHasError,
   regulationTypes,
-}: Props) {
+}: Readonly<Props>) {
   const { fields, append, remove, update } = useFieldArray({ control, name: "legal_refs" });
 
   return (

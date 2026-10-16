@@ -46,7 +46,7 @@ function Host({
   errors = {},
   invalidRows = [],
   onValues,
-}: HostProps) {
+}: Readonly<HostProps>) {
   const { register, control, getValues } = useForm<CaseFormValues>({
     defaultValues: { ...emptyCaseFormValues(), legal_refs: refs ?? [emptyLegalRef()] },
   });

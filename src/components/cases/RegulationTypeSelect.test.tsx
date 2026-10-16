@@ -32,7 +32,12 @@ type HarnessProps = {
 };
 
 /** Komponen ini terkendali: pembungkus ini menyimpan nilainya seperti yang dilakukan form. */
-function Harness({ initial = "", types = TYPES, onChange = vi.fn(), ...rest }: HarnessProps) {
+function Harness({
+  initial = "",
+  types = TYPES,
+  onChange = vi.fn(),
+  ...rest
+}: Readonly<HarnessProps>) {
   const [value, setValue] = useState(initial);
   return (
     <RegulationTypeSelect

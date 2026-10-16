@@ -40,7 +40,7 @@ export function LegalRefLinkFields({
   control,
   errorFor,
   regulationTypes,
-}: Props) {
+}: Readonly<Props>) {
   const base = `legal_refs.${refIndex}.links.${linkIndex}` as const;
   const ready = regulationTypes.status === "ready";
 

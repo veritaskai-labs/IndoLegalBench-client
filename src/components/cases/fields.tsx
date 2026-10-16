@@ -115,7 +115,7 @@ export function SelectField({
   error,
   hint,
   disabled = false,
-}: {
+}: Readonly<{
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -123,7 +123,7 @@ export function SelectField({
   error?: string;
   hint?: string;
   disabled?: boolean;
-}) {
+}>) {
   const id = useId();
   return (
     <div>
