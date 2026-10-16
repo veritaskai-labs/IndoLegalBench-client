@@ -8,7 +8,10 @@ vi.mock("@/lib/cases/versionApi", () => ({ listCaseVersions: vi.fn() }));
 const listMock = vi.mocked(listCaseVersions);
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
-const ME = { id: "11111111-1111-1111-1111-111111111111", role: "author" as const };
+const ME = {
+  id: "11111111-1111-1111-1111-111111111111",
+  role: "author" as const,
+};
 
 beforeEach(() => {
   listMock.mockReset();
@@ -17,18 +20,26 @@ beforeEach(() => {
 describe("useCanSubmitForReview", () => {
   // Positive
   it("lets the author who wrote the case submit a draft", async () => {
-    listMock.mockResolvedValue([makeSummary(1, { author: { id: ME.id, name: "Esi" } })]);
+    listMock.mockResolvedValue([
+      makeSummary(1, { author: { id: ME.id, name: "Esi" } }),
+    ]);
 
-    const { result } = renderHook(() => useCanSubmitForReview(CASE_ID, ME, "draft"));
+    const { result } = renderHook(() =>
+      useCanSubmitForReview(CASE_ID, ME, "draft"),
+    );
 
     await waitFor(() => expect(result.current).toBe(true));
   });
 
   // Negative: author lain, bukan penulis kasus ini.
   it("refuses an author who did not write the case", async () => {
-    listMock.mockResolvedValue([makeSummary(1, { author: { id: "someone-else", name: "Roben" } })]);
+    listMock.mockResolvedValue([
+      makeSummary(1, { author: { id: "someone-else", name: "Roben" } }),
+    ]);
 
-    const { result } = renderHook(() => useCanSubmitForReview(CASE_ID, ME, "draft"));
+    const { result } = renderHook(() =>
+      useCanSubmitForReview(CASE_ID, ME, "draft"),
+    );
 
     await waitFor(() => expect(listMock).toHaveBeenCalled());
     expect(result.current).toBe(false);
@@ -46,7 +57,9 @@ describe("useCanSubmitForReview", () => {
 
   // Negative: status yang memang tidak bisa diajukan.
   it("does not ask for the history on an approved case", () => {
-    const { result } = renderHook(() => useCanSubmitForReview(CASE_ID, ME, "approved"));
+    const { result } = renderHook(() =>
+      useCanSubmitForReview(CASE_ID, ME, "approved"),
+    );
 
     expect(result.current).toBe(false);
     expect(listMock).not.toHaveBeenCalled();
@@ -54,9 +67,13 @@ describe("useCanSubmitForReview", () => {
 
   // Corner: render pertama, permintaan baru dikirim dan hasilnya belum ada.
   it("hides the button while the history is still loading", () => {
-    listMock.mockResolvedValue([makeSummary(1, { author: { id: ME.id, name: "Esi" } })]);
+    listMock.mockResolvedValue([
+      makeSummary(1, { author: { id: ME.id, name: "Esi" } }),
+    ]);
 
-    const { result } = renderHook(() => useCanSubmitForReview(CASE_ID, ME, "draft"));
+    const { result } = renderHook(() =>
+      useCanSubmitForReview(CASE_ID, ME, "draft"),
+    );
 
     expect(result.current).toBe(false);
   });
@@ -67,7 +84,9 @@ describe("useCanSubmitForReview", () => {
     failure.catch(() => undefined);
     listMock.mockReturnValue(failure);
 
-    const { result } = renderHook(() => useCanSubmitForReview(CASE_ID, ME, "draft"));
+    const { result } = renderHook(() =>
+      useCanSubmitForReview(CASE_ID, ME, "draft"),
+    );
 
     await waitFor(() => expect(listMock).toHaveBeenCalled());
     expect(result.current).toBe(false);
@@ -75,7 +94,9 @@ describe("useCanSubmitForReview", () => {
 
   // Corner: sesi belum terbaca.
   it("refuses when nobody is signed in", () => {
-    const { result } = renderHook(() => useCanSubmitForReview(CASE_ID, null, "draft"));
+    const { result } = renderHook(() =>
+      useCanSubmitForReview(CASE_ID, null, "draft"),
+    );
 
     expect(result.current).toBe(false);
     expect(listMock).not.toHaveBeenCalled();

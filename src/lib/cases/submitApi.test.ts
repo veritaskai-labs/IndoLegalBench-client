@@ -23,7 +23,9 @@ describe("submitForReview", () => {
   it("posts to the submit-review endpoint of that case", async () => {
     await submitForReview("c1");
 
-    expect(fetchMock).toHaveBeenCalledWith("/cases/c1/submit-review", { method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/cases/c1/submit-review", {
+      method: "POST",
+    });
   });
 
   // Positive
@@ -35,6 +37,8 @@ describe("submitForReview", () => {
   it("encodes the case id once", async () => {
     await submitForReview("a/b");
 
-    expect(fetchMock).toHaveBeenCalledWith("/cases/a%2Fb/submit-review", { method: "POST" });
+    expect(fetchMock).toHaveBeenCalledWith("/cases/a%2Fb/submit-review", {
+      method: "POST",
+    });
   });
 });

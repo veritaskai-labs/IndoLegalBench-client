@@ -34,11 +34,12 @@ describe("SubmitReviewButton", () => {
     expect(onSubmitted).toHaveBeenCalledWith(SUBMITTED);
   });
 
-
   it("stays disabled while the case is not ready", async () => {
     const user = userEvent.setup();
 
-    render(<SubmitReviewButton caseId="c1" ready={false} onSubmitted={vi.fn()} />);
+    render(
+      <SubmitReviewButton caseId="c1" ready={false} onSubmitted={vi.fn()} />,
+    );
     await user.click(screen.getByRole("button", { name: "Ajukan review" }));
 
     expect(submit).not.toHaveBeenCalled();
@@ -56,7 +57,9 @@ describe("SubmitReviewButton", () => {
     render(<SubmitReviewButton caseId="c1" ready onSubmitted={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "Ajukan review" }));
 
-    expect(await screen.findByText("Minimal satu rujukan hukum")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Minimal satu rujukan hukum"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Tag dataset belum dipilih")).toBeInTheDocument();
   });
 
@@ -88,17 +91,23 @@ describe("SubmitReviewButton", () => {
   it("refuses to submit while there are unsaved changes", async () => {
     const user = userEvent.setup();
 
-    render(<SubmitReviewButton caseId="c1" ready dirty onSubmitted={vi.fn()} />);
+    render(
+      <SubmitReviewButton caseId="c1" ready dirty onSubmitted={vi.fn()} />,
+    );
     await user.click(screen.getByRole("button", { name: "Ajukan review" }));
 
     expect(submit).not.toHaveBeenCalled();
-    expect(screen.getByText("Simpan perubahan dulu sebelum mengajukan.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Simpan perubahan dulu sebelum mengajukan."),
+    ).toBeInTheDocument();
   });
 
   // Corner: tanpa perubahan tertunda, petunjuk itu tidak muncul.
   it("does not show the save hint when nothing is pending", () => {
     render(<SubmitReviewButton caseId="c1" ready onSubmitted={vi.fn()} />);
 
-    expect(screen.queryByText("Simpan perubahan dulu sebelum mengajukan.")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Simpan perubahan dulu sebelum mengajukan."),
+    ).not.toBeInTheDocument();
   });
 });

@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
-import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
+import {
+  getOpenCaseVersion,
+  listCaseVersions,
+  startCaseVersion,
+} from "@/lib/cases/versionApi";
 import { submitForReview } from "@/lib/cases/submitApi";
 import { session } from "@/test/authMock";
 import { makeSummary } from "@/test/versionFixtures";
@@ -13,7 +17,10 @@ import EditCasePage from "./page";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 
-const { params, push } = vi.hoisted(() => ({ params: { id: "" }, push: vi.fn() }));
+const { params, push } = vi.hoisted(() => ({
+  params: { id: "" },
+  push: vi.fn(),
+}));
 const confirmMock = vi.fn();
 
 // The page reads the case id from the URL and navigates back to the suite;
@@ -61,7 +68,11 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
     id: CASE_ID,
     suite_id: "11111111-1111-1111-1111-111111111111",
     case_code: "ILB-PT-0142",
-    identity: { title: "Pemberitahuan PHK", question: "Wajib?", category: null },
+    identity: {
+      title: "Pemberitahuan PHK",
+      question: "Wajib?",
+      category: null,
+    },
     legal_refs: [
       {
         regulation_type: "UU",
@@ -72,7 +83,11 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
         huruf: null,
       },
     ],
-    answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
+    answer_criteria: {
+      must_contain: [],
+      must_not_contain: [],
+      expected_conclusion: null,
+    },
     traps: [],
     split_tag: "dev",
     status: "draft",
@@ -84,12 +99,19 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
   };
 }
 
-function completeness(overrides: Partial<CaseCompleteness> = {}): CaseCompleteness {
+function completeness(
+  overrides: Partial<CaseCompleteness> = {},
+): CaseCompleteness {
   return {
     is_complete: false,
     ready_for_review: false,
     pct: 83,
-    missing: [{ field: "answer_criteria", message: "Butuh minimal satu kriteria jawaban." }],
+    missing: [
+      {
+        field: "answer_criteria",
+        message: "Butuh minimal satu kriteria jawaban.",
+      },
+    ],
     trap_count: 0,
     legal_ref_count: 1,
     ...overrides,
@@ -140,14 +162,18 @@ describe("EditCasePage loading", () => {
     renderPage();
 
     expect(screen.getByText("Memuat kasus…")).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Identitas" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Identitas" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the case code, the Draft badge, and the prefilled editor once loaded", async () => {
     getCaseMock.mockResolvedValue(savedCase());
     renderPage();
 
-    expect(await screen.findByRole("heading", { name: "ILB-PT-0142" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "ILB-PT-0142" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByLabelText("Judul")).toHaveValue("Pemberitahuan PHK");
     expect(getCaseMock).toHaveBeenCalledWith(CASE_ID);
@@ -166,13 +192,19 @@ describe("EditCasePage loading", () => {
 
   // Negative
   it("says the case was not found on 404, without a retry button", async () => {
-    getCaseMock.mockRejectedValue(new ApiError(404, "NOT_FOUND", "Kasus tidak ditemukan"));
+    getCaseMock.mockRejectedValue(
+      new ApiError(404, "NOT_FOUND", "Kasus tidak ditemukan"),
+    );
     renderPage();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Kasus tidak ditemukan.");
-    expect(screen.queryByRole("button", { name: "Coba lagi" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Kasus tidak ditemukan.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Coba lagi" }),
+    ).not.toBeInTheDocument();
   });
-  
+
   it("offers a way back to the suites list when the case is not found", async () => {
     getCaseMock.mockRejectedValue(new ApiError(404, "not_found"));
     renderPage();
@@ -189,10 +221,14 @@ describe("EditCasePage loading", () => {
       .mockResolvedValueOnce(savedCase());
     renderPage();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Gagal memuat kasus.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Gagal memuat kasus.",
+    );
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
 
-    expect(await screen.findByRole("heading", { name: "ILB-PT-0142" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "ILB-PT-0142" }),
+    ).toBeInTheDocument();
     expect(getCaseMock).toHaveBeenCalledTimes(2);
   });
 
@@ -213,7 +249,13 @@ describe("EditCasePage saving", () => {
     const user = userEvent.setup();
     getCaseMock.mockResolvedValue(savedCase());
     updateCaseMock.mockResolvedValue(
-      savedCase({ identity: { title: "Judul dari server", question: "Wajib?", category: null } }),
+      savedCase({
+        identity: {
+          title: "Judul dari server",
+          question: "Wajib?",
+          category: null,
+        },
+      }),
     );
     renderPage();
     const title = await screen.findByLabelText("Judul");
@@ -244,7 +286,9 @@ describe("EditCasePage saving", () => {
 
     await user.type(title, "!");
 
-    expect(screen.getByText("Ada perubahan yang belum disimpan")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ada perubahan yang belum disimpan"),
+    ).toBeInTheDocument();
     const leaving = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(leaving);
     expect(leaving.defaultPrevented).toBe(true);
@@ -252,7 +296,9 @@ describe("EditCasePage saving", () => {
     await user.click(save());
 
     await waitFor(() =>
-      expect(screen.queryByText("Ada perubahan yang belum disimpan")).not.toBeInTheDocument(),
+      expect(
+        screen.queryByText("Ada perubahan yang belum disimpan"),
+      ).not.toBeInTheDocument(),
     );
     const leavingAgain = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(leavingAgain);
@@ -265,7 +311,9 @@ describe("EditCasePage saving", () => {
 
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
 
-    expect(screen.queryByText("Ada perubahan yang belum disimpan")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Ada perubahan yang belum disimpan"),
+    ).not.toBeInTheDocument();
   });
 
   // Negative: server errors, same mapping as the new-case page.
@@ -273,7 +321,11 @@ describe("EditCasePage saving", () => {
     const user = userEvent.setup();
     getCaseMock.mockResolvedValue(savedCase());
     updateCaseMock.mockRejectedValue(
-      new ApiError(409, "CASE_CODE_TAKEN", "Kode kasus 'X-1' sudah dipakai di suite 'test1'"),
+      new ApiError(
+        409,
+        "CASE_CODE_TAKEN",
+        "Kode kasus 'X-1' sudah dipakai di suite 'test1'",
+      ),
     );
     renderPage();
     const code = await screen.findByLabelText("ID kasus");
@@ -287,7 +339,9 @@ describe("EditCasePage saving", () => {
         "Kode kasus 'X-1' sudah dipakai di suite 'test1'",
       ),
     );
-    expect(screen.getByText("Ada perubahan yang belum disimpan")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ada perubahan yang belum disimpan"),
+    ).toBeInTheDocument();
     expect(toast()).toBeEmptyDOMElement();
   });
 
@@ -295,7 +349,12 @@ describe("EditCasePage saving", () => {
     const user = userEvent.setup();
     getCaseMock.mockResolvedValue(savedCase());
     updateCaseMock.mockRejectedValue(
-      new ApiError(422, "FIELD_REQUIRED", "Field legal_refs[0].pasal wajib diisi", "legal_refs[0].pasal"),
+      new ApiError(
+        422,
+        "FIELD_REQUIRED",
+        "Field legal_refs[0].pasal wajib diisi",
+        "legal_refs[0].pasal",
+      ),
     );
     renderPage();
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
@@ -339,7 +398,9 @@ describe("EditCasePage saving", () => {
     await screen.findByRole("alert");
     await user.click(save());
 
-    await waitFor(() => expect(toast()).toHaveTextContent("Perubahan tersimpan"));
+    await waitFor(() =>
+      expect(toast()).toHaveTextContent("Perubahan tersimpan"),
+    );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
@@ -350,10 +411,18 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
     getCaseMock.mockResolvedValue(savedCase());
     renderPage();
 
-    const indicator = await screen.findByRole("region", { name: "Kelengkapan kasus" });
-    expect(await within(indicator).findByText("Kelengkapan 83%")).toBeInTheDocument();
-    expect(within(indicator).getByText("Butuh minimal satu kriteria jawaban.")).toBeInTheDocument();
-    expect(within(indicator).queryByText(/Jebakan belum ada/)).not.toBeInTheDocument();
+    const indicator = await screen.findByRole("region", {
+      name: "Kelengkapan kasus",
+    });
+    expect(
+      await within(indicator).findByText("Kelengkapan 83%"),
+    ).toBeInTheDocument();
+    expect(
+      within(indicator).getByText("Butuh minimal satu kriteria jawaban."),
+    ).toBeInTheDocument();
+    expect(
+      within(indicator).queryByText(/Jebakan belum ada/),
+    ).not.toBeInTheDocument();
     expect(completenessMock).toHaveBeenCalledWith(CASE_ID);
   });
 
@@ -362,20 +431,28 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
     getCaseMock.mockResolvedValue(savedCase());
     updateCaseMock.mockResolvedValue(savedCase());
     let finish: (value: CaseCompleteness) => void = () => undefined;
-    completenessMock
-      .mockResolvedValueOnce(completeness())
-      .mockReturnValueOnce(
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-      );
+    completenessMock.mockResolvedValueOnce(completeness()).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
     renderPage();
     await screen.findByText("Kelengkapan 83%");
 
     await user.click(save());
 
-    expect(await screen.findByText("Menghitung kelengkapan…")).toBeInTheDocument();
-    finish(completeness({ pct: 100, is_complete: true, ready_for_review: true, missing: [], trap_count: 1 }));
+    expect(
+      await screen.findByText("Menghitung kelengkapan…"),
+    ).toBeInTheDocument();
+    finish(
+      completeness({
+        pct: 100,
+        is_complete: true,
+        ready_for_review: true,
+        missing: [],
+        trap_count: 1,
+      }),
+    );
     expect(await screen.findByText("Siap diajukan review")).toBeInTheDocument();
     expect(completenessMock).toHaveBeenCalledTimes(2);
   });
@@ -389,7 +466,9 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
       .mockResolvedValueOnce(completeness());
     renderPage();
 
-    expect(await screen.findByText(/Gagal memuat kelengkapan kasus/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Gagal memuat kelengkapan kasus/),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Judul")).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
@@ -398,63 +477,70 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
   });
 
   describe("EditCasePage navigation (SCRUM-128)", () => {
-  const SUITE_PATH = "/suites/11111111-1111-1111-1111-111111111111";
+    const SUITE_PATH = "/suites/11111111-1111-1111-1111-111111111111";
 
-  // Positive
-  it("shows the breadcrumb down to the case code", async () => {
-    getCaseMock.mockResolvedValue(savedCase());
-    renderPage();
+    // Positive
+    it("shows the breadcrumb down to the case code", async () => {
+      getCaseMock.mockResolvedValue(savedCase());
+      renderPage();
 
-    const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
-    expect(nav).toHaveTextContent("Suite");
-    expect(nav).toHaveTextContent("ILB-PT-0142");
+      const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
+      expect(nav).toHaveTextContent("Suite");
+      expect(nav).toHaveTextContent("ILB-PT-0142");
+    });
+
+    // Positive
+    it("goes back to the suite when nothing has changed", async () => {
+      const user = userEvent.setup();
+      getCaseMock.mockResolvedValue(savedCase());
+      renderPage();
+
+      await user.click(
+        await screen.findByRole("button", { name: "Kembali ke suite" }),
+      );
+
+      expect(push).toHaveBeenCalledWith(SUITE_PATH);
+      expect(confirmMock).not.toHaveBeenCalled();
+    });
+
+    // Negative
+    it("asks before leaving with unsaved changes, and stays when the author cancels", async () => {
+      const user = userEvent.setup();
+      confirmMock.mockReturnValue(false);
+      getCaseMock.mockResolvedValue(savedCase());
+      renderPage();
+
+      await user.type(await screen.findByLabelText(/judul/i), "x");
+      await user.click(
+        screen.getByRole("button", { name: "Kembali ke suite" }),
+      );
+
+      expect(confirmMock).toHaveBeenCalled();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    // Positive
+    it("leaves when the author confirms", async () => {
+      const user = userEvent.setup();
+      confirmMock.mockReturnValue(true);
+      getCaseMock.mockResolvedValue(savedCase());
+      renderPage();
+
+      await user.type(await screen.findByLabelText(/judul/i), "x");
+      await user.click(
+        screen.getByRole("button", { name: "Kembali ke suite" }),
+      );
+
+      expect(push).toHaveBeenCalledWith(SUITE_PATH);
+    });
   });
-
-  // Positive
-  it("goes back to the suite when nothing has changed", async () => {
-    const user = userEvent.setup();
-    getCaseMock.mockResolvedValue(savedCase());
-    renderPage();
-
-    await user.click(await screen.findByRole("button", { name: "Kembali ke suite" }));
-
-    expect(push).toHaveBeenCalledWith(SUITE_PATH);
-    expect(confirmMock).not.toHaveBeenCalled();
-  });
-
-  // Negative
-  it("asks before leaving with unsaved changes, and stays when the author cancels", async () => {
-    const user = userEvent.setup();
-    confirmMock.mockReturnValue(false);
-    getCaseMock.mockResolvedValue(savedCase());
-    renderPage();
-
-    await user.type(await screen.findByLabelText(/judul/i), "x");
-    await user.click(screen.getByRole("button", { name: "Kembali ke suite" }));
-
-    expect(confirmMock).toHaveBeenCalled();
-    expect(push).not.toHaveBeenCalled();
-  });
-
-  // Positive
-  it("leaves when the author confirms", async () => {
-    const user = userEvent.setup();
-    confirmMock.mockReturnValue(true);
-    getCaseMock.mockResolvedValue(savedCase());
-    renderPage();
-
-    await user.type(await screen.findByLabelText(/judul/i), "x");
-    await user.click(screen.getByRole("button", { name: "Kembali ke suite" }));
-
-    expect(push).toHaveBeenCalledWith(SUITE_PATH);
-  });
-});
-
 });
 
 describe("EditCasePage locked versions (SCRUM-138)", () => {
-  const startButton = () => screen.findByRole("button", { name: "Edit (buat versi baru)" });
-  const noStartButton = () => screen.queryByRole("button", { name: "Edit (buat versi baru)" });
+  const startButton = () =>
+    screen.findByRole("button", { name: "Edit (buat versi baru)" });
+  const noStartButton = () =>
+    screen.queryByRole("button", { name: "Edit (buat versi baru)" });
 
   // Version 1 was written by the signed-in user (id u1), so the author is the creator.
   beforeEach(() => {
@@ -468,13 +554,17 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
 
     // Act
     renderPage();
-    const notice = await screen.findByRole("region", { name: "Versi terkunci" });
+    const notice = await screen.findByRole("region", {
+      name: "Versi terkunci",
+    });
 
     // Assert
     expect(notice).toHaveTextContent("ditinjau ulang");
     expect(await startButton()).toBeEnabled();
     expect(screen.getByLabelText("Judul")).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Simpan draf" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Simpan draf" }),
+    ).not.toBeInTheDocument();
   });
 
   it("fills the editor from the new draft, not from the approved case, and unlocks it", async () => {
@@ -485,7 +575,11 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
       savedCase({
         status: "draft",
         version: 2,
-        identity: { title: "Judul draf versi 2", question: "Wajib?", category: null },
+        identity: {
+          title: "Judul draf versi 2",
+          question: "Wajib?",
+          category: null,
+        },
       }),
     );
     renderPage();
@@ -496,11 +590,15 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
 
     // Assert
     expect(startVersionMock).toHaveBeenCalledWith(CASE_ID);
-    expect(await screen.findByLabelText("Judul")).toHaveValue("Judul draf versi 2");
+    expect(await screen.findByLabelText("Judul")).toHaveValue(
+      "Judul draf versi 2",
+    );
     expect(screen.getByLabelText("Judul")).toBeEnabled();
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(save()).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Versi terkunci" }),
+    ).not.toBeInTheDocument();
     expect(toast()).toHaveTextContent("Versi baru dibuat");
     expect(getCaseMock).toHaveBeenCalledTimes(1);
   });
@@ -510,7 +608,9 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     // Arrange
     const user = userEvent.setup();
     getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
-    startVersionMock.mockRejectedValue(new ApiError(409, "VERSION_IN_PROGRESS"));
+    startVersionMock.mockRejectedValue(
+      new ApiError(409, "VERSION_IN_PROGRESS"),
+    );
     renderPage();
     await screen.findByRole("region", { name: "Versi terkunci" });
 
@@ -547,7 +647,9 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
   it("offers the start button to an admin without asking who created the case", async () => {
     // Arrange
     session.role = "admin";
-    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    listVersionsMock.mockResolvedValue([
+      makeSummary(1, { author: { id: "u2", name: "Penulis lain" } }),
+    ]);
     getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
 
     // Act
@@ -586,7 +688,9 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
       await screen.findByRole("region", { name: "Versi terkunci" });
 
       // Assert
-      expect(screen.queryByRole("button", { name: "Edit (buat versi baru)" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Edit (buat versi baru)" }),
+      ).not.toBeInTheDocument();
       expect(screen.getByLabelText("Judul")).toBeDisabled();
     },
   );
@@ -598,11 +702,15 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
 
     // Act
     renderPage();
-    const notice = await screen.findByRole("region", { name: "Versi terkunci" });
+    const notice = await screen.findByRole("region", {
+      name: "Versi terkunci",
+    });
 
     // Assert
     expect(notice).toHaveTextContent("sedang ditinjau");
-    expect(screen.queryByRole("button", { name: "Edit (buat versi baru)" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit (buat versi baru)" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Judul")).toBeDisabled();
   });
 
@@ -616,14 +724,18 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
 
     // Assert
-    expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Versi terkunci" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Judul")).toBeEnabled();
   });
 });
 
 describe("EditCasePage reopening the draft (SCRUM-138)", () => {
-  const startButton = () => screen.findByRole("button", { name: "Edit (buat versi baru)" });
-  const noStartButton = () => screen.queryByRole("button", { name: "Edit (buat versi baru)" });
+  const startButton = () =>
+    screen.findByRole("button", { name: "Edit (buat versi baru)" });
+  const noStartButton = () =>
+    screen.queryByRole("button", { name: "Edit (buat versi baru)" });
   const draftOf = (title: string) =>
     savedCase({
       status: "draft",
@@ -649,7 +761,9 @@ describe("EditCasePage reopening the draft (SCRUM-138)", () => {
     expect(await screen.findByDisplayValue("Judul draf versi 2")).toBeEnabled();
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(save()).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Versi terkunci" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Versi terkunci" }),
+    ).not.toBeInTheDocument();
     expect(noStartButton()).not.toBeInTheDocument();
     expect(openDraftMock).toHaveBeenCalledWith(CASE_ID);
   });
@@ -685,8 +799,12 @@ describe("EditCasePage reopening the draft (SCRUM-138)", () => {
     // Assert
     await waitFor(() => expect(updateCaseMock).toHaveBeenCalledTimes(1));
     expect(updateCaseMock.mock.calls[0]?.[0]).toBe(CASE_ID);
-    expect(updateCaseMock.mock.calls[0]?.[1].identity.title).toBe("Judul hasil sunting");
-    expect(await screen.findByLabelText("Judul")).toHaveValue("Judul hasil sunting");
+    expect(updateCaseMock.mock.calls[0]?.[1].identity.title).toBe(
+      "Judul hasil sunting",
+    );
+    expect(await screen.findByLabelText("Judul")).toHaveValue(
+      "Judul hasil sunting",
+    );
     expect(toast()).toHaveTextContent("Perubahan tersimpan");
     expect(startVersionMock).not.toHaveBeenCalled();
   });
@@ -805,9 +923,14 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
     await user.click(historyTab());
 
     // Assert
-    expect(await screen.findByRole("row", { name: /Versi 1/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("row", { name: /Versi 1/ }),
+    ).toBeInTheDocument();
     expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID);
-    expect(screen.getByRole("tab", { name: "Riwayat versi" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Riwayat versi" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   // Edge: the history is only requested when somebody looks at it.
@@ -822,7 +945,10 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
 
     // Assert
     expect(listVersionsMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("tab", { name: "Editor" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Editor" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   // Edge: switching tabs must not throw away what the author typed.
@@ -843,7 +969,9 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
 
     // Assert
     expect(screen.getByLabelText("Judul")).toHaveValue("Judul belum disimpan");
-    expect(screen.getByText("Ada perubahan yang belum disimpan")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ada perubahan yang belum disimpan"),
+    ).toBeInTheDocument();
   });
 
   // Negative
@@ -859,32 +987,41 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
     await user.click(historyTab());
 
     // Assert
-    expect(await screen.findByRole("alert")).toHaveTextContent("Gagal memuat riwayat versi.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Gagal memuat riwayat versi.",
+    );
     await user.click(screen.getByRole("tab", { name: "Editor" }));
     expect(screen.getByLabelText("Judul")).toBeEnabled();
   });
 
   // Edge: every role may read the history (the server allows it).
-  it.each(["author", "reviewer", "admin", "viewer"] as const)("lets the %s open the history", async (role) => {
-    // Arrange
-    const user = userEvent.setup();
-    session.role = role;
-    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
-    listVersionsMock.mockResolvedValue([]);
-    renderPage();
-    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+  it.each(["author", "reviewer", "admin", "viewer"] as const)(
+    "lets the %s open the history",
+    async (role) => {
+      // Arrange
+      const user = userEvent.setup();
+      session.role = role;
+      getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+      listVersionsMock.mockResolvedValue([]);
+      renderPage();
+      await screen.findByRole("heading", { name: "ILB-PT-0142" });
 
-    // Act
-    await user.click(historyTab());
+      // Act
+      await user.click(historyTab());
 
-    // Assert
-    expect(await screen.findByText("Belum ada riwayat versi")).toBeInTheDocument();
-  });
+      // Assert
+      expect(
+        await screen.findByText("Belum ada riwayat versi"),
+      ).toBeInTheDocument();
+    },
+  );
 });
 
 describe("EditCasePage submit for review (SCRUM-148)", () => {
-  const submitButton = () => screen.getByRole("button", { name: "Ajukan review" });
-  const noSubmitButton = () => screen.queryByRole("button", { name: "Ajukan review" });
+  const submitButton = () =>
+    screen.getByRole("button", { name: "Ajukan review" });
+  const noSubmitButton = () =>
+    screen.queryByRole("button", { name: "Ajukan review" });
 
   const SUBMITTED = {
     case_id: CASE_ID,
@@ -895,7 +1032,13 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
   };
 
   const ready = () =>
-    completeness({ pct: 100, is_complete: true, ready_for_review: true, missing: [], trap_count: 1 });
+    completeness({
+      pct: 100,
+      is_complete: true,
+      ready_for_review: true,
+      missing: [],
+      trap_count: 1,
+    });
 
   // Version 1 was written by the signed-in user (id u1), so the author is the creator.
   beforeEach(() => {
@@ -923,7 +1066,9 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     completenessMock.mockResolvedValue(completeness());
     renderPage();
 
-    expect(await screen.findByRole("button", { name: "Ajukan review" })).toBeDisabled();
+    expect(
+      await screen.findByRole("button", { name: "Ajukan review" }),
+    ).toBeDisabled();
   });
 
   // Negative: the server only accepts the submission from the author who wrote the case,
@@ -938,7 +1083,9 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
 
   // Negative: version 1 was written by somebody else.
   it("does not offer the button to an author who did not write the case", async () => {
-    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    listVersionsMock.mockResolvedValue([
+      makeSummary(1, { author: { id: "u2", name: "Penulis lain" } }),
+    ]);
     renderPage();
     await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
 
@@ -963,7 +1110,9 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     await user.type(await screen.findByLabelText("Judul"), "!");
 
     expect(submitButton()).toBeDisabled();
-    expect(screen.getByText("Simpan perubahan dulu sebelum mengajukan.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Simpan perubahan dulu sebelum mengajukan."),
+    ).toBeInTheDocument();
   });
   // AC1: setelah diajukan, kartu kelengkapan tidak lagi mengajak mengajukan.
   it("stops calling the case ready once it has been submitted", async () => {

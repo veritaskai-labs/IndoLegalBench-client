@@ -14,7 +14,8 @@ export function mapSubmitError(error: unknown): string {
 
   const byCode = CODE_MESSAGE[error.code];
   if (byCode !== undefined) return byCode;
-  if (error.status === 403) return "Hanya penulis kasus ini yang bisa mengajukannya untuk direview.";
+  if (error.status === 403)
+    return "Hanya penulis kasus ini yang bisa mengajukannya untuk direview.";
   if (error.status === 404) return "Kasus tidak ditemukan.";
   return DEFAULT_MESSAGE;
 }

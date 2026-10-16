@@ -44,7 +44,8 @@ export function CaseCard({
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="font-mono text-slate-500 tracking-tight">{id}</span>
           <span
-            className={`px-2 py-0.5 rounded text-[11px] font-medium border ${style}`}>
+            className={`px-2 py-0.5 rounded text-[11px] font-medium border ${style}`}
+          >
             {label}
           </span>
         </div>

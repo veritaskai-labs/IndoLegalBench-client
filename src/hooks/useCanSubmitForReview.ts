@@ -28,11 +28,17 @@ export function useCanSubmitForReview(
     `${caseId}|${userId}|submit|${needsCreatorCheck}`,
     () =>
       needsCreatorCheck
-        ? listCaseVersions(caseId).then((versions) => isCaseCreator(versions, userId))
+        ? listCaseVersions(caseId).then((versions) =>
+            isCaseCreator(versions, userId),
+          )
         : Promise.resolve(false),
     historyMessage,
   );
 
   const isCreator = creator.status === "ready" && creator.data;
-  return user !== null && status !== null && canSubmitForReview(user.role, status, isCreator);
+  return (
+    user !== null &&
+    status !== null &&
+    canSubmitForReview(user.role, status, isCreator)
+  );
 }

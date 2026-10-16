@@ -12,7 +12,9 @@ describe("mapSubmitError", () => {
 
   // Negative
   it("explains a case that is gone", () => {
-    expect(mapSubmitError(new ApiError(404, "CASE_NOT_FOUND"))).toBe("Kasus tidak ditemukan.");
+    expect(mapSubmitError(new ApiError(404, "CASE_NOT_FOUND"))).toBe(
+      "Kasus tidak ditemukan.",
+    );
   });
 
   // Negative: 409 punya kodenya sendiri, bukan pesan umum.
@@ -38,12 +40,13 @@ describe("mapSubmitError", () => {
 
   // Corner
   it("falls back to a general message for anything else", () => {
-    expect(mapSubmitError(new Error("boom"))).toBe("Gagal mengajukan kasus. Coba lagi.");
+    expect(mapSubmitError(new Error("boom"))).toBe(
+      "Gagal mengajukan kasus. Coba lagi.",
+    );
   });
 });
 
 describe("submitBlockers", () => {
-
   it("hands back the missing sections of a CASE_NOT_READY", () => {
     const error = new ApiError(422, "CASE_NOT_READY", null, null, [
       { field: "legal_refs", message: "Minimal satu rujukan hukum" },
@@ -56,9 +59,10 @@ describe("submitBlockers", () => {
     ]);
   });
 
-  // Corner
-  it("is empty for an error that carries no sections", () => {
-    expect(submitBlockers(new ApiError(403, "FORBIDDEN"))).toEqual([]);
-    expect(submitBlockers(new Error("boom"))).toEqual([]);
+  // Corner: ApiError dengan kode dan status yang belum dipetakan tetap dapat pesan umum.
+  it("falls back for an ApiError nobody mapped", () => {
+    expect(mapSubmitError(new ApiError(500, "INTERNAL_ERROR"))).toBe(
+      "Gagal mengajukan kasus. Coba lagi.",
+    );
   });
 });

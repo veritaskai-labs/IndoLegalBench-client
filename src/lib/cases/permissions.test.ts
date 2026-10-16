@@ -1,17 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/types";
 import type { CaseStatus } from "@/types/case";
-import { canStartNewVersion, isCaseEditable, canSubmitForReview } from "./permissions";
+import {
+  canStartNewVersion,
+  isCaseEditable,
+  canSubmitForReview,
+} from "./permissions";
 
 describe("isCaseEditable", () => {
   // Positive: the server accepts a save only for these two statuses.
-  it.each(["draft", "needs_revision"] as const)("allows editing a %s case", (status) => {
-    // Arrange / Act
-    const editable = isCaseEditable(status);
+  it.each(["draft", "needs_revision"] as const)(
+    "allows editing a %s case",
+    (status) => {
+      // Arrange / Act
+      const editable = isCaseEditable(status);
 
-    // Assert
-    expect(editable).toBe(true);
-  });
+      // Assert
+      expect(editable).toBe(true);
+    },
+  );
 
   // Negative
   it.each(["in_review", "approved"] as const)("locks a %s case", (status) => {
