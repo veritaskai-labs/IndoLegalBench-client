@@ -82,7 +82,7 @@ describe("toCaseWritePayload", () => {
               regulation_type: "uu",
               number: "13",
               year: 2003,
-              about: null,
+              about: "",
               pasal: "151",
               angka: null,
               ayat: "3",
@@ -148,32 +148,48 @@ describe("toCaseWritePayload", () => {
   it("turns blank optional fields into null", () => {
     const form = filledForm();
     form.identity.category = "";
-    form.legal_refs = [structuredRef(pasalLink({ about: "", ayat: "", huruf: "" }))];
     form.answer_criteria.expected_conclusion = "";
     form.traps = [{ description: "Jebakan", expected_model_behavior: "" }];
 
     const payload = toCaseWritePayload(form);
 
     expect(payload.identity.category).toBeNull();
-    expect(payload.legal_refs[0]?.links[0]).toMatchObject({
-      about: null,
-      ayat: null,
-      huruf: null,
-    });
     expect(payload.answer_criteria?.expected_conclusion).toBeNull();
     expect(payload.traps?.[0]?.expected_model_behavior).toBeNull();
   });
 
-  it("treats whitespace-only optional fields as blank", () => {
+  it("treats a whitespace-only category as blank", () => {
     const form = filledForm();
     form.identity.category = "   ";
-    form.legal_refs = [structuredRef(pasalLink({ about: "  ", ayat: " \t" }))];
 
     const payload = toCaseWritePayload(form);
 
     expect(payload.identity.category).toBeNull();
-    expect(payload.legal_refs[0]?.links[0]?.about).toBeNull();
-    expect(payload.legal_refs[0]?.links[0]?.ayat).toBeNull();
+  });
+
+  it("sends the shown link fields as typed, even when blank, and leaves the clean-up to the server", () => {
+    // Arrange: the server strips blank text to null before it checks the pattern
+    const form = filledForm();
+    form.legal_refs = [structuredRef(pasalLink({ about: "", ayat: "", huruf: "" }))];
+
+    // Act
+    const link = toCaseWritePayload(form).legal_refs[0]?.links[0];
+
+    // Assert
+    expect(link).toMatchObject({ about: "", ayat: "", huruf: "" });
+  });
+
+  it("sends whitespace-only link fields untouched instead of deciding for the server", () => {
+    // Arrange
+    const form = filledForm();
+    form.legal_refs = [structuredRef(pasalLink({ about: "  ", ayat: " \t" }))];
+
+    // Act
+    const link = toCaseWritePayload(form).legal_refs[0]?.links[0];
+
+    // Assert
+    expect(link?.about).toBe("  ");
+    expect(link?.ayat).toBe(" \t");
   });
 
   it("parses year with surrounding spaces and keeps 0 instead of nulling it", () => {
@@ -503,11 +519,20 @@ describe("fromCaseRead", () => {
 
   it("round-trips: saving an unchanged form sends back the same body", () => {
     const saved = savedCase();
+    // A blank optional link field comes back as an empty string, which the server reads as null.
+    const legalRefs = saved.legal_refs.map((ref) => ({
+      ...ref,
+      links: ref.links.map((link) => ({
+        ...link,
+        about: link.about ?? "",
+        huruf: link.huruf ?? "",
+      })),
+    }));
 
     expect(toCaseWritePayload(fromCaseRead(saved))).toEqual({
       case_code: saved.case_code,
       identity: saved.identity,
-      legal_refs: saved.legal_refs,
+      legal_refs: legalRefs,
       answer_criteria: saved.answer_criteria,
       traps: saved.traps,
       split_tag: saved.split_tag,
