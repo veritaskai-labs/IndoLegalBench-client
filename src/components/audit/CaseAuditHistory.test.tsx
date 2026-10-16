@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listAuditLogs } from "@/lib/audit/auditApi";
 import { makeAuditEntry, makeAuditPage } from "@/test/auditFixtures";
@@ -55,6 +56,44 @@ describe("CaseAuditHistory", () => {
       expect(screen.getByRole("table")).toBeInTheDocument();
       expect(screen.getByText("Herdayani")).toBeInTheDocument();
       expect(screen.getByText("case.submitted")).toBeInTheDocument();
+    });
+  });
+
+  describe("membuka satu catatan", () => {
+    const entries = [
+      makeAuditEntry({ id: 1, actor_name: "Herdayani", action: "case.updated" }),
+      makeAuditEntry({
+        id: 2,
+        actor_name: "Roben",
+        action: "case.submitted",
+        before: { status: "draft" },
+        after: { status: "in_review" },
+      }),
+    ];
+
+    it("shows the before and after values of the row that was clicked", async () => {
+      list.mockResolvedValue(makeAuditPage(entries));
+      const user = userEvent.setup();
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      await user.click(await screen.findByText("Roben"));
+
+      const detail = screen.getByRole("dialog", { name: "Detail catatan audit" });
+      expect(detail).toHaveTextContent("case.submitted");
+      expect(detail).toHaveTextContent("draft");
+      expect(detail).toHaveTextContent("in_review");
+    });
+
+    it("closes the detail with Tutup and keeps the list", async () => {
+      list.mockResolvedValue(makeAuditPage(entries));
+      const user = userEvent.setup();
+      render(<CaseAuditHistory caseId="case-1" />);
+      await user.click(await screen.findByText("Roben"));
+
+      await user.click(screen.getByRole("button", { name: "Tutup" }));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
     });
   });
 });
