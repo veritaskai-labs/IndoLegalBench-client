@@ -82,13 +82,13 @@ function phraseLines(value: string): string[] {
     .filter((line) => line !== "");
 }
 
-/** Field bentuk yang wajib bila tampil: dikirim apa adanya, kosong pun, supaya server yang menjawab. */
-const REQUIRED_EXTRA_FIELDS: readonly LinkExtraField[] = ["pasal", "angka"];
-
-/** Field yang tidak dipakai bentuk link dikirim null; yang opsional dan kosong juga null. */
+/**
+ * Field yang tampil di bentuk link dikirim apa adanya, kosong pun: server yang
+ * men-strip teks kosong jadi null dan menjawab FIELD_REQUIRED bila bentuknya
+ * mewajibkan. Field yang tidak dipakai bentuknya dikirim null.
+ */
 function extraFieldValue(link: LegalRefLinkFormValues, field: LinkExtraField): string | null {
-  if (!visibleLinkFields(link.form).includes(field)) return null;
-  return REQUIRED_EXTRA_FIELDS.includes(field) ? link[field] : optionalText(link[field]);
+  return visibleLinkFields(link.form).includes(field) ? link[field] : null;
 }
 
 function toLinkPayload(link: LegalRefLinkFormValues): LegalRefLinkPayload {
@@ -98,7 +98,7 @@ function toLinkPayload(link: LegalRefLinkFormValues): LegalRefLinkPayload {
     regulation_type: link.regulation_type,
     number: link.number,
     year: yearOrOmitted(link.year),
-    about: optionalText(link.about),
+    about: link.about,
     pasal: extraFieldValue(link, "pasal"),
     angka: extraFieldValue(link, "angka"),
     ayat: extraFieldValue(link, "ayat"),
