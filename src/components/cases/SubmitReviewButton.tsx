@@ -13,12 +13,7 @@ type Props = {
   onSubmitted: (result: ReviewSubmission) => void;
 };
 
-export function SubmitReviewButton({
-  caseId,
-  ready,
-  dirty = false,
-  onSubmitted,
-}: Props) {
+export function SubmitReviewButton({ caseId, ready, dirty = false, onSubmitted }: Readonly<Props>) {
   const [blockers, setBlockers] = useState<MissingSection[]>([]);
 
   const action = useCallback(() => submitForReview(caseId), [caseId]);
