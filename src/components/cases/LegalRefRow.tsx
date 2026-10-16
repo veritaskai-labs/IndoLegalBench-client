@@ -68,6 +68,8 @@ export function LegalRefRow({
         hint={CASE_HELP.refForm}
         value={refMode(ref)}
         options={REF_MODE_OPTIONS}
+        // Kesalahan struktur rujukan (bentuk atau daftar link) tidak punya kolom sendiri.
+        error={errorFor(`legal_refs.${index}.kind`) ?? errorFor(`legal_refs.${index}.links`)}
         onChange={(mode) => {
           if (isRefMode(mode)) onUpdate(changeRefMode(ref, mode));
         }}

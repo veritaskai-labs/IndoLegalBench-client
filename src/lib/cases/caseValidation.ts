@@ -19,12 +19,18 @@ const FIELD_LABELS: Record<string, string> = {
   "identity.title": "Judul",
   "identity.question": "Pertanyaan",
   "identity.category": "Kategori",
+  kind: "Bentuk rujukan",
+  form: "Bentuk peraturan",
+  connector: "Penghubung",
   regulation_type: "Jenis peraturan",
-  regulation_number: "Nomor peraturan",
+  number: "Nomor peraturan",
   year: "Tahun",
+  about: "Tentang",
   pasal: "Pasal",
+  angka: "Angka",
   ayat: "Ayat",
   huruf: "Huruf",
+  free_text: "Teks bebas",
   description: "Deskripsi jebakan",
   expected_model_behavior: "Perilaku model yang diharapkan",
   "answer_criteria.expected_conclusion": "Kesimpulan yang diharapkan",
@@ -57,7 +63,7 @@ function messageFor(issue: z.core.$ZodIssue, path: CaseFieldPath, data: unknown)
   const label = labelFor(path);
   switch (issue.code) {
     case "too_small":
-      if (path === "legal_refs") return "Butuh minimal satu rujukan hukum sampai tingkat pasal.";
+      if (path === "legal_refs") return "Butuh minimal satu rujukan hukum.";
       if (issue.origin === "string") {
         return valueAt(data, issue.path) === ""
           ? `${label} wajib diisi.`
@@ -73,6 +79,8 @@ function messageFor(issue: z.core.$ZodIssue, path: CaseFieldPath, data: unknown)
     case "invalid_value":
       return path === "split_tag" ? "Pilih tag dev atau test." : `${label} tidak valid.`;
     case "invalid_type":
+      // Field yang tidak dikirim (mis. tahun kosong) wajib diisi, bukan salah tipe.
+      if (valueAt(data, issue.path) === undefined) return `${label} wajib diisi.`;
       return issue.expected === "number" || issue.expected === "int"
         ? `${label} harus bilangan bulat.`
         : `${label} wajib diisi.`;
@@ -91,9 +99,36 @@ function trimmed(value: unknown): unknown {
   return value;
 }
 
+/**
+ * Field rujukan yang boleh kosong. Server mengubah teks kosongnya menjadi null sebelum memeriksa
+ * pola, jadi di sini teks kosong tidak boleh dihitung sebagai format yang salah. Server pula yang
+ * menjawab FIELD_REQUIRED bila bentuk link mewajibkannya, karena kontrak tidak bisa menyatakannya.
+ */
+const BLANK_TO_NULL_FIELDS: ReadonlySet<string> = new Set([
+  "about",
+  "pasal",
+  "angka",
+  "ayat",
+  "huruf",
+  "free_text",
+]);
+
+function blankToNull(value: unknown, key = ""): unknown {
+  if (typeof value === "string") {
+    return value === "" && BLANK_TO_NULL_FIELDS.has(key) ? null : value;
+  }
+  if (Array.isArray(value)) return value.map((item) => blankToNull(item));
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([name, inner]) => [name, blankToNull(inner, name)]),
+    );
+  }
+  return value;
+}
+
 /** Semua isian yang akan ditolak server, satu pesan per field, urut sesuai form. */
 export function validateCaseForm(values: CaseFormValues): FieldIssue[] {
-  const data = trimmed(toCaseWritePayload(values));
+  const data = blankToNull(trimmed(toCaseWritePayload(values)));
   const result = CaseWriteSchema.safeParse(data);
   if (result.success) return [];
 
