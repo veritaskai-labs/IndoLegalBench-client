@@ -1,4 +1,9 @@
-export const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+import type { components } from "@/lib/generated/api";
+
+export const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+export type MissingSection = components["schemas"]["CompletenessIssue"];
 
 export class ApiError extends Error {
   constructor(
@@ -8,6 +13,7 @@ export class ApiError extends Error {
     readonly serverMessage: string | null = null,
     /** Lokasi field yang gagal, misalnya legal_refs[0].pasal. */
     readonly field: string | null = null,
+    readonly missing: MissingSection[] = [],
   ) {
     super(code);
     this.name = "ApiError";
@@ -37,20 +43,30 @@ function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+function missingSections(value: unknown): MissingSection[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (item): item is MissingSection =>
+      typeof item?.field === "string" && typeof item?.message === "string",
+  );
+}
+
 /** Read JSON error backend: { code, message, field? } */
 async function parseError(response: Response): Promise<ApiError> {
   let code = "UNKNOWN_ERROR";
   let message: string | null = null;
   let field: string | null = null;
+  let missing: MissingSection[] = [];
   try {
     const body = await response.json();
     if (typeof body?.code === "string") code = body.code;
     message = stringOrNull(body?.message);
     field = stringOrNull(body?.field);
+    missing = missingSections(body?.missing);
   } catch {
-    // no JSON body
+    // bukan JSON: halaman error HTML, balasan kosong, atau koneksi terputus.
   }
-  return new ApiError(response.status, code, message, field);
+  return new ApiError(response.status, code, message, field, missing);
 }
 
 /** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
