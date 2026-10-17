@@ -742,3 +742,137 @@ describe("fromCaseRead", () => {
     expect(values.legal_refs.map((ref) => ref.links[0]?.pasal)).toEqual(["1", "2", "3"]);
   });
 });
+
+describe("fromCaseRead for a name-only link that still holds provision fields", () => {
+  // The Sprint 1 mapper of the server can leave ayat/huruf on a name_only link. The form hides
+  // those fields for that shape, so saving would send null and drop them without the Author knowing.
+  function linkAfterLoading(overrides: Partial<SavedLink>) {
+    const saved = savedCase({
+      legal_refs: [
+        {
+          kind: "structured",
+          free_text: null,
+          display_text: "UU 13/2003",
+          links: [
+            savedLink({
+              form: "name_only",
+              pasal: null,
+              angka: null,
+              ayat: null,
+              huruf: null,
+              ...overrides,
+            }),
+          ],
+        },
+      ],
+    });
+    return fromCaseRead(saved).legal_refs[0]?.links[0];
+  }
+
+  // Positive
+  const cases: [string, Partial<SavedLink>, string][] = [
+    ["ayat and huruf without pasal", { ayat: "3", huruf: "a" }, "pasal"],
+    ["a pasal", { pasal: "151" }, "pasal"],
+    ["an angka", { angka: "5" }, "pasal_angka"],
+  ];
+  it.each(cases)(
+    "switches the form so the fields show when it has %s",
+    (_name, fields, expected) => {
+      // Arrange + Act
+      const link = linkAfterLoading(fields);
+
+      // Assert
+      expect(link?.form).toBe(expected);
+      expect(link).toMatchObject({
+        pasal: fields.pasal ?? "",
+        angka: fields.angka ?? "",
+        ayat: fields.ayat ?? "",
+        huruf: fields.huruf ?? "",
+      });
+    },
+  );
+
+  it("keeps ayat and huruf in the payload sent on the first save", () => {
+    // Arrange
+    const saved = savedCase({
+      legal_refs: [
+        {
+          kind: "structured",
+          free_text: null,
+          display_text: "UU 13/2003",
+          links: [savedLink({ form: "name_only", pasal: null, ayat: "3", huruf: "a" })],
+        },
+      ],
+    });
+
+    // Act
+    const payload = toCaseWritePayload(fromCaseRead(saved));
+
+    // Assert
+    expect(payload.legal_refs[0]?.links[0]).toMatchObject({ ayat: "3", huruf: "a" });
+  });
+
+  it("decides for each link of a chain on its own", () => {
+    // Arrange
+    const saved = savedCase({
+      legal_refs: [
+        {
+          kind: "structured",
+          free_text: null,
+          display_text: "UU 13/2003 jo. UU 6/2023",
+          links: [
+            savedLink({ form: "name_only", pasal: null, ayat: null }),
+            savedLink({ form: "name_only", connector: "jo", pasal: null, ayat: "2" }),
+          ],
+        },
+      ],
+    });
+
+    // Act
+    const forms = fromCaseRead(saved).legal_refs[0]?.links.map((link) => link.form);
+
+    // Assert
+    expect(forms).toEqual(["name_only", "pasal"]);
+  });
+
+  // Negative: nothing to protect, nothing to change.
+  it("keeps name_only when the provision fields are empty", () => {
+    // Arrange + Act
+    const link = linkAfterLoading({});
+
+    // Assert
+    expect(link?.form).toBe("name_only");
+  });
+
+  // Edge
+  it("treats provision fields with only spaces as empty", () => {
+    // Arrange + Act
+    const link = linkAfterLoading({ pasal: "  ", ayat: " ", huruf: "" });
+
+    // Assert
+    expect(link?.form).toBe("name_only");
+  });
+
+  it("never moves a link that already has a form with fields", () => {
+    // Arrange
+    const saved = savedCase({
+      legal_refs: [
+        {
+          kind: "structured",
+          free_text: null,
+          display_text: "Pasal II UU 6/2023",
+          links: [
+            savedLink({ form: "pasal_angka", angka: null }),
+            savedLink({ form: "pasal", connector: "jo", pasal: null, ayat: null }),
+          ],
+        },
+      ],
+    });
+
+    // Act
+    const forms = fromCaseRead(saved).legal_refs[0]?.links.map((link) => link.form);
+
+    // Assert
+    expect(forms).toEqual(["pasal_angka", "pasal"]);
+  });
+});
