@@ -1,10 +1,7 @@
 import type { FieldPath } from "react-hook-form";
 import { ApiError } from "@/lib/apiClient";
-import type {
-  CaseFormValues,
-  LegalRefFormValues,
-  TrapFormValues,
-} from "./caseFormMapping";
+import type { CaseFormValues, TrapFormValues } from "./caseFormMapping";
+import type { LegalRefFormValues, LegalRefLinkFormValues } from "./legalRefForm";
 import { VERSION_LOCKED_MESSAGE } from "./versionErrors";
 
 export type CaseFieldPath = FieldPath<CaseFormValues>;
@@ -16,6 +13,8 @@ export type SaveError =
 export type FieldSaveError = Extract<SaveError, { kind: "field" }>;
 
 export const GENERIC_SAVE_ERROR = "Gagal menyimpan kasus. Coba lagi.";
+export const SPLIT_TAG_CHANGED_MESSAGE =
+  "Tag kasus ini baru saja diubah Admin. Muat ulang halaman lalu simpan lagi.";
 
 const FIXED_PATHS = new Map<string, CaseFieldPath>([
   ["case_code", "case_code"],
@@ -30,11 +29,19 @@ const FIXED_PATHS = new Map<string, CaseFieldPath>([
   ["answer_criteria.expected_conclusion", "answer_criteria.expected_conclusion"],
 ]);
 
-const LEGAL_REF_KEYS: readonly (keyof LegalRefFormValues)[] = [
+/** Field tingkat rujukan yang bisa ditolak server: bentuk, teks bebas, dan daftar link-nya. */
+const LEGAL_REF_KEYS: readonly (keyof LegalRefFormValues)[] = ["kind", "free_text", "links"];
+
+/** Field satu link. Daftar eksplisit, bukan cast, supaya nama baru dari server tidak lolos diam-diam. */
+const LEGAL_REF_LINK_KEYS: readonly (keyof LegalRefLinkFormValues)[] = [
+  "form",
+  "connector",
   "regulation_type",
-  "regulation_number",
+  "number",
   "year",
+  "about",
   "pasal",
+  "angka",
   "ayat",
   "huruf",
 ];
@@ -45,6 +52,7 @@ const TRAP_KEYS: readonly (keyof TrapFormValues)[] = [
 ];
 
 const ROW_FIELD = /^(legal_refs|traps)\[(\d+)\]\.(\w+)$/;
+const LINK_FIELD = /^legal_refs\[(\d+)\]\.links\[(\d+)\]\.(\w+)$/;
 /** Satu frasa di server, satu textarea di form: buang indeks frasanya. */
 const PHRASE_ITEM = /^(answer_criteria\.must(?:_not)?_contain)\[\d+\]$/;
 
@@ -52,6 +60,14 @@ const PHRASE_ITEM = /^(answer_criteria\.must(?:_not)?_contain)\[\d+\]$/;
 function toFormPath(field: string): CaseFieldPath | null {
   const fixed = FIXED_PATHS.get(field.replace(PHRASE_ITEM, "$1"));
   if (fixed !== undefined) return fixed;
+
+  const link = LINK_FIELD.exec(field);
+  if (link !== null) {
+    const linkKey = LEGAL_REF_LINK_KEYS.find((candidate) => candidate === link[3]);
+    return linkKey === undefined
+      ? null
+      : `legal_refs.${Number(link[1])}.links.${Number(link[2])}.${linkKey}`;
+  }
 
   const row = ROW_FIELD.exec(field);
   if (row === null) return null;
@@ -87,6 +103,11 @@ export function mapSaveError(error: unknown): SaveError {
       message: error.serverMessage ?? "ID kasus tidak bisa diubah setelah kasus pernah disetujui.",
       detail: null,
     };
+  }
+  if (error.code === "SPLIT_TAG_LOCKED") {
+    // 409 dari server #53: tag dikunci setelah disetujui dan biasanya baru saja diubah Admin
+    // di tab lain. Form tetap di tempat supaya suntingan tidak hilang.
+    return { kind: "form", message: SPLIT_TAG_CHANGED_MESSAGE };
   }
   if (error.code === "VERSION_LOCKED") {
     return { kind: "form", message: VERSION_LOCKED_MESSAGE };

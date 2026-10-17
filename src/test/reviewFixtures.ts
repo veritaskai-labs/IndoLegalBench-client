@@ -14,6 +14,11 @@ export const OTHER_ASSIGNMENT_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 export const CASE_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 export const AUTHOR_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd";
 
+/** Satu rujukan hukum bentuk baru; teks penulisannya datang dari server (display_text). */
+export function structuredRef(displayText: string): ReviewCopy["legal_refs"][number] {
+  return { kind: "structured", links: [], display_text: displayText };
+}
+
 export function makeReviewCopy(overrides: Partial<ReviewCopy> = {}): ReviewCopy {
   return {
     case_id: CASE_ID,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeReviewCopy } from "@/test/reviewFixtures";
+import { makeReviewCopy, structuredRef } from "@/test/reviewFixtures";
 import { reviewCopyToSections } from "./reviewCaseSections";
 
 describe("reviewCopyToSections", () => {
@@ -28,7 +28,7 @@ describe("reviewCopyToSections", () => {
   // Positive: the structured parts are passed on as they are, the shared formatter reads them.
   it("passes the legal references, answer criteria and traps on unchanged", () => {
     // Arrange
-    const legalRefs = [{ regulation_type: "UU", regulation_number: "13", year: 2003, pasal: "151" }];
+    const legalRefs = [structuredRef("UU No. 13 Tahun 2003, Pasal 151")];
     const criteria = { must_contain: ["harus_menyebut"], must_not_contain: [], expected_conclusion: null };
     const traps = [{ description: "Menyitasi aturan yang sudah dicabut" }];
     const copy = makeReviewCopy({ legal_refs: legalRefs, answer_criteria: criteria, traps });

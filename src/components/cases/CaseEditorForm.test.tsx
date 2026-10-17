@@ -1,10 +1,47 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import type { CaseFormValues, CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { CASE_HELP } from "@/lib/cases/caseHelpText";
+import { emptyLink, type LegalRefFormValues } from "@/lib/cases/legalRefForm";
+import type { RegulationType } from "@/types/regulationType";
 import { CaseEditorForm, VALIDATE_DELAY_MS } from "./CaseEditorForm";
+
+// Daftar jenis datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
+vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+
+const TYPES: RegulationType[] = [
+  { code: "uu", label: "Undang-undang", singkatan: "UU", is_active: true },
+  { code: "pp", label: "Peraturan Pemerintah", singkatan: "PP", is_active: true },
+];
+
+beforeEach(() => {
+  vi.mocked(useRegulationTypes).mockReturnValue({
+    status: "ready",
+    types: TYPES,
+    reload: vi.fn(),
+  });
+});
+
+function structuredRef(overrides: Partial<ReturnType<typeof emptyLink>> = {}): LegalRefFormValues {
+  return {
+    kind: "structured",
+    free_text: "",
+    links: [
+      {
+        ...emptyLink("pasal"),
+        regulation_type: "uu",
+        number: "13",
+        year: "2003",
+        pasal: "151",
+        ayat: "3",
+        ...overrides,
+      },
+    ],
+  };
+}
 
 const filled: CaseFormValues = {
   case_code: "ILB-PT-0142",
@@ -13,16 +50,7 @@ const filled: CaseFormValues = {
     question: "Apakah pemberitahuan tertulis wajib?",
     category: "Ketenagakerjaan",
   },
-  legal_refs: [
-    {
-      regulation_type: "UU",
-      regulation_number: "13",
-      year: "2003",
-      pasal: "151",
-      ayat: "3",
-      huruf: "",
-    },
-  ],
+  legal_refs: [structuredRef()],
   answer_criteria: {
     must_contain: "Pasal 151",
     must_not_contain: "",
@@ -102,7 +130,8 @@ describe("CaseEditorForm", () => {
     await user.type(screen.getByLabelText("Judul"), "Judul");
     await user.type(screen.getByLabelText("Pertanyaan"), "Tanya?");
     const ref = within(refRow(1));
-    await user.type(ref.getByLabelText("Jenis peraturan"), "UU");
+    await user.click(ref.getByLabelText("Jenis peraturan"));
+    await user.click(screen.getByRole("option", { name: /Undang-undang/ }));
     await user.type(ref.getByLabelText("Nomor"), "13");
     await user.type(ref.getByLabelText("Tahun"), "2003");
     await user.type(ref.getByLabelText("Pasal"), "151");
@@ -118,12 +147,22 @@ describe("CaseEditorForm", () => {
       identity: { title: "Judul", question: "Tanya?", category: null },
       legal_refs: [
         {
-          regulation_type: "UU",
-          regulation_number: "13",
-          year: 2003,
-          pasal: "151",
-          ayat: null,
-          huruf: null,
+          kind: "structured",
+          free_text: null,
+          links: [
+            {
+              form: "pasal",
+              connector: "none",
+              regulation_type: "uu",
+              number: "13",
+              year: 2003,
+              about: "",
+              pasal: "151",
+              angka: null,
+              ayat: "",
+              huruf: "",
+            },
+          ],
         },
       ],
       answer_criteria: {
@@ -156,7 +195,7 @@ describe("CaseEditorForm", () => {
       "Pertanyaan wajib diisi.",
       "Jenis peraturan wajib diisi.",
       "Nomor peraturan wajib diisi.",
-      "Pasal wajib diisi.",
+      "Tahun wajib diisi.",
       "Pilih tag dev atau test.",
     ]) {
       expect(within(summary).getByRole("button", { name: message })).toBeInTheDocument();
@@ -179,8 +218,7 @@ describe("CaseEditorForm", () => {
     const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
     // Mulai dari tiga baris: yang diuji penghapusan baris tengah, bukan mengetik.
     // Mengetik huruf demi huruf di sini dulu membuat test ini timeout saat suite penuh berjalan.
-    const ref = filled.legal_refs[0];
-    const legal_refs = ["1", "2", "3"].map((pasal) => ({ ...ref, pasal }));
+    const legal_refs = ["1", "2", "3"].map((pasal) => structuredRef({ pasal }));
     render(<CaseEditorForm defaultValues={{ ...filled, legal_refs }} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole("button", { name: "Hapus rujukan 2" }));
@@ -190,7 +228,7 @@ describe("CaseEditorForm", () => {
     expect(screen.queryByRole("group", { name: "Rujukan 3" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
-    const pasal = onSubmit.mock.calls[0]?.[0].legal_refs.map((ref) => ref.pasal);
+    const pasal = onSubmit.mock.calls[0]?.[0].legal_refs.map((ref) => ref.links[0]?.pasal);
     expect(pasal).toEqual(["1", "3"]);
   });
 
@@ -206,7 +244,7 @@ describe("CaseEditorForm", () => {
     expect(onSubmit).not.toHaveBeenCalled();
     const section = screen.getByRole("group", { name: "Rujukan hukum" });
     expect(
-      within(section).getByText("Butuh minimal satu rujukan hukum sampai tingkat pasal."),
+      within(section).getByText("Butuh minimal satu rujukan hukum."),
     ).toBeInTheDocument();
   });
 
@@ -348,13 +386,13 @@ describe("CaseEditorForm server errors", () => {
   it("shows a missing pasal on the second legal reference row only", async () => {
     const twoRefs: CaseFormValues = {
       ...filled,
-      legal_refs: [filled.legal_refs[0], { ...filled.legal_refs[0], pasal: "152" }],
+      legal_refs: [filled.legal_refs[0], structuredRef({ pasal: "152" })],
     };
     await submitWith(
       {
         kind: "field",
-        path: "legal_refs.1.pasal",
-        message: "Field legal_refs[1].pasal wajib diisi",
+        path: "legal_refs.1.links.0.pasal",
+        message: "Field legal_refs[1].links[0].pasal wajib diisi",
         detail: null,
       },
       twoRefs,
@@ -362,7 +400,7 @@ describe("CaseEditorForm server errors", () => {
 
     const second = within(refRow(2)).getByLabelText("Pasal");
     expect(second).toHaveAttribute("aria-invalid", "true");
-    expect(second).toHaveAccessibleDescription("Field legal_refs[1].pasal wajib diisi");
+    expect(second).toHaveAccessibleDescription("Field legal_refs[1].links[0].pasal wajib diisi");
     expect(within(refRow(1)).getByLabelText("Pasal")).not.toHaveAttribute(
       "aria-invalid",
       "true",
@@ -389,7 +427,7 @@ describe("CaseEditorForm server errors", () => {
     await submitWith(
       {
         kind: "field",
-        path: "legal_refs.0.year",
+        path: "legal_refs.0.links.0.year",
         message: "Isian tidak valid.",
         detail: "Input should be greater than or equal to 1",
       },
@@ -406,12 +444,12 @@ describe("CaseEditorForm server errors", () => {
     await submitWith({
       kind: "field",
       path: "legal_refs",
-      message: "Minimal satu rujukan hukum sampai level pasal",
+      message: "Butuh minimal satu rujukan hukum.",
       detail: null,
     });
 
     const section = screen.getByRole("group", { name: "Rujukan hukum" });
-    expect(within(section).getByText("Minimal satu rujukan hukum sampai level pasal")).toBeInTheDocument();
+    expect(within(section).getByText("Butuh minimal satu rujukan hukum.")).toBeInTheDocument();
   });
 
   // ARIA puts aria-invalid on the radiogroup, not on each radio.
@@ -620,7 +658,7 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     const onSubmit = vi.fn();
     const twoRefs: CaseFormValues = {
       ...filled,
-      legal_refs: [filled.legal_refs[0], { ...filled.legal_refs[0], pasal: "" }],
+      legal_refs: [filled.legal_refs[0], structuredRef({ number: "" })],
     };
     render(<CaseEditorForm defaultValues={twoRefs} onSubmit={onSubmit} />);
 
@@ -720,7 +758,15 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
   it("gives every legal reference and answer criteria field its own hint", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    for (const label of ["Jenis peraturan", "Nomor", "Tahun", "Pasal", "Ayat (opsional)", "Huruf (opsional)"]) {
+    for (const label of [
+      "Jenis peraturan",
+      "Nomor",
+      "Tahun",
+      "Tentang (opsional)",
+      "Pasal",
+      "Ayat (opsional)",
+      "Huruf (opsional)",
+    ]) {
       expect(within(refRow(1)).getByLabelText(label)).toHaveAccessibleDescription(/.+/);
     }
     for (const label of ["Wajib ada", "Tidak boleh ada", "Kesimpulan yang diharapkan"]) {
@@ -743,11 +789,15 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
     render(<CaseEditorForm onSubmit={vi.fn()} />);
 
     const ref = within(refRow(1));
-    expect(ref.getByLabelText("Jenis peraturan")).toHaveAttribute("placeholder", "UU");
+    expect(ref.getByLabelText("Jenis peraturan")).toHaveAttribute(
+      "placeholder",
+      "Ketik untuk mencari, misalnya UU",
+    );
     expect(ref.getByLabelText("Nomor")).toHaveAttribute("placeholder", "13");
     expect(ref.getByLabelText("Tahun")).toHaveAttribute("placeholder", "2003");
+    expect(ref.getByLabelText("Tentang (opsional)")).toHaveAttribute("placeholder", "Ketenagakerjaan");
     expect(ref.getByLabelText("Pasal")).toHaveAttribute("placeholder", "156");
-    expect(ref.getByLabelText("Ayat (opsional)")).toHaveAttribute("placeholder", "2");
+    expect(ref.getByLabelText("Ayat (opsional)")).toHaveAttribute("placeholder", "1");
     expect(ref.getByLabelText("Huruf (opsional)")).toHaveAttribute("placeholder", "a");
   });
 
@@ -756,8 +806,14 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
     render(<CaseEditorForm onSubmit={vi.fn()} />);
     await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
 
-    const inputs = [...screen.getAllByRole("textbox"), ...screen.getAllByRole("spinbutton")];
-    expect(inputs).toHaveLength(15);
+    // Dropdown jenis peraturan berperan combobox, jadi tidak ikut daftar textbox.
+    const dropdown = within(refRow(1)).getByRole("combobox", { name: "Jenis peraturan" });
+    const inputs = [
+      dropdown,
+      ...screen.getAllByRole("textbox"),
+      ...screen.getAllByRole("spinbutton"),
+    ];
+    expect(inputs).toHaveLength(16);
     for (const input of inputs) {
       expect(input.getAttribute("placeholder") ?? "", input.id).not.toBe("");
     }
@@ -768,7 +824,7 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
     render(<CaseEditorForm onSubmit={vi.fn()} />);
 
     const ref = within(refRow(1));
-    for (const label of ["Ayat (opsional)", "Huruf (opsional)"]) {
+    for (const label of ["Tentang (opsional)", "Ayat (opsional)", "Huruf (opsional)"]) {
       expect(ref.getByLabelText(label)).toHaveAccessibleDescription(/.+/);
       expect(ref.getByLabelText(label)).not.toHaveAccessibleDescription(/opsional/i);
     }
@@ -806,7 +862,7 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const payload = onSubmit.mock.calls[0]?.[0];
-    expect(payload?.legal_refs[0]?.huruf).toBeNull();
+    expect(payload?.legal_refs[0]?.links[0]?.huruf).toBe("");
     expect(payload?.identity.category).toBeNull();
   });
 
@@ -835,5 +891,185 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
     // Assert
     expect(title).toBeEnabled();
     expect(screen.getByRole("button", { name: "Simpan draf" })).toBeEnabled();
+  });
+});
+
+describe("CaseEditorForm legal references (PBI-21)", () => {
+  // AC9: a case written in Sprint 1 opens in the new form.
+  it("opens a Sprint 1 reference without a year and asks for the year before saving", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    const legacy = { ...filled, legal_refs: [structuredRef({ year: "", pasal: "156" })] };
+    render(<CaseEditorForm defaultValues={legacy} onSubmit={onSubmit} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+    const blockedBeforeYear = onSubmit.mock.calls.length === 0;
+    await user.type(within(refRow(1)).getByLabelText("Tahun"), "2003");
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    expect(blockedBeforeYear).toBe(true);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]?.[0].legal_refs[0]?.links[0]).toMatchObject({
+      year: 2003,
+      pasal: "156",
+    });
+  });
+
+  it("shows the year as required in the summary for an old reference without one", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const legacy = { ...filled, legal_refs: [structuredRef({ year: "" })] };
+    render(<CaseEditorForm defaultValues={legacy} onSubmit={vi.fn()} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    const summary = screen.getByRole("alert");
+    expect(within(summary).getByRole("button", { name: "Tahun wajib diisi." })).toBeInTheDocument();
+  });
+
+  it("opens a reference that was kept as free text and saves it as typed", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    const text = "Peraturan Gubernur Kuno Nomor 5 Tahun 2001, Pasal 3";
+    const kept = { ...filled, legal_refs: [{ kind: "free_text" as const, free_text: text, links: [] }] };
+    render(<CaseEditorForm defaultValues={kept} onSubmit={onSubmit} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    expect(within(refRow(1)).getByText("Tidak terstruktur")).toBeInTheDocument();
+    expect(onSubmit.mock.calls[0]?.[0].legal_refs).toEqual([
+      { kind: "free_text", free_text: text, links: [] },
+    ]);
+  });
+
+  it("saves a chain with its order, forms and connectors", async () => {
+    // Arrange: Pasal 156 UU 13/2003 jo. Pasal II Angka 5 UU 6/2023
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    const chain: LegalRefFormValues = {
+      kind: "structured",
+      free_text: "",
+      links: [
+        { ...emptyLink("pasal"), regulation_type: "uu", number: "13", year: "2003", pasal: "156" },
+        {
+          ...emptyLink("pasal_angka", "jo"),
+          regulation_type: "uu",
+          number: "6",
+          year: "2023",
+          pasal: "II",
+          angka: "5",
+        },
+      ],
+    };
+    render(<CaseEditorForm defaultValues={{ ...filled, legal_refs: [chain] }} onSubmit={onSubmit} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    const links = onSubmit.mock.calls[0]?.[0].legal_refs[0]?.links ?? [];
+    expect(links.map((link) => [link.form, link.connector, link.pasal, link.angka])).toEqual([
+      ["pasal", "none", "156", null],
+      ["pasal_angka", "jo", "II", "5"],
+    ]);
+  });
+
+  it("keeps the code of a saved type that is no longer in the list", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onSubmit = vi.fn<(payload: CaseWritePayload) => void>();
+    const old = { ...filled, legal_refs: [structuredRef({ regulation_type: "peraturan_lama" })] };
+    render(<CaseEditorForm defaultValues={old} onSubmit={onSubmit} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    expect(within(refRow(1)).getByLabelText("Jenis peraturan")).toHaveValue("peraturan_lama");
+    expect(onSubmit.mock.calls[0]?.[0].legal_refs[0]?.links[0]?.regulation_type).toBe(
+      "peraturan_lama",
+    );
+  });
+
+  it("moves the focus to the dropdown when the server rejects the regulation type", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const rejected: FieldSaveError = {
+      kind: "field",
+      path: "legal_refs.0.links.0.regulation_type",
+      message: "Jenis peraturan tidak ada di daftar",
+      detail: null,
+    };
+    render(
+      <CaseEditorForm defaultValues={filled} onSubmit={vi.fn(() => Promise.resolve(rejected))} />,
+    );
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    const dropdown = within(refRow(1)).getByRole("combobox", { name: "Jenis peraturan" });
+    expect(dropdown).toHaveFocus();
+    expect(dropdown).toHaveAccessibleDescription("Jenis peraturan tidak ada di daftar");
+  });
+
+  it("shows why the types could not be loaded and keeps the rest of the form usable", () => {
+    // Arrange
+    vi.mocked(useRegulationTypes).mockReturnValue({
+      status: "error",
+      message: "Gagal memuat daftar jenis peraturan. Coba lagi.",
+      reload: vi.fn(),
+    });
+
+    // Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
+    expect(within(refRow(1)).getByLabelText("Nomor")).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Simpan draf" })).toBeEnabled();
+  });
+});
+
+describe("CaseEditorForm locked tag (PBI-9 AC3, SCRUM-165)", () => {
+  // Positive
+  it("shows the tag as a badge instead of choices once the case has been approved", () => {
+    // Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} tagLocked />);
+
+    // Assert
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByText(/Tag dikunci setelah kasus disetujui/)).toBeInTheDocument();
+  });
+
+  it("still sends the saved tag when a later draft is saved", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} tagLocked />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ split_tag: filled.split_tag }));
+  });
+
+  // Negative
+  it("keeps the choices for the author before approval", () => {
+    // Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    // Assert
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    expect(screen.queryByText(/Tag dikunci/)).not.toBeInTheDocument();
   });
 });

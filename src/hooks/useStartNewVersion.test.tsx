@@ -21,6 +21,7 @@ function draftCase(): CaseRead {
     split_tag: "dev",
     status: "draft",
     completeness_pct: 50,
+    was_dev: false,
     version: 2,
     created_at: "2026-10-03T00:00:00Z",
     updated_at: "2026-10-03T00:00:00Z",

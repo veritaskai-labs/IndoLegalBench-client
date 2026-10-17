@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { makeReviewCopy } from "@/test/reviewFixtures";
+import { makeReviewCopy, structuredRef } from "@/test/reviewFixtures";
 import { ReviewCaseContent } from "./ReviewCaseContent";
 
 /** The row of one section: its label and the lines next to it. */
@@ -45,8 +45,8 @@ describe("ReviewCaseContent", () => {
     // Arrange
     const copy = makeReviewCopy({
       legal_refs: [
-        { regulation_type: "UU", regulation_number: "13", year: 2003, pasal: "151", ayat: "3", huruf: null },
-        { regulation_type: "UU", regulation_number: "6", year: 2023, pasal: "81", ayat: null, huruf: null },
+        structuredRef("UU No. 13 Tahun 2003, Pasal 151 ayat (3)"),
+        structuredRef("UU No. 6 Tahun 2023, Pasal 81"),
       ],
     });
 
