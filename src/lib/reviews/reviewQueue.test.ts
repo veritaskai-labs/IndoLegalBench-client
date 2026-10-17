@@ -72,6 +72,20 @@ describe("reassignmentReason", () => {
   it("falls back to a plain reason for an open round without an active reviewer", () => {
     expect(reassignmentReason(row())).toBe("Tidak ada reviewer aktif");
   });
+  
+  // Positif
+  it("counts how many of the two reviewers are in place", () => {
+    expect(
+      reassignmentReason(row({ round_status: "open", active_reviewers_count: 1 })),
+    ).toBe("Baru 1 dari 2 reviewer");
+  });
+
+  // corner
+  it("falls back to a plain reason when the round already has both reviewers", () => {
+    expect(
+      reassignmentReason(row({ round_status: "open", active_reviewers_count: 2 })),
+    ).toBe("Perlu penugasan ulang");
+  });
 });
 
 describe("activeAssignments", () => {
