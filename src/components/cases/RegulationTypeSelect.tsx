@@ -18,7 +18,10 @@ export const MAX_VISIBLE_OPTIONS = 50;
 
 type Props = {
   label: string;
-  /** Jenis aktif dari useRegulationTypes, diurutkan server. Muat sekali di bagian rujukan. */
+  /**
+   * Semua jenis dari useRegulationTypes (termasuk yang nonaktif), diurutkan server. Hanya yang aktif
+   * jadi pilihan; yang nonaktif dipakai untuk label rujukan lama. Muat sekali di bagian rujukan.
+   */
   types: readonly RegulationType[];
   /** Kode jenis yang dipilih, atau "" bila belum ada. */
   value: string;
@@ -73,11 +76,16 @@ export function RegulationTypeSelect({
   const [query, setQuery] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  // Kode yang tidak ada di daftar (jenis yang sudah dinonaktifkan) ditampilkan apa adanya.
+  const selectable = useMemo(() => types.filter((type) => type.is_active), [types]);
+
+  // Kode yang tidak ada di daftar sama sekali ditampilkan apa adanya.
   const chosenText = types.find((type) => type.code === value)?.label ?? value;
-  const matches = useMemo(() => searchRegulationTypes(types, query ?? ""), [types, query]);
+  const matches = useMemo(
+    () => searchRegulationTypes(selectable, query ?? ""),
+    [selectable, query],
+  );
   const visible = matches.slice(0, MAX_VISIBLE_OPTIONS);
-  const message = open ? statusMessage(types.length, matches.length) : undefined;
+  const message = open ? statusMessage(selectable.length, matches.length) : undefined;
   const showList = open && visible.length > 0;
   const activeCode = showList ? visible[activeIndex]?.code : undefined;
 
