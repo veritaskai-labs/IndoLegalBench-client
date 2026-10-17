@@ -938,7 +938,6 @@ export interface components {
             /**
              * Was Dev
              * @description Kasus ini pernah berada di dev set (PBI-9 AC3); tidak pernah kembali false
-             * @default false
              */
             was_dev: boolean;
             /** Completeness Pct */
@@ -1451,7 +1450,7 @@ export interface components {
             message: string;
             /**
              * Requires Confirmation
-             * @default true
+             * @default false
              */
             requires_confirmation: boolean;
         };
