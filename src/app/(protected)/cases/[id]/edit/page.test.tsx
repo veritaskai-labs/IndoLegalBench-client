@@ -1012,3 +1012,41 @@ describe("EditCasePage change tag button (UAT feedback)", () => {
     expect(screen.getByText("Simpan perubahan dulu untuk mengubah tag")).toBeInTheDocument();
   });
 });
+
+describe("EditCasePage tag changed by an Admin meanwhile (review of #30)", () => {
+  it("keeps the author on the page with their edits and asks for a reload", async () => {
+    // Arrange: the author's form still has the old tag, the server answers 409
+    listVersionsMock.mockResolvedValue([makeSummary(1), makeSummary(2)]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(savedCase({ status: "draft", version: 2 }));
+    updateCaseMock.mockRejectedValue(new ApiError(409, "SPLIT_TAG_LOCKED", "server text"));
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Simpan draf" });
+    await user.type(screen.getByLabelText("Judul"), " baru");
+
+    // Act
+    await user.click(save());
+
+    // Assert
+    expect(await screen.findByText(/baru saja diubah Admin/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Judul")).toHaveValue("Pemberitahuan PHK baru");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("closes the change tag dialog on cancel without saving", async () => {
+    // Arrange
+    session.role = "admin";
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Ubah tag" }));
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+
+    // Assert
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(changeTagMock).not.toHaveBeenCalled();
+  });
+});

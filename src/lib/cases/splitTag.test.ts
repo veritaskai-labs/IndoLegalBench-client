@@ -102,3 +102,13 @@ describe("splitTagErrorMessage", () => {
     expect(splitTagErrorMessage(new Error("network"))).toBe("Gagal mengubah tag. Coba lagi.");
   });
 });
+
+describe("splitTagErrorMessage unknown server errors", () => {
+  // Edge: an ApiError with an unknown code that is neither 403 nor 404
+  it("falls back to the retry message for a 500", () => {
+    // Act + Assert
+    expect(splitTagErrorMessage(new ApiError(500, "internal_error", null, null))).toBe(
+      "Gagal mengubah tag. Coba lagi.",
+    );
+  });
+});

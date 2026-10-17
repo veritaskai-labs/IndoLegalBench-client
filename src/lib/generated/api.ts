@@ -2384,7 +2384,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), tag diubah lewat PUT setelah disetujui (`SPLIT_TAG_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2486,7 +2486,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), tag diubah lewat PUT setelah disetujui (`SPLIT_TAG_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2584,7 +2584,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), tag diubah lewat PUT setelah disetujui (`SPLIT_TAG_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
             409: {
                 headers: {
                     [name: string]: unknown;
