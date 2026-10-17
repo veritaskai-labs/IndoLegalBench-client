@@ -120,4 +120,43 @@ describe("SubmitReviewButton", () => {
       "Simpan perubahan dulu sebelum mengajukan.",
     );
   });
+  // Negative: diajukan dari tab lain → 409, halaman harus diberi tahu supaya menyegarkan status.
+  it("tells the page the case is stale when the version cannot be submitted again", async () => {
+    const user = userEvent.setup();
+    const onStale = vi.fn();
+    submit.mockRejectedValue(new ApiError(409, "VERSION_NOT_SUBMITTABLE"));
+
+    render(
+      <SubmitReviewButton
+        caseId="c1"
+        ready
+        onStale={onStale}
+        onSubmitted={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Ajukan review" }));
+
+    await screen.findByRole("alert");
+    expect(onStale).toHaveBeenCalledTimes(1);
+  });
+
+  // Corner: kegagalan lain tidak memicu penyegaran.
+  it("does not call onStale for a failure that is not about the version", async () => {
+    const user = userEvent.setup();
+    const onStale = vi.fn();
+    submit.mockRejectedValue(new ApiError(422, "SUITE_NOT_ACTIVE"));
+
+    render(
+      <SubmitReviewButton
+        caseId="c1"
+        ready
+        onStale={onStale}
+        onSubmitted={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Ajukan review" }));
+
+    await screen.findByRole("alert");
+    expect(onStale).not.toHaveBeenCalled();
+  });
 });
