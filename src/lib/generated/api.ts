@@ -1070,7 +1070,7 @@ export interface components {
             message: string;
             /**
              * Field
-             * @description Lokasi field yang gagal, misalnya legal_refs[0].pasal
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].links[0].pasal
              */
             field?: string | null;
         };
