@@ -89,11 +89,9 @@ function ReviewerCell({ review }: Readonly<{ review: CaseReviewOrNull }>) {
           <div className="text-xs text-slate-700">
             {verdictLabel(slot.verdict)}
           </div>
-          {slot.verdict !== null && slot.verdict.comment !== null && (
-            <p className="mt-1 text-xs text-slate-600">
-              {slot.verdict.comment}
-            </p>
-          )}
+          {slot.verdict?.comment ? (
+            <p className="mt-1 text-xs text-slate-600">{slot.verdict.comment}</p>
+          ) : null}
         </li>
       ))}
     </ul>

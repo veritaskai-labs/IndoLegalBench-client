@@ -30,8 +30,8 @@ export const ROUND_DECISION_LABEL: Record<RoundDecision, string> = {
 };
 
 /** AC3 meminta status penilaian sudah atau belum, jadi null pun punya kata-katanya sendiri. */
-export function verdictLabel(verdict: VerdictView | null): string {
-  return verdict === null
-    ? "Belum menilai"
-    : VERDICT_DECISION_LABEL[verdict.decision];
+export function verdictLabel(
+  verdict: VerdictView | null | undefined,
+): string {
+  return verdict ? VERDICT_DECISION_LABEL[verdict.decision] : "Belum menilai";
 }

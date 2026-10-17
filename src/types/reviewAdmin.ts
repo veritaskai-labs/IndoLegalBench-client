@@ -1,14 +1,23 @@
+import type { components } from "@/lib/generated/api";
+
 /**
- * Bentuk dari SCRUM-147 (app/modules/reviews/schemas.py). Ditulis tangan dulu
- * karena PR-nya belum merge, jadi belum ada di contract/openapi.json.
- * Setelah SCRUM-147 masuk staging, ReassignmentRow diganti jadi
- * components["schemas"]["NeedsReassignmentResponse"] dan sisanya ikut.
+ * Bentuk review sudah ada di kontrak sejak SCRUM-145 merge (server PR #45),
+ * jadi diturunkan dari sana.
  */
+export type AssignmentStatus = components["schemas"]["AssignmentStatus"];
+export type RoundStatus = components["schemas"]["RoundStatus"];
+export type VerdictDecision = components["schemas"]["VerdictDecision"];
+export type RoundDecision = components["schemas"]["RoundDecision"];
+export type VerdictView = components["schemas"]["VerdictView"];
+export type ReviewerSlot = components["schemas"]["ReviewerSlot"];
+export type CaseReview = components["schemas"]["CaseReview"];
 
-export type AssignmentStatus = "active" | "replaced" | "void";
-
-export type RoundStatus = "awaiting_assignment" | "open" | "decided";
-
+/**
+ * Bentuk antrean penugasan ulang dan penggantian reviewer dari SCRUM-147
+ * (server PR #50, belum merge), jadi masih ditulis tangan. Diganti ke
+ * components["schemas"][...] setelah PR itu masuk dan kontraknya disalin ulang.
+ * Hanya field yang dipakai FE.
+ */
 export type ReassignmentAssignment = {
   id: string;
   reviewer_id: string;
@@ -44,42 +53,8 @@ export type ReplacedAssignment = {
   replaced_assignment_id: string | null;
 };
 
+/** Satu pilihan reviewer di dialog penggantian. */
 export type ReviewerOption = {
   id: string;
   name: string;
 };
-
-/** Keputusan satu reviewer (VerdictDecision di server). */
-export type VerdictDecision = "approve" | "revise";
-
-/** Keputusan satu putaran review (RoundDecision di server). */
-export type RoundDecision = "approved" | "revise";
-
-export type VerdictView = {
-  decision: VerdictDecision;
-  comment: string | null;
-  submitted_at: string | null;
-};
-
-/**
- * Satu reviewer di putaran. verdict null berarti belum menilai atau belum boleh dilihat;
- * untuk Admin server mengirim semuanya, jadi di halaman pemantauan null berarti belum menilai.
- */
-export type ReviewerSlot = {
-  assignment_id: string;
-  reviewer: { id: string; name: string };
-  status: AssignmentStatus;
-  verdict: VerdictView | null;
-};
-
-export type CaseReview = {
-  case_id: string;
-  case_version_id: string;
-  round_no: number;
-  status: RoundStatus;
-  decision: RoundDecision | null;
-  opened_at: string | null;
-  decided_at: string | null;
-  reviewers: ReviewerSlot[];
-};
-
