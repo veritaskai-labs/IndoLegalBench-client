@@ -48,3 +48,37 @@ export type ReviewerOption = {
   id: string;
   name: string;
 };
+
+/** Keputusan satu reviewer (VerdictDecision di server). */
+export type VerdictDecision = "approve" | "revise";
+
+/** Keputusan satu putaran review (RoundDecision di server). */
+export type RoundDecision = "approved" | "revise";
+
+export type VerdictView = {
+  decision: VerdictDecision;
+  comment: string | null;
+  submitted_at: string | null;
+};
+
+/**
+ * Satu reviewer di putaran. verdict null berarti belum menilai atau belum boleh dilihat;
+ * untuk Admin server mengirim semuanya, jadi di halaman pemantauan null berarti belum menilai.
+ */
+export type ReviewerSlot = {
+  assignment_id: string;
+  reviewer: { id: string; name: string };
+  status: AssignmentStatus;
+  verdict: VerdictView | null;
+};
+
+export type CaseReview = {
+  case_id: string;
+  case_version_id: string;
+  round_no: number;
+  status: RoundStatus;
+  decision: RoundDecision | null;
+  opened_at: string | null;
+  decided_at: string | null;
+  reviewers: ReviewerSlot[];
+};

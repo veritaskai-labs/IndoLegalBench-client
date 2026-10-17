@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "@/lib/apiClient";
-import { listNeedsReassignment, replaceReviewer } from "./reviewApi";
+import { listNeedsReassignment, replaceReviewer, getCaseReview } from "./reviewApi";
 
 vi.mock("@/lib/apiClient", () => ({ apiFetch: vi.fn() }));
 const fetchMock = vi.mocked(apiFetch);
@@ -62,5 +62,46 @@ describe("replaceReviewer", () => {
     await replaceReviewer("a/b", { new_reviewer_id: REVIEWER_ID, reason: "x" });
 
     expect(fetchMock).toHaveBeenCalledWith("/reviews/a%2Fb/replace", expect.anything());
+  });
+});
+
+const REVIEW: CaseReview = {
+  case_id: "c1",
+  case_version_id: "v1",
+  round_no: 1,
+  status: "open",
+  decision: null,
+  opened_at: "2026-10-16T03:00:00Z",
+  decided_at: null,
+  reviewers: [
+    {
+      assignment_id: "a1",
+      reviewer: { id: "u1", name: "Roben" },
+      status: "active",
+      verdict: null,
+    },
+  ],
+};
+
+describe("getCaseReview", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  // Positif
+  it("reads the latest round of one case", async () => {
+    fetchMock.mockResolvedValue(REVIEW);
+
+    await expect(getCaseReview("c1")).resolves.toEqual(REVIEW);
+    expect(fetchMock).toHaveBeenCalledWith("/cases/c1/review");
+  });
+
+  // Sudut
+  it("escapes the case id in the path", async () => {
+    fetchMock.mockResolvedValue(REVIEW);
+
+    await getCaseReview("c 1/2");
+
+    expect(fetchMock).toHaveBeenCalledWith("/cases/c%201%2F2/review");
   });
 });
