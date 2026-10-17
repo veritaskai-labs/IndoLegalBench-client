@@ -110,4 +110,14 @@ describe("SubmitReviewButton", () => {
       screen.queryByText("Simpan perubahan dulu sebelum mengajukan."),
     ).not.toBeInTheDocument();
   });
+  // a11y: terhalang bukan berarti hilang dari papan tunjuk; alasannya harus terbaca.
+  it("keeps the button focusable and links the save hint to it", () => {
+    render(<SubmitReviewButton caseId="c1" ready dirty onSubmitted={vi.fn()} />);
+
+    const button = screen.getByRole("button", { name: "Ajukan review" });
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).toHaveAccessibleDescription(
+      "Simpan perubahan dulu sebelum mengajukan.",
+    );
+  });
 });
