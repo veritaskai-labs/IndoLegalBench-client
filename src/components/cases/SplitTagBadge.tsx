@@ -15,7 +15,7 @@ type Props = {
 };
 
 /** Badge tag dev/test yang sama di editor, daftar kasus, dan halaman review. */
-export function SplitTagBadge({ tag, infoOnly = false, wasDev = false }: Props) {
+export function SplitTagBadge({ tag, infoOnly = false, wasDev = false }: Readonly<Props>) {
   const label = SPLIT_TAG_LABEL[tag];
   return (
     <span className="inline-flex items-center gap-1.5">

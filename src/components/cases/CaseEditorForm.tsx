@@ -10,6 +10,7 @@ import {
 } from "@/lib/cases/caseFormMapping";
 import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
 import type { FieldSaveError } from "@/lib/cases/saveError";
+import type { SplitTag } from "@/types/case";
 import { ErrorSummary } from "./ErrorSummary";
 import {
   AnswerCriteriaSection,
@@ -39,6 +40,12 @@ type Props = {
   tagLocked?: boolean;
 };
 
+/** Tag tersimpan, atau null bila belum dipilih (nilai form kosong ""). */
+function chosenTag(values: CaseFormValues | undefined): SplitTag | null {
+  const tag = values?.split_tag;
+  return tag === "dev" || tag === "test" ? tag : null;
+}
+
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
 export const VALIDATE_DELAY_MS = 300;
 
@@ -52,7 +59,7 @@ export function CaseEditorForm({
   onDirtyChange,
   readOnly = false,
   tagLocked = false,
-}: Props) {
+}: Readonly<Props>) {
   const {
     register,
     control,
@@ -136,7 +143,7 @@ export function CaseEditorForm({
         <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
         <AnswerCriteriaSection {...sectionProps} />
         <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
-        <SplitTagSection {...sectionProps} lockedTag={tagLocked ? defaultValues?.split_tag || null : null} />
+        <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
       </fieldset>
 
       {!readOnly && (

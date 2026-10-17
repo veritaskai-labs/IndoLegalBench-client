@@ -20,7 +20,7 @@ const TAGS: readonly SplitTag[] = ["dev", "test"];
  * Dev ke test diberi peringatan lebih dulu dan baru terkirim setelah Admin mencentang
  * konfirmasi, jadi server tidak perlu menjawab 409 TAG_CHANGE_NEEDS_CONFIRMATION.
  */
-export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDone }: Props) {
+export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDone }: Readonly<Props>) {
   const baseId = useId();
   const [chosen, setChosen] = useState<SplitTag>(current);
   const [confirmed, setConfirmed] = useState(false);
@@ -51,7 +51,14 @@ export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDon
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+      {/* <dialog open> bawaan browser, bukan div role="dialog". Gaya bawaannya (posisi absolut,
+          border) ditimpa supaya tetap di tengah overlay. */}
+      <dialog
+        open
+        aria-modal="true"
+        aria-label={title}
+        className="relative m-0 w-full max-w-md rounded-lg border-0 bg-white p-6 text-slate-900 shadow-lg"
+      >
         <h2 className="text-base font-semibold text-slate-900">{title}</h2>
         <p className="mt-2 text-sm text-slate-600">
           Kasus ini sudah disetujui, jadi tagnya hanya bisa diubah Admin. Perubahan tercatat di log audit.
@@ -68,7 +75,7 @@ export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDon
                 checked={chosen === tag}
                 onChange={() => choose(tag)}
               />
-              {SPLIT_TAG_LABEL[tag]}
+              <span>{SPLIT_TAG_LABEL[tag]}</span>
             </label>
           ))}
         </fieldset>
@@ -87,7 +94,7 @@ export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDon
                 onChange={(event) => setConfirmed(event.target.checked)}
                 className="mt-0.5"
               />
-              Saya paham dan tetap ingin memindahkan kasus ini ke test.
+              <span>Saya paham dan tetap ingin memindahkan kasus ini ke test.</span>
             </label>
           </div>
         )}
@@ -115,7 +122,7 @@ export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDon
             Simpan tag
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }
