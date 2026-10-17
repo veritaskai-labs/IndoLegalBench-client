@@ -13,6 +13,7 @@ import {
 import { apiFetch, ApiError } from "@/lib/apiClient";
 import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import { SnapshotSection } from "@/components/suites/SnapshotSection";
+import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import type { Suite } from "@/types/suite";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 
@@ -365,9 +366,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
                           {item.title}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="inline-block px-2 py-0.5 rounded font-mono text-[11px] bg-slate-100 text-slate-700">
-                            {item.split_tag}
-                          </span>
+                          <SplitTagBadge tag={item.split_tag} />
                         </td>
                         <td className="py-3.5 px-4">
                           <CaseStatusBadge status={item.status} />

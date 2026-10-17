@@ -259,3 +259,19 @@ describe("mapSaveError", () => {
   });
 
 });
+
+describe("mapSaveError split tag (review of #30)", () => {
+  it("asks for a reload, above the form, when an Admin changed the tag meanwhile", () => {
+    // Arrange: 409, so the global 403 handler does not move the author to /forbidden
+    const error = new ApiError(409, "SPLIT_TAG_LOCKED", "server text");
+
+    // Act
+    const result = mapSaveError(error);
+
+    // Assert
+    expect(result).toEqual({
+      kind: "form",
+      message: "Tag kasus ini baru saja diubah Admin. Muat ulang halaman lalu simpan lagi.",
+    });
+  });
+});
