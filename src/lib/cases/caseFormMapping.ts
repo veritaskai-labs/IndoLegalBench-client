@@ -140,9 +140,23 @@ function textOrEmpty(value: string | null | undefined): string {
   return value ?? "";
 }
 
+const hasText = (value: string | null | undefined) => textOrEmpty(value).trim() !== "";
+
+/**
+ * Bentuk yang dipakai form untuk link tersimpan. Link name_only dari pemetaan Sprint 1 bisa masih
+ * punya pasal, angka, ayat, atau huruf; form menyembunyikan field itu untuk name_only dan
+ * mengirimnya null, jadi isinya hilang diam-diam. Pindahkan ke bentuk yang menampilkannya.
+ */
+function formForSavedLink(link: LegalRefLinkRead): LegalRefLinkRead["form"] {
+  if (link.form !== "name_only") return link.form;
+  if (hasText(link.angka)) return "pasal_angka";
+  if (hasText(link.pasal) || hasText(link.ayat) || hasText(link.huruf)) return "pasal";
+  return link.form;
+}
+
 function fromLinkRead(link: LegalRefLinkRead): LegalRefLinkFormValues {
   return {
-    form: link.form,
+    form: formForSavedLink(link),
     connector: link.connector,
     regulation_type: link.regulation_type,
     number: link.number,
