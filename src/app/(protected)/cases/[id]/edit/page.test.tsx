@@ -1145,4 +1145,20 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     expect(await screen.findByText("Dalam tinjauan")).toBeInTheDocument();
     expect(screen.queryByText("Siap diajukan review")).not.toBeInTheDocument();
   });
+  // Negative: kasus sudah diajukan dari tab lain. Pesan saja tidak cukup — badge
+  // tetap "Draft" dan form masih bisa diedit, lalu simpan berikutnya kena VERSION_LOCKED.
+  it("reads the case again and shows the real status after a stale submission", async () => {
+    const user = userEvent.setup();
+    getCaseMock
+      .mockResolvedValueOnce(savedCase({ status: "draft" }))
+      .mockResolvedValue(savedCase({ status: "in_review" }));
+    submitMock.mockRejectedValue(new ApiError(409, "VERSION_NOT_SUBMITTABLE"));
+    renderPage();
+    await screen.findByRole("button", { name: "Ajukan review" });
+
+    await user.click(submitButton());
+
+    expect(await screen.findByText("Dalam tinjauan")).toBeInTheDocument();
+    expect(getCaseMock).toHaveBeenCalledTimes(2);
+  });
 });
