@@ -36,9 +36,7 @@ export function ErrorText({ id, message }: { id?: string; message: string }) {
 
 /** Atribut aksesibilitas untuk kontrol yang tidak valid. */
 export function invalidProps(errorId: string, error: string | undefined) {
-  return error === undefined
-    ? {}
-    : { "aria-invalid": true, "aria-describedby": errorId };
+  return error === undefined ? {} : { "aria-invalid": true, "aria-describedby": errorId };
 }
 
 export function HintText({ id, text }: Readonly<{ id: string; text: string }>) {
@@ -109,8 +107,11 @@ export function TextAreaField({
   );
 }
 
-/** Pilihan satu nilai dari daftar kecil. Terkendali: nilai dan perubahan dikelola pemanggil. */
-export function SelectField({
+/**
+ * Pilihan satu nilai dari daftar kecil. Terkendali: nilai dan perubahan dikelola pemanggil.
+ * `onChange` hanya menerima nilai yang ada di `options`, jadi tipenya mengikuti daftar itu.
+ */
+export function SelectField<T extends string>({
   label,
   value,
   onChange,
@@ -120,9 +121,9 @@ export function SelectField({
   disabled = false,
 }: Readonly<{
   label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly { value: string; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  options: readonly { value: T; label: string }[];
   error?: string;
   hint?: string;
   disabled?: boolean;
@@ -136,7 +137,10 @@ export function SelectField({
         id={id}
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => {
+          const chosen = options.find((option) => option.value === event.target.value);
+          if (chosen !== undefined) onChange(chosen.value);
+        }}
         {...describedBy(id, hint, error)}
         className={CONTROL_CLASS}
       >
@@ -198,7 +202,9 @@ export function RowGroup({
       <legend className={`px-1 text-sm font-medium ${invalid ? "text-red-700" : "text-slate-700"}`}>
         {title}
       </legend>
-      {invalid && <p className="mb-2 text-xs font-medium text-red-700">Baris ini perlu diperbaiki.</p>}
+      {invalid && (
+        <p className="mb-2 text-xs font-medium text-red-700">Baris ini perlu diperbaiki.</p>
+      )}
       <div className="space-y-3">{children}</div>
       <button
         type="button"

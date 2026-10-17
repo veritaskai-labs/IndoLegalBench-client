@@ -11,8 +11,6 @@ import {
   REF_MODE_OPTIONS,
   refMode,
   type LegalRefFormValues,
-  type LinkForm,
-  type RefMode,
 } from "@/lib/cases/legalRefForm";
 import { RowGroup, SelectField, TextAreaField } from "./fields";
 import { LegalRefLinkFields } from "./LegalRefLinkFields";
@@ -32,14 +30,6 @@ type Props = {
 };
 
 const CONNECTOR_LABEL = { none: "", jo: "jo.", jis: "jis." } as const;
-
-function isRefMode(value: string): value is RefMode {
-  return REF_MODE_OPTIONS.some((option) => option.value === value);
-}
-
-function isLinkForm(value: string): value is LinkForm {
-  return LINK_FORM_OPTIONS.some((option) => option.value === value);
-}
 
 /** Satu rujukan: pilihan bentuk, lalu field link-nya atau teks bebas. */
 export function LegalRefRow({
@@ -70,9 +60,7 @@ export function LegalRefRow({
         options={REF_MODE_OPTIONS}
         // Kesalahan struktur rujukan (bentuk atau daftar link) tidak punya kolom sendiri.
         error={errorFor(`legal_refs.${index}.kind`) ?? errorFor(`legal_refs.${index}.links`)}
-        onChange={(mode) => {
-          if (isRefMode(mode)) onUpdate(changeRefMode(ref, mode));
-        }}
+        onChange={(mode) => onUpdate(changeRefMode(ref, mode))}
       />
       {ref.kind === "free_text" ? (
         <div>
@@ -106,15 +94,14 @@ export function LegalRefRow({
                   label={`Bentuk peraturan ${linkIndex + 1}`}
                   value={link.form}
                   options={LINK_FORM_OPTIONS}
-                  onChange={(form) => {
-                    if (!isLinkForm(form)) return;
+                  onChange={(form) =>
                     onUpdate({
                       ...ref,
                       links: ref.links.map((item, position) =>
                         position === linkIndex ? changeLinkForm(item, form) : item,
                       ),
-                    });
-                  }}
+                    })
+                  }
                 />
               </>
             )}
