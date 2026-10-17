@@ -210,3 +210,140 @@ describe("sectionLines", () => {
     expect(lines).toEqual([[], []]);
   });
 });
+
+describe("sectionLines for legal references of the new shape (PBI-21)", () => {
+  const CHAIN_TEXT = "Pasal 156 UU 13/2003 jo. Pasal II Angka 5 UU 6/2023";
+  const PLACEHOLDER = "Rujukan terstruktur, teks penulisannya belum tersedia di tampilan ini.";
+
+  // Positive: the server writes the citation, the client only shows it.
+  it("shows the text the server wrote for a citation", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [
+        {
+          kind: "structured",
+          free_text: null,
+          display_text: CHAIN_TEXT,
+          links: [{ form: "pasal" }],
+        },
+      ],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual([CHAIN_TEXT]);
+  });
+
+  it("prefers the text of the server over the old fields of the same citation", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [
+        {
+          regulation_type: "uu",
+          regulation_number: "13",
+          year: 2003,
+          pasal: "156",
+          display_text: "Pasal 156 UU 13/2003",
+        },
+      ],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual(["Pasal 156 UU 13/2003"]);
+  });
+
+  it("shows free text as it was typed", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [{ kind: "free_text", free_text: "Putusan MA 12 K/Pdt/2020", links: [] }],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual(["Putusan MA 12 K/Pdt/2020"]);
+  });
+
+  it("keeps old and new citations side by side in their order", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [
+        {
+          regulation_type: "UU",
+          regulation_number: "13",
+          year: 2003,
+          pasal: "151",
+          ayat: null,
+          huruf: null,
+        },
+        { kind: "structured", free_text: null, display_text: CHAIN_TEXT, links: [] },
+      ],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual(["UU No. 13 Tahun 2003, Pasal 151", CHAIN_TEXT]);
+  });
+
+  // Negative: never hide a citation that is there.
+  it("says a structured citation is there when the server sent no text for it", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [
+        { kind: "structured", free_text: null, links: [{ form: "pasal", pasal: "156" }] },
+      ],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual([PLACEHOLDER]);
+  });
+
+  it("treats a blank server text like a missing one", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [{ kind: "structured", free_text: null, display_text: "   ", links: [] }],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual([PLACEHOLDER]);
+  });
+
+  // Edge
+  it("skips free text that is blank", () => {
+    // Arrange
+    const version = sections({
+      legal_refs: [{ kind: "free_text", free_text: "   ", links: [] }],
+    });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual([]);
+  });
+
+  it("skips an entry that has no kind and none of the old fields", () => {
+    // Arrange
+    const version = sections({ legal_refs: [{ links: [] }, { display_text: 5 }] });
+
+    // Act
+    const lines = sectionLines("legal_refs", version);
+
+    // Assert
+    expect(lines).toEqual([]);
+  });
+});

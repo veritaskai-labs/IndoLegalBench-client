@@ -534,6 +534,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/assigned": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kasus yang ditugaskan ke reviewer yang login
+         * @description Active assignments in open rounds, with the case body and only your own verdict.
+         */
+        get: operations["list_assigned_reviews_assigned_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{assignment_id}/verdict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kirim penilaian review
+         * @description PBI-6 AC2-AC6. The response carries your own verdict only.
+         *
+         *     When this is the last verdict of the round, the round is decided in the
+         *     same transaction and the case version becomes approved or needs_revision.
+         */
+        post: operations["submit_verdict_reviews__assignment_id__verdict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review terakhir satu kasus
+         * @description PBI-6 AC3. While the round is open, another reviewer's verdict is null.
+         *
+         *     Admin sees every verdict at any time (client decision in SCRUM-145).
+         */
+        get: operations["get_case_review_cases__case_id__review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-logs": {
         parameters: {
             query?: never;
@@ -699,6 +764,29 @@ export interface components {
             expected_conclusion?: string | null;
         };
         /**
+         * AssignedReview
+         * @description Satu baris GET /reviews/assigned.
+         */
+        AssignedReview: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /** Round No */
+            round_no: number;
+            /** Assigned At */
+            assigned_at: string | null;
+            case: components["schemas"]["ReviewCopy"];
+            my_verdict: components["schemas"]["VerdictView"] | null;
+        };
+        /**
+         * AssignmentStatus
+         * @description replaced: diganti Admin (AC7). void: reviewer dinonaktifkan (AC8).
+         * @enum {string}
+         */
+        AssignmentStatus: "active" | "replaced" | "void";
+        /**
          * AuditEntityType
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
@@ -838,6 +926,32 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * CaseReview
+         * @description GET /cases/{case_id}/review: round terakhir kasus ini.
+         */
+        CaseReview: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Case Version Id
+             * Format: uuid
+             */
+            case_version_id: string;
+            /** Round No */
+            round_no: number;
+            status: components["schemas"]["RoundStatus"];
+            decision: components["schemas"]["RoundDecision"] | null;
+            /** Opened At */
+            opened_at: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Reviewers */
+            reviewers: components["schemas"]["ReviewerSlot"][];
         };
         /**
          * CaseStatus
@@ -1038,6 +1152,47 @@ export interface components {
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
         /**
+         * ReviewCopy
+         * @description One version as a reviewer reads it (PBI-6, SCRUM-145).
+         *
+         *     split_tag is shown read-only and is not graded (PBI-9 AC2).
+         */
+        ReviewCopy: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /**
+             * Author Id
+             * Format: uuid
+             */
+            author_id: string;
+            /**
+             * Case Version Id
+             * Format: uuid
+             */
+            case_version_id: string;
+            /** Version No */
+            version_no: number;
+            split_tag: components["schemas"]["SplitTag"];
+            identity: components["schemas"]["CaseIdentity"];
+            /** Legal Refs */
+            legal_refs: {
+                [key: string]: unknown;
+            }[];
+            /** Answer Criteria */
+            answer_criteria: {
+                [key: string]: unknown;
+            };
+            /** Traps */
+            traps: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
          * ReviewSubmission
          * @description POST /cases/{id}/submit-review. The version now waits for reviewers.
          */
@@ -1064,11 +1219,46 @@ export interface components {
              */
             round_status: string;
         };
+        /** ReviewerRead */
+        ReviewerRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * ReviewerSlot
+         * @description Satu reviewer aktif di round. verdict null bila belum ada atau belum boleh dilihat.
+         */
+        ReviewerSlot: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            reviewer: components["schemas"]["ReviewerRead"];
+            status: components["schemas"]["AssignmentStatus"];
+            verdict: components["schemas"]["VerdictView"] | null;
+        };
         /**
          * Role
          * @enum {string}
          */
         Role: "author" | "reviewer" | "admin" | "viewer";
+        /**
+         * RoundDecision
+         * @enum {string}
+         */
+        RoundDecision: "approved" | "revise";
+        /**
+         * RoundStatus
+         * @description awaiting_assignment sampai dua reviewer aktif terpasang (SCRUM-144).
+         * @enum {string}
+         */
+        RoundStatus: "awaiting_assignment" | "open" | "decided";
         /**
          * SnapshotItemRead
          * @description One frozen case. body is the copy taken at snapshot time.
@@ -1257,6 +1447,52 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VerdictDecision
+         * @enum {string}
+         */
+        VerdictDecision: "approve" | "revise";
+        /**
+         * VerdictResult
+         * @description 201 dari pengiriman verdict: verdict milik sendiri saja (AC3, D3 langkah 26).
+         */
+        VerdictResult: {
+            decision: components["schemas"]["VerdictDecision"];
+            /** Comment */
+            comment: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            round_status: components["schemas"]["RoundStatus"];
+            round_decision: components["schemas"]["RoundDecision"] | null;
+        };
+        /**
+         * VerdictView
+         * @description Satu verdict yang boleh dilihat peminta.
+         */
+        VerdictView: {
+            decision: components["schemas"]["VerdictDecision"];
+            /** Comment */
+            comment: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+        };
+        /**
+         * VerdictWrite
+         * @description POST /reviews/{assignment_id}/verdict.
+         */
+        VerdictWrite: {
+            decision: components["schemas"]["VerdictDecision"];
+            /**
+             * Comment
+             * @description Wajib bila decision = revise (COMMENT_REQUIRED)
+             */
+            comment?: string | null;
         };
         /**
          * VersionCompare
@@ -2803,6 +3039,137 @@ export interface operations {
                 };
             };
             /** @description Produk AI tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assigned_reviews_assigned_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignedReview"][];
+                };
+            };
+        };
+    };
+    submit_verdict_reviews__assignment_id__verdict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerdictWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictResult"];
+                };
+            };
+            /** @description Penugasan milik reviewer lain (`NOT_YOUR_ASSIGNMENT`) atau reviewer adalah penulis kasus (`REVIEWER_IS_AUTHOR`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Penugasan tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Penugasan sudah replaced/void (`ASSIGNMENT_NOT_ACTIVE`), round tidak open (`ROUND_NOT_OPEN`), atau penilaian sudah dikirim (`VERDICT_ALREADY_SUBMITTED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Komentar kosong untuk decision = revise (`COMMENT_REQUIRED`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_case_review_cases__case_id__review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseReview"];
+                };
+            };
+            /** @description Tidak terlibat di kasus ini. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus tidak ditemukan, atau belum pernah diajukan (`NO_REVIEW_ROUND`). */
             404: {
                 headers: {
                     [name: string]: unknown;
