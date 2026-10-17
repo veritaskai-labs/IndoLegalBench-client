@@ -7,7 +7,13 @@ import type {
 
 /** Data contoh bersama untuk test riwayat dan perbandingan versi, supaya bentuknya tidak disalin per file. */
 
-export function makeSections(overrides: Partial<VersionSections> = {}): VersionSections {
+/**
+ * Rujukan hukum di sini boleh berbentuk apa saja: snapshot Sprint 1 dan data yang rusak tidak
+ * mengikuti tipe kontrak, dan tampilan harus tetap bisa menanganinya.
+ */
+type SectionOverrides = Omit<Partial<VersionSections>, "legal_refs"> & { legal_refs?: unknown[] };
+
+export function makeSections(overrides: SectionOverrides = {}): VersionSections {
   return {
     "identity.title": "Pemberitahuan PHK",
     "identity.question": "Apakah wajib tertulis?",
@@ -17,7 +23,7 @@ export function makeSections(overrides: Partial<VersionSections> = {}): VersionS
     legal_refs: [],
     answer_criteria: {},
     traps: [],
-    ...overrides,
+    ...(overrides as Partial<VersionSections>),
   };
 }
 

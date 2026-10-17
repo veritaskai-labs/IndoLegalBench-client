@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
+import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
 import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
@@ -36,6 +37,9 @@ vi.mock("@/lib/cases/caseApi", () => ({
   updateCase: vi.fn(),
 }));
 
+// Daftar jenis peraturan datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
+vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+
 // Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 
@@ -60,12 +64,23 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
     identity: { title: "Pemberitahuan PHK", question: "Wajib?", category: null },
     legal_refs: [
       {
-        regulation_type: "UU",
-        regulation_number: "13",
-        year: 2003,
-        pasal: "151",
-        ayat: null,
-        huruf: null,
+        kind: "structured",
+        free_text: null,
+        display_text: "Pasal 151 UU 13/2003",
+        links: [
+          {
+            form: "pasal",
+            connector: "none",
+            regulation_type: "uu",
+            number: "13",
+            year: 2003,
+            about: null,
+            pasal: "151",
+            angka: null,
+            ayat: null,
+            huruf: null,
+          },
+        ],
       },
     ],
     answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
@@ -124,6 +139,11 @@ beforeEach(() => {
   completenessMock.mockResolvedValue(completeness());
   push.mockReset();
   vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
+  vi.mocked(useRegulationTypes).mockReturnValue({
+    status: "ready",
+    types: [{ code: "uu", label: "Undang-undang", singkatan: "UU", is_active: true }],
+    reload: vi.fn(),
+  });
   confirmMock.mockReset().mockReturnValue(true);
   vi.stubGlobal("confirm", confirmMock);
 });
@@ -290,7 +310,12 @@ describe("EditCasePage saving", () => {
     const user = userEvent.setup();
     getCaseMock.mockResolvedValue(savedCase());
     updateCaseMock.mockRejectedValue(
-      new ApiError(422, "FIELD_REQUIRED", "Field legal_refs[0].pasal wajib diisi", "legal_refs[0].pasal"),
+      new ApiError(
+        422,
+        "FIELD_REQUIRED",
+        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "legal_refs[0].links[0].pasal",
+      ),
     );
     renderPage();
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
@@ -300,7 +325,7 @@ describe("EditCasePage saving", () => {
     const row = screen.getByRole("group", { name: "Rujukan 1" });
     await waitFor(() =>
       expect(within(row).getByLabelText("Pasal")).toHaveAccessibleDescription(
-        "Field legal_refs[0].pasal wajib diisi",
+        "Field legal_refs[0].links[0].pasal wajib diisi",
       ),
     );
   });
