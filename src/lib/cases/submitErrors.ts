@@ -24,3 +24,8 @@ export function mapSubmitError(error: unknown): string {
 export function submitBlockers(error: unknown): MissingSection[] {
   return error instanceof ApiError ? error.missing : [];
 }
+
+/** 409 yang artinya versi ini sudah diajukan atau disetujui, jadi halaman perlu dibaca ulang. */
+export function isStaleSubmit(error: unknown): boolean {
+  return error instanceof ApiError && error.code === "VERSION_NOT_SUBMITTABLE";
+}
