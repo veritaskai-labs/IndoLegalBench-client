@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
@@ -35,7 +35,11 @@ describe("TextField", () => {
 describe("TextAreaField", () => {
   it("shows the placeholder it is given", () => {
     render(
-      <TextAreaField label="Deskripsi" placeholder="Contoh jebakan" registration={registration("description")} />,
+      <TextAreaField
+        label="Deskripsi"
+        placeholder="Contoh jebakan"
+        registration={registration("description")}
+      />,
     );
 
     expect(screen.getByLabelText("Deskripsi")).toHaveAttribute("placeholder", "Contoh jebakan");
@@ -87,6 +91,21 @@ describe("SelectField", () => {
 
     // Assert
     expect(onChange).toHaveBeenCalledExactlyOnceWith("pasal_angka");
+  });
+
+  // Edge: the browser can report a value that is not one of the options (e.g. a stale DOM).
+  it("ignores a value that is not one of the options", () => {
+    // Arrange
+    const onChange = vi.fn();
+    render(
+      <SelectField label="Bentuk rujukan" value="pasal" options={OPTIONS} onChange={onChange} />,
+    );
+
+    // Act
+    fireEvent.change(screen.getByLabelText("Bentuk rujukan"), { target: { value: "tidak_ada" } });
+
+    // Assert
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   // Negative
