@@ -8,13 +8,23 @@ export const CaseIdentitySchema = z.object({
   category: z.string().max(120).nullable().optional(),
 });
 
-export const LegalRefSchema = z.object({
-  regulation_type: z.string().min(1).max(40),
-  regulation_number: z.string().min(1).max(40),
-  year: z.number().int().min(1).max(9999).nullable().optional(),
-  pasal: z.string().min(1).max(40),
+export const LegalRefLinkWriteSchema = z.object({
+  form: z.enum(["name_only","pasal","pasal_angka"]),
+  connector: z.enum(["none","jo","jis"]),
+  regulation_type: z.string().min(1).max(150),
+  number: z.string().min(1).max(100),
+  about: z.string().max(500).nullable().optional(),
+  pasal: z.string().max(40).regex(new RegExp("^(?:[1-9][0-9]*[A-Z]?|M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))$")).nullable().optional(),
+  angka: z.string().max(40).regex(new RegExp("^[1-9][0-9]*$")).nullable().optional(),
   ayat: z.string().max(20).nullable().optional(),
   huruf: z.string().max(8).nullable().optional(),
+  year: z.number().int().min(1).max(9999),
+});
+
+export const LegalRefWriteSchema = z.object({
+  kind: z.enum(["structured","free_text"]),
+  free_text: z.string().max(2000).nullable().optional(),
+  links: z.array(LegalRefLinkWriteSchema),
 });
 
 export const AnswerCriteriaSchema = z.object({
@@ -33,7 +43,7 @@ export const SplitTagSchema = z.enum(["dev","test"]);
 export const CaseWriteSchema = z.object({
   case_code: z.string().min(2).max(64).regex(new RegExp("^[A-Za-z0-9][A-Za-z0-9._-]{1,63}$")),
   identity: CaseIdentitySchema,
-  legal_refs: z.array(LegalRefSchema).min(1),
+  legal_refs: z.array(LegalRefWriteSchema).min(1),
   answer_criteria: AnswerCriteriaSchema.optional(),
   traps: z.array(TrapSchema).optional(),
   split_tag: SplitTagSchema,

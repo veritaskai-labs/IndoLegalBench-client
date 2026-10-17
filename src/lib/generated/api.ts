@@ -673,6 +673,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/regulation-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar jenis peraturan (JDIH BPK) untuk rujukan hukum
+         * @description Return the regulation types ordered by urutan, active ones unless asked otherwise.
+         */
+        get: operations["list_regulation_types_regulation_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -929,7 +949,7 @@ export interface components {
             case_code: string;
             identity: components["schemas"]["CaseIdentity"];
             /** Legal Refs */
-            legal_refs: components["schemas"]["LegalRef"][];
+            legal_refs: components["schemas"]["LegalRefRead"][];
             answer_criteria: components["schemas"]["AnswerCriteria"];
             /** Traps */
             traps: components["schemas"]["Trap"][];
@@ -1024,9 +1044,9 @@ export interface components {
             identity: components["schemas"]["CaseIdentity"];
             /**
              * Legal Refs
-             * @description Minimal satu rujukan, masing-masing sampai level pasal.
+             * @description Minimal satu rujukan. Isi wajib tiap link mengikuti bentuknya (PBI-21).
              */
-            legal_refs: components["schemas"]["LegalRef"][];
+            legal_refs: components["schemas"]["LegalRefWrite"][];
             answer_criteria?: components["schemas"]["AnswerCriteria"];
             /** Traps */
             traps?: components["schemas"]["Trap"][];
@@ -1078,7 +1098,7 @@ export interface components {
             message: string;
             /**
              * Field
-             * @description Lokasi field yang gagal, misalnya legal_refs[0].pasal
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].links[0].pasal
              */
             field?: string | null;
         };
@@ -1107,22 +1127,133 @@ export interface components {
          */
         LastTestStatus: "ok" | "failed";
         /**
-         * LegalRef
-         * @description One citation. regulation_type, regulation_number, and pasal are required.
+         * LegalRefLinkRead
+         * @description One regulation in a citation, as stored.
+         *
+         *     A migrated Sprint 1 citation may have no year and a free-form pasal (AC9).
+         *     The Author fixes both when the case is saved again.
          */
-        LegalRef: {
-            /** Regulation Type */
+        LegalRefLinkRead: {
+            /**
+             * Form
+             * @enum {string}
+             */
+            form: "name_only" | "pasal" | "pasal_angka";
+            /**
+             * Connector
+             * @enum {string}
+             */
+            connector: "none" | "jo" | "jis";
+            /**
+             * Regulation Type
+             * @description Kode dari GET /regulation-types, bukan label
+             */
             regulation_type: string;
-            /** Regulation Number */
-            regulation_number: string;
-            /** Year */
-            year?: number | null;
+            /**
+             * Number
+             * @description Boleh alfanumerik
+             */
+            number: string;
+            /**
+             * About
+             * @description Tentang, opsional
+             */
+            about?: string | null;
             /** Pasal */
-            pasal: string;
+            pasal?: string | null;
+            /** Angka */
+            angka?: string | null;
             /** Ayat */
             ayat?: string | null;
             /** Huruf */
             huruf?: string | null;
+            /** Year */
+            year?: number | null;
+        };
+        /**
+         * LegalRefLinkWrite
+         * @description One regulation in a citation, as the editor sends it.
+         *
+         *     Cross-field rules (which form needs pasal or angka, the jo./jis. chain,
+         *     year not after the current year) live in validation.py.
+         */
+        LegalRefLinkWrite: {
+            /**
+             * Form
+             * @enum {string}
+             */
+            form: "name_only" | "pasal" | "pasal_angka";
+            /**
+             * Connector
+             * @enum {string}
+             */
+            connector: "none" | "jo" | "jis";
+            /**
+             * Regulation Type
+             * @description Kode dari GET /regulation-types, bukan label
+             */
+            regulation_type: string;
+            /**
+             * Number
+             * @description Boleh alfanumerik
+             */
+            number: string;
+            /**
+             * About
+             * @description Tentang, opsional
+             */
+            about?: string | null;
+            /** Pasal */
+            pasal?: string | null;
+            /** Angka */
+            angka?: string | null;
+            /** Ayat */
+            ayat?: string | null;
+            /** Huruf */
+            huruf?: string | null;
+            /** Year */
+            year: number;
+        };
+        /**
+         * LegalRefRead
+         * @description One citation as returned, written in legal style by the server (AC6).
+         */
+        LegalRefRead: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "structured" | "free_text";
+            /**
+             * Free Text
+             * @description Hanya untuk kind free_text, disimpan apa adanya
+             */
+            free_text?: string | null;
+            /** Links */
+            links: components["schemas"]["LegalRefLinkRead"][];
+            /**
+             * Display Text
+             * @description Ditulis server, misalnya "Pasal 156 UU 13/2003 jo. Pasal II Angka 5 UU 6/2023"
+             */
+            display_text: string;
+        };
+        /**
+         * LegalRefWrite
+         * @description One citation as the editor sends it. Links are in chain order.
+         */
+        LegalRefWrite: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "structured" | "free_text";
+            /**
+             * Free Text
+             * @description Hanya untuk kind free_text, disimpan apa adanya
+             */
+            free_text?: string | null;
+            /** Links */
+            links: components["schemas"]["LegalRefLinkWrite"][];
         };
         /** MeResponse */
         MeResponse: {
@@ -1180,6 +1311,20 @@ export interface components {
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
         /**
+         * RegulationTypeRead
+         * @description Satu jenis peraturan untuk dropdown editor (AC2).
+         */
+        RegulationTypeRead: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Singkatan */
+            singkatan: string | null;
+            /** Is Active */
+            is_active: boolean;
+        };
+        /**
          * ReviewCopy
          * @description One version as a reviewer reads it (PBI-6, SCRUM-145).
          *
@@ -1208,9 +1353,7 @@ export interface components {
             split_tag: components["schemas"]["SplitTag"];
             identity: components["schemas"]["CaseIdentity"];
             /** Legal Refs */
-            legal_refs: {
-                [key: string]: unknown;
-            }[];
+            legal_refs: components["schemas"]["LegalRefRead"][];
             /** Answer Criteria */
             answer_criteria: {
                 [key: string]: unknown;
@@ -1584,7 +1727,7 @@ export interface components {
             /** Split Tag */
             split_tag: string;
             /** Legal Refs */
-            legal_refs: unknown[];
+            legal_refs: components["schemas"]["LegalRefRead"][];
             /** Answer Criteria */
             answer_criteria: {
                 [key: string]: unknown;
@@ -3446,6 +3589,56 @@ export interface operations {
             };
             /** @description Catatan tidak ditemukan */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_regulation_types_regulation_types_get: {
+        parameters: {
+            query?: {
+                /** @description Sertakan jenis nonaktif, untuk label rujukan lama yang masih memakainya. */
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegulationTypeRead"][];
+                };
+            };
+            /** @description Belum login. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Peran tidak dikenal. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

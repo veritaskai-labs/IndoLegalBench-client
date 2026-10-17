@@ -6,11 +6,7 @@ import {
   type Control,
   type UseFormRegister,
 } from "react-hook-form";
-import {
-  emptyLegalRef,
-  emptyTrap,
-  type CaseFormValues,
-} from "@/lib/cases/caseFormMapping";
+import { emptyTrap, type CaseFormValues } from "@/lib/cases/caseFormMapping";
 import { CASE_HELP, CASE_PLACEHOLDER } from "@/lib/cases/caseHelpText";
 import type { CaseFieldPath } from "@/lib/cases/saveError";
 import {
@@ -68,47 +64,6 @@ export function IdentitySection({ register, errorFor }: SectionProps) {
         registration={register("identity.question")}
         error={errorFor("identity.question")}
       />
-    </FormSection>
-  );
-}
-
-const LEGAL_REF_FIELDS = [
-  { key: "regulation_type", label: "Jenis peraturan", type: "text", name: "regulationType" },
-  { key: "regulation_number", label: "Nomor", type: "text", name: "regulationNumber" },
-  { key: "year", label: "Tahun", type: "number", name: "year" },
-  { key: "pasal", label: "Pasal", type: "text", name: "pasal" },
-  { key: "ayat", label: "Ayat (opsional)", type: "text", name: "ayat" },
-  { key: "huruf", label: "Huruf (opsional)", type: "text", name: "huruf" },
-] as const;
-
-export function LegalRefsSection({ register, control, errorFor, rowHasError }: ArrayProps) {
-  const { fields, append, remove } = useFieldArray({ control, name: "legal_refs" });
-  return (
-    <FormSection title="Rujukan hukum" help={CASE_HELP.legalRefs} error={errorFor("legal_refs")}>
-      {fields.map((field, index) => (
-        <RowGroup
-          key={field.id}
-          title={`Rujukan ${index + 1}`}
-          removeLabel={`Hapus rujukan ${index + 1}`}
-          onRemove={() => remove(index)}
-          invalid={rowHasError(`legal_refs.${index}`)}
-        >
-          <div className="grid gap-3 sm:grid-cols-3">
-            {LEGAL_REF_FIELDS.map(({ key, label, type, name }) => (
-              <TextField
-                key={key}
-                label={label}
-                hint={CASE_HELP[name]}
-                placeholder={CASE_PLACEHOLDER[name]}
-                type={type}
-                registration={register(`legal_refs.${index}.${key}`)}
-                error={errorFor(`legal_refs.${index}.${key}`)}
-              />
-            ))}
-          </div>
-        </RowGroup>
-      ))}
-      <AddRowButton label="+ Tambah rujukan" onClick={() => append(emptyLegalRef())} />
     </FormSection>
   );
 }

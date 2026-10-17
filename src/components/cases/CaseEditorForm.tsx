@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { get, useForm } from "react-hook-form";
+import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import {
   emptyCaseFormValues,
   toCaseWritePayload,
@@ -12,10 +13,10 @@ import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import type { SplitTag } from "@/types/case";
 import { ErrorSummary } from "./ErrorSummary";
+import { LegalRefsSection } from "./LegalRefsSection";
 import {
   AnswerCriteriaSection,
   IdentitySection,
-  LegalRefsSection,
   SplitTagSection,
   TrapsSection,
   type ErrorLookup,
@@ -101,6 +102,9 @@ export function CaseEditorForm({
     };
   }, [subscribe, trigger]);
 
+  // Satu kali untuk seluruh bagian rujukan, bukan di tiap baris.
+  const regulationTypes = useRegulationTypes();
+
   const { isDirty } = formState;
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -140,7 +144,12 @@ export function CaseEditorForm({
       {/* fieldset disabled menonaktifkan semua kolom dan tombol tambah baris di dalamnya sekaligus. */}
       <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-6 border-0 p-0">
         <IdentitySection {...sectionProps} />
-        <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
+        <LegalRefsSection
+          {...sectionProps}
+          control={control}
+          rowHasError={rowHasError}
+          regulationTypes={regulationTypes}
+        />
         <AnswerCriteriaSection {...sectionProps} />
         <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
         <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />

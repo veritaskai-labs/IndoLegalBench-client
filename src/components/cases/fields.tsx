@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
-const CONTROL_CLASS =
+export const CONTROL_CLASS =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 aria-[invalid=true]:border-red-600";
 
 type FieldProps = {
@@ -15,7 +15,10 @@ type FieldProps = {
   placeholder?: string;
 };
 
-function FieldLabel({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
+export function FieldLabel({
+  htmlFor,
+  children,
+}: Readonly<{ htmlFor: string; children: ReactNode }>) {
   return (
     <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700">
       {children}
@@ -33,12 +36,10 @@ export function ErrorText({ id, message }: { id?: string; message: string }) {
 
 /** Atribut aksesibilitas untuk kontrol yang tidak valid. */
 export function invalidProps(errorId: string, error: string | undefined) {
-  return error === undefined
-    ? {}
-    : { "aria-invalid": true, "aria-describedby": errorId };
+  return error === undefined ? {} : { "aria-invalid": true, "aria-describedby": errorId };
 }
 
-function HintText({ id, text }: { id: string; text: string }) {
+export function HintText({ id, text }: Readonly<{ id: string; text: string }>) {
   return (
     <p id={id} className="mt-0.5 text-xs text-slate-500">
       {text}
@@ -47,7 +48,7 @@ function HintText({ id, text }: { id: string; text: string }) {
 }
 
 /** Saat ada error, pembaca layar cukup membacakan error-nya; bantuan tetap terlihat. */
-function describedBy(id: string, hint: string | undefined, error: string | undefined) {
+export function describedBy(id: string, hint: string | undefined, error: string | undefined) {
   if (error !== undefined) return invalidProps(`${id}-error`, error);
   return hint === undefined ? {} : { "aria-describedby": `${id}-hint` };
 }
@@ -106,6 +107,54 @@ export function TextAreaField({
   );
 }
 
+/**
+ * Pilihan satu nilai dari daftar kecil. Terkendali: nilai dan perubahan dikelola pemanggil.
+ * `onChange` hanya menerima nilai yang ada di `options`, jadi tipenya mengikuti daftar itu.
+ */
+export function SelectField<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+  error,
+  hint,
+  disabled = false,
+}: Readonly<{
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: readonly { value: T; label: string }[];
+  error?: string;
+  hint?: string;
+  disabled?: boolean;
+}>) {
+  const id = useId();
+  return (
+    <div>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      {hint !== undefined && <HintText id={`${id}-hint`} text={hint} />}
+      <select
+        id={id}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => {
+          const chosen = options.find((option) => option.value === event.target.value);
+          if (chosen !== undefined) onChange(chosen.value);
+        }}
+        {...describedBy(id, hint, error)}
+        className={CONTROL_CLASS}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {error !== undefined && <ErrorText id={`${id}-error`} message={error} />}
+    </div>
+  );
+}
+
 /** Kartu satu bagian form. fieldset + legend memberi nama grup untuk pembaca layar. */
 export function FormSection({
   title,
@@ -153,7 +202,9 @@ export function RowGroup({
       <legend className={`px-1 text-sm font-medium ${invalid ? "text-red-700" : "text-slate-700"}`}>
         {title}
       </legend>
-      {invalid && <p className="mb-2 text-xs font-medium text-red-700">Baris ini perlu diperbaiki.</p>}
+      {invalid && (
+        <p className="mb-2 text-xs font-medium text-red-700">Baris ini perlu diperbaiki.</p>
+      )}
       <div className="space-y-3">{children}</div>
       <button
         type="button"
