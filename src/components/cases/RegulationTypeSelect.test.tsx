@@ -323,6 +323,70 @@ describe("RegulationTypeSelect", () => {
     expect(combobox()).toHaveValue("peraturan_lama");
   });
 
+  it("shows the label, not the code, of a saved type that was deactivated", () => {
+    // Arrange
+    const types = [
+      ...TYPES,
+      { ...regulationType("permen_lama", "Peraturan Lama"), is_active: false },
+    ];
+
+    // Act
+    render(<Harness types={types} initial="permen_lama" />);
+
+    // Assert
+    expect(combobox()).toHaveValue("Peraturan Lama");
+  });
+
+  it("does not offer a deactivated type as an option", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const types = [
+      ...TYPES,
+      { ...regulationType("permen_lama", "Peraturan Lama"), is_active: false },
+    ];
+    render(<Harness types={types} />);
+
+    // Act
+    await user.click(combobox());
+
+    // Assert
+    expect(optionNames()).toHaveLength(TYPES.length);
+    expect(optionNames().join(" ")).not.toContain("Peraturan Lama");
+  });
+
+  it("does not find a deactivated type when searching", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const types = [
+      ...TYPES,
+      { ...regulationType("permen_lama", "Peraturan Lama"), is_active: false },
+    ];
+    render(<Harness types={types} />);
+
+    // Act
+    await user.type(combobox(), "Peraturan Lama");
+
+    // Assert
+    expect(options()).toHaveLength(0);
+    expect(screen.getByRole("status")).toHaveTextContent("Jenis peraturan tidak ditemukan.");
+  });
+
+  it("says no type is available when every type is deactivated", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const types = TYPES.map((type) => ({ ...type, is_active: false }));
+    render(<Harness types={types} />);
+
+    // Act
+    await user.click(combobox());
+
+    // Assert
+    expect(options()).toHaveLength(0);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Belum ada jenis peraturan yang tersedia.",
+    );
+  });
+
   it("puts the chosen label back when the user leaves without choosing", async () => {
     // Arrange
     const user = userEvent.setup();

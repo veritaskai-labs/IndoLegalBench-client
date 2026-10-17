@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe("listRegulationTypes", () => {
   // Positive
-  it("asks the server for the active types only, with the session cookie", async () => {
+  it("asks the server for the inactive types too, with the session cookie", async () => {
     // Arrange
     fetchMock.mockResolvedValue(jsonResponse(200, TYPES));
 
@@ -45,7 +45,7 @@ describe("listRegulationTypes", () => {
 
     // Assert
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe(`${BASE_URL}/regulation-types?include_inactive=false`);
+    expect(url).toBe(`${BASE_URL}/regulation-types?include_inactive=true`);
     expect(init?.method ?? "GET").toBe("GET");
     expect(init?.credentials).toBe("include");
   });
