@@ -1665,7 +1665,7 @@ export interface components {
             /** Split Tag */
             split_tag: string;
             /** Legal Refs */
-            legal_refs: unknown[];
+            legal_refs: components["schemas"]["LegalRefRead"][];
             /** Answer Criteria */
             answer_criteria: {
                 [key: string]: unknown;
