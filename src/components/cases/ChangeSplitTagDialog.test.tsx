@@ -128,3 +128,21 @@ describe("ChangeSplitTagDialog", () => {
     expect(screen.getByRole("button", { name: "Simpan tag" })).toBeDisabled();
   });
 });
+
+describe("ChangeSplitTagDialog QA (SCRUM-166)", () => {
+  // Edge: the admin reads the warning, even ticks it, and still cancels.
+  it("sends nothing when the admin cancels after the dev to test warning", async () => {
+    // Arrange
+    const { user, onClose, onDone } = renderDialog("dev");
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
+    await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+
+    // Assert
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+});
