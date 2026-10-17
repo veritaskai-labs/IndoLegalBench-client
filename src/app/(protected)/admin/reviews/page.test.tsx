@@ -8,6 +8,7 @@ vi.mock("@/lib/reviews/reviewApi", async (importOriginal) => {
   return { ...actual, listNeedsReassignment: vi.fn(), replaceReviewer: vi.fn() };
 });
 vi.mock("@/lib/userApi", () => ({ listActiveUsers: vi.fn() }));
+vi.mock("@/lib/reviews/inReviewApi", () => ({ listInReviewCases: vi.fn() }));
 
 import { ApiError } from "@/lib/apiClient";
 import {
@@ -22,6 +23,43 @@ import type {
   ReplacedAssignment,
 } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
+import { listInReviewCases } from "@/lib/reviews/inReviewApi";
+import type { InReviewRow } from "@/lib/reviews/inReviewApi";
+
+const inReviewMock = vi.mocked(listInReviewCases);
+
+const IN_REVIEW: InReviewRow = {
+  case: {
+    id: "c1",
+    case_code: "ILB-PT-0142",
+    title: "Sengketa tanah warisan",
+    split_tag: "dev",
+    status: "in_review",
+    completeness_pct: 100,
+    updated_at: "2026-10-16T03:00:00Z",
+  },
+  review: {
+    case_id: "c1",
+    case_version_id: "v1",
+    round_no: 1,
+    status: "open",
+    decision: null,
+    opened_at: "2026-10-16T03:00:00Z",
+    decided_at: null,
+    reviewers: [
+      {
+        assignment_id: "a1",
+        reviewer: { id: "u1", name: "Roben" },
+        status: "active",
+        verdict: {
+          decision: "approve",
+          comment: "Sudah lengkap.",
+          submitted_at: "2026-10-16T04:00:00Z",
+        },
+      },
+    ],
+  },
+};
 
 const queueMock = vi.mocked(listNeedsReassignment);
 const replaceMock = vi.mocked(replaceReviewer);
@@ -82,10 +120,14 @@ const REPLACED: ReplacedAssignment = {
 };
 
 beforeEach(() => {
+    
   queueMock.mockReset();
   replaceMock.mockReset();
   usersMock.mockReset();
   usersMock.mockResolvedValue([ROBEN, AILEEN]);
+  inReviewMock.mockReset();
+  inReviewMock.mockResolvedValue([]);
+
 });
 
 describe("AdminReviewsPage (SCRUM-150)", () => {
@@ -164,16 +206,50 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  // Sudut
-  it("explains why the verdict list is not there yet", async () => {
+// Positif
+  it("lists the cases in review on the second tab", async () => {
     const user = userEvent.setup();
     queueMock.mockResolvedValue([]);
+    inReviewMock.mockResolvedValue([IN_REVIEW]);
+
+    render(<AdminReviewsPage />);
+    await user.click(screen.getByRole("tab", { name: "Dalam review" }));
+
+    expect(await screen.findByText("ILB-PT-0142")).toBeInTheDocument();
+    expect(screen.getByText("Roben")).toBeInTheDocument();
+    expect(screen.getByText("Setuju")).toBeInTheDocument();
+    expect(screen.getByText("Sudah lengkap.")).toBeInTheDocument();
+  });
+
+  // corner
+  it("says so when nothing is in review", async () => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValue([]);
+    inReviewMock.mockResolvedValue([]);
 
     render(<AdminReviewsPage />);
     await user.click(screen.getByRole("tab", { name: "Dalam review" }));
 
     expect(
-      screen.getByText("Keputusan reviewer belum bisa ditampilkan"),
+      await screen.findByText("Tidak ada kasus yang sedang direview"),
+    ).toBeInTheDocument();
+  });
+
+  // Negatif
+  it("shows the message when the review list fails", async () => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValue([]);
+    const failure = Promise.reject(new Error("offline"));
+    failure.catch(() => undefined);
+    inReviewMock.mockReturnValue(failure);
+
+    render(<AdminReviewsPage />);
+    await user.click(screen.getByRole("tab", { name: "Dalam review" }));
+
+    expect(
+      await screen.findByText(
+        "Gagal memuat kasus yang sedang direview. Coba lagi.",
+      ),
     ).toBeInTheDocument();
   });
 });
