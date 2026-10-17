@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "@/lib/apiClient";
 import { listNeedsReassignment, replaceReviewer, getCaseReview } from "./reviewApi";
-
+import type {CaseReview} from "@/types/reviewAdmin";
 vi.mock("@/lib/apiClient", () => ({ apiFetch: vi.fn() }));
 const fetchMock = vi.mocked(apiFetch);
 

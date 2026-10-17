@@ -1,10 +1,4 @@
 import { apiFetch } from "@/lib/apiClient";
-import {
-  getCaseReview,
-  listNeedsReassignment,
-  replaceReviewer,
-} from "./reviewApi";
-
 import type {
   CaseReview,
   ReassignmentRow,
@@ -28,25 +22,7 @@ export function replaceReviewer(
   );
 }
 
-const REVIEW: CaseReview = {
-  case_id: "c1",
-  case_version_id: "v1",
-  round_no: 1,
-  status: "open",
-  decision: null,
-  opened_at: "2026-10-16T03:00:00Z",
-  decided_at: null,
-  reviewers: [
-    {
-      assignment_id: "a1",
-      reviewer: { id: "u1", name: "Roben" },
-      status: "active",
-      verdict: null,
-    },
-  ],
-};
-
-
+/** GET /cases/{case_id}/review. Admin melihat semua verdict kapan pun (keputusan klien SCRUM-145). */
 export function getCaseReview(caseId: string): Promise<CaseReview> {
   return apiFetch<CaseReview>(`/cases/${encodeURIComponent(caseId)}/review`);
 }
