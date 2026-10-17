@@ -1085,10 +1085,10 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
   it("keeps the button disabled while the case is not ready", async () => {
     completenessMock.mockResolvedValue(completeness());
     renderPage();
-
+    
     expect(
       await screen.findByRole("button", { name: "Ajukan review" }),
-    ).toBeDisabled();
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   // Negative: the server only accepts the submission from the author who wrote the case,
@@ -1128,8 +1128,8 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     await screen.findByRole("button", { name: "Ajukan review" });
 
     await user.type(await screen.findByLabelText("Judul"), "!");
-
-    expect(submitButton()).toBeDisabled();
+    
+    expect(submitButton()).toHaveAttribute("aria-disabled", "true");
     expect(
       screen.getByText("Simpan perubahan dulu sebelum mengajukan."),
     ).toBeInTheDocument();

@@ -65,4 +65,8 @@ describe("submitBlockers", () => {
       "Gagal mengajukan kasus. Coba lagi.",
     );
   });
+  // Negative: koneksi putus memberi TypeError, bukan ApiError, jadi tidak ada bagian yang bisa didaftar.
+  it("hands back nothing when the failure is not an ApiError", () => {
+    expect(submitBlockers(new TypeError("Failed to fetch"))).toEqual([]);
+  });
 });

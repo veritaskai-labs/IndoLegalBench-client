@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { MissingSection } from "@/lib/apiClient";
 import { submitForReview, type ReviewSubmission } from "@/lib/cases/submitApi";
@@ -13,8 +13,14 @@ type Props = {
   onSubmitted: (result: ReviewSubmission) => void;
 };
 
-export function SubmitReviewButton({ caseId, ready, dirty = false, onSubmitted }: Readonly<Props>) {
+export function SubmitReviewButton({
+  caseId,
+  ready,
+  dirty = false,
+  onSubmitted,
+}: Readonly<Props>) {
   const [blockers, setBlockers] = useState<MissingSection[]>([]);
+  const hintId = useId();
 
   const action = useCallback(() => submitForReview(caseId), [caseId]);
 
@@ -23,25 +29,31 @@ export function SubmitReviewButton({ caseId, ready, dirty = false, onSubmitted }
     return mapSubmitError(failure);
   }, []);
 
-  const { run, pending, error } = useAsyncAction(
-    action,
-    onSubmitted,
-    toMessage,
-  );
+  const { run, pending, error } = useAsyncAction(action, onSubmitted, toMessage);
+
+  // Tombolnya tetap bisa difokus meski terhalang, supaya pengguna papan tunjuk
+  // dan pembaca layar ikut mendengar alasannya; yang diabaikan kliknya, bukan fokusnya.
+  const blocked = !ready || dirty || pending;
+
+  const handleClick = useCallback(() => {
+    if (blocked) return;
+    run();
+  }, [blocked, run]);
 
   return (
     <div>
       <button
         type="button"
-        onClick={run}
-        disabled={!ready || dirty || pending}
-        className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        onClick={handleClick}
+        aria-disabled={blocked}
+        aria-describedby={dirty ? hintId : undefined}
+        className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-indigo-600"
       >
         {pending ? "Mengajukan…" : "Ajukan review"}
       </button>
 
       {dirty && (
-        <p className="mt-2 text-xs text-amber-700">
+        <p id={hintId} className="mt-2 text-xs text-amber-700">
           Simpan perubahan dulu sebelum mengajukan.
         </p>
       )}
