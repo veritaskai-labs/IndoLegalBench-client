@@ -4,12 +4,17 @@ import { useCallback, useId, useState } from "react";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { MissingSection } from "@/lib/apiClient";
 import { submitForReview, type ReviewSubmission } from "@/lib/cases/submitApi";
-import { mapSubmitError, submitBlockers } from "@/lib/cases/submitErrors";
+import {
+  isStaleSubmit,
+  mapSubmitError,
+  submitBlockers,
+} from "@/lib/cases/submitErrors";
 
 type Props = {
   caseId: string;
   ready: boolean;
   dirty?: boolean;
+  onStale?: () => void;
   onSubmitted: (result: ReviewSubmission) => void;
 };
 
@@ -17,6 +22,7 @@ export function SubmitReviewButton({
   caseId,
   ready,
   dirty = false,
+  onStale,
   onSubmitted,
 }: Readonly<Props>) {
   const [blockers, setBlockers] = useState<MissingSection[]>([]);
@@ -24,10 +30,14 @@ export function SubmitReviewButton({
 
   const action = useCallback(() => submitForReview(caseId), [caseId]);
 
-  const toMessage = useCallback((failure: unknown) => {
-    setBlockers(submitBlockers(failure));
-    return mapSubmitError(failure);
-  }, []);
+  const toMessage = useCallback(
+    (failure: unknown) => {
+      setBlockers(submitBlockers(failure));
+      if (isStaleSubmit(failure)) onStale?.();
+      return mapSubmitError(failure);
+    },
+    [onStale],
+  );
 
   const { run, pending, error } = useAsyncAction(action, onSubmitted, toMessage);
 
