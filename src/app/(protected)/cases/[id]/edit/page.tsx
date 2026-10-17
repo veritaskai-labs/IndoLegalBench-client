@@ -19,6 +19,7 @@ import {
 import { LockedVersionNotice } from "@/components/cases/LockedVersionNotice";
 import { SubmitReviewButton } from "@/components/cases/SubmitReviewButton";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
+import { ReviewerFeedbackGate } from "@/components/reviews/ReviewerFeedbackGate";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
@@ -210,6 +211,8 @@ export default function EditCasePage() {
         hidden={tab !== "editor"}
         className="space-y-6"
       >
+        <ReviewerFeedbackGate caseId={caseId} user={user} status={saved.status} />
+
         <CompletenessIndicator
           {...completeness}
           submittable={editable}

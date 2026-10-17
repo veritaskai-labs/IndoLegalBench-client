@@ -2785,7 +2785,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Versi sedang ditinjau atau sudah disetujui (`VERSION_NOT_SUBMITTABLE`). */
+            /** @description Versi sedang ditinjau atau sudah disetujui (`VERSION_NOT_SUBMITTABLE`), atau pengajuan ulang tanpa putusan revisi pada round terakhir (`ROUND_NOT_REVISED`). */
             409: {
                 headers: {
                     [name: string]: unknown;
