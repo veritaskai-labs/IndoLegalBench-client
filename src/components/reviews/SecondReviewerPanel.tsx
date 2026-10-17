@@ -8,7 +8,7 @@ type Props = {
   myAssignmentId: string;
 };
 
-function SecondReviewerBody({ slot, review }: { slot: ReviewerSlot; review: CaseReview }) {
+function SecondReviewerBody({ slot, review }: Readonly<{ slot: ReviewerSlot; review: CaseReview }>) {
   const name = slot.reviewer.name;
 
   if (otherReviewerIsBlind(slot, review.status)) {
@@ -44,7 +44,7 @@ function SecondReviewerBody({ slot, review }: { slot: ReviewerSlot; review: Case
  * ditampilkan sebagai buta, dan penilaian yang dikirim server (setelah round selesai, atau untuk admin)
  * ditampilkan apa adanya. Aturan butanya sendiri tetap milik server.
  */
-export function SecondReviewerPanel({ review, myAssignmentId }: Props) {
+export function SecondReviewerPanel({ review, myAssignmentId }: Readonly<Props>) {
   const other = review.reviewers.find((slot) => slot.assignment_id !== myAssignmentId) ?? null;
   const blind = other !== null && otherReviewerIsBlind(other, review.status);
 

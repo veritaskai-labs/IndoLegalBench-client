@@ -18,7 +18,7 @@ type Props = {
  * Form penilaian reviewer: satu keputusan, satu komentar, satu tombol kirim. Aturan kapan tombol aktif
  * dan bentuk body ada di verdictRules, pengiriman ada di useSubmitVerdict; komponen ini hanya merangkai.
  */
-export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Props) {
+export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<Props>) {
   const [decision, setDecision] = useState<VerdictDecision | null>(null);
   const [comment, setComment] = useState("");
 
@@ -42,11 +42,13 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Props) {
         {VERDICT_ORDER.map((option) => (
           <label
             key={option}
+            htmlFor={`verdict-${option}`}
             className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
               decision === option ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-white"
             }`}
           >
             <input
+              id={`verdict-${option}`}
               type="radio"
               name="decision"
               value={option}

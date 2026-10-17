@@ -6,7 +6,7 @@ import { VerdictSummary } from "./VerdictSummary";
  * Catatan peninjau untuk Author pada kasus yang perlu revisi. Hanya baca: kasusnya diubah di form.
  * Penilaian yang dikirim server ditampilkan apa adanya; yang null ditulis belum tersedia, bukan dikarang.
  */
-export function ReviewerFeedback({ review }: { review: CaseReview }) {
+export function ReviewerFeedback({ review }: Readonly<{ review: CaseReview }>) {
   const reviewers = revisionRequestsFirst(review.reviewers);
 
   return (

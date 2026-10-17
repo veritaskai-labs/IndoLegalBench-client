@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeReviewCopy, structuredRef } from "@/test/reviewFixtures";
 import { ReviewCaseContent } from "./ReviewCaseContent";
 
@@ -86,6 +86,23 @@ describe("ReviewCaseContent", () => {
     const refs = section("Rujukan hukum");
     expect(within(refs).getByText("UU No. 13 Tahun 2003, Pasal 151 ayat (3)")).toBeInTheDocument();
     expect(within(refs).getByText("UU No. 6 Tahun 2023, Pasal 81")).toBeInTheDocument();
+  });
+
+  // Edge: two references can read the same, and both stay on the page without a duplicate key warning.
+  it("shows two identical legal reference lines once each without a key warning", () => {
+    // Arrange
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const copy = makeReviewCopy({
+      legal_refs: [structuredRef("UU No. 13 Tahun 2003, Pasal 151"), structuredRef("UU No. 13 Tahun 2003, Pasal 151")],
+    });
+
+    // Act
+    render(<ReviewCaseContent copy={copy} />);
+
+    // Assert
+    expect(within(section("Rujukan hukum")).getAllByText("UU No. 13 Tahun 2003, Pasal 151")).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
   });
 
   // Positive

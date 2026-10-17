@@ -10,7 +10,7 @@ function standing(review: AssignedReview): { label: string; className: string } 
 }
 
 /** Antrean tinjauan reviewer. Urutan dari server dipertahankan: round terlama lebih dulu. */
-export function ReviewQueueList({ reviews }: { reviews: AssignedReview[] }) {
+export function ReviewQueueList({ reviews }: Readonly<{ reviews: AssignedReview[] }>) {
   return (
     <ul aria-label="Antrean tinjauan" className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
       {reviews.map((review) => {

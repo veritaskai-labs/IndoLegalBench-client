@@ -24,7 +24,7 @@ const BACK_LINK = (
 );
 
 /** Satu penugasan yang sudah dimuat: isi kasus, form atau penilaian terkirim, dan peninjau kedua. */
-function AssignmentReview({ assignment }: { assignment: AssignedReview }) {
+function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview }>) {
   const [result, setResult] = useState<VerdictResult | null>(null);
   const copy = assignment.case;
   const verdict = submittedVerdict(result, assignment.my_verdict);

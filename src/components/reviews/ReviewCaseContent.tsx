@@ -7,11 +7,21 @@ import type { ReviewCopy } from "@/types/review";
 const HEADER_SECTIONS: readonly string[] = ["case_code", "identity.question", "split_tag"];
 const BODY_SECTIONS = SECTION_KEYS.filter((key) => !HEADER_SECTIONS.includes(key));
 
+/** Dua baris bisa sama persis (mis. dua jebakan sama), jadi kuncinya teks ditambah urutan kemunculan teks itu. */
+function keyedLines(lines: string[]): { id: string; line: string }[] {
+  const seen = new Map<string, number>();
+  return lines.map((line) => {
+    const count = (seen.get(line) ?? 0) + 1;
+    seen.set(line, count);
+    return { id: `${line}#${count}`, line };
+  });
+}
+
 /**
  * Isi kasus yang ditinjau, hanya baca. Tag dev/test tampil sebagai informasi. Tidak ada kolom isian
  * atau tombol di sini: form penilaian ada di komponen lain.
  */
-export function ReviewCaseContent({ copy }: { copy: ReviewCopy }) {
+export function ReviewCaseContent({ copy }: Readonly<{ copy: ReviewCopy }>) {
   const sections = reviewCopyToSections(copy);
 
   return (
@@ -37,8 +47,8 @@ export function ReviewCaseContent({ copy }: { copy: ReviewCopy }) {
                 {lines.length === 0 ? (
                   <span className="text-slate-400">—</span>
                 ) : (
-                  lines.map((line, index) => (
-                    <p key={index} className="whitespace-pre-wrap">
+                  keyedLines(lines).map(({ id, line }) => (
+                    <p key={id} className="whitespace-pre-wrap">
                       {line}
                     </p>
                   ))

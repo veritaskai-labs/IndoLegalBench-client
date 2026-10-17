@@ -3,7 +3,7 @@ import { VERDICT_LABEL } from "@/lib/reviews/reviewLabels";
 import type { VerdictView } from "@/types/review";
 
 /** Satu penilaian yang sudah dikirim: keputusan, waktu (WIB), dan komentar. Dipakai untuk penilaian sendiri dan peninjau lain. */
-export function VerdictSummary({ verdict }: { verdict: VerdictView }) {
+export function VerdictSummary({ verdict }: Readonly<{ verdict: VerdictView }>) {
   return (
     <div className="space-y-2">
       <div className="space-y-1">

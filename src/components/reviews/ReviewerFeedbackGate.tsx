@@ -17,7 +17,7 @@ type Props = {
  * tidak berhak dan setiap 403 memindahkan pengguna ke /forbidden, jadi bagian ini tidak dipasang dan
  * tidak meminta apa pun kecuali untuk admin atau pembuat kasus yang kasusnya perlu revisi.
  */
-export function ReviewerFeedbackGate({ caseId, user, status }: Props) {
+export function ReviewerFeedbackGate({ caseId, user, status }: Readonly<Props>) {
   const canRead = useCanReadReviewFeedback(caseId, user, status);
   return canRead ? <ReviewerFeedbackSection caseId={caseId} /> : null;
 }
