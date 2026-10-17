@@ -32,6 +32,11 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   /** Versi terkunci: semua kolom dinonaktifkan dan tombol simpan disembunyikan. */
   readOnly?: boolean;
+  /**
+   * Kasus sudah pernah disetujui: tag hanya diubah Admin lewat dialog "Ubah tag" (PBI-9 AC3).
+   * Pilihan tag diganti badge; nilainya tetap ikut terkirim dari defaultValues.
+   */
+  tagLocked?: boolean;
 };
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
@@ -41,7 +46,13 @@ function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
-export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnly = false }: Props) {
+export function CaseEditorForm({
+  defaultValues,
+  onSubmit,
+  onDirtyChange,
+  readOnly = false,
+  tagLocked = false,
+}: Props) {
   const {
     register,
     control,
@@ -125,7 +136,7 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnl
         <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
         <AnswerCriteriaSection {...sectionProps} />
         <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
-        <SplitTagSection {...sectionProps} />
+        <SplitTagSection {...sectionProps} lockedTag={tagLocked ? defaultValues?.split_tag || null : null} />
       </fieldset>
 
       {!readOnly && (

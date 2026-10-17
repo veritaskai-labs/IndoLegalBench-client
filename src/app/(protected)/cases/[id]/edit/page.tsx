@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { CaseEditorForm } from "@/components/cases/CaseEditorForm";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
+import { ChangeSplitTagDialog } from "@/components/cases/ChangeSplitTagDialog";
+import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import { CompletenessIndicator } from "@/components/cases/CompletenessIndicator";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -22,6 +24,7 @@ import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { updateCase } from "@/lib/cases/caseApi";
 import { fromCaseRead, type CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import { isCaseEditable } from "@/lib/cases/permissions";
+import { canChangeTagAsAdmin, isTagLockedInEditor } from "@/lib/cases/splitTag";
 import type { CaseRead } from "@/types/case";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
@@ -36,6 +39,7 @@ export default function EditCasePage() {
   const saveError = useSaveErrorBanner();
   const [dirty, setDirty] = useState(false);
   const [tab, setTab] = useState<CaseTab>("editor");
+  const [changingTag, setChangingTag] = useState(false);
   // Kunci baru me-remount form dengan data tersimpan, jadi status dirty ikut bersih.
   const [formKey, setFormKey] = useState(0);
   // formKey naik tiap simpan berhasil, jadi kelengkapan ikut dihitung ulang server.
@@ -78,6 +82,7 @@ export default function EditCasePage() {
   }
   const { saved } = detail;
   const editable = isCaseEditable(saved.status);
+  const canChangeTag = canChangeTagAsAdmin(user?.role ?? null, saved);
   
   const suitePath = `/suites/${encodeURIComponent(saved.suite_id)}`;
 
@@ -86,6 +91,15 @@ export default function EditCasePage() {
       return;
     }
     router.push(path);
+  }
+
+  function handleTagChanged(result: CaseRead) {
+    setChangingTag(false);
+    // PATCH mengembalikan versi yang berlaku. Kalau yang terbuka draf berikutnya, draf itu tetap
+    // ditampilkan dan hanya tagnya yang diganti, karena server mengubah tag keduanya.
+    detail.replace({ ...saved, split_tag: result.split_tag, was_dev: result.was_dev });
+    setFormKey((key) => key + 1);
+    showToast("Tag kasus diubah");
   }
 
   async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
@@ -113,6 +127,19 @@ export default function EditCasePage() {
       <header className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold text-slate-900">{saved.case_code}</h1>
         <CaseStatusBadge status={saved.status} />
+        <SplitTagBadge tag={saved.split_tag} wasDev={saved.was_dev} />
+        {canChangeTag && (
+          <button
+            type="button"
+            onClick={() => setChangingTag(true)}
+            // Form dimuat ulang setelah tag berubah, jadi perubahan yang belum disimpan akan hilang.
+            disabled={dirty}
+            title={dirty ? "Simpan perubahan dulu sebelum mengubah tag" : undefined}
+            className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Ubah tag
+          </button>
+        )}
         {dirty && (
           <p className="text-xs font-medium text-amber-700">Ada perubahan yang belum disimpan</p>
         )}
@@ -160,8 +187,19 @@ export default function EditCasePage() {
           onSubmit={handleSubmit}
           onDirtyChange={setDirty}
           readOnly={!editable}
+          tagLocked={isTagLockedInEditor(saved)}
         />
       </div>
+
+      {changingTag && (
+        <ChangeSplitTagDialog
+          caseId={caseId}
+          caseCode={saved.case_code}
+          current={saved.split_tag}
+          onClose={() => setChangingTag(false)}
+          onDone={handleTagChanged}
+        />
+      )}
 
       {tab === "history" && (
         <div role="tabpanel" id={panelId("history")} aria-labelledby={tabId("history")}>

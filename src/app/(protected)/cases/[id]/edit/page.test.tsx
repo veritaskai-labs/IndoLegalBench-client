@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
+import { changeSplitTag } from "@/lib/cases/splitTagApi";
 import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
 import { session } from "@/test/authMock";
 import { makeSummary } from "@/test/versionFixtures";
@@ -45,6 +46,10 @@ vi.mock("@/lib/cases/versionApi", () => ({
   getOpenCaseVersion: vi.fn(),
 }));
 
+// The PATCH itself is tested in splitTagApi.test.ts; here only the page's reaction matters.
+vi.mock("@/lib/cases/splitTagApi", () => ({ changeSplitTag: vi.fn() }));
+
+const changeTagMock = vi.mocked(changeSplitTag);
 const getCaseMock = vi.mocked(getCase);
 const startVersionMock = vi.mocked(startCaseVersion);
 const listVersionsMock = vi.mocked(listCaseVersions);
@@ -73,6 +78,7 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
     split_tag: "dev",
     status: "draft",
     completeness_pct: 83,
+    was_dev: false,
     version: 1,
     created_at: "2026-09-29T00:00:00Z",
     updated_at: "2026-09-29T00:00:00Z",
@@ -873,5 +879,114 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
 
     // Assert
     expect(await screen.findByText("Belum ada riwayat versi")).toBeInTheDocument();
+  });
+});
+
+describe("EditCasePage dev/test tag (PBI-9, SCRUM-165)", () => {
+  const changeButton = () => screen.queryByRole("button", { name: "Ubah tag" });
+
+  beforeEach(() => {
+    changeTagMock.mockReset();
+  });
+
+  // Positive
+  it("shows the tag next to the status", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ split_tag: "test", was_dev: true, status: "approved" }));
+
+    // Act
+    renderPage();
+
+    // Assert
+    const header = await screen.findByRole("banner");
+    expect(within(header).getByText("Test")).toBeInTheDocument();
+    expect(within(header).getByText("pernah dev")).toBeInTheDocument();
+  });
+
+  it("lets an admin change the tag of an approved case and shows the new tag", async () => {
+    // Arrange
+    session.role = "admin";
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    changeTagMock.mockResolvedValue(savedCase({ status: "approved", split_tag: "test", was_dev: true }));
+    const user = userEvent.setup();
+    renderPage();
+
+    // Act
+    await user.click(await screen.findByRole("button", { name: "Ubah tag" }));
+    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
+    await user.click(screen.getByRole("button", { name: "Simpan tag" }));
+
+    // Assert
+    expect(changeTagMock).toHaveBeenCalledWith(CASE_ID, "test", true);
+    const header = screen.getByRole("banner");
+    expect(await within(header).findByText("pernah dev")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(toast()).toHaveTextContent("Tag kasus diubah");
+  });
+
+  it("keeps the open draft on screen after an admin changes the tag", async () => {
+    // Arrange: the server answers with the approved version, the page shows draft v2
+    session.role = "admin";
+    listVersionsMock.mockResolvedValue([makeSummary(1), makeSummary(2)]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(savedCase({ status: "draft", version: 2 }));
+    changeTagMock.mockResolvedValue(savedCase({ status: "approved", split_tag: "test", was_dev: true }));
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Simpan draf" });
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Ubah tag" }));
+    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
+    await user.click(screen.getByRole("button", { name: "Simpan tag" }));
+
+    // Assert
+    const header = screen.getByRole("banner");
+    expect(await within(header).findByText("Test")).toBeInTheDocument();
+    expect(within(header).getByText("Draft")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Simpan draf" })).toBeInTheDocument();
+  });
+
+  it("locks the tag in the editor of a later draft", async () => {
+    // Arrange
+    listVersionsMock.mockResolvedValue([makeSummary(1), makeSummary(2)]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(savedCase({ status: "draft", version: 2 }));
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(await screen.findByText(/Tag dikunci setelah kasus disetujui/)).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  // Negative
+  it("does not offer the change to an author", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+
+    // Assert
+    await screen.findByRole("banner");
+    expect(changeButton()).not.toBeInTheDocument();
+  });
+
+  it("does not offer the change before approval, when the author picks the tag in the form", async () => {
+    // Arrange
+    session.role = "admin";
+    getCaseMock.mockResolvedValue(savedCase({ status: "draft", version: 1 }));
+
+    // Act
+    renderPage();
+
+    // Assert
+    await screen.findByRole("button", { name: "Simpan draf" });
+    expect(changeButton()).not.toBeInTheDocument();
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
   });
 });

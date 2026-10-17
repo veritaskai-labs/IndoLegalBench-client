@@ -1,4 +1,6 @@
 import { useId } from "react";
+import type { SplitTag } from "@/types/case";
+import { SplitTagBadge } from "./SplitTagBadge";
 import {
   useFieldArray,
   type Control,
@@ -183,10 +185,30 @@ const SPLIT_TAGS = [
   },
 ] as const;
 
-export function SplitTagSection({ register, errorFor }: SectionProps) {
+type SplitTagSectionProps = SectionProps & {
+  /** Tag kasus yang sudah disetujui. Ditampilkan sebagai badge, tidak bisa dipilih (PBI-9 AC3). */
+  lockedTag?: SplitTag | null;
+};
+
+export function SplitTagSection({ register, errorFor, lockedTag = null }: SplitTagSectionProps) {
   const baseId = useId();
   const errorId = `${baseId}-error`;
   const error = errorFor("split_tag");
+  if (lockedTag !== null) {
+    // Radio sengaja tidak dirender: input yang dinonaktifkan tidak ikut dikirim react-hook-form,
+    // sedangkan nilai dari defaultValues tetap terkirim dan server menolak perubahan tag di PUT.
+    return (
+      <FormSection title="Tag dev/test" help={CASE_HELP.splitTag}>
+        <div className="space-y-2">
+          <SplitTagBadge tag={lockedTag} />
+          <p className="text-xs text-slate-500">
+            Tag dikunci setelah kasus disetujui. Hanya Admin yang bisa mengubahnya lewat tombol
+            &quot;Ubah tag&quot;.
+          </p>
+        </div>
+      </FormSection>
+    );
+  }
   return (
     <FormSection title="Tag dev/test" help={CASE_HELP.splitTag}>
       {/* aria-invalid berlaku untuk grup radio, bukan tiap radio (ARIA). */}

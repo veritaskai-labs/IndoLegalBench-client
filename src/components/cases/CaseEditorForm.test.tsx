@@ -837,3 +837,38 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
     expect(screen.getByRole("button", { name: "Simpan draf" })).toBeEnabled();
   });
 });
+
+describe("CaseEditorForm locked tag (PBI-9 AC3, SCRUM-165)", () => {
+  // Positive
+  it("shows the tag as a badge instead of choices once the case has been approved", () => {
+    // Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} tagLocked />);
+
+    // Assert
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByText(/Tag dikunci setelah kasus disetujui/)).toBeInTheDocument();
+  });
+
+  it("still sends the saved tag when a later draft is saved", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<CaseEditorForm defaultValues={filled} onSubmit={onSubmit} tagLocked />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Simpan draf" }));
+
+    // Assert
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ split_tag: filled.split_tag }));
+  });
+
+  // Negative
+  it("keeps the choices for the author before approval", () => {
+    // Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    // Assert
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    expect(screen.queryByText(/Tag dikunci/)).not.toBeInTheDocument();
+  });
+});
