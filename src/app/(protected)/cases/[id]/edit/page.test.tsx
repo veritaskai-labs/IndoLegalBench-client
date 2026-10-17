@@ -369,7 +369,12 @@ describe("EditCasePage saving", () => {
     const user = userEvent.setup();
     getCaseMock.mockResolvedValue(savedCase());
     updateCaseMock.mockRejectedValue(
-      new ApiError(422, "FIELD_REQUIRED", "Field legal_refs[0].pasal wajib diisi", "legal_refs[0].pasal"),
+      new ApiError(
+        422,
+        "FIELD_REQUIRED",
+        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "legal_refs[0].links[0].pasal",
+      ),
     );
     renderPage();
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
