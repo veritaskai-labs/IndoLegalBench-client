@@ -5,6 +5,8 @@ const CODE_MESSAGE: Record<string, string> = {
   VERSION_NOT_SUBMITTABLE: "Versi ini sedang ditinjau atau sudah disetujui.",
   SUITE_NOT_ACTIVE: "Suite ini tidak aktif, jadi kasusnya belum bisa diajukan.",
   CASE_NOT_READY: "Kasus belum lengkap. Lengkapi bagian berikut dulu.",
+  ROUND_NOT_REVISED:
+    "Kasus ini belum bisa diajukan ulang karena belum ada putusan revisi. Hubungi Admin.",
 };
 
 const DEFAULT_MESSAGE = "Gagal mengajukan kasus. Coba lagi.";
