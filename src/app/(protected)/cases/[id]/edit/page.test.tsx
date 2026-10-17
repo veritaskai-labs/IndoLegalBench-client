@@ -1101,6 +1101,7 @@ describe("EditCasePage dev/test tag QA (SCRUM-166)", () => {
     await user.click(await screen.findByRole("button", { name: "Ubah tag" }));
     await user.click(screen.getByRole("radio", { name: "Test set" }));
     expect(screen.getByRole("alert")).toHaveTextContent("sudah pernah dipakai sebagai dev set");
+    await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
 
     // Act
     await user.click(screen.getByRole("button", { name: "Batal" }));
