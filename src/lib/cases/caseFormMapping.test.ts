@@ -288,6 +288,7 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
     split_tag: "test",
     status: "draft",
     completeness_pct: 86,
+    was_dev: false,
     version: 3,
     created_at: "2026-09-29T00:00:00Z",
     updated_at: "2026-09-29T00:00:00Z",
