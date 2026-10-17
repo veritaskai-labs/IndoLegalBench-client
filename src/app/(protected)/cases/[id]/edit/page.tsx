@@ -10,19 +10,29 @@ import { CompletenessIndicator } from "@/components/cases/CompletenessIndicator"
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useToast } from "@/components/ui/Toast";
-import { CaseTabs, panelId, tabId, type CaseTab } from "@/components/cases/CaseTabs";
+import {
+  CaseTabs,
+  panelId,
+  tabId,
+  type CaseTab,
+} from "@/components/cases/CaseTabs";
 import { LockedVersionNotice } from "@/components/cases/LockedVersionNotice";
+import { SubmitReviewButton } from "@/components/cases/SubmitReviewButton";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
+import { useCanSubmitForReview } from "@/hooks/useCanSubmitForReview";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useOpenDraft } from "@/hooks/useOpenDraft";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { useStartNewVersion } from "@/hooks/useStartNewVersion";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { updateCase } from "@/lib/cases/caseApi";
-import { fromCaseRead, type CaseWritePayload } from "@/lib/cases/caseFormMapping";
+import {
+  fromCaseRead,
+  type CaseWritePayload,
+} from "@/lib/cases/caseFormMapping";
 import { isCaseEditable } from "@/lib/cases/permissions";
 import { canChangeTagAsAdmin, isTagLockedInEditor } from "@/lib/cases/splitTag";
 import type { CaseRead } from "@/types/case";
@@ -47,7 +57,17 @@ export default function EditCasePage() {
   const router = useRouter();
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
-  const canStart = useCanStartNewVersion(caseId, user, detail.status === "ready" ? detail.saved.status : null);
+  const canStart = useCanStartNewVersion(
+    caseId,
+    user,
+    detail.status === "ready" ? detail.saved.status : null,
+  );
+  // Server hanya menerima pengajuan dari penulis kasus; tombol mengikuti aturan yang sama.
+  const canSubmit = useCanSubmitForReview(
+    caseId,
+    user,
+    detail.status === "ready" ? detail.saved.status : null,
+  );
   // GET masih mengembalikan versi yang disetujui walau draf sudah ada, jadi draf dicari lewat
   // endpoint sendiri. Hanya untuk yang boleh membuat versi baru: server menjawab 403 untuk yang lain.
   const openDraft = useOpenDraft(caseId, canStart, (draft: CaseRead) => {
@@ -60,24 +80,36 @@ export default function EditCasePage() {
   const startVersion = useStartNewVersion(caseId, (draft: CaseRead) => {
     detail.replace(draft);
     setFormKey((key) => key + 1);
-    showToast("Versi baru dibuat. Perubahan akan ditinjau ulang sebelum berlaku");
+    showToast(
+      "Versi baru dibuat. Perubahan akan ditinjau ulang sebelum berlaku",
+    );
   });
-  const suiteName = useSuiteName( detail.status === "ready" ? detail.saved.suite_id : null);
+  const suiteName = useSuiteName(
+    detail.status === "ready" ? detail.saved.suite_id : null,
+  );
 
   useUnsavedChangesWarning(dirty);
 
-  if (detail.status === "loading") return <LoadingState label="Memuat kasus…" />;
+  if (detail.status === "loading")
+    return <LoadingState label="Memuat kasus…" />;
 
   if (detail.status === "error") {
     return detail.notFound ? (
       <div className="space-y-4">
         <ErrorState variant="card" message="Kasus tidak ditemukan." />
-        <Link href="/suites" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+        <Link
+          href="/suites"
+          className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+        >
           Kembali ke Suites
         </Link>
       </div>
     ) : (
-      <ErrorState variant="card" message="Gagal memuat kasus." onRetry={detail.reload} />
+      <ErrorState
+        variant="card"
+        message="Gagal memuat kasus."
+        onRetry={detail.reload}
+      />
     );
   }
   const { saved } = detail;
@@ -87,7 +119,10 @@ export default function EditCasePage() {
   const suitePath = `/suites/${encodeURIComponent(saved.suite_id)}`;
 
   function leaveTo(path: string) {
-    if (dirty && !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")) {
+    if (
+      dirty &&
+      !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")
+    ) {
       return;
     }
     router.push(path);
@@ -175,9 +210,33 @@ export default function EditCasePage() {
         hidden={tab !== "editor"}
         className="space-y-6"
       >
-        <CompletenessIndicator {...completeness} onRetry={completeness.reload} />
-      
-        {saveError.message !== null && <ErrorState message={saveError.message} />}
+        <CompletenessIndicator
+          {...completeness}
+          submittable={editable}
+          onRetry={completeness.reload}
+        />
+
+        {canSubmit && completeness.status === "ready" && (
+          <SubmitReviewButton
+            caseId={caseId}
+            ready={completeness.completeness.ready_for_review}
+            dirty={dirty}
+            onStale={() => {
+              // Diajukan dari tempat lain: baca ulang supaya status dan kunci editor ikut benar.
+              detail.reload();
+            }}
+            onSubmitted={(result) => {
+              // Status diambil dari balasan server, bukan ditebak.
+              detail.replace({ ...saved, status: result.status });
+              setFormKey((key) => key + 1);
+              showToast("Kasus diajukan untuk direview");
+            }}
+          />
+        )}
+
+        {saveError.message !== null && (
+          <ErrorState message={saveError.message} />
+        )}
 
         {openDraft.status === "error" && (
           <ErrorState message={openDraft.message} onRetry={openDraft.reload} />
@@ -214,7 +273,11 @@ export default function EditCasePage() {
       )}
 
       {tab === "history" && (
-        <div role="tabpanel" id={panelId("history")} aria-labelledby={tabId("history")}>
+        <div
+          role="tabpanel"
+          id={panelId("history")}
+          aria-labelledby={tabId("history")}
+        >
           <VersionHistoryTab key={caseId} caseId={caseId} />
         </div>
       )}

@@ -15,17 +15,11 @@ import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import { SnapshotSection } from "@/components/suites/SnapshotSection";
 import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import type { Suite } from "@/types/suite";
+import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
-
-const STATUS_BADGES: Record<CaseStatus, { label: string; className: string }> = {
-  draft: { label: CASE_STATUS_LABEL.draft, className: "bg-slate-100 text-slate-700 border-slate-200" },
-  in_review: { label: CASE_STATUS_LABEL.in_review, className: "bg-amber-50 text-amber-800 border-amber-200" },
-  needs_revision: { label: CASE_STATUS_LABEL.needs_revision, className: "bg-rose-50 text-rose-800 border-rose-200" },
-  approved: { label: CASE_STATUS_LABEL.approved, className: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-};
 
 const ALL_STATUSES: { value: CaseStatus; label: string }[] = [
   { value: "draft", label: CASE_STATUS_LABEL.draft },
@@ -353,10 +347,6 @@ export default function SuiteDetailPage({ params }: PageProps) {
 
                 {!loading &&
                   displayedCases.map((item) => {
-                    const badge = STATUS_BADGES[item.status] ?? {
-                      label: item.status,
-                      className: "bg-slate-100 text-slate-700 border-slate-200",
-                    };
                     return (
                       <tr
                         key={item.id}
@@ -379,9 +369,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
                           <SplitTagBadge tag={item.split_tag} />
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${badge.className}`}>
-                            {badge.label}
-                          </span>
+                          <CaseStatusBadge status={item.status} />
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">

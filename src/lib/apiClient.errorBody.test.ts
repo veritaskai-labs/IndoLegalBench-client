@@ -75,7 +75,10 @@ describe("ApiError body details", () => {
   // Negative
   it("ignores message and field that are not strings", async () => {
     fetchMock.mockResolvedValue(
-      errorResponse(422, JSON.stringify({ code: "X", message: 42, field: ["a"] })),
+      errorResponse(
+        422,
+        JSON.stringify({ code: "X", message: 42, field: ["a"] }),
+      ),
     );
 
     const error = await caught();
@@ -101,5 +104,41 @@ describe("ApiError body details", () => {
     expect(error.serverMessage).toBeNull();
     expect(error.field).toBeNull();
     expect(error.message).toBe("UNKNOWN_ERROR");
+  });
+
+  it("keeps the missing sections from a 422 CASE_NOT_READY body", async () => {
+    fetchMock.mockResolvedValue(
+      errorResponse(
+        422,
+        JSON.stringify({
+          code: "CASE_NOT_READY",
+          message: "Kasus belum lengkap",
+          missing: [
+            { field: "legal_refs", message: "Minimal satu rujukan hukum" },
+          ],
+        }),
+      ),
+    );
+
+    const error = await caught();
+
+    expect(error.code).toBe("CASE_NOT_READY");
+    expect(error.missing).toEqual([
+      { field: "legal_refs", message: "Minimal satu rujukan hukum" },
+    ]);
+  });
+
+  //Negative
+  it("leaves the missing list empty when the body has none", async () => {
+    fetchMock.mockResolvedValue(
+      errorResponse(
+        422,
+        JSON.stringify({ code: "SUITE_NOT_ACTIVE", message: "Suite arsip" }),
+      ),
+    );
+
+    const error = await caught();
+
+    expect(error.missing).toEqual([]);
   });
 });

@@ -19,11 +19,11 @@ describe("Design System Cards", () => {
           author="Rina Hapsari"
           updatedAt="2 hari lalu"
           onOpen={handleOpen}
-        />
+        />,
       );
 
       expect(screen.getByText("ILB-PT-0142")).toBeInTheDocument();
-      expect(screen.getByText("In review")).toBeInTheDocument();
+      expect(screen.getByText("Dalam tinjauan")).toBeInTheDocument();
 
       const openBtn = screen.getByRole("button", { name: "Buka" });
       fireEvent.click(openBtn);
@@ -41,9 +41,9 @@ describe("Design System Cards", () => {
           version="v1"
           author="Budi"
           updatedAt="Hari ini"
-        />
+        />,
       );
-      expect(screen.getByText("Approved")).toHaveClass("text-emerald-800");
+      expect(screen.getByText("Disetujui")).toHaveClass("text-emerald-800");
 
       rerender(
         <CaseCard
@@ -55,32 +55,22 @@ describe("Design System Cards", () => {
           version="v1"
           author="Budi"
           updatedAt="Hari ini"
-        />
+        />,
       );
-      expect(screen.getByText("Needs revision")).toHaveClass("text-rose-800");
+      expect(screen.getByText("Perlu revisi")).toHaveClass("text-rose-800");
     });
   });
 
   describe("MetricCard", () => {
     it("merender nilai persentase, label, dan warna delta dinamis", () => {
       const { rerender } = render(
-        <MetricCard
-          label="Pass rate"
-          value="65%"
-          delta="+4,1 pt"
-        />
+        <MetricCard label="Pass rate" value="65%" delta="+4,1 pt" />,
       );
 
       expect(screen.getByText("65%")).toBeInTheDocument();
       expect(screen.getByText("+4,1 pt")).toHaveClass("text-emerald-700");
 
-      rerender(
-        <MetricCard
-          label="Failure rate"
-          value="35%"
-          delta="-2,5 pt"
-        />
-      );
+      rerender(<MetricCard label="Failure rate" value="35%" delta="-2,5 pt" />);
       expect(screen.getByText("-2,5 pt")).toHaveClass("text-rose-700");
     });
 
@@ -103,27 +93,23 @@ describe("Design System Cards", () => {
     });
 
     it("memprioritaskan prop progressPercent eksplisit dibanding nilai string", () => {
-      render(
-        <MetricCard label="Pass rate" value="80%" progressPercent={25} />
-      );
+      render(<MetricCard label="Pass rate" value="80%" progressPercent={25} />);
       const progressBar = screen.getByTestId("metric-progress-bar");
       expect(progressBar).toHaveStyle({ width: "25%" });
     });
 
     it("tidak merender progress bar jika value bukan persentase dan progressPercent undefined", () => {
       render(<MetricCard label="Total Kasus" value="120 kasus" />);
-      expect(screen.queryByTestId("metric-progress-bar")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("metric-progress-bar"),
+      ).not.toBeInTheDocument();
     });
   });
 
   describe("ProviderCard", () => {
     it("default fail-closed: menyembunyikan badge jika prop tidak diisi", () => {
       render(
-        <ProviderCard
-          name="Provider AI hukum"
-          rpm={60}
-          version="v2026.08"
-        />
+        <ProviderCard name="Provider AI hukum" rpm={60} version="v2026.08" />,
       );
 
       expect(screen.getByText("Provider AI hukum")).toBeInTheDocument();
@@ -139,11 +125,27 @@ describe("Design System Cards", () => {
           version="v2026.08"
           tosReviewed={true}
           keyEncrypted={true}
-        />
+        />,
       );
 
       expect(screen.getByText("ToS reviewed")).toBeInTheDocument();
       expect(screen.getByText("key encrypted")).toBeInTheDocument();
     });
+  });
+  it("labels the status the same way as the rest of the app", () => {
+    render(
+      <CaseCard
+        id="ILB-03"
+        title="Kasus 3"
+        status="in_review"
+        axis="akurasi"
+        tag="dev"
+        version="v1"
+        author="Budi"
+        updatedAt="Hari ini"
+      />,
+    );
+
+    expect(screen.getByText("Dalam tinjauan")).toBeInTheDocument();
   });
 });
