@@ -188,6 +188,10 @@ export default function EditCasePage() {
             caseId={caseId}
             ready={completeness.completeness.ready_for_review}
             dirty={dirty}
+            onStale={() => {
+              // Diajukan dari tempat lain: baca ulang supaya status dan kunci editor ikut benar.
+              detail.reload();
+            }}
             onSubmitted={(result) => {
               // Status diambil dari balasan server, bukan ditebak.
               detail.replace({ ...saved, status: result.status });
