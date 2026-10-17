@@ -78,7 +78,7 @@ export function ChangeSplitTagDialog({ caseId, caseCode, current, onClose, onDon
             <p role="alert" className="text-xs text-amber-900">
               Kasus ini sudah pernah dipakai sebagai dev set, jadi developer AI mungkin sudah melihatnya.
               Memindahkannya ke test bisa membuat skor resmi kurang objektif. Kasus akan ditandai
-              &quot;pernah dev&quot; selamanya.
+              &quot;pernah dev set&quot; selamanya.
             </p>
             <label className="flex items-start gap-2 text-xs font-medium text-amber-900">
               <input

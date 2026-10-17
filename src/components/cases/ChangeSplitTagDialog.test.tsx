@@ -37,7 +37,7 @@ describe("ChangeSplitTagDialog", () => {
 
     // Assert
     expect(screen.getByRole("dialog", { name: "Ubah tag KTK-001" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Dev" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Dev set" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Simpan tag" })).toBeDisabled();
   });
 
@@ -46,7 +46,7 @@ describe("ChangeSplitTagDialog", () => {
     const { user } = renderDialog("dev");
 
     // Act
-    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
 
     // Assert
     expect(screen.getByRole("alert")).toHaveTextContent("sudah pernah dipakai sebagai dev set");
@@ -59,7 +59,7 @@ describe("ChangeSplitTagDialog", () => {
     const { user, onDone } = renderDialog("dev");
     const saved = { id: CASE_ID, split_tag: "test", was_dev: true };
     apiFetchMock.mockResolvedValue(saved);
-    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
     await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
 
     // Act
@@ -77,7 +77,7 @@ describe("ChangeSplitTagDialog", () => {
     apiFetchMock.mockResolvedValue({ id: CASE_ID, split_tag: "dev" });
 
     // Act
-    await user.click(screen.getByRole("radio", { name: "Dev" }));
+    await user.click(screen.getByRole("radio", { name: "Dev set" }));
     await user.click(screen.getByRole("button", { name: "Simpan tag" }));
 
     // Assert
@@ -92,7 +92,7 @@ describe("ChangeSplitTagDialog", () => {
     apiFetchMock.mockRejectedValue(new ApiError(422, "SUITE_NOT_ACTIVE", null, null));
 
     // Act
-    await user.click(screen.getByRole("radio", { name: "Dev" }));
+    await user.click(screen.getByRole("radio", { name: "Dev set" }));
     await user.click(screen.getByRole("button", { name: "Simpan tag" }));
 
     // Assert
@@ -116,12 +116,12 @@ describe("ChangeSplitTagDialog", () => {
   it("unticks the confirmation when the admin switches back to the current tag", async () => {
     // Arrange
     const { user } = renderDialog("dev");
-    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
     await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
 
     // Act
-    await user.click(screen.getByRole("radio", { name: "Dev" }));
-    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("radio", { name: "Dev set" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
 
     // Assert
     expect(screen.getByRole("checkbox", { name: /Saya paham/ })).not.toBeChecked();

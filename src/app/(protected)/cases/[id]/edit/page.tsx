@@ -124,24 +124,36 @@ export default function EditCasePage() {
         ]}
       />
 
-      <header className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">{saved.case_code}</h1>
-        <CaseStatusBadge status={saved.status} />
-        <SplitTagBadge tag={saved.split_tag} wasDev={saved.was_dev} />
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-xl font-semibold text-slate-900">{saved.case_code}</h1>
+            <CaseStatusBadge status={saved.status} />
+            <SplitTagBadge tag={saved.split_tag} wasDev={saved.was_dev} />
+          </div>
+          {dirty && (
+            <p className="text-xs font-medium text-amber-700">Ada perubahan yang belum disimpan</p>
+          )}
+        </div>
         {canChangeTag && (
-          <button
-            type="button"
-            onClick={() => setChangingTag(true)}
-            // Form dimuat ulang setelah tag berubah, jadi perubahan yang belum disimpan akan hilang.
-            disabled={dirty}
-            title={dirty ? "Simpan perubahan dulu sebelum mengubah tag" : undefined}
-            className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            Ubah tag
-          </button>
-        )}
-        {dirty && (
-          <p className="text-xs font-medium text-amber-700">Ada perubahan yang belum disimpan</p>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={() => setChangingTag(true)}
+              // Form dimuat ulang setelah tag berubah, jadi perubahan yang belum disimpan akan hilang.
+              disabled={dirty}
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="M13.6 2.6a2 2 0 0 1 2.8 2.8l-8.5 8.5-3.6.8.8-3.6 8.5-8.5Z" />
+                <path d="M3 17h14v1.5H3z" />
+              </svg>
+              Ubah tag
+            </button>
+            {dirty && (
+              <p className="text-[11px] text-slate-500">Simpan perubahan dulu untuk mengubah tag</p>
+            )}
+          </div>
         )}
       </header>
 

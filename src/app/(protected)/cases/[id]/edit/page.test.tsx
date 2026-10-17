@@ -899,8 +899,8 @@ describe("EditCasePage dev/test tag (PBI-9, SCRUM-165)", () => {
 
     // Assert
     const header = await screen.findByRole("banner");
-    expect(within(header).getByText("Test")).toBeInTheDocument();
-    expect(within(header).getByText("pernah dev")).toBeInTheDocument();
+    expect(within(header).getByText("Test set")).toBeInTheDocument();
+    expect(within(header).getByText("pernah dev set")).toBeInTheDocument();
   });
 
   it("lets an admin change the tag of an approved case and shows the new tag", async () => {
@@ -913,14 +913,14 @@ describe("EditCasePage dev/test tag (PBI-9, SCRUM-165)", () => {
 
     // Act
     await user.click(await screen.findByRole("button", { name: "Ubah tag" }));
-    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
     await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
     await user.click(screen.getByRole("button", { name: "Simpan tag" }));
 
     // Assert
     expect(changeTagMock).toHaveBeenCalledWith(CASE_ID, "test", true);
     const header = screen.getByRole("banner");
-    expect(await within(header).findByText("pernah dev")).toBeInTheDocument();
+    expect(await within(header).findByText("pernah dev set")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(toast()).toHaveTextContent("Tag kasus diubah");
   });
@@ -938,13 +938,13 @@ describe("EditCasePage dev/test tag (PBI-9, SCRUM-165)", () => {
 
     // Act
     await user.click(screen.getByRole("button", { name: "Ubah tag" }));
-    await user.click(screen.getByRole("radio", { name: "Test" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
     await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
     await user.click(screen.getByRole("button", { name: "Simpan tag" }));
 
     // Assert
     const header = screen.getByRole("banner");
-    expect(await within(header).findByText("Test")).toBeInTheDocument();
+    expect(await within(header).findByText("Test set")).toBeInTheDocument();
     expect(within(header).getByText("Draft")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Simpan draf" })).toBeInTheDocument();
   });
@@ -988,5 +988,27 @@ describe("EditCasePage dev/test tag (PBI-9, SCRUM-165)", () => {
     await screen.findByRole("button", { name: "Simpan draf" });
     expect(changeButton()).not.toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(2);
+  });
+});
+
+describe("EditCasePage change tag button (UAT feedback)", () => {
+  // Edge: the form reloads after a tag change, so unsaved edits would be lost.
+  it("disables the change and says why while there are unsaved edits", async () => {
+    // Arrange
+    session.role = "admin";
+    listVersionsMock.mockResolvedValue([makeSummary(1), makeSummary(2)]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+    openDraftMock.mockResolvedValue(savedCase({ status: "draft", version: 2 }));
+    const user = userEvent.setup();
+    renderPage();
+    // Wait for the draft: typing into the approved form first would be discarded when it loads.
+    await screen.findByRole("button", { name: "Simpan draf" });
+
+    // Act
+    await user.type(screen.getByLabelText("Judul"), " baru");
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Ubah tag" })).toBeDisabled();
+    expect(screen.getByText("Simpan perubahan dulu untuk mengubah tag")).toBeInTheDocument();
   });
 });

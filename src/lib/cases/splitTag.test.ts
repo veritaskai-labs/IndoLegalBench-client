@@ -11,7 +11,7 @@ import {
 describe("SPLIT_TAG_LABEL", () => {
   it("labels both tags for badges and options", () => {
     // Act + Assert
-    expect(SPLIT_TAG_LABEL).toEqual({ dev: "Dev", test: "Test" });
+    expect(SPLIT_TAG_LABEL).toEqual({ dev: "Dev set", test: "Test set" });
   });
 });
 

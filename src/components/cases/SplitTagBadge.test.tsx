@@ -5,8 +5,8 @@ import { SplitTagBadge } from "./SplitTagBadge";
 describe("SplitTagBadge", () => {
   // Positive
   it.each([
-    ["dev", "Dev"],
-    ["test", "Test"],
+    ["dev", "Dev set"],
+    ["test", "Test set"],
   ] as const)("shows the %s tag as %s", (tag, label) => {
     // Act
     render(<SplitTagBadge tag={tag} />);
@@ -22,7 +22,7 @@ describe("SplitTagBadge", () => {
 
     // Assert
     expect(screen.getByText("info saja")).toBeInTheDocument();
-    expect(screen.getByLabelText("Tag Test, hanya informasi dan tidak dinilai")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tag Test set, hanya informasi dan tidak dinilai")).toBeInTheDocument();
   });
 
   it("shows that a test case was once in the dev set (PBI-9 AC3)", () => {
@@ -30,7 +30,7 @@ describe("SplitTagBadge", () => {
     render(<SplitTagBadge tag="test" wasDev />);
 
     // Assert
-    expect(screen.getByText("pernah dev")).toBeInTheDocument();
+    expect(screen.getByText("pernah dev set")).toBeInTheDocument();
   });
 
   // Edge
@@ -39,6 +39,6 @@ describe("SplitTagBadge", () => {
     render(<SplitTagBadge tag="dev" wasDev />);
 
     // Assert
-    expect(screen.queryByText("pernah dev")).not.toBeInTheDocument();
+    expect(screen.queryByText("pernah dev set")).not.toBeInTheDocument();
   });
 });

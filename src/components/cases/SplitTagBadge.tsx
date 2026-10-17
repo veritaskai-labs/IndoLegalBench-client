@@ -31,7 +31,7 @@ export function SplitTagBadge({ tag, infoOnly = false, wasDev = false }: Props) 
           title="Kasus ini pernah dipakai sebagai dev set dan sudah terlihat developer AI."
           className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800"
         >
-          pernah dev
+          pernah dev set
         </span>
       )}
     </span>

@@ -3,7 +3,7 @@ import type { Role } from "@/types";
 import type { CaseRead, SplitTag } from "@/types/case";
 
 /** Label tag dev/test untuk badge dan pilihan di dialog. */
-export const SPLIT_TAG_LABEL: Record<SplitTag, string> = { dev: "Dev", test: "Test" };
+export const SPLIT_TAG_LABEL: Record<SplitTag, string> = { dev: "Dev set", test: "Test set" };
 
 /** Dev ke test: kasusnya sudah pernah terlihat developer AI, jadi perlu peringatan (PBI-9 AC3). */
 export function isDevToTest(from: SplitTag, to: SplitTag): boolean {
