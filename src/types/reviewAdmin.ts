@@ -43,3 +43,8 @@ export type ReplacedAssignment = {
   status: AssignmentStatus;
   replaced_assignment_id: string | null;
 };
+
+export type ReviewerOption = {
+  id: string;
+  name: string;
+};

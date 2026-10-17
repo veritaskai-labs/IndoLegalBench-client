@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 
-import type { ReplaceReviewerBody } from "@/types/reviewAdmin";
-
-export type ReviewerOption = { id: string; name: string };
+import type { ReplaceReviewerBody, ReviewerOption } from "@/types/reviewAdmin";
 
 type Props = {
   caseCode: string;

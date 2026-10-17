@@ -1,0 +1,109 @@
+import { describe, expect, it } from "vitest";
+
+import { reviewerCandidates } from "./reviewerCandidates";
+import type {
+  ReassignmentAssignment,
+  ReassignmentRow,
+} from "@/types/reviewAdmin";
+import type { User } from "@/types/user-management";
+
+function user(overrides: Partial<User> = {}): User {
+  return {
+    id: "u1",
+    name: "Roben",
+    email: "roben@example.com",
+    role: "reviewer",
+    is_active: true,
+    ...overrides,
+  };
+}
+
+function assignment(
+  overrides: Partial<ReassignmentAssignment> = {},
+): ReassignmentAssignment {
+  return {
+    id: "a1",
+    reviewer_id: "u1",
+    reviewer_name: "Roben",
+    status: "active",
+    assigned_at: "2026-10-16T03:00:00Z",
+    ended_at: null,
+    end_reason: null,
+    ...overrides,
+  };
+}
+
+function row(overrides: Partial<ReassignmentRow> = {}): ReassignmentRow {
+  return {
+    case_id: "c1",
+    case_code: "ILB-PT-0142",
+    case_title: "Sengketa tanah warisan",
+    round_id: "r1",
+    round_no: 1,
+    round_status: "open",
+    active_reviewers_count: 0,
+    void_assignments: [],
+    assignments: [],
+    ...overrides,
+  };
+}
+
+describe("reviewerCandidates", () => {
+  // Positif
+  it("keeps the active reviewers", () => {
+    const pool = [
+      user({ id: "u9", name: "Aileen" }),
+      user({ id: "u5", name: "Esi", role: "author" }),
+      user({ id: "u7", name: "Rafa", is_active: false }),
+    ];
+
+    expect(reviewerCandidates(pool, row())).toEqual([
+      { id: "u9", name: "Aileen" },
+    ]);
+  });
+
+  // Negatif
+  it("drops a reviewer already assigned to this round", () => {
+    const pool = [
+      user({ id: "u1", name: "Roben" }),
+      user({ id: "u9", name: "Aileen" }),
+    ];
+    const queued = row({ assignments: [assignment({ reviewer_id: "u1" })] });
+
+    expect(reviewerCandidates(pool, queued)).toEqual([
+      { id: "u9", name: "Aileen" },
+    ]);
+  });
+
+  // Positif
+  it("keeps a reviewer whose earlier assignment is no longer active", () => {
+    const pool = [user({ id: "u1", name: "Roben" })];
+    const queued = row({
+      assignments: [assignment({ reviewer_id: "u1", status: "replaced" })],
+    });
+
+    expect(reviewerCandidates(pool, queued)).toEqual([
+      { id: "u1", name: "Roben" },
+    ]);
+  });
+
+  // Sudut
+  it("sorts the candidates by name", () => {
+    const pool = [
+      user({ id: "u3", name: "Zahra" }),
+      user({ id: "u2", name: "Aileen" }),
+      user({ id: "u4", name: "Rafa" }),
+    ];
+
+    expect(reviewerCandidates(pool, row()).map((item) => item.name)).toEqual([
+      "Aileen",
+      "Rafa",
+      "Zahra",
+    ]);
+  });
+
+  // Sudut
+  it("gives an empty list when nobody is eligible", () => {
+    expect(reviewerCandidates([], row())).toEqual([]);
+  });
+});
