@@ -15,6 +15,8 @@ import type {
   ReassignmentRow,
 } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
+import { InReviewTable } from "@/components/reviews/InReviewTable";
+import { useInReviewCases } from "@/hooks/useInReviewCases";
 
 type Tab = "queue" | "decisions";
 type Target = { assignment: ReassignmentAssignment; row: ReassignmentRow };
@@ -32,6 +34,7 @@ export default function AdminReviewsPage() {
   const [users, setUsers] = useState<User[]>([]);
 
   const queue = useNeedsReassignment();
+  const inReview = useInReviewCases();
   const { reload } = queue;
 
   const afterReplace = useCallback(() => {
@@ -118,16 +121,25 @@ export default function AdminReviewsPage() {
           )}
         </section>
       ) : (
-        <section aria-label={TAB_LABEL.decisions}>
-          {/*
-            AC3 menunggu endpoint daftar kasus in_review untuk admin. Keputusan per
-            kasus sudah ada di server lewat GET /cases/{case_id}/review (SCRUM-147),
-            tapi tanpa daftarnya halaman ini harus menebak kasus mana yang diminta.
-          */}
-          <EmptyState
-            title="Keputusan reviewer belum bisa ditampilkan"
-            description="Server belum menyediakan daftar kasus yang sedang direview untuk admin, jadi panel ini menunggu endpoint tersebut menyusul."
-          />
+      <section aria-label={TAB_LABEL.decisions}>
+          {inReview.status === "error" ? (
+            <ErrorState
+              variant="card"
+              message={inReview.message}
+              onRetry={inReview.reload}
+            />
+          ) : inReview.status === "loading" ? (
+            <LoadingSkeleton variant="lines" rows={5} />
+          ) : inReview.data.length === 0 ? (
+            <EmptyState
+              title="Tidak ada kasus yang sedang direview"
+              description="Kasus akan muncul di sini setelah Author mengajukannya untuk review."
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+              <InReviewTable rows={inReview.data} />
+            </div>
+          )}
         </section>
       )}
 
