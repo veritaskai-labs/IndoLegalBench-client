@@ -1,4 +1,4 @@
-import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
+import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import type { CaseStatus } from "@/types/case";
 
 export interface CaseCardProps {
@@ -14,13 +14,6 @@ export interface CaseCardProps {
   className?: string;
 }
 
-const STATUS_STYLE: Record<CaseStatus, string> = {
-  draft: "bg-slate-100 text-slate-700 border-slate-200",
-  in_review: "bg-amber-50 text-amber-800 border-amber-200",
-  needs_revision: "bg-rose-50 text-rose-800 border-rose-200",
-  approved: "bg-emerald-50 text-emerald-800 border-emerald-200",
-};
-
 export function CaseCard({
   id,
   title,
@@ -33,9 +26,6 @@ export function CaseCard({
   onOpen,
   className = "",
 }: CaseCardProps) {
-  const label = CASE_STATUS_LABEL[status];
-  const style = STATUS_STYLE[status];
-
   return (
     <div
       className={`bg-white border border-slate-200 rounded p-4 flex flex-col justify-between text-xs transition-colors hover:border-slate-300 ${className}`}
@@ -43,11 +33,7 @@ export function CaseCard({
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
           <span className="font-mono text-slate-500 tracking-tight">{id}</span>
-          <span
-            className={`px-2 py-0.5 rounded text-[11px] font-medium border ${style}`}
-          >
-            {label}
-          </span>
+          <CaseStatusBadge status={status} />
         </div>
 
         <h4 className="font-bold text-slate-900 text-sm leading-snug mb-4 line-clamp-2">

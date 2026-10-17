@@ -159,4 +159,5 @@ describe("SubmitReviewButton", () => {
     await screen.findByRole("alert");
     expect(onStale).not.toHaveBeenCalled();
   });
+
 });
