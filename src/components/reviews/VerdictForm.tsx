@@ -42,13 +42,11 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
         {VERDICT_ORDER.map((option) => (
           <label
             key={option}
-            htmlFor={`verdict-${option}`}
-            className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
+            className={`grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg border p-3 ${
               decision === option ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-white"
             }`}
           >
             <input
-              id={`verdict-${option}`}
               type="radio"
               name="decision"
               value={option}
@@ -56,10 +54,8 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
               onChange={() => setDecision(option)}
               className="mt-1"
             />
-            <span className="space-y-1">
-              <span className="block text-sm font-medium text-slate-900">{VERDICT_LABEL[option]}</span>
-              <span className="block text-xs text-slate-600">{VERDICT_HINT[option]}</span>
-            </span>
+            <span className="block text-sm font-medium text-slate-900">{VERDICT_LABEL[option]}</span>
+            <span className="col-start-2 block text-xs text-slate-600">{VERDICT_HINT[option]}</span>
           </label>
         ))}
       </fieldset>
