@@ -44,6 +44,12 @@ describe("mapSubmitError", () => {
       "Gagal mengajukan kasus. Coba lagi.",
     );
   });
+  // Negative: 409 kedua dari server #49 — mengulang pengajuan tidak akan pernah menolong.
+  it("explains a version with no revise decision yet", () => {
+    expect(mapSubmitError(new ApiError(409, "ROUND_NOT_REVISED"))).toBe(
+      "Kasus ini belum bisa diajukan ulang karena belum ada putusan revisi. Hubungi Admin.",
+    );
+  });
 });
 
 describe("submitBlockers", () => {
@@ -88,5 +94,8 @@ describe("submitBlockers", () => {
     expect(isStaleSubmit(new TypeError("Failed to fetch"))).toBe(false);
   });
 });
-
+  // Negative: 409 yang ini bukan status basi — membaca ulang kasusnya tidak mengubah apa pun.
+  it("leaves a 409 that is not about the version alone", () => {
+    expect(isStaleSubmit(new ApiError(409, "ROUND_NOT_REVISED"))).toBe(false);
+  });
 });
