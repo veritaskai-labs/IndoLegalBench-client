@@ -57,7 +57,7 @@ describe("reviewerCandidates", () => {
       user({ id: "u7", name: "Rafa", is_active: false }),
     ];
 
-    expect(reviewerCandidates(pool, row())).toEqual([
+    expect(reviewerCandidates(pool, row(), null)).toEqual([
       { id: "u9", name: "Aileen" },
     ]);
   });
@@ -82,12 +82,12 @@ describe("reviewerCandidates", () => {
       assignments: [assignment({ reviewer_id: "u1", status: "replaced" })],
     });
 
-    expect(reviewerCandidates(pool, queued)).toEqual([
+    expect(reviewerCandidates(pool, queued, null)).toEqual([
       { id: "u1", name: "Roben" },
     ]);
   });
 
-  // Sudut
+  // corner
   it("sorts the candidates by name", () => {
     const pool = [
       user({ id: "u3", name: "Zahra" }),
@@ -95,15 +95,35 @@ describe("reviewerCandidates", () => {
       user({ id: "u4", name: "Rafa" }),
     ];
 
-    expect(reviewerCandidates(pool, row()).map((item) => item.name)).toEqual([
+    expect(reviewerCandidates(pool, row()).map((item) => item.name, null)).toEqual([
       "Aileen",
       "Rafa",
       "Zahra",
     ]);
   });
 
-  // Sudut
+  // corner
   it("gives an empty list when nobody is eligible", () => {
-    expect(reviewerCandidates([], row())).toEqual([]);
+    expect(reviewerCandidates([], row(), null)).toEqual([]);
+  });
+    // Negatif
+  it("drops the case author even when they are a reviewer", () => {
+    const pool = [
+      user({ id: "u5", name: "Esi" }),
+      user({ id: "u9", name: "Aileen" }),
+    ];
+
+    expect(reviewerCandidates(pool, row(), "u5")).toEqual([
+      { id: "u9", name: "Aileen" },
+    ]);
+  });
+
+  // corner
+  it("keeps everyone when the author is not known yet", () => {
+    const pool = [user({ id: "u9", name: "Aileen" })];
+
+    expect(reviewerCandidates(pool, row(), null)).toEqual([
+      { id: "u9", name: "Aileen" },
+    ]);
   });
 });
