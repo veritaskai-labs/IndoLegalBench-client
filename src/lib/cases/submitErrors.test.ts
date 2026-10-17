@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
-import { mapSubmitError, submitBlockers } from "./submitErrors";
+import { isStaleSubmit, mapSubmitError, submitBlockers } from "./submitErrors";
 
 describe("mapSubmitError", () => {
   // Negative
@@ -69,4 +69,24 @@ describe("submitBlockers", () => {
   it("hands back nothing when the failure is not an ApiError", () => {
     expect(submitBlockers(new TypeError("Failed to fetch"))).toEqual([]);
   });
+
+  describe("isStaleSubmit", () => {
+  // Positive: versi sudah diajukan dari tempat lain, jadi halaman perlu dibaca ulang.
+  it("recognises a version that cannot be submitted again", () => {
+    expect(isStaleSubmit(new ApiError(409, "VERSION_NOT_SUBMITTABLE"))).toBe(
+      true,
+    );
+  });
+
+  // Negative: kegagalan lain tidak berarti statusnya basi.
+  it("leaves another ApiError alone", () => {
+    expect(isStaleSubmit(new ApiError(422, "SUITE_NOT_ACTIVE"))).toBe(false);
+  });
+
+  // Corner: koneksi putus bukan ApiError.
+  it("leaves a failure that is not an ApiError alone", () => {
+    expect(isStaleSubmit(new TypeError("Failed to fetch"))).toBe(false);
+  });
+});
+
 });
