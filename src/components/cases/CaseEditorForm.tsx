@@ -11,6 +11,7 @@ import {
 } from "@/lib/cases/caseFormMapping";
 import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
 import type { FieldSaveError } from "@/lib/cases/saveError";
+import type { SplitTag } from "@/types/case";
 import { ErrorSummary } from "./ErrorSummary";
 import { LegalRefsSection } from "./LegalRefsSection";
 import {
@@ -33,7 +34,18 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   /** Versi terkunci: semua kolom dinonaktifkan dan tombol simpan disembunyikan. */
   readOnly?: boolean;
+  /**
+   * Kasus sudah pernah disetujui: tag hanya diubah Admin lewat dialog "Ubah tag" (PBI-9 AC3).
+   * Pilihan tag diganti badge; nilainya tetap ikut terkirim dari defaultValues.
+   */
+  tagLocked?: boolean;
 };
+
+/** Tag tersimpan, atau null bila belum dipilih (nilai form kosong ""). */
+function chosenTag(values: CaseFormValues | undefined): SplitTag | null {
+  const tag = values?.split_tag;
+  return tag === "dev" || tag === "test" ? tag : null;
+}
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
 export const VALIDATE_DELAY_MS = 300;
@@ -42,7 +54,13 @@ function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
-export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnly = false }: Props) {
+export function CaseEditorForm({
+  defaultValues,
+  onSubmit,
+  onDirtyChange,
+  readOnly = false,
+  tagLocked = false,
+}: Readonly<Props>) {
   const {
     register,
     control,
@@ -134,7 +152,7 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnl
         />
         <AnswerCriteriaSection {...sectionProps} />
         <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
-        <SplitTagSection {...sectionProps} />
+        <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
       </fieldset>
 
       {!readOnly && (

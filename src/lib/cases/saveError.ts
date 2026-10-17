@@ -13,6 +13,8 @@ export type SaveError =
 export type FieldSaveError = Extract<SaveError, { kind: "field" }>;
 
 export const GENERIC_SAVE_ERROR = "Gagal menyimpan kasus. Coba lagi.";
+export const SPLIT_TAG_CHANGED_MESSAGE =
+  "Tag kasus ini baru saja diubah Admin. Muat ulang halaman lalu simpan lagi.";
 
 const FIXED_PATHS = new Map<string, CaseFieldPath>([
   ["case_code", "case_code"],
@@ -101,6 +103,11 @@ export function mapSaveError(error: unknown): SaveError {
       message: error.serverMessage ?? "ID kasus tidak bisa diubah setelah kasus pernah disetujui.",
       detail: null,
     };
+  }
+  if (error.code === "SPLIT_TAG_LOCKED") {
+    // 409 dari server #53: tag dikunci setelah disetujui dan biasanya baru saja diubah Admin
+    // di tab lain. Form tetap di tempat supaya suntingan tidak hilang.
+    return { kind: "form", message: SPLIT_TAG_CHANGED_MESSAGE };
   }
   if (error.code === "VERSION_LOCKED") {
     return { kind: "form", message: VERSION_LOCKED_MESSAGE };

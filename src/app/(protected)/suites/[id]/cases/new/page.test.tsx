@@ -51,6 +51,7 @@ function createdCase(id: string): CaseRead {
     split_tag: "dev",
     status: "draft",
     completeness_pct: 0,
+    was_dev: false,
     version: 1,
     created_at: "2026-09-29T00:00:00Z",
     updated_at: "2026-09-29T00:00:00Z",
