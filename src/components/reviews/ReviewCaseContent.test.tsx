@@ -26,10 +26,10 @@ describe("ReviewCaseContent", () => {
     ).toBeInTheDocument();
   });
 
-  // Positive: the dev/test tag is information here, not something to pick.
-  it("shows the title, the category and the dev/test tag", () => {
+  // Positive
+  it("shows the title and the category", () => {
     // Arrange
-    const copy = makeReviewCopy({ split_tag: "test" });
+    const copy = makeReviewCopy();
 
     // Act
     render(<ReviewCaseContent copy={copy} />);
@@ -37,7 +37,36 @@ describe("ReviewCaseContent", () => {
     // Assert
     expect(within(section("Judul")).getByText("Kewajiban pemberitahuan tertulis sebelum PHK")).toBeInTheDocument();
     expect(within(section("Kategori")).getByText("Ketenagakerjaan")).toBeInTheDocument();
-    expect(within(section("Tag dev/test")).getByText("test")).toBeInTheDocument();
+  });
+
+  // Positive: the dev/test tag is information here, not something to pick (PBI-9 AC2).
+  it.each([
+    ["dev", "Tag Dev set, hanya informasi dan tidak dinilai"],
+    ["test", "Tag Test set, hanya informasi dan tidak dinilai"],
+  ] as const)("shows the %s tag as an info-only badge in the header", (tag, label) => {
+    // Arrange
+    const copy = makeReviewCopy({ split_tag: tag });
+
+    // Act
+    render(<ReviewCaseContent copy={copy} />);
+
+    // Assert
+    const header = screen.getByRole("banner");
+    expect(within(header).getByLabelText(label)).toBeInTheDocument();
+    expect(within(header).getByText("info saja")).toBeInTheDocument();
+  });
+
+  // Edge: the tag has one place on the page, so it is not repeated in the list of sections.
+  it("does not repeat the tag in the list of sections", () => {
+    // Arrange
+    const copy = makeReviewCopy({ split_tag: "test" });
+
+    // Act
+    render(<ReviewCaseContent copy={copy} />);
+
+    // Assert
+    expect(screen.queryByText("Tag dev/test")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText(/^Tag (Dev|Test) set/)).toHaveLength(1);
   });
 
   // Positive: the shared formatter writes the legal reference the way the case editor reads it.
