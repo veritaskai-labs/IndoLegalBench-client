@@ -70,7 +70,7 @@ describe("reviewerCandidates", () => {
     ];
     const queued = row({ assignments: [assignment({ reviewer_id: "u1" })] });
 
-    expect(reviewerCandidates(pool, queued)).toEqual([
+    expect(reviewerCandidates(pool, queued, null)).toEqual([
       { id: "u9", name: "Aileen" },
     ]);
   });
@@ -95,7 +95,7 @@ describe("reviewerCandidates", () => {
       user({ id: "u4", name: "Rafa" }),
     ];
 
-    expect(reviewerCandidates(pool, row()).map((item) => item.name, null)).toEqual([
+    expect(reviewerCandidates(pool, row(), null).map((item) => item.name)).toEqual([
       "Aileen",
       "Rafa",
       "Zahra",

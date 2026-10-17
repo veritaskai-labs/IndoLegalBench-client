@@ -2,21 +2,23 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { InReviewTable } from "@/components/reviews/InReviewTable";
 import { ReassignmentTable } from "@/components/reviews/ReassignmentTable";
 import { SwapReviewerDialog } from "@/components/reviews/SwapReviewerDialog";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
+import { useInReviewCases } from "@/hooks/useInReviewCases";
 import { useNeedsReassignment } from "@/hooks/useNeedsReassignment";
 import { useReplaceReviewer } from "@/hooks/useReplaceReviewer";
-import { reviewerCandidates } from "@/lib/reviews/reviewerCandidates";
+import { listCaseVersions } from "@/lib/cases/versionApi";
+import { isCaseCreator } from "@/lib/cases/versionCreator";
 import { reviewerName } from "@/lib/reviews/reviewQueue";
+import { reviewerCandidates } from "@/lib/reviews/reviewerCandidates";
 import { listActiveUsers } from "@/lib/userApi";
 import type {
   ReassignmentAssignment,
   ReassignmentRow,
 } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
-import { InReviewTable } from "@/components/reviews/InReviewTable";
-import { useInReviewCases } from "@/hooks/useInReviewCases";
 
 type Tab = "queue" | "decisions";
 type Target = { assignment: ReassignmentAssignment; row: ReassignmentRow };
@@ -32,10 +34,11 @@ export default function AdminReviewsPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const [target, setTarget] = useState<Target | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [authorId, setAuthorId] = useState<string | null>(null);
 
   const queue = useNeedsReassignment();
-  const inReview = useInReviewCases();
   const { reload } = queue;
+  const inReview = useInReviewCases();
 
   const afterReplace = useCallback(() => {
     setTarget(null);
@@ -56,9 +59,34 @@ export default function AdminReviewsPage() {
     };
   }, []);
 
+  /**
+   * AC7 mengecualikan penulis kasus. Antrean dari server belum membawa field author,
+   * jadi penulisnya dicari dari versi 1 lewat isCaseCreator — hanya saat dialog dibuka,
+   * dan hanya di antara kandidat, karena di luar itu tidak berpengaruh.
+   */
+  useEffect(() => {
+    if (target === null) return;
+
+    let cancelled = false;
+    listCaseVersions(target.row.case_id)
+      .then((versions) => {
+        if (cancelled) return;
+        const author = users.find((item) => isCaseCreator(versions, item.id));
+        setAuthorId(author?.id ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthorId(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [target, users]);
+
   const openDialog = useCallback(
     (assignment: ReassignmentAssignment, row: ReassignmentRow) => {
       reset();
+      setAuthorId(null);
       setTarget({ assignment, row });
     },
     [reset],
@@ -121,7 +149,7 @@ export default function AdminReviewsPage() {
           )}
         </section>
       ) : (
-      <section aria-label={TAB_LABEL.decisions}>
+        <section aria-label={TAB_LABEL.decisions}>
           {inReview.status === "error" ? (
             <ErrorState
               variant="card"
@@ -149,7 +177,7 @@ export default function AdminReviewsPage() {
             caseCode={target.row.case_code}
             currentReviewerId={target.assignment.reviewer_id}
             currentReviewerName={reviewerName(target.assignment)}
-            candidates={reviewerCandidates(users, target.row)}
+            candidates={reviewerCandidates(users, target.row, authorId)}
             pending={replacement.pending}
             error={replacement.error}
             onConfirm={(body) =>

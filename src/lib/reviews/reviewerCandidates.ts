@@ -3,16 +3,17 @@ import type { ReassignmentRow, ReviewerOption } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
 
 /**
- * Siapa yang boleh menggantikan reviewer pada satu ronde: akun reviewer yang masih aktif
- * dan belum ditugaskan di ronde itu.
+ * Siapa yang boleh menggantikan reviewer pada satu ronde (AC7): akun reviewer yang masih
+ * aktif, bukan penulis kasus, dan belum ditugaskan di ronde itu. Server tetap penjaga
+ * terakhir — ini supaya admin tidak kena penolakan setelah mengisi alasan.
  *
- * Penulis kasus belum bisa dikecualikan di sini karena antrean dari server belum
- * membawa field author. Kalau terpilih, server menolak dengan REVIEWER_IS_AUTHOR dan
- * pesannya sudah ada di replaceErrors.ts.
+ * authorId null berarti penulisnya belum diketahui; daftar tidak disembunyikan karena itu,
+ * dan server masih menolak dengan REVIEWER_IS_AUTHOR bila ternyata penulis yang dipilih.
  */
 export function reviewerCandidates(
   users: User[],
   row: ReassignmentRow,
+  authorId: string | null,
 ): ReviewerOption[] {
   const taken = new Set(
     activeAssignments(row).map((assignment) => assignment.reviewer_id),
@@ -21,7 +22,10 @@ export function reviewerCandidates(
   return users
     .filter(
       (user) =>
-        user.role === "reviewer" && user.is_active && !taken.has(user.id),
+        user.role === "reviewer" &&
+        user.is_active &&
+        user.id !== authorId &&
+        !taken.has(user.id),
     )
     .map((user) => ({ id: user.id, name: user.name }))
     .sort((left, right) => left.name.localeCompare(right.name, "id"));

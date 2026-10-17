@@ -1,15 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-vi.mock("@/lib/reviews/reviewApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/lib/reviews/reviewApi")>();
-  return { ...actual, listNeedsReassignment: vi.fn(), replaceReviewer: vi.fn() };
-});
-vi.mock("@/lib/userApi", () => ({ listActiveUsers: vi.fn() }));
-vi.mock("@/lib/reviews/inReviewApi", () => ({ listInReviewCases: vi.fn() }));
-
 import { ApiError } from "@/lib/apiClient";
 import {
   listNeedsReassignment,
@@ -25,6 +16,19 @@ import type {
 import type { User } from "@/types/user-management";
 import { listInReviewCases } from "@/lib/reviews/inReviewApi";
 import type { InReviewRow } from "@/lib/reviews/inReviewApi";
+import { listCaseVersions } from "@/lib/cases/versionApi";
+import { makeSummary } from "@/test/versionFixtures";
+
+vi.mock("@/lib/reviews/reviewApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/reviews/reviewApi")>();
+  return { ...actual, listNeedsReassignment: vi.fn(), replaceReviewer: vi.fn() };
+});
+vi.mock("@/lib/userApi", () => ({ listActiveUsers: vi.fn() }));
+vi.mock("@/lib/reviews/inReviewApi", () => ({ listInReviewCases: vi.fn() }));
+vi.mock("@/lib/cases/versionApi", () => ({ listCaseVersions: vi.fn() }));
+
+
 
 const inReviewMock = vi.mocked(listInReviewCases);
 
@@ -111,6 +115,16 @@ const AILEEN: User = {
   is_active: true,
 };
 
+const versionsMock = vi.mocked(listCaseVersions);
+
+const ESI: User = {
+  id: "u5",
+  name: "Esi",
+  email: "esi@example.com",
+  role: "reviewer",
+  is_active: true,
+};
+
 const REPLACED: ReplacedAssignment = {
   id: "a2",
   review_round_id: "r1",
@@ -127,6 +141,8 @@ beforeEach(() => {
   usersMock.mockResolvedValue([ROBEN, AILEEN]);
   inReviewMock.mockReset();
   inReviewMock.mockResolvedValue([]);
+  versionsMock.mockReset();
+  versionsMock.mockResolvedValue([]);
 
 });
 
@@ -252,4 +268,28 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
       ),
     ).toBeInTheDocument();
   });
+
+    // Negatif
+  it("leaves the case author out of the candidates", async () => {
+    const user = userEvent.setup();
+    const active = assignment({ id: "a1", reviewer_id: "u1" });
+    queueMock.mockResolvedValue([row({ assignments: [active] })]);
+    usersMock.mockResolvedValue([ROBEN, AILEEN, ESI]);
+    versionsMock.mockResolvedValue([
+      makeSummary(1, { author: { id: "u5", name: "Esi" } }),
+    ]);
+
+    render(<AdminReviewsPage />);
+    await user.click(
+      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+    );
+
+    expect(
+      await screen.findByRole("option", { name: "Aileen" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("option", { name: "Esi" })).not.toBeInTheDocument(),
+    );
+  });
+  
 });
