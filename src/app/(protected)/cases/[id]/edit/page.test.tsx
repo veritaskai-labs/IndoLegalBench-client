@@ -1075,3 +1075,68 @@ describe("EditCasePage tag changed by an Admin meanwhile (review of #30)", () =>
     expect(changeTagMock).not.toHaveBeenCalled();
   });
 });
+
+describe("EditCasePage dev/test tag QA (SCRUM-166)", () => {
+  const header = () => screen.getByRole("banner");
+
+  async function changeTo(user: ReturnType<typeof userEvent.setup>, label: string, confirm: boolean) {
+    await user.click(screen.getByRole("button", { name: "Ubah tag" }));
+    await user.click(screen.getByRole("radio", { name: label }));
+    if (confirm) await user.click(screen.getByRole("checkbox", { name: /Saya paham/ }));
+    await user.click(screen.getByRole("button", { name: "Simpan tag" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  }
+
+  beforeEach(() => {
+    session.role = "admin";
+    changeTagMock.mockReset();
+  });
+
+  // Edge: ticket scenario "Admin membatalkan dialog peringatan -> tag tidak berubah"
+  it("keeps the tag when the admin cancels after reading the warning", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved", split_tag: "dev" }));
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Ubah tag" }));
+    await user.click(screen.getByRole("radio", { name: "Test set" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("sudah pernah dipakai sebagai dev set");
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+
+    // Assert
+    expect(within(header()).getByText("Dev set")).toBeInTheDocument();
+    expect(within(header()).queryByText("pernah dev set")).not.toBeInTheDocument();
+    expect(changeTagMock).not.toHaveBeenCalled();
+  });
+
+  // Edge: ticket scenario dev -> test -> dev (-> test), the marker never disappears on the server
+  it("shows the dev set marker again after the tag goes dev, test, dev, test", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved", split_tag: "dev" }));
+    changeTagMock
+      .mockResolvedValueOnce(savedCase({ status: "approved", split_tag: "test", was_dev: true }))
+      .mockResolvedValueOnce(savedCase({ status: "approved", split_tag: "dev", was_dev: true }))
+      .mockResolvedValueOnce(savedCase({ status: "approved", split_tag: "test", was_dev: true }));
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Ubah tag" });
+
+    // Act + Assert, one step at a time
+    await changeTo(user, "Test set", true);
+    expect(within(header()).getByText("pernah dev set")).toBeInTheDocument();
+
+    await changeTo(user, "Dev set", false);
+    expect(within(header()).getByText("Dev set")).toBeInTheDocument();
+    expect(within(header()).queryByText("pernah dev set")).not.toBeInTheDocument();
+
+    await changeTo(user, "Test set", true);
+    expect(within(header()).getByText("pernah dev set")).toBeInTheDocument();
+    expect(changeTagMock.mock.calls.map(([, tag, confirm]) => [tag, confirm])).toEqual([
+      ["test", true],
+      ["dev", false],
+      ["test", true],
+    ]);
+  });
+});
