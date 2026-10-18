@@ -15,3 +15,4 @@ export * from "./MetricCard";
 export * from "./ProviderCard";
 export * from "./Toast";
 export * from "./Breadcrumb";
+export * from "./Tabs";
