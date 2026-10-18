@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 
 import { CaseCountCards } from "./CaseCountCards";
 
@@ -24,10 +25,10 @@ describe("CaseCountCards", () => {
       .getAllByRole("listitem")
       .map((card) => card.textContent);
 
-    expect(labels[0]).toMatch(/Draf/);
-    expect(labels[1]).toMatch(/review/i);
-    expect(labels[2]).toMatch(/revisi/i);
-    expect(labels[3]).toMatch(/[Ss]etujui/);
+    expect(labels[0]).toContain(CASE_STATUS_LABEL.draft);
+    expect(labels[1]).toContain(CASE_STATUS_LABEL.in_review);
+    expect(labels[2]).toContain(CASE_STATUS_LABEL.needs_revision);
+    expect(labels[3]).toContain(CASE_STATUS_LABEL.approved);
   });
 
   // Corner: status kosong tetap muncul sebagai nol, bukan hilang.
