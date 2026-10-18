@@ -176,7 +176,7 @@ export function RegulationTypeSelect({
           id={listId}
           role="listbox" // NOSONAR
           aria-label={label}
-          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-300 bg-white py-1 text-sm shadow-lg"
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-300 bg-white py-1 text-sm text-slate-900 shadow-lg"
         >
           {visible.map((type, index) => (
             <li // NOSONAR
