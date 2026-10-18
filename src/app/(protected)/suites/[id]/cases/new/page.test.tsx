@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
+import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { createCase } from "@/lib/cases/caseApi";
 import type { CaseRead } from "@/types/case";
@@ -33,6 +34,9 @@ vi.mock("@/lib/apiClient", async (importOriginal) => {
   return { ...actual, apiFetch: vi.fn() };
 });
 
+// Daftar jenis peraturan datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
+vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+
 const createCaseMock = vi.mocked(createCase);
 
 function createdCase(id: string): CaseRead {
@@ -47,6 +51,7 @@ function createdCase(id: string): CaseRead {
     split_tag: "dev",
     status: "draft",
     completeness_pct: 0,
+    was_dev: false,
     version: 1,
     created_at: "2026-09-29T00:00:00Z",
     updated_at: "2026-09-29T00:00:00Z",
@@ -75,8 +80,10 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Judul"), "Pemberitahuan PHK");
   await user.type(screen.getByLabelText("Pertanyaan"), "Wajib?");
   const ref = within(screen.getByRole("group", { name: "Rujukan 1" }));
-  await user.type(ref.getByLabelText("Jenis peraturan"), "UU");
+  await user.click(ref.getByLabelText("Jenis peraturan"));
+  await user.click(screen.getByRole("option", { name: /Undang-undang/ }));
   await user.type(ref.getByLabelText("Nomor"), "13");
+  await user.type(ref.getByLabelText("Tahun"), "2003");
   await user.type(ref.getByLabelText("Pasal"), "151");
   await user.click(screen.getByRole("radio", { name: /dev/ }));
 }
@@ -86,7 +93,11 @@ beforeEach(() => {
   push.mockReset();
   createCaseMock.mockReset();
   vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
-  
+  vi.mocked(useRegulationTypes).mockReturnValue({
+    status: "ready",
+    types: [{ code: "uu", label: "Undang-undang", singkatan: "UU", is_active: true }],
+    reload: vi.fn(),
+  });
   confirmMock.mockReset().mockReturnValue(true);
   vi.stubGlobal("confirm", confirmMock);
 });
@@ -175,8 +186,8 @@ describe("NewCasePage", () => {
       new ApiError(
         422,
         "FIELD_REQUIRED",
-        "Field legal_refs[0].pasal wajib diisi",
-        "legal_refs[0].pasal",
+        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "legal_refs[0].links[0].pasal",
       ),
     );
     renderPage();
@@ -187,7 +198,7 @@ describe("NewCasePage", () => {
     const row = screen.getByRole("group", { name: "Rujukan 1" });
     await waitFor(() =>
       expect(within(row).getByLabelText("Pasal")).toHaveAccessibleDescription(
-        "Field legal_refs[0].pasal wajib diisi",
+        "Field legal_refs[0].links[0].pasal wajib diisi",
       ),
     );
   });

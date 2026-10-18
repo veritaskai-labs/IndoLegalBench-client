@@ -360,6 +360,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajukan kasus untuk direview
+         * @description PBI-6 AC1. The version becomes in_review and a new review round is created.
+         */
+        post: operations["submit_for_review_cases__case_id__submit_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cases/{case_id}/versions/compare": {
         parameters: {
             query?: never;
@@ -404,6 +424,29 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/split-tag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Ubah tag dev/test kasus yang sudah disetujui
+         * @description PBI-9 AC3. Changes the approved version and any open version, and is audited.
+         *
+         *     Moving dev to test needs confirm = true, because AI developers have
+         *     already seen the case. The case is then marked was_dev for good.
+         */
+        patch: operations["change_split_tag_cases__case_id__split_tag_patch"];
         trace?: never;
     };
     "/cases/{case_id}/completeness": {
@@ -514,6 +557,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/assigned": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kasus yang ditugaskan ke reviewer yang login
+         * @description Active assignments in open rounds, with the case body and only your own verdict.
+         */
+        get: operations["list_assigned_reviews_assigned_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{assignment_id}/verdict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kirim penilaian review
+         * @description PBI-6 AC2-AC6. The response carries your own verdict only.
+         *
+         *     When this is the last verdict of the round, the round is decided in the
+         *     same transaction and the case version becomes approved or needs_revision.
+         */
+        post: operations["submit_verdict_reviews__assignment_id__verdict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cases/{case_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review terakhir satu kasus
+         * @description PBI-6 AC3. While the round is open, another reviewer's verdict is null.
+         *
+         *     Admin sees every verdict at any time (client decision in SCRUM-145).
+         */
+        get: operations["get_case_review_cases__case_id__review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-logs": {
         parameters: {
             query?: never;
@@ -557,6 +665,26 @@ export interface paths {
         };
         /** Buka kembali satu catatan audit */
         get: operations["get_log_audit_logs__log_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/regulation-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar jenis peraturan (JDIH BPK) untuk rujukan hukum
+         * @description Return the regulation types ordered by urutan, active ones unless asked otherwise.
+         */
+        get: operations["list_regulation_types_regulation_types_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -679,6 +807,29 @@ export interface components {
             expected_conclusion?: string | null;
         };
         /**
+         * AssignedReview
+         * @description Satu baris GET /reviews/assigned.
+         */
+        AssignedReview: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /** Round No */
+            round_no: number;
+            /** Assigned At */
+            assigned_at: string | null;
+            case: components["schemas"]["ReviewCopy"];
+            my_verdict: components["schemas"]["VerdictView"] | null;
+        };
+        /**
+         * AssignmentStatus
+         * @description replaced: diganti Admin (AC7). void: reviewer dinonaktifkan (AC8).
+         * @enum {string}
+         */
+        AssignmentStatus: "active" | "replaced" | "void";
+        /**
          * AuditEntityType
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
@@ -765,6 +916,21 @@ export interface components {
             category?: string | null;
         };
         /**
+         * CaseNotReadyBody
+         * @description 422 CASE_NOT_READY: every section that blocks the submission.
+         */
+        CaseNotReadyBody: {
+            /**
+             * Code
+             * @example CASE_NOT_READY
+             */
+            code: string;
+            /** Message */
+            message: string;
+            /** Missing */
+            missing: components["schemas"]["CompletenessIssue"][];
+        };
+        /**
          * CaseRead
          * @description Full case returned by create, read, and update.
          */
@@ -783,12 +949,17 @@ export interface components {
             case_code: string;
             identity: components["schemas"]["CaseIdentity"];
             /** Legal Refs */
-            legal_refs: components["schemas"]["LegalRef"][];
+            legal_refs: components["schemas"]["LegalRefRead"][];
             answer_criteria: components["schemas"]["AnswerCriteria"];
             /** Traps */
             traps: components["schemas"]["Trap"][];
             split_tag: components["schemas"]["SplitTag"];
             status: components["schemas"]["CaseStatus"];
+            /**
+             * Was Dev
+             * @description Kasus ini pernah berada di dev set (PBI-9 AC3); tidak pernah kembali false
+             */
+            was_dev: boolean;
             /** Completeness Pct */
             completeness_pct: number;
             /** Version */
@@ -803,6 +974,32 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * CaseReview
+         * @description GET /cases/{case_id}/review: round terakhir kasus ini.
+         */
+        CaseReview: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Case Version Id
+             * Format: uuid
+             */
+            case_version_id: string;
+            /** Round No */
+            round_no: number;
+            status: components["schemas"]["RoundStatus"];
+            decision: components["schemas"]["RoundDecision"] | null;
+            /** Opened At */
+            opened_at: string | null;
+            /** Decided At */
+            decided_at: string | null;
+            /** Reviewers */
+            reviewers: components["schemas"]["ReviewerSlot"][];
         };
         /**
          * CaseStatus
@@ -847,9 +1044,9 @@ export interface components {
             identity: components["schemas"]["CaseIdentity"];
             /**
              * Legal Refs
-             * @description Minimal satu rujukan, masing-masing sampai level pasal.
+             * @description Minimal satu rujukan. Isi wajib tiap link mengikuti bentuknya (PBI-21).
              */
-            legal_refs: components["schemas"]["LegalRef"][];
+            legal_refs: components["schemas"]["LegalRefWrite"][];
             answer_criteria?: components["schemas"]["AnswerCriteria"];
             /** Traps */
             traps?: components["schemas"]["Trap"][];
@@ -901,7 +1098,7 @@ export interface components {
             message: string;
             /**
              * Field
-             * @description Lokasi field yang gagal, misalnya legal_refs[0].pasal
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].links[0].pasal
              */
             field?: string | null;
         };
@@ -930,22 +1127,133 @@ export interface components {
          */
         LastTestStatus: "ok" | "failed";
         /**
-         * LegalRef
-         * @description One citation. regulation_type, regulation_number, and pasal are required.
+         * LegalRefLinkRead
+         * @description One regulation in a citation, as stored.
+         *
+         *     A migrated Sprint 1 citation may have no year and a free-form pasal (AC9).
+         *     The Author fixes both when the case is saved again.
          */
-        LegalRef: {
-            /** Regulation Type */
+        LegalRefLinkRead: {
+            /**
+             * Form
+             * @enum {string}
+             */
+            form: "name_only" | "pasal" | "pasal_angka";
+            /**
+             * Connector
+             * @enum {string}
+             */
+            connector: "none" | "jo" | "jis";
+            /**
+             * Regulation Type
+             * @description Kode dari GET /regulation-types, bukan label
+             */
             regulation_type: string;
-            /** Regulation Number */
-            regulation_number: string;
-            /** Year */
-            year?: number | null;
+            /**
+             * Number
+             * @description Boleh alfanumerik
+             */
+            number: string;
+            /**
+             * About
+             * @description Tentang, opsional
+             */
+            about?: string | null;
             /** Pasal */
-            pasal: string;
+            pasal?: string | null;
+            /** Angka */
+            angka?: string | null;
             /** Ayat */
             ayat?: string | null;
             /** Huruf */
             huruf?: string | null;
+            /** Year */
+            year?: number | null;
+        };
+        /**
+         * LegalRefLinkWrite
+         * @description One regulation in a citation, as the editor sends it.
+         *
+         *     Cross-field rules (which form needs pasal or angka, the jo./jis. chain,
+         *     year not after the current year) live in validation.py.
+         */
+        LegalRefLinkWrite: {
+            /**
+             * Form
+             * @enum {string}
+             */
+            form: "name_only" | "pasal" | "pasal_angka";
+            /**
+             * Connector
+             * @enum {string}
+             */
+            connector: "none" | "jo" | "jis";
+            /**
+             * Regulation Type
+             * @description Kode dari GET /regulation-types, bukan label
+             */
+            regulation_type: string;
+            /**
+             * Number
+             * @description Boleh alfanumerik
+             */
+            number: string;
+            /**
+             * About
+             * @description Tentang, opsional
+             */
+            about?: string | null;
+            /** Pasal */
+            pasal?: string | null;
+            /** Angka */
+            angka?: string | null;
+            /** Ayat */
+            ayat?: string | null;
+            /** Huruf */
+            huruf?: string | null;
+            /** Year */
+            year: number;
+        };
+        /**
+         * LegalRefRead
+         * @description One citation as returned, written in legal style by the server (AC6).
+         */
+        LegalRefRead: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "structured" | "free_text";
+            /**
+             * Free Text
+             * @description Hanya untuk kind free_text, disimpan apa adanya
+             */
+            free_text?: string | null;
+            /** Links */
+            links: components["schemas"]["LegalRefLinkRead"][];
+            /**
+             * Display Text
+             * @description Ditulis server, misalnya "Pasal 156 UU 13/2003 jo. Pasal II Angka 5 UU 6/2023"
+             */
+            display_text: string;
+        };
+        /**
+         * LegalRefWrite
+         * @description One citation as the editor sends it. Links are in chain order.
+         */
+        LegalRefWrite: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "structured" | "free_text";
+            /**
+             * Free Text
+             * @description Hanya untuk kind free_text, disimpan apa adanya
+             */
+            free_text?: string | null;
+            /** Links */
+            links: components["schemas"]["LegalRefLinkWrite"][];
         };
         /** MeResponse */
         MeResponse: {
@@ -1003,10 +1311,125 @@ export interface components {
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
         /**
+         * RegulationTypeRead
+         * @description Satu jenis peraturan untuk dropdown editor (AC2).
+         */
+        RegulationTypeRead: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Singkatan */
+            singkatan: string | null;
+            /** Is Active */
+            is_active: boolean;
+        };
+        /**
+         * ReviewCopy
+         * @description One version as a reviewer reads it (PBI-6, SCRUM-145).
+         *
+         *     split_tag is shown read-only and is not graded (PBI-9 AC2).
+         */
+        ReviewCopy: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /**
+             * Author Id
+             * Format: uuid
+             */
+            author_id: string;
+            /**
+             * Case Version Id
+             * Format: uuid
+             */
+            case_version_id: string;
+            /** Version No */
+            version_no: number;
+            split_tag: components["schemas"]["SplitTag"];
+            identity: components["schemas"]["CaseIdentity"];
+            /** Legal Refs */
+            legal_refs: components["schemas"]["LegalRefRead"][];
+            /** Answer Criteria */
+            answer_criteria: {
+                [key: string]: unknown;
+            };
+            /** Traps */
+            traps: {
+                [key: string]: unknown;
+            }[];
+        };
+        /**
+         * ReviewSubmission
+         * @description POST /cases/{id}/submit-review. The version now waits for reviewers.
+         */
+        ReviewSubmission: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Version
+             * @description Nomor versi yang diajukan
+             */
+            version: number;
+            status: components["schemas"]["CaseStatus"];
+            /**
+             * Round No
+             * @description 1 untuk pengajuan pertama, naik setiap pengajuan ulang
+             */
+            round_no: number;
+            /**
+             * Round Status
+             * @description awaiting_assignment sampai dua reviewer terpasang (SCRUM-144)
+             */
+            round_status: string;
+        };
+        /** ReviewerRead */
+        ReviewerRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * ReviewerSlot
+         * @description Satu reviewer aktif di round. verdict null bila belum ada atau belum boleh dilihat.
+         */
+        ReviewerSlot: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            reviewer: components["schemas"]["ReviewerRead"];
+            status: components["schemas"]["AssignmentStatus"];
+            verdict: components["schemas"]["VerdictView"] | null;
+        };
+        /**
          * Role
          * @enum {string}
          */
         Role: "author" | "reviewer" | "admin" | "viewer";
+        /**
+         * RoundDecision
+         * @enum {string}
+         */
+        RoundDecision: "approved" | "revise";
+        /**
+         * RoundStatus
+         * @description awaiting_assignment sampai dua reviewer aktif terpasang (SCRUM-144).
+         * @enum {string}
+         */
+        RoundStatus: "awaiting_assignment" | "open" | "decided";
         /**
          * SnapshotItemRead
          * @description One frozen case. body is the copy taken at snapshot time.
@@ -1076,6 +1499,19 @@ export interface components {
          * @enum {string}
          */
         SplitTag: "dev" | "test";
+        /**
+         * SplitTagChange
+         * @description PATCH /cases/{id}/split-tag (PBI-9 AC3). Admin only, after approval.
+         */
+        SplitTagChange: {
+            split_tag: components["schemas"]["SplitTag"];
+            /**
+             * Confirm
+             * @description Wajib true untuk dev ke test. Tanpa itu jawabannya 409 TAG_CHANGE_NEEDS_CONFIRMATION dengan requires_confirmation = true.
+             * @default false
+             */
+            confirm: boolean;
+        };
         /** SuiteCreate */
         SuiteCreate: {
             /**
@@ -1144,6 +1580,24 @@ export interface components {
             description?: string | null;
         };
         /**
+         * TagConfirmationBody
+         * @description 409 TAG_CHANGE_NEEDS_CONFIRMATION: tampilkan peringatan lalu kirim ulang dengan confirm.
+         */
+        TagConfirmationBody: {
+            /**
+             * Code
+             * @example TAG_CHANGE_NEEDS_CONFIRMATION
+             */
+            code: string;
+            /** Message */
+            message: string;
+            /**
+             * Requires Confirmation
+             * @default false
+             */
+            requires_confirmation: boolean;
+        };
+        /**
          * Trap
          * @description An optionally included known mistake and how the model is expected to handle it.
          */
@@ -1197,6 +1651,55 @@ export interface components {
             ctx?: Record<string, never>;
         };
         /**
+         * VerdictDecision
+         * @enum {string}
+         */
+        VerdictDecision: "approve" | "revise";
+        /**
+         * VerdictResult
+         * @description 201 dari pengiriman verdict: verdict milik sendiri saja (AC3, D3 langkah 26).
+         */
+        VerdictResult: {
+            decision: components["schemas"]["VerdictDecision"];
+            /** Comment */
+            comment: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            round_status: components["schemas"]["RoundStatus"];
+            round_decision: components["schemas"]["RoundDecision"] | null;
+        };
+        /**
+         * VerdictView
+         * @description Satu verdict yang boleh dilihat peminta.
+         */
+        VerdictView: {
+            decision: components["schemas"]["VerdictDecision"];
+            /** Comment */
+            comment: string | null;
+            /** Submitted At */
+            submitted_at: string | null;
+        };
+        /**
+         * VerdictWrite
+         * @description POST /reviews/{assignment_id}/verdict.
+         *
+         *     Field lain ditolak (422), termasuk split_tag: reviewer menilai substansi
+         *     kasus, bukan tag dev/test (PBI-9 AC2).
+         */
+        VerdictWrite: {
+            decision: components["schemas"]["VerdictDecision"];
+            /**
+             * Comment
+             * @description Wajib bila decision = revise (COMMENT_REQUIRED)
+             */
+            comment?: string | null;
+        };
+        /**
          * VersionCompare
          * @description GET /cases/{id}/versions/compare. a and b are version numbers.
          */
@@ -1224,7 +1727,7 @@ export interface components {
             /** Split Tag */
             split_tag: string;
             /** Legal Refs */
-            legal_refs: unknown[];
+            legal_refs: components["schemas"]["LegalRefRead"][];
             /** Answer Criteria */
             answer_criteria: {
                 [key: string]: unknown;
@@ -2024,7 +2527,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), tag diubah lewat PUT setelah disetujui (`SPLIT_TAG_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2126,7 +2629,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), tag diubah lewat PUT setelah disetujui (`SPLIT_TAG_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2224,7 +2727,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
+            /** @description Kode kasus sudah dipakai (`CASE_CODE_TAKEN`), kode diubah setelah ada versi yang disetujui (`CASE_CODE_LOCKED`), tag diubah lewat PUT setelah disetujui (`SPLIT_TAG_LOCKED`), versi yang disetujui atau sedang ditinjau diubah (`VERSION_LOCKED`), versi baru diminta saat draf atau tinjauan masih berjalan (`VERSION_IN_PROGRESS`), atau versi baru diminta sebelum ada versi yang disetujui (`NO_APPROVED_VERSION`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2240,6 +2743,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    submit_for_review_cases__case_id__submit_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSubmission"];
+                };
+            };
+            /** @description Bukan Author atau bukan penulis kasus ini. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Versi sedang ditinjau atau sudah disetujui (`VERSION_NOT_SUBMITTABLE`), atau pengajuan ulang tanpa putusan revisi pada round terakhir (`ROUND_NOT_REVISED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kelengkapan belum 100%, tag kosong, atau rujukan hukum belum lengkap (`CASE_NOT_READY`, daftar di `missing`). Suite tidak aktif (`SUITE_NOT_ACTIVE`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseNotReadyBody"];
                 };
             };
         };
@@ -2334,6 +2895,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_split_tag_cases__case_id__split_tag_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitTagChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRead"];
+                };
+            };
+            /** @description Bukan Admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Dev ke test tanpa confirm (`TAG_CHANGE_NEEDS_CONFIRMATION`, `requires_confirmation` = true), atau kasus belum disetujui (`NO_APPROVED_VERSION`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagConfirmationBody"];
+                };
+            };
+            /** @description Suite tidak aktif (`SUITE_NOT_ACTIVE`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -2702,6 +3325,137 @@ export interface operations {
             };
         };
     };
+    list_assigned_reviews_assigned_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignedReview"][];
+                };
+            };
+        };
+    };
+    submit_verdict_reviews__assignment_id__verdict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerdictWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerdictResult"];
+                };
+            };
+            /** @description Penugasan milik reviewer lain (`NOT_YOUR_ASSIGNMENT`) atau reviewer adalah penulis kasus (`REVIEWER_IS_AUTHOR`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Penugasan tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Penugasan sudah replaced/void (`ASSIGNMENT_NOT_ACTIVE`), round tidak open (`ROUND_NOT_OPEN`), atau penilaian sudah dikirim (`VERDICT_ALREADY_SUBMITTED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Komentar kosong untuk decision = revise (`COMMENT_REQUIRED`), tag dev/test ikut dikirim (`SPLIT_TAG_NOT_REVIEWED`, PBI-9 AC2), field lain yang tidak dikenal (`UNKNOWN_FIELD`), atau decision kosong/tidak sah. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_case_review_cases__case_id__review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseReview"];
+                };
+            };
+            /** @description Tidak terlibat di kasus ini. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus tidak ditemukan, atau belum pernah diajukan (`NO_REVIEW_ROUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     search_logs_audit_logs_get: {
         parameters: {
             query?: {
@@ -2835,6 +3589,56 @@ export interface operations {
             };
             /** @description Catatan tidak ditemukan */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_regulation_types_regulation_types_get: {
+        parameters: {
+            query?: {
+                /** @description Sertakan jenis nonaktif, untuk label rujukan lama yang masih memakainya. */
+                include_inactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegulationTypeRead"][];
+                };
+            };
+            /** @description Belum login. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Peran tidak dikenal. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -24,20 +24,55 @@ describe("mapSaveError", () => {
     });
   });
 
-  // Positive: AC5, the error lands on the exact legal reference row.
-  it("puts a 422 on a specific legal reference row", () => {
+  // Positive: AC8, the error lands on the exact link of the exact legal reference.
+  it("puts a 422 on a specific link of a specific legal reference", () => {
+    // Arrange
     const error = fieldError(
       "FIELD_REQUIRED",
-      "legal_refs[1].pasal",
-      "Field legal_refs[1].pasal wajib diisi",
+      "legal_refs[1].links[0].pasal",
+      "Field legal_refs[1].links[0].pasal wajib diisi",
     );
 
-    expect(mapSaveError(error)).toEqual({
+    // Act
+    const result = mapSaveError(error);
+
+    // Assert
+    expect(result).toEqual({
       kind: "field",
-      path: "legal_refs.1.pasal",
-      message: "Field legal_refs[1].pasal wajib diisi",
+      path: "legal_refs.1.links.0.pasal",
+      message: "Field legal_refs[1].links[0].pasal wajib diisi",
       detail: null,
     });
+  });
+
+  it.each([
+    [
+      "FIELD_NOT_ALLOWED",
+      "legal_refs[0].links[0].angka",
+      "Field legal_refs[0].links[0].angka tidak boleh diisi",
+    ],
+    [
+      "CONNECTOR_INVALID",
+      "legal_refs[0].links[1].connector",
+      "Peraturan ke-2 wajib disambung dengan jo. atau jis.",
+    ],
+    ["YEAR_IN_FUTURE", "legal_refs[0].links[0].year", "Tahun tidak boleh melewati 2026"],
+    [
+      "REGULATION_TYPE_UNKNOWN",
+      "legal_refs[0].links[0].regulation_type",
+      "Jenis peraturan tidak ada di daftar",
+    ],
+    [
+      "REGULATION_TYPE_INACTIVE",
+      "legal_refs[0].links[0].regulation_type",
+      "Jenis peraturan sudah tidak dipakai",
+    ],
+  ])("shows the server message of %s on its field", (code, serverField, message) => {
+    // Act
+    const result = mapSaveError(fieldError(code, serverField, message));
+
+    // Assert
+    expect(result).toMatchObject({ kind: "field", message, detail: null });
   });
 
   it.each([
@@ -46,9 +81,19 @@ describe("mapSaveError", () => {
     ["identity.title", "identity.title"],
     ["identity.question", "identity.question"],
     ["identity.category", "identity.category"],
-    ["legal_refs[0].regulation_type", "legal_refs.0.regulation_type"],
-    ["legal_refs[0].regulation_number", "legal_refs.0.regulation_number"],
-    ["legal_refs[12].huruf", "legal_refs.12.huruf"],
+    ["legal_refs[0].links[0].form", "legal_refs.0.links.0.form"],
+    ["legal_refs[0].links[0].connector", "legal_refs.0.links.0.connector"],
+    ["legal_refs[0].links[0].regulation_type", "legal_refs.0.links.0.regulation_type"],
+    ["legal_refs[0].links[0].number", "legal_refs.0.links.0.number"],
+    ["legal_refs[0].links[0].year", "legal_refs.0.links.0.year"],
+    ["legal_refs[0].links[0].about", "legal_refs.0.links.0.about"],
+    ["legal_refs[0].links[0].pasal", "legal_refs.0.links.0.pasal"],
+    ["legal_refs[0].links[0].angka", "legal_refs.0.links.0.angka"],
+    ["legal_refs[0].links[0].ayat", "legal_refs.0.links.0.ayat"],
+    ["legal_refs[12].links[3].huruf", "legal_refs.12.links.3.huruf"],
+    ["legal_refs[0].kind", "legal_refs.0.kind"],
+    ["legal_refs[0].free_text", "legal_refs.0.free_text"],
+    ["legal_refs[0].links", "legal_refs.0.links"],
     ["traps[0].description", "traps.0.description"],
     ["traps[3].expected_model_behavior", "traps.3.expected_model_behavior"],
     ["answer_criteria.expected_conclusion", "answer_criteria.expected_conclusion"],
@@ -78,13 +123,13 @@ describe("mapSaveError", () => {
   it("uses Indonesian copy for VALIDATION_ERROR and keeps the server text as detail", () => {
     const error = fieldError(
       "VALIDATION_ERROR",
-      "legal_refs[0].year",
+      "legal_refs[0].links[0].year",
       "Input should be greater than or equal to 1",
     );
 
     expect(mapSaveError(error)).toEqual({
       kind: "field",
-      path: "legal_refs.0.year",
+      path: "legal_refs.0.links.0.year",
       message: "Isian tidak valid.",
       detail: "Input should be greater than or equal to 1",
     });
@@ -96,8 +141,14 @@ describe("mapSaveError", () => {
     "identity",
     "legal_refs[0]",
     "legal_refs[0].unknown",
+    "legal_refs[0].links[0].unknown",
+    "legal_refs[0].links[1]",
+    "legal_refs[0].links[x].pasal",
     "traps[0].unknown",
-    "legal_refs[x].pasal",
+    "legal_refs[x].links[0].pasal",
+    // Sprint 1 field names that the form no longer has
+    "legal_refs[0].pasal",
+    "legal_refs[0].regulation_number",
     "status",
     "",
   ])("falls back to a form-level message for unknown field %j", (serverField) => {
@@ -205,5 +256,22 @@ describe("mapSaveError", () => {
     ["a non-error value", "boom"],
   ])("uses the generic message for %s", (_label, error) => {
     expect(mapSaveError(error)).toEqual({ kind: "form", message: GENERIC_SAVE_ERROR });
+  });
+
+});
+
+describe("mapSaveError split tag (review of #30)", () => {
+  it("asks for a reload, above the form, when an Admin changed the tag meanwhile", () => {
+    // Arrange: 409, so the global 403 handler does not move the author to /forbidden
+    const error = new ApiError(409, "SPLIT_TAG_LOCKED", "server text");
+
+    // Act
+    const result = mapSaveError(error);
+
+    // Assert
+    expect(result).toEqual({
+      kind: "form",
+      message: "Tag kasus ini baru saja diubah Admin. Muat ulang halaman lalu simpan lagi.",
+    });
   });
 });

@@ -27,9 +27,12 @@ function single(value: unknown): string[] {
   return shown === "" ? [] : [shown];
 }
 
+/** Rujukan bentuk baru yang disimpan tanpa teks dari server: ada, tapi belum bisa dituliskan di sini. */
+const STRUCTURED_WITHOUT_TEXT =
+  "Rujukan terstruktur, teks penulisannya belum tersedia di tampilan ini.";
+
 /** "UU No. 13 Tahun 2003, Pasal 151 ayat (3) huruf a". Bagian yang kosong dilewati. */
-function legalRefLine(ref: unknown): string | null {
-  if (!isRecord(ref)) return null;
+function legacyRefLine(ref: Record<string, unknown>): string | null {
   const regulation = [
     text(ref.regulation_type),
     text(ref.regulation_number) && `No. ${text(ref.regulation_number)}`,
@@ -46,6 +49,21 @@ function legalRefLine(ref: unknown): string | null {
     .join(" ");
   const line = [regulation, provision].filter(Boolean).join(", ");
   return line === "" ? null : line;
+}
+
+/**
+ * Satu baris untuk satu rujukan. Teks yang ditulis server dipakai apa adanya, jadi aturan penulisan
+ * rujukan hanya ada di server. Tanpa itu: teks bebas ditampilkan seperti diketik, bentuk lama
+ * (Sprint 1) ditulis seperti biasa, dan bentuk baru tanpa teks diberi baris pengganti supaya tidak
+ * hilang diam-diam dari tampilan.
+ */
+function legalRefLine(ref: unknown): string | null {
+  if (!isRecord(ref)) return null;
+  const written = typeof ref.display_text === "string" ? ref.display_text.trim() : "";
+  if (written !== "") return written;
+  if (ref.kind === "free_text") return text(ref.free_text) || null;
+  if (ref.kind === "structured") return STRUCTURED_WITHOUT_TEXT;
+  return legacyRefLine(ref);
 }
 
 function legalRefLines(value: unknown): string[] {
