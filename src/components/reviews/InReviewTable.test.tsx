@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { InReviewTable } from "./InReviewTable";
 import type { InReviewRow } from "@/lib/reviews/inReviewApi";
 import type { CaseReview, ReviewerSlot } from "@/types/reviewAdmin";
+import userEvent from "@testing-library/user-event";
 
 function slot(overrides: Partial<ReviewerSlot> = {}): ReviewerSlot {
   return {
@@ -139,5 +140,30 @@ describe("InReviewTable", () => {
     render(<InReviewTable rows={[]} />);
 
     expect(screen.getAllByRole("row")).toHaveLength(1);
+  });
+
+  // AC7: reviewer yang lambat tapi masih aktif juga harus bisa diganti dari sini.
+  it("hands back the slot and the row when the admin replaces a reviewer", async () => {
+    const user = userEvent.setup();
+    const onReplace = vi.fn();
+    const queued = row();
+
+    render(<InReviewTable rows={[queued]} onReplace={onReplace} />);
+    await user.click(
+      screen.getByRole("button", { name: "Ganti reviewer Roben" }),
+    );
+
+    expect(onReplace).toHaveBeenCalledWith(queued.review?.reviewers[0], queued);
+  });
+
+  // corner: penugasan yang sudah diganti tidak bisa diganti lagi.
+  it("offers no button for a reviewer who was already replaced", () => {
+    const queued = row({
+      review: review({ reviewers: [slot({ status: "replaced" })] }),
+    });
+
+    render(<InReviewTable rows={[queued]} onReplace={vi.fn()} />);
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

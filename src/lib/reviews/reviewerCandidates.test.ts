@@ -128,3 +128,18 @@ describe("reviewerCandidates", () => {
     ]);
   });
 });
+
+describe("candidatesExcept", () => {
+  // AC7 dari tab "Dalam review": yang terpakai datang sebagai daftar id, bukan baris antrean.
+  it("drops the taken reviewers and the author", () => {
+    const users = [
+      { id: "u1", name: "Roben", email: "r@x.test", role: "reviewer", is_active: true },
+      { id: "u5", name: "Esi", email: "e@x.test", role: "reviewer", is_active: true },
+      { id: "u9", name: "Aileen", email: "a@x.test", role: "reviewer", is_active: true },
+    ] as User[];
+
+    const options = candidatesExcept(users, ["u1"], "u5");
+
+    expect(options.map((item) => item.id)).toEqual(["u9"]);
+  });
+});
