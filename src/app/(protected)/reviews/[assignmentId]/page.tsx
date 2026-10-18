@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import { CaseAuditHistory } from "@/components/audit/CaseAuditHistory";
 import { OwnVerdictNotice } from "@/components/reviews/OwnVerdictNotice";
 import { ReviewCaseContent } from "@/components/reviews/ReviewCaseContent";
 import { SecondReviewerPanel } from "@/components/reviews/SecondReviewerPanel";
 import { VerdictForm } from "@/components/reviews/VerdictForm";
-import { Breadcrumb, EmptyState, ErrorState } from "@/components/ui";
+import { Breadcrumb, EmptyState, ErrorState, Tabs, tabElementId, tabPanelId, type TabItem } from "@/components/ui";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAssignedReview } from "@/hooks/useAssignedReview";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,13 +24,28 @@ const BACK_LINK = (
   </Link>
 );
 
+type ReviewTab = "verdict" | "history";
+
+const TAB_PREFIX = "review";
+const REVIEW_TABS: readonly TabItem<ReviewTab>[] = [
+  { id: "verdict", label: "Penilaian" },
+  { id: "history", label: "Riwayat" },
+];
+
 /** Satu penugasan yang sudah dimuat: isi kasus, form atau penilaian terkirim, dan peninjau kedua. */
 function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview }>) {
   const [result, setResult] = useState<VerdictResult | null>(null);
+  const [tab, setTab] = useState<ReviewTab>("verdict");
+  const [historyOpened, setHistoryOpened] = useState(false);
   const copy = assignment.case;
   const verdict = submittedVerdict(result, assignment.my_verdict);
   // Kunci muat ulang: setelah verdict terkirim, round bisa saja sudah selesai dan penilaian kedua terbuka.
   const caseReview = useCaseReview(copy.case_id, true, result?.submitted_at ?? "");
+
+  function showTab(next: ReviewTab) {
+    setTab(next);
+    if (next === "history") setHistoryOpened(true);
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -37,16 +53,35 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          <ReviewCaseContent copy={copy} />
-          {verdict === null ? (
-            <VerdictForm assignmentId={assignment.assignment_id} versionNo={copy.version_no} onSubmitted={setResult} />
-          ) : (
-            <OwnVerdictNotice
-              verdict={verdict}
-              roundStatus={result?.round_status ?? "open"}
-              roundDecision={result?.round_decision ?? null}
-            />
-          )}
+          <Tabs tabs={REVIEW_TABS} active={tab} onChange={showTab} label="Bagian penilaian" idPrefix={TAB_PREFIX} />
+          {/* Form tetap terpasang saat riwayat dibuka, supaya draf tidak hilang. */}
+          <div
+            role="tabpanel"
+            id={tabPanelId(TAB_PREFIX, "verdict")}
+            aria-labelledby={tabElementId(TAB_PREFIX, "verdict")}
+            hidden={tab !== "verdict"}
+            className="space-y-6"
+          >
+            <ReviewCaseContent copy={copy} />
+            {verdict === null ? (
+              <VerdictForm assignmentId={assignment.assignment_id} versionNo={copy.version_no} onSubmitted={setResult} />
+            ) : (
+              <OwnVerdictNotice
+                verdict={verdict}
+                roundStatus={result?.round_status ?? "open"}
+                roundDecision={result?.round_decision ?? null}
+              />
+            )}
+          </div>
+          {/* Riwayat dimuat saat tab pertama dibuka, lalu tetap terpasang. */}
+          <div
+            role="tabpanel"
+            id={tabPanelId(TAB_PREFIX, "history")}
+            aria-labelledby={tabElementId(TAB_PREFIX, "history")}
+            hidden={tab !== "history"}
+          >
+            {historyOpened && <CaseAuditHistory key={result?.submitted_at ?? ""} caseId={copy.case_id} />}
+          </div>
         </div>
 
         <aside>
