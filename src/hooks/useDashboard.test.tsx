@@ -33,9 +33,30 @@ const tick = async (ms: number) => {
   });
 };
 
+function setVisibility(state: DocumentVisibilityState) {
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    get: () => state,
+  });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
+
+const hide = () => {
+  act(() => {
+    setVisibility("hidden");
+  });
+};
+
+const show = () => {
+  act(() => {
+    setVisibility("visible");
+  });
+};
+
 beforeEach(() => {
   vi.useFakeTimers();
   getMock.mockReset();
+  setVisibility("visible");
 });
 
 afterEach(() => {
@@ -116,5 +137,31 @@ describe("useDashboard", () => {
     await tick(DASHBOARD_POLL_MS * 2);
 
     expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Review #35: tab yang tidak dilihat tidak perlu disegarkan.
+  it("skips the refresh while the tab is hidden", async () => {
+    getMock.mockResolvedValue(summary());
+    renderHook(() => useDashboard(true));
+    await flush();
+
+    hide();
+    await tick(DASHBOARD_POLL_MS);
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
+  // AC2: begitu kembali dilihat, angkanya langsung disegarkan, tidak menunggu satu menit.
+  it("reads again as soon as the tab comes back", async () => {
+    getMock.mockResolvedValue(summary());
+    renderHook(() => useDashboard(true));
+    await flush();
+    hide();
+    await tick(DASHBOARD_POLL_MS);
+
+    show();
+    await flush();
+
+    expect(getMock).toHaveBeenCalledTimes(2);
   });
 });
