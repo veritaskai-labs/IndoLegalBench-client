@@ -11,9 +11,12 @@ import {
 import { makeNotification, makeNotificationPage } from "@/test/notificationFixtures";
 import { NotificationBell } from "./NotificationBell";
 
-const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+const { push, route } = vi.hoisted(() => ({ push: vi.fn(), route: { pathname: "/dashboard" } }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => route.pathname,
+}));
 vi.mock("@/lib/notifications/notificationApi", () => ({
   getUnreadCount: vi.fn(),
   listNotifications: vi.fn(),
@@ -47,6 +50,7 @@ async function openBell() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  route.pathname = "/dashboard";
   countMock.mockResolvedValue({ count: 1 });
   listMock.mockResolvedValue(makeNotificationPage([unread, read]));
   readMock.mockResolvedValue({ ...unread, read_at: "2026-10-18T05:00:00Z" });
@@ -123,6 +127,55 @@ describe("NotificationBell", () => {
 
       expect(await screen.findByText("Tugas review baru")).toBeInTheDocument();
       expect(listMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("menutup daftar", () => {
+    it("closes when the reader clicks outside the list", async () => {
+      const user = userEvent.setup();
+      render(
+        <>
+          <NotificationBell />
+          <p>Isi halaman</p>
+        </>,
+      );
+      await user.click(bell());
+
+      await user.click(screen.getByText("Isi halaman"));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(bell()).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("stays open when the reader clicks inside the list", async () => {
+      const user = await openBell();
+      const panel = await screen.findByRole("dialog", { name: "Notifikasi" });
+
+      await user.click(within(panel).getByRole("heading", { name: "Notifikasi" }));
+
+      expect(screen.getByRole("dialog", { name: "Notifikasi" })).toBeInTheDocument();
+    });
+
+    it("closes on Escape and puts the focus back on the bell", async () => {
+      const user = await openBell();
+      await screen.findByRole("dialog", { name: "Notifikasi" });
+
+      await user.keyboard("{Escape}");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(bell()).toHaveFocus();
+    });
+
+    it("closes when the reader moves to another page", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<NotificationBell />);
+      await user.click(bell());
+      await screen.findByRole("dialog", { name: "Notifikasi" });
+
+      route.pathname = "/reviews";
+      rerender(<NotificationBell />);
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
 
