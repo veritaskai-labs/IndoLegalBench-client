@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
 
 import { InReviewTable } from "@/components/reviews/InReviewTable";
 import { ReassignmentTable } from "@/components/reviews/ReassignmentTable";
@@ -107,13 +107,20 @@ export default function AdminReviewsPage() {
   const queue = useNeedsReassignment();
   const { reload } = queue;
   const inReview = useInReviewCases();
+  const { reload: reloadInReview } = inReview;
+
+  /** Satu penggantian mengubah dua daftar sekaligus, jadi keduanya dimuat ulang. */
+  const reloadBoth = useCallback(() => {
+    reload();
+    reloadInReview();
+  }, [reload, reloadInReview]);
 
   const afterReplace = useCallback(() => {
     setTarget(null);
-    reload();
-  }, [reload]);
+    reloadBoth();
+  }, [reloadBoth]);
 
-  const replacement = useReplaceReviewer(afterReplace);
+  const replacement = useReplaceReviewer(afterReplace, reloadBoth);
   const { reset } = replacement;
 
   // Kandidat reviewer diambil sekali; daftar anggota tidak berubah selama halaman terbuka.
@@ -160,6 +167,15 @@ export default function AdminReviewsPage() {
     [reset],
   );
 
+  /** Pola tablist: panah kiri/kanan berpindah tab dan memindahkan fokus, hanya ada dua tab. */
+  const moveTab = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+    event.preventDefault();
+    const next: Tab = tab === "queue" ? "decisions" : "queue";
+    setTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <header>
@@ -175,14 +191,18 @@ export default function AdminReviewsPage() {
       <div
         role="tablist"
         aria-label="Tampilan pemantauan"
+        onKeyDown={moveTab}
         className="flex gap-2 border-b border-slate-200"
       >
         {TABS.map((name) => (
           <button
             key={name}
+            id={`tab-${name}`}
             type="button"
             role="tab"
             aria-selected={tab === name}
+            aria-controls={`panel-${name}`}
+            tabIndex={tab === name ? 0 : -1}
             onClick={() => setTab(name)}
             className={
               tab === name
@@ -196,11 +216,21 @@ export default function AdminReviewsPage() {
       </div>
 
       {tab === "queue" ? (
-        <section aria-label={TAB_LABEL.queue}>
+        <section
+          id="panel-queue"
+          role="tabpanel"
+          aria-labelledby="tab-queue"
+          tabIndex={0}
+        >
           <ReassignmentPanel queue={queue} onReplace={openDialog} />
         </section>
       ) : (
-        <section aria-label={TAB_LABEL.decisions}>
+        <section
+          id="panel-decisions"
+          role="tabpanel"
+          aria-labelledby="tab-decisions"
+          tabIndex={0}
+        >
           <InReviewPanel inReview={inReview} />
         </section>
       )}

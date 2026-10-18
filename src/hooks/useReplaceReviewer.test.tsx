@@ -52,7 +52,7 @@ describe("useReplaceReviewer", () => {
   // Negatif
   it("keeps the server message and leaves the queue alone", async () => {
     const onDone = vi.fn();
-    replaceMock.mockRejectedValue(new ApiError(422, "REVIEWER_IS_AUTHOR"));
+    replaceMock.mockRejectedValue(new ApiError(422, "CANNOT_ASSIGN_AUTHOR"));
 
     const { result } = renderHook(() => useReplaceReviewer(onDone));
     await act(async () => {
@@ -93,7 +93,7 @@ describe("useReplaceReviewer", () => {
 
   // corner
   it("clears the message when the dialog is opened again", async () => {
-    replaceMock.mockRejectedValue(new ApiError(409, "ROUND_NOT_OPEN"));
+    replaceMock.mockRejectedValue(new ApiError(409, "ROUND_ALREADY_DECIDED"));
 
     const { result } = renderHook(() => useReplaceReviewer(vi.fn()));
     await act(async () => {
@@ -107,6 +107,7 @@ describe("useReplaceReviewer", () => {
 
     expect(result.current.error).toBeNull();
   });
+
   // Negatif: 409 berarti layar sudah ketinggalan, jadi daftarnya yang dimuat ulang.
   it("asks the page to reload when the server says the row is stale", async () => {
     const onDone = vi.fn();
