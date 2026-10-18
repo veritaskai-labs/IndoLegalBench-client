@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AuditDetailPanel } from "@/components/audit/AuditDetailPanel";
+import { AuditPager } from "@/components/audit/AuditPager";
 import { AuditTable } from "@/components/audit/AuditTable";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { auditExportUrl, listAuditActors, type AuditActor } from "@/lib/audit/auditApi";
@@ -89,29 +90,7 @@ export default function AuditPage() {
             <AuditTable entries={state.entries} onRowClick={setSelected} />
           </div>
 
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span>
-              Halaman {page} dari {lastPage}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPage(page - 1)}
-                disabled={page <= 1}
-                className="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-50 disabled:opacity-50"
-              >
-                Sebelumnya
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage(page + 1)}
-                disabled={page >= lastPage}
-                className="rounded-md border border-slate-300 px-3 py-1.5 font-medium hover:bg-slate-50 disabled:opacity-50"
-              >
-                Berikutnya
-              </button>
-            </div>
-          </div>
+          <AuditPager page={page} lastPage={lastPage} onPageChange={setPage} />
         </>
       )}
 
