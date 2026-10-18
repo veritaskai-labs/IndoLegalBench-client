@@ -158,12 +158,23 @@ describe("NotificationBell", () => {
 
     it("closes on Escape and puts the focus back on the bell", async () => {
       const user = await openBell();
-      await screen.findByRole("dialog", { name: "Notifikasi" });
+      await screen.findByRole("button", { name: "Tandai semua dibaca" });
+      await user.tab();
+      expect(bell()).not.toHaveFocus();
 
       await user.keyboard("{Escape}");
 
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(bell()).toHaveFocus();
+    });
+
+    it("stays open when another key is pressed", async () => {
+      const user = await openBell();
+      await screen.findByRole("dialog", { name: "Notifikasi" });
+
+      await user.keyboard("{Tab}");
+
+      expect(screen.getByRole("dialog", { name: "Notifikasi" })).toBeInTheDocument();
     });
 
     it("closes when the reader moves to another page", async () => {
