@@ -399,7 +399,7 @@ describe("CaseEditorForm server errors", () => {
       {
         kind: "field",
         path: "legal_refs.1.links.0.pasal",
-        message: "Field legal_refs[1].links[0].pasal wajib diisi",
+        message: "Pasal wajib diisi untuk bentuk Pasal.",
         detail: null,
       },
       twoRefs,
@@ -407,7 +407,7 @@ describe("CaseEditorForm server errors", () => {
 
     const second = within(refRow(2)).getByLabelText("Pasal");
     expect(second).toHaveAttribute("aria-invalid", "true");
-    expect(second).toHaveAccessibleDescription("Field legal_refs[1].links[0].pasal wajib diisi");
+    expect(second).toHaveAccessibleDescription("Pasal wajib diisi untuk bentuk Pasal.");
     expect(within(refRow(1)).getByLabelText("Pasal")).not.toHaveAttribute(
       "aria-invalid",
       "true",

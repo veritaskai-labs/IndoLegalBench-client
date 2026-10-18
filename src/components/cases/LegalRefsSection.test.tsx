@@ -377,7 +377,7 @@ describe("LegalRefsSection", () => {
     render(
       <Host
         errors={{
-          "legal_refs.0.links.0.pasal": "Field legal_refs[0].links[0].pasal wajib diisi",
+          "legal_refs.0.links.0.pasal": "Pasal wajib diisi untuk bentuk Pasal.",
           "legal_refs.0.links.0.regulation_type": "Jenis peraturan wajib dipilih.",
         }}
       />,
@@ -385,7 +385,7 @@ describe("LegalRefsSection", () => {
 
     // Assert
     expect(screen.getByLabelText("Pasal")).toHaveAccessibleDescription(
-      "Field legal_refs[0].links[0].pasal wajib diisi",
+      "Pasal wajib diisi untuk bentuk Pasal.",
     );
     expect(screen.getByRole("combobox", { name: "Jenis peraturan" })).toHaveAccessibleDescription(
       "Jenis peraturan wajib dipilih.",
@@ -443,21 +443,21 @@ describe("LegalRefsSection", () => {
 describe("LegalRefsSection errors about the structure of a reference", () => {
   it("shows an error about the form of a reference at the form select", () => {
     // Arrange + Act
-    render(<Host errors={{ "legal_refs.0.kind": "Field legal_refs[0].kind wajib diisi" }} />);
+    render(<Host errors={{ "legal_refs.0.kind": "Bentuk rujukan wajib diisi." }} />);
 
     // Assert
     expect(screen.getByRole("combobox", { name: "Bentuk rujukan" })).toHaveAccessibleDescription(
-      expect.stringContaining("Field legal_refs[0].kind wajib diisi"),
+      expect.stringContaining("Bentuk rujukan wajib diisi."),
     );
   });
 
   it("shows an error about a reference that has no links at the form select", () => {
     // Arrange + Act
-    render(<Host errors={{ "legal_refs.0.links": "Field legal_refs[0].links wajib diisi" }} />);
+    render(<Host errors={{ "legal_refs.0.links": "Peraturan wajib diisi." }} />);
 
     // Assert
     expect(screen.getByRole("combobox", { name: "Bentuk rujukan" })).toHaveAccessibleDescription(
-      expect.stringContaining("Field legal_refs[0].links wajib diisi"),
+      expect.stringContaining("Peraturan wajib diisi."),
     );
   });
 });

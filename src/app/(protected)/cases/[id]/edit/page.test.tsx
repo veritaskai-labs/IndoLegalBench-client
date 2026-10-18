@@ -456,7 +456,7 @@ describe("EditCasePage saving", () => {
       new ApiError(
         422,
         "FIELD_REQUIRED",
-        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "Pasal wajib diisi untuk bentuk Pasal.",
         "legal_refs[0].links[0].pasal",
       ),
     );
@@ -468,7 +468,7 @@ describe("EditCasePage saving", () => {
     const row = screen.getByRole("group", { name: "Rujukan 1" });
     await waitFor(() =>
       expect(within(row).getByLabelText("Pasal")).toHaveAccessibleDescription(
-        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "Pasal wajib diisi untuk bentuk Pasal.",
       ),
     );
   });
