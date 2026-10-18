@@ -107,4 +107,36 @@ describe("useReplaceReviewer", () => {
 
     expect(result.current.error).toBeNull();
   });
+  // Negatif: 409 berarti layar sudah ketinggalan, jadi daftarnya yang dimuat ulang.
+  it("asks the page to reload when the server says the row is stale", async () => {
+    const onDone = vi.fn();
+    const onStale = vi.fn();
+    replaceMock.mockRejectedValue(
+      new ApiError(409, "ASSIGNMENT_ALREADY_REPLACED"),
+    );
+
+    const { result } = renderHook(() => useReplaceReviewer(onDone, onStale));
+    await act(async () => {
+      await result.current.replace("a1", BODY);
+    });
+
+    expect(onStale).toHaveBeenCalledTimes(1);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(result.current.error).toBe(
+      "Penugasan ini sudah pernah diganti. Daftarnya dimuat ulang.",
+    );
+  });
+
+  // corner: galat yang masih bisa diperbaiki admin tidak memuat ulang apa pun.
+  it("does not reload for an error the admin can fix", async () => {
+    const onStale = vi.fn();
+    replaceMock.mockRejectedValue(new ApiError(422, "REASON_REQUIRED"));
+
+    const { result } = renderHook(() => useReplaceReviewer(vi.fn(), onStale));
+    await act(async () => {
+      await result.current.replace("a1", BODY);
+    });
+
+    expect(onStale).not.toHaveBeenCalled();
+  });
 });
