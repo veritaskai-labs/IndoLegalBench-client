@@ -3,6 +3,7 @@ import { getCaseReview } from "@/lib/reviews/reviewApi";
 import { listActiveSuites } from "@/lib/suites/suiteApi";
 import type { CaseSummary } from "@/lib/api/cases";
 import type { CaseReview } from "@/types/reviewAdmin";
+import { ApiError } from "@/lib/apiClient";
 
 export type InReviewRow = {
   case: CaseSummary;
@@ -30,11 +31,13 @@ export async function listInReviewCases(): Promise<InReviewRow[]> {
   );
 }
 
-/** Kasus yang belum punya ronde (404 NO_REVIEW_ROUND) tetap tampil, reviewnya kosong. */
 async function reviewOrNull(caseId: string): Promise<CaseReview | null> {
   try {
     return await getCaseReview(caseId);
-  } catch {
-    return null;
+  } catch (failure) {
+    // 404 NO_REVIEW_ROUND memang berarti kasus ini belum punya ronde.
+    // Galat lain (500, jaringan) harus naik, supaya tabnya menampilkan "Coba lagi".
+    if (failure instanceof ApiError && failure.status === 404) return null;
+    throw failure;
   }
 }
