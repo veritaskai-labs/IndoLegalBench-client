@@ -577,6 +577,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/needs-reassignment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar kasus yang memerlukan penugasan reviewer ulang (AC8)
+         * @description Mengembalikan daftar kasus dengan round aktif yang memerlukan penugasan ulang reviewer.
+         *
+         *     Kasus yang reviewer-nya dinonaktifkan (void) otomatis muncul di antrean ini (AC8).
+         */
+        get: operations["get_needs_reassignment_reviews_needs_reassignment_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{assignment_id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ganti reviewer pada sebuah kasus (AC7)
+         * @description Admin mengganti reviewer yang ditugaskan pada sebuah kasus (AC7).
+         *
+         *     Assignment lama diubah statusnya menjadi replaced dan penilaiannya tidak dihitung.
+         *     Reviewer baru ditugaskan dan dinotifikasi.
+         */
+        post: operations["replace_reviewer_reviews__assignment_id__replace_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews/{assignment_id}/verdict": {
         parameters: {
             query?: never;
@@ -616,6 +661,74 @@ export interface paths {
         get: operations["get_case_review_cases__case_id__review_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar notifikasi milik pengguna saat ini */
+        get: operations["list_notifications_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jumlah notifikasi belum dibaca */
+        get: operations["unread_count_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tandai semua notifikasi sebagai dibaca */
+        post: operations["read_all_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tandai satu notifikasi sebagai dibaca */
+        post: operations["read_one_notifications__notification_id__read_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -685,6 +798,46 @@ export interface paths {
          * @description Return the regulation types ordered by urutan, active ones unless asked otherwise.
          */
         get: operations["list_regulation_types_regulation_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/legal-refs/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pratinjau rujukan hukum saat mengetik
+         * @description Satu item per rujukan: display_text kalau rujukan itu akan diterima saat simpan, atau error pertamanya dengan code dan field yang sama seperti simpan. Rujukan yang salah tidak membuat request ini 422. Tidak menulis apa pun.
+         */
+        post: operations["preview_legal_refs_legal_refs_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ringkasan dashboard sesuai peran
+         * @description PBI-19 AC1, AC2, AC6. Safe to poll every 60 s.
+         */
+        get: operations["get_dashboard_dashboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -824,6 +977,11 @@ export interface components {
             my_verdict: components["schemas"]["VerdictView"] | null;
         };
         /**
+         * AssignmentSource
+         * @enum {string}
+         */
+        AssignmentSource: "system" | "admin";
+        /**
          * AssignmentStatus
          * @description replaced: diganti Admin (AC7). void: reviewer dinonaktifkan (AC8).
          * @enum {string}
@@ -896,6 +1054,20 @@ export interface components {
             trap_count: number;
             /** Legal Ref Count */
             legal_ref_count: number;
+        };
+        /**
+         * CaseCounts
+         * @description Jumlah kasus per status versi yang berlaku, sama seperti daftar kasus.
+         */
+        CaseCounts: {
+            /** Draft */
+            draft: number;
+            /** In Review */
+            in_review: number;
+            /** Needs Revision */
+            needs_revision: number;
+            /** Approved */
+            approved: number;
         };
         /**
          * CaseIdentity
@@ -1087,6 +1259,38 @@ export interface components {
             message?: string | null;
             error_category?: components["schemas"]["ConnectionTestErrorCategory"] | null;
         };
+        /**
+         * DashboardSummary
+         * @description GET /dashboard: ringkasan kerja pengguna yang login, sesuai perannya.
+         */
+        DashboardSummary: {
+            /**
+             * Generated At
+             * Format: date-time
+             * @description Waktu data dihitung (AC2)
+             */
+            generated_at: string;
+            case_counts: components["schemas"]["CaseCounts"];
+            /** Total Cases */
+            total_cases: number;
+            /**
+             * Waiting For Review
+             * @description Kasus in_review yang round berjalannya belum punya verdict sah dari kedua slot reviewer, termasuk kasus dengan 0 atau 1 reviewer. Bisa lebih besar dari total antrean reviewer.
+             */
+            waiting_for_review: number;
+            /**
+             * Review Queue
+             * @description Hanya Reviewer: kasus yang ditugaskan dan belum dinilai, terlama dulu (AC6). null untuk peran lain.
+             */
+            review_queue: components["schemas"]["PendingReview"][] | null;
+            /**
+             * Needs Reassignment
+             * @description Hanya Admin: kasus yang perlu penugasan ulang reviewer. null untuk peran lain.
+             */
+            needs_reassignment: number | null;
+            /** @description Sesi pengukuran terakhir. null sampai PBI-11 ada. */
+            latest_run?: components["schemas"]["LatestRunSummary"] | null;
+        };
         /** ErrorBody */
         ErrorBody: {
             /** Code */
@@ -1126,6 +1330,11 @@ export interface components {
          * @enum {string}
          */
         LastTestStatus: "ok" | "failed";
+        /**
+         * LatestRunSummary
+         * @description Sesi pengukuran terakhir. Selalu null sampai PBI-11 mengisinya (AC1).
+         */
+        LatestRunSummary: Record<string, never>;
         /**
          * LegalRefLinkRead
          * @description One regulation in a citation, as stored.
@@ -1215,6 +1424,48 @@ export interface components {
             year: number;
         };
         /**
+         * LegalRefPreviewItem
+         * @description Preview of one citation while the Author types (PBI-21 AC6, AC8, AC10).
+         *
+         *     Exactly one of the two fields is set: the text when the citation would be
+         *     saved, otherwise its first problem as a save would report it.
+         */
+        LegalRefPreviewItem: {
+            /**
+             * Display Text
+             * @description Sama dengan display_text setelah simpan; null selama rujukan ini masih salah
+             */
+            display_text: string | null;
+            /** @description Masalah pertama rujukan ini, dengan code dan field yang sama seperti simpan */
+            error: components["schemas"]["ErrorBody"] | null;
+        };
+        /**
+         * LegalRefPreviewRequest
+         * @description Body POST /legal-refs/preview (SCRUM-162).
+         */
+        LegalRefPreviewRequest: {
+            /**
+             * Legal Refs
+             * @description Rujukan seperti legal_refs di body kasus (LegalRefWrite), urut seperti di form
+             */
+            legal_refs: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Case Id
+             * @description Kasus yang sedang diedit. Hanya untuk membaca kode jenis yang sudah tersimpan di versi terbuka, supaya jenis nonaktif diperlakukan sama seperti saat simpan.
+             */
+            case_id?: string | null;
+        };
+        /**
+         * LegalRefPreviewResponse
+         * @description Satu item per rujukan yang dikirim, urutannya sama.
+         */
+        LegalRefPreviewResponse: {
+            /** Items */
+            items: components["schemas"]["LegalRefPreviewItem"][];
+        };
+        /**
          * LegalRefRead
          * @description One citation as returned, written in legal style by the server (AC6).
          */
@@ -1268,10 +1519,73 @@ export interface components {
             email: string;
             role: components["schemas"]["Role"];
         };
+        /**
+         * NeedsReassignmentResponse
+         * @description Satu kasus pada antrean penugasan ulang (GET /reviews/needs-reassignment).
+         */
+        NeedsReassignmentResponse: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Case Title */
+            case_title: string;
+            /**
+             * Round Id
+             * Format: uuid
+             */
+            round_id: string;
+            /** Round No */
+            round_no: number;
+            round_status: components["schemas"]["RoundStatus"];
+            /** Active Reviewers Count */
+            active_reviewers_count: number;
+            /** Void Assignments */
+            void_assignments: components["schemas"]["ReassignmentAssignmentRead"][];
+            /** Assignments */
+            assignments: components["schemas"]["ReassignmentAssignmentRead"][];
+        };
+        /** NotificationRead */
+        NotificationRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Type */
+            type: string;
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Link */
+            link: string;
+            /** Read At */
+            read_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** Page[AuditLogRead] */
         Page_AuditLogRead_: {
             /** Items */
             items: components["schemas"]["AuditLogRead"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
+        /** Page[NotificationRead] */
+        Page_NotificationRead_: {
+            /** Items */
+            items: components["schemas"]["NotificationRead"][];
             /** Total */
             total: number;
             /** Page */
@@ -1302,6 +1616,41 @@ export interface components {
             size: number;
         };
         /**
+         * PendingReview
+         * @description Satu baris antrean dashboard reviewer (PBI-19 AC6, SCRUM-154).
+         *
+         *     waiting_since adalah saat round dibuka; antrean diurutkan dari yang
+         *     terlama. assigned_at bisa lebih baru bila reviewer ini pengganti.
+         */
+        PendingReview: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** Round No */
+            round_no: number;
+            /**
+             * Waiting Since
+             * Format: date-time
+             */
+            waiting_since: string;
+            /**
+             * Assigned At
+             * Format: date-time
+             */
+            assigned_at: string;
+        };
+        /**
          * ProviderType
          * @description ProviderType:
          *     - openai_compatible: OpenAI chat completions (DeepSeek, GPT). Bearer auth. The stored URL is posted as-is.
@@ -1310,6 +1659,35 @@ export interface components {
          * @enum {string}
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
+        /**
+         * ReassignmentAssignmentRead
+         * @description Ringkasan satu penugasan dalam putaran review.
+         */
+        ReassignmentAssignmentRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Reviewer Id
+             * Format: uuid
+             */
+            reviewer_id: string;
+            /** Reviewer Name */
+            reviewer_name?: string | null;
+            status: components["schemas"]["AssignmentStatus"];
+            source: components["schemas"]["AssignmentSource"];
+            /**
+             * Assigned At
+             * Format: date-time
+             */
+            assigned_at: string;
+            /** Ended At */
+            ended_at?: string | null;
+            /** End Reason */
+            end_reason?: string | null;
+        };
         /**
          * RegulationTypeRead
          * @description Satu jenis peraturan untuk dropdown editor (AC2).
@@ -1323,6 +1701,60 @@ export interface components {
             singkatan: string | null;
             /** Is Active */
             is_active: boolean;
+        };
+        /**
+         * ReplaceReviewerRequest
+         * @description Payload untuk POST /reviews/{assignment_id}/replace.
+         */
+        ReplaceReviewerRequest: {
+            /**
+             * New Reviewer Id
+             * Format: uuid
+             * @description ID reviewer pengganti (harus reviewer aktif, bukan pembuat kasus atau reviewer lain di round ini)
+             */
+            new_reviewer_id: string;
+            /**
+             * Reason
+             * @description Alasan penggantian reviewer (wajib untuk jejak audit)
+             */
+            reason: string;
+        };
+        /**
+         * ReplaceReviewerResponse
+         * @description Response sukses POST /reviews/{assignment_id}/replace.
+         */
+        ReplaceReviewerResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description ID penugasan baru
+             */
+            id: string;
+            /**
+             * Review Round Id
+             * Format: uuid
+             */
+            review_round_id: string;
+            /**
+             * Reviewer Id
+             * Format: uuid
+             */
+            reviewer_id: string;
+            source: components["schemas"]["AssignmentSource"];
+            /** Assigned By */
+            assigned_by?: string | null;
+            /**
+             * Assigned At
+             * Format: date-time
+             */
+            assigned_at: string;
+            status: components["schemas"]["AssignmentStatus"];
+            /**
+             * Replaced Assignment Id
+             * Format: uuid
+             * @description ID penugasan lama yang digantikan
+             */
+            replaced_assignment_id: string;
         };
         /**
          * ReviewCopy
@@ -1606,6 +2038,14 @@ export interface components {
             description: string;
             /** Expected Model Behavior */
             expected_model_behavior?: string | null;
+        };
+        /** UnreadCount */
+        UnreadCount: {
+            /**
+             * Count
+             * @description Jumlah notifikasi belum dibaca milik pengguna saat ini
+             */
+            count: number;
         };
         /** UserCreateRequest */
         UserCreateRequest: {
@@ -3345,6 +3785,115 @@ export interface operations {
             };
         };
     };
+    get_needs_reassignment_reviews_needs_reassignment_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeedsReassignmentResponse"][];
+                };
+            };
+            /** @description Tidak ada sesi aktif. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya admin yang boleh mengakses antrean ini. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    replace_reviewer_reviews__assignment_id__replace_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceReviewerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplaceReviewerResponse"];
+                };
+            };
+            /** @description Tidak ada sesi aktif. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya admin yang boleh mengganti reviewer. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Penugasan review atau reviewer baru tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Penugasan sudah pernah diganti atau putaran review sudah diputuskan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Reviewer baru tidak boleh penulis kasus, tidak boleh reviewer lain di round itu, atau bukan akun reviewer yang aktif. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     submit_verdict_reviews__assignment_id__verdict_post: {
         parameters: {
             query?: never;
@@ -3437,6 +3986,129 @@ export interface operations {
                 };
             };
             /** @description Kasus tidak ditemukan, atau belum pernah diajukan (`NO_REVIEW_ROUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_notifications_get: {
+        parameters: {
+            query?: {
+                /** @description True = hanya belum dibaca. False atau kosong = semua. */
+                unread?: boolean | null;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_NotificationRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unread_count_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+        };
+    };
+    read_all_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCount"];
+                };
+            };
+        };
+    };
+    read_one_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"];
+                };
+            };
+            /** @description Notifikasi milik pengguna lain (`NOTIFICATION_NOT_YOURS`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Notifikasi tidak ditemukan (`NOTIFICATION_NOT_FOUND`) */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3653,6 +4325,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_legal_refs_legal_refs_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalRefPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalRefPreviewResponse"];
+                };
+            };
+            /** @description Belum login. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bukan Author/Admin, atau case_id milik orang lain. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description case_id tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Body bukan daftar rujukan, atau lebih dari 100. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_dashboard_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummary"];
+                };
+            };
+            /** @description Viewer tidak punya dashboard. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
