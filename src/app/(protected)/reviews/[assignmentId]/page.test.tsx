@@ -29,6 +29,10 @@ vi.mock("@/lib/reviews/reviewApi", () => ({
   submitVerdict: vi.fn(),
   getCaseReview: vi.fn(),
 }));
+// The history has its own tests; here it only has to receive the right case.
+vi.mock("@/components/audit/CaseAuditHistory", () => ({
+  CaseAuditHistory: ({ caseId }: { caseId: string }) => <p>Riwayat kasus {caseId}</p>,
+}));
 
 const listMock = vi.mocked(listAssignedReviews);
 const submitMock = vi.mocked(submitVerdict);
@@ -258,5 +262,52 @@ describe("ReviewAssignmentPage", () => {
     // Assert
     expect(await screen.findByRole("form", { name: "Penilaian Anda" })).toBeInTheDocument();
     expect(screen.queryByText("Anda tidak bisa meninjau kasus yang Anda tulis.")).not.toBeInTheDocument();
+  });
+});
+
+describe("ReviewAssignmentPage tabs", () => {
+  // Positive
+  it("opens on the Penilaian tab and loads no history yet", async () => {
+    // Arrange / Act
+    render(<ReviewAssignmentPage />);
+
+    // Assert
+    const tabs = await screen.findByRole("tablist", { name: "Bagian penilaian" });
+    expect(within(tabs).getByRole("tab", { name: "Penilaian" })).toHaveAttribute("aria-selected", "true");
+    expect(within(tabs).getByRole("tab", { name: "Riwayat" })).toHaveAttribute("aria-selected", "false");
+    const panel = screen.getByRole("tabpanel", { name: "Penilaian" });
+    expect(within(panel).getByRole("form", { name: "Penilaian Anda" })).toBeInTheDocument();
+    expect(screen.queryByText(/Riwayat kasus/)).not.toBeInTheDocument();
+  });
+
+  // Positive: SCRUM-168, the history belongs to the case under review.
+  it("shows the history of this case on the Riwayat tab", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+
+    // Act
+    await user.click(await screen.findByRole("tab", { name: "Riwayat" }));
+
+    // Assert
+    const panel = screen.getByRole("tabpanel", { name: "Riwayat" });
+    expect(within(panel).getByText(`Riwayat kasus ${CASE_ID}`)).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Penilaian Anda" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Peninjau kedua" })).toBeInTheDocument();
+  });
+
+  // Edge: the form stays mounted, so a draft survives a look at the history.
+  it("keeps an unsent comment after a visit to the Riwayat tab", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+    await user.type(await screen.findByLabelText(/Komentar untuk penulis/), "Pasal 151 kurang tepat");
+
+    // Act
+    await user.click(screen.getByRole("tab", { name: "Riwayat" }));
+    await user.click(screen.getByRole("tab", { name: "Penilaian" }));
+
+    // Assert
+    expect(screen.getByLabelText(/Komentar untuk penulis/)).toHaveValue("Pasal 151 kurang tepat");
   });
 });
