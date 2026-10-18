@@ -49,6 +49,24 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
         {rows.map((queued) => {
           const active = activeAssignments(queued);
 
+          /**
+           * AC8: kasus yang reviewernya dinonaktifkan justru yang paling perlu diganti,
+           * jadi penugasan void ikut dapat tombol. Labelnya dibedakan supaya admin tahu
+           * penugasan mana yang sedang ia ganti.
+           */
+          const swappable = [
+            ...active.map((item) => ({
+              item,
+              text: "Ganti reviewer",
+              label: `Ganti reviewer ${reviewerName(item)}`,
+            })),
+            ...queued.void_assignments.map((item) => ({
+              item,
+              text: "Ganti reviewer nonaktif",
+              label: `Ganti reviewer nonaktif ${reviewerName(item)}`,
+            })),
+          ];
+
           return (
             <tr
               key={queued.round_id}
@@ -69,21 +87,19 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
                 {reassignmentReason(queued)}
               </td>
               <td className="py-3 px-4">
-                {active.length === 0 ? (
-                  <span className="text-slate-500">
-                    Belum ada penugasan aktif
-                  </span>
+                {swappable.length === 0 ? (
+                  <span className="text-slate-500">Belum ada penugasan</span>
                 ) : (
                   <ul className="space-y-1">
-                    {active.map((item) => (
+                    {swappable.map(({ item, text, label }) => (
                       <li key={item.id}>
                         <button
                           type="button"
-                          aria-label={`Ganti reviewer ${reviewerName(item)}`}
+                          aria-label={label}
                           onClick={() => onReplace(item, queued)}
                           className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
                         >
-                          Ganti reviewer
+                          {text}
                         </button>
                       </li>
                     ))}
