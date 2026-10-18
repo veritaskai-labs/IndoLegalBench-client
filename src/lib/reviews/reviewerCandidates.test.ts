@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reviewerCandidates } from "./reviewerCandidates";
+import { reviewerCandidates, candidatesExcept } from "./reviewerCandidates";
 import type {
   ReassignmentAssignment,
   ReassignmentRow,
