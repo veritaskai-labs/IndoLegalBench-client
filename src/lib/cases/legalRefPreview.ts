@@ -7,7 +7,7 @@
 // yang dikirim.
 
 import { toLegalRefPayload, type LegalRefPayload } from "./caseFormMapping";
-import type { LegalRefFormValues } from "./legalRefForm";
+import type { LegalRefFormValues, LegalRefLinkFormValues } from "./legalRefForm";
 import type { LegalRefPreviewItem } from "./legalRefPreviewApi";
 import { fieldErrorText, mapServerFieldError, type SaveError } from "./saveError";
 
@@ -58,9 +58,22 @@ const LINK_INPUTS = [
   "huruf",
 ] as const;
 
+function linkHasInput(link: LegalRefLinkFormValues): boolean {
+  return LINK_INPUTS.some((name) => link[name].trim() !== "");
+}
+
 function hasInput(ref: LegalRefFormValues): boolean {
   if (ref.kind === "free_text") return ref.free_text.trim() !== "";
-  return ref.links.some((link) => LINK_INPUTS.some((name) => link[name].trim() !== ""));
+  return ref.links.some(linkHasInput);
+}
+
+const LINK_IN_FIELD = /^legal_refs\[\d+\]\.links\[(\d+)\]/;
+
+/** Error di dalam peraturan rangkaian yang belum diisi: belum ditampilkan, sama seperti baris baru. */
+function inEmptyLink(ref: LegalRefFormValues, field: string | null | undefined): boolean {
+  const match = LINK_IN_FIELD.exec(field ?? "");
+  const link = match === null ? undefined : ref.links[Number(match[1])];
+  return link !== undefined && !linkHasInput(link);
 }
 
 function toCitationPreview(ref: LegalRefFormValues, item: LegalRefPreviewItem): CitationPreview {
@@ -68,7 +81,7 @@ function toCitationPreview(ref: LegalRefFormValues, item: LegalRefPreviewItem): 
     // Teks Bebas tidak diberi pratinjau: isinya sama persis dengan yang diketik (keputusan PO 9).
     text: ref.kind === "free_text" ? null : item.display_text,
     error:
-      item.error === null
+      item.error === null || inEmptyLink(ref, item.error.field)
         ? null
         : mapServerFieldError(item.error.code, item.error.message, item.error.field),
   };
