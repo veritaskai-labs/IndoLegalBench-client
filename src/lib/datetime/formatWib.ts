@@ -18,3 +18,15 @@ export function formatWib(iso: string): string {
   const clock = `${pad2(wib.getUTCHours())}.${pad2(wib.getUTCMinutes())}`;
   return `${date}, ${clock} WIB`;
 }
+
+/**
+ * Jam WIB saja, untuk penanda "Diperbarui …" di dasbor (AC2).
+ * Teks yang bukan tanggal jadi string kosong supaya penandanya tidak ditampilkan.
+ */
+export function formatWibClock(iso: string): string {
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return "";
+
+  const wib = new Date(time + WIB_OFFSET_MS);
+  return `${pad2(wib.getUTCHours())}.${pad2(wib.getUTCMinutes())}`;
+}
