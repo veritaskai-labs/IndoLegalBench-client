@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -120,5 +120,29 @@ describe("SwapReviewerDialog", () => {
     rerender(<SwapReviewerDialog {...props({ pending: true })} />);
 
     expect(screen.getByRole("button", { name: "Menyimpan…" })).toBeDisabled();
+  });
+
+  // Dialog modal: Esc memicu event cancel, dan itu harus menutup lewat onClose.
+  it("closes when the dialog is cancelled with Escape", () => {
+    const onClose = vi.fn();
+
+    render(
+      <SwapReviewerDialog
+        caseCode="ILB-PT-0142"
+        currentReviewerId="u1"
+        currentReviewerName="Roben"
+        candidates={[{ id: "u9", name: "Aileen" }]}
+        pending={false}
+        error={null}
+        onConfirm={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    fireEvent(
+      screen.getByRole("dialog"),
+      new Event("cancel", { bubbles: false, cancelable: true }),
+    );
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

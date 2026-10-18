@@ -316,21 +316,19 @@ export default function AdminReviewsPage() {
       )}
 
       {target && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4">
-          <SwapReviewerDialog
-            caseCode={target.caseCode}
-            currentReviewerId={target.reviewerId}
-            currentReviewerName={target.reviewerName}
-            candidates={candidatesExcept(users, target.takenReviewerIds, authorId)}
-            notice={dialogNotice(usersFailed, authorFailed)}
-            pending={replacement.pending}
-            error={replacement.error}
-            onConfirm={(body) =>
-              void replacement.replace(target.assignmentId, body)
-            }
-            onClose={() => setTarget(null)}
-          />
-        </div>
+        <SwapReviewerDialog
+          caseCode={target.caseCode}
+          currentReviewerId={target.reviewerId}
+          currentReviewerName={target.reviewerName}
+          candidates={candidatesExcept(users, target.takenReviewerIds, authorId)}
+          notice={dialogNotice(usersFailed, authorFailed)}
+          pending={replacement.pending}
+          error={replacement.error}
+          onConfirm={(body) =>
+            void replacement.replace(target.assignmentId, body)
+          }
+          onClose={() => setTarget(null)}
+        />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ReplaceReviewerBody, ReviewerOption } from "@/types/reviewAdmin";
 
@@ -9,9 +9,9 @@ type Props = {
   currentReviewerId: string;
   currentReviewerName: string;
   candidates: ReviewerOption[];
+  notice?: string | null;
   pending: boolean;
   error: string | null;
-  notice?: string | null;
   onConfirm: (body: ReplaceReviewerBody) => void;
   onClose: () => void;
 };
@@ -22,15 +22,30 @@ export function SwapReviewerDialog({
   currentReviewerId,
   currentReviewerName,
   candidates,
+  notice,
   pending,
   error,
-  notice,
   onConfirm,
   onClose,
 }: Readonly<Props>) {
   const [reviewerId, setReviewerId] = useState("");
   const [reason, setReason] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const ref = useRef<HTMLDialogElement>(null);
+
+  /**
+   * showModal, bukan atribut open: hanya dialog modal yang memerangkap fokus,
+   * menutup lewat Esc, dan menggelapkan latarnya sendiri.
+   */
+  useEffect(() => {
+    const node = ref.current;
+    if (node === null || node.open) return;
+    if (typeof node.showModal === "function") {
+      node.showModal();
+    } else {
+      node.open = true;
+    }
+  }, []);
 
   const options = candidates.filter((item) => item.id !== currentReviewerId);
   const trimmed = reason.trim();
@@ -39,10 +54,14 @@ export function SwapReviewerDialog({
 
   return (
     <dialog
-      open
-      aria-modal="true"
+      ref={ref}
       aria-labelledby="swap-reviewer-title"
-      className="static m-0 w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-lg"
+      onCancel={(event) => {
+        // Esc: tutup lewat state halaman, jangan biarkan browser menutupnya diam-diam.
+        event.preventDefault();
+        onClose();
+      }}
+      className="m-auto w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-lg backdrop:bg-slate-900/40"
     >
       <h2
         id="swap-reviewer-title"
@@ -51,13 +70,14 @@ export function SwapReviewerDialog({
         Ganti reviewer
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        {notice ? (
-          <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
-            {notice}
-            </p>
-          ) : null}
-          {`${caseCode} · reviewer sekarang ${currentReviewerName}`}
+        {`${caseCode} · reviewer sekarang ${currentReviewerName}`}
       </p>
+
+      {notice ? (
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+          {notice}
+        </p>
+      ) : null}
 
       {confirming && chosen ? (
         <div className="mt-4 space-y-4">
@@ -153,6 +173,6 @@ export function SwapReviewerDialog({
           {error}
         </p>
       )}
-      </dialog>
+    </dialog>
   );
 }
