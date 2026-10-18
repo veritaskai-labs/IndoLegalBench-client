@@ -1,4 +1,5 @@
 import type { RoundDecision, VerdictDecision } from "@/types/review";
+import type { AssignmentStatus, RoundStatus, VerdictView } from "@/types/reviewAdmin";
 import type { ReviewBlocker } from "./verdictRules";
 
 /** Record, bukan string bebas: nilai baru di contract membuat tsc gagal sampai labelnya ditambah. */
@@ -25,3 +26,34 @@ export const BLOCKER_MESSAGE: Record<ReviewBlocker, string> = {
   not_reviewer: "Halaman ini untuk peninjau yang ditugaskan",
   is_author: "Anda tidak bisa meninjau kasus yang Anda tulis.",
 };
+
+/** Record<RoundStatus, string>: kalau server menambah status baru, tsc gagal sampai labelnya diisi. */
+export const ROUND_STATUS_LABEL: Record<RoundStatus, string> = {
+  awaiting_assignment: "Menunggu penugasan",
+  open: "Sedang dinilai",
+  decided: "Sudah diputuskan",
+};
+
+export const ASSIGNMENT_STATUS_LABEL: Record<AssignmentStatus, string> = {
+  active: "Aktif",
+  replaced: "Diganti",
+  void: "Dibatalkan",
+};
+
+/** Versi pendek untuk tabel admin; VERDICT_LABEL yang panjang dipakai di form reviewer. */
+export const VERDICT_DECISION_LABEL: Record<VerdictDecision, string> = {
+  approve: "Setuju",
+  revise: "Minta revisi",
+};
+
+export const ROUND_DECISION_LABEL: Record<RoundDecision, string> = {
+  approved: "Disetujui",
+  revise: "Perlu revisi",
+};
+
+/** AC3 meminta status penilaian sudah atau belum, jadi null pun punya kata-katanya sendiri. */
+export function verdictLabel(
+  verdict: VerdictView | null | undefined,
+): string {
+  return verdict ? VERDICT_DECISION_LABEL[verdict.decision] : "Belum menilai";
+}

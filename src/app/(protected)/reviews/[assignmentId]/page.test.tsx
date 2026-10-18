@@ -18,7 +18,10 @@ import {
 } from "@/test/reviewFixtures";
 import ReviewAssignmentPage from "./page";
 
-const { params } = vi.hoisted(() => ({ params: { assignmentId: "" } }));
+const { params, historyMounts } = vi.hoisted(() => ({
+  params: { assignmentId: "" },
+  historyMounts: { count: 0 },
+}));
 
 // The page reads the assignment id from the URL; there is no Next router in tests.
 vi.mock("next/navigation", () => ({ useParams: () => params }));
@@ -29,6 +32,18 @@ vi.mock("@/lib/reviews/reviewApi", () => ({
   submitVerdict: vi.fn(),
   getCaseReview: vi.fn(),
 }));
+// The history has its own tests; here it only counts its mounts.
+vi.mock("@/components/audit/CaseAuditHistory", async () => {
+  const { useEffect } = await import("react");
+  return {
+    CaseAuditHistory: function CaseAuditHistoryStub({ caseId }: Readonly<{ caseId: string }>) {
+      useEffect(() => {
+        historyMounts.count += 1;
+      }, []);
+      return <p>Riwayat kasus {caseId}</p>;
+    },
+  };
+});
 
 const listMock = vi.mocked(listAssignedReviews);
 const submitMock = vi.mocked(submitVerdict);
@@ -49,6 +64,7 @@ beforeEach(() => {
   reviewMock.mockReset();
   session.role = "reviewer";
   params.assignmentId = ASSIGNMENT_ID;
+  historyMounts.count = 0;
   listMock.mockResolvedValue([makeAssigned({ assignment_id: ASSIGNMENT_ID })]);
   reviewMock.mockResolvedValue(makeCaseReview({ reviewers: [mineSlot(), otherSlot()] }));
 });
@@ -258,5 +274,97 @@ describe("ReviewAssignmentPage", () => {
     // Assert
     expect(await screen.findByRole("form", { name: "Penilaian Anda" })).toBeInTheDocument();
     expect(screen.queryByText("Anda tidak bisa meninjau kasus yang Anda tulis.")).not.toBeInTheDocument();
+  });
+});
+
+describe("ReviewAssignmentPage tabs", () => {
+  // Positive
+  it("opens on the Penilaian tab and loads no history yet", async () => {
+    // Arrange / Act
+    render(<ReviewAssignmentPage />);
+
+    // Assert
+    const tabs = await screen.findByRole("tablist", { name: "Bagian penilaian" });
+    expect(within(tabs).getByRole("tab", { name: "Penilaian" })).toHaveAttribute("aria-selected", "true");
+    expect(within(tabs).getByRole("tab", { name: "Riwayat" })).toHaveAttribute("aria-selected", "false");
+    const panel = screen.getByRole("tabpanel", { name: "Penilaian" });
+    expect(within(panel).getByRole("form", { name: "Penilaian Anda" })).toBeInTheDocument();
+    expect(screen.queryByText(/Riwayat kasus/)).not.toBeInTheDocument();
+  });
+
+  // Positive: SCRUM-168, the history belongs to the case under review.
+  it("shows the history of this case on the Riwayat tab", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+
+    // Act
+    await user.click(await screen.findByRole("tab", { name: "Riwayat" }));
+
+    // Assert
+    const panel = screen.getByRole("tabpanel", { name: "Riwayat" });
+    expect(within(panel).getByText(`Riwayat kasus ${CASE_ID}`)).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Penilaian Anda" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Peninjau kedua" })).toBeInTheDocument();
+  });
+
+  // Edge: the form stays mounted, so a draft survives a look at the history.
+  it("keeps an unsent comment after a visit to the Riwayat tab", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+    await user.type(await screen.findByLabelText(/Komentar untuk penulis/), "Pasal 151 kurang tepat");
+
+    // Act
+    await user.click(screen.getByRole("tab", { name: "Riwayat" }));
+    await user.click(screen.getByRole("tab", { name: "Penilaian" }));
+
+    // Assert
+    expect(screen.getByLabelText(/Komentar untuk penulis/)).toHaveValue("Pasal 151 kurang tepat");
+  });
+
+  // Edge: screen readers follow aria-controls even before the tab is opened.
+  it("points the closed Riwayat tab at a panel that is in the page", async () => {
+    // Arrange / Act
+    render(<ReviewAssignmentPage />);
+
+    // Assert
+    const tab = await screen.findByRole("tab", { name: "Riwayat" });
+    const panel = document.getElementById(tab.getAttribute("aria-controls") ?? "");
+    expect(panel).not.toBeNull();
+    expect(panel).not.toBeVisible();
+  });
+
+  // Edge: a sent verdict adds an audit row, so the history loads again.
+  it("loads the history again after the reviewer sends a verdict", async () => {
+    // Arrange
+    submitMock.mockResolvedValue(makeVerdictResult({ decision: "approve", round_status: "open" }));
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+    await user.click(await screen.findByRole("tab", { name: "Riwayat" }));
+    await user.click(screen.getByRole("tab", { name: "Penilaian" }));
+    await user.click(screen.getByRole("radio", { name: /Dapat dipertahankan sebagaimana tertulis/ }));
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Kirim penilaian" }));
+    await screen.findByText("Menunggu peninjau lain menilai.");
+    await user.click(screen.getByRole("tab", { name: "Riwayat" }));
+
+    // Assert
+    expect(historyMounts.count).toBe(2);
+  });
+
+  // Edge: going back keeps the loaded history and the row that was opened.
+  it("keeps the history mounted after going back to Penilaian", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+    await user.click(await screen.findByRole("tab", { name: "Riwayat" }));
+
+    // Act
+    await user.click(screen.getByRole("tab", { name: "Penilaian" }));
+
+    // Assert
+    expect(screen.getByText(`Riwayat kasus ${CASE_ID}`)).not.toBeVisible();
   });
 });
