@@ -11,17 +11,31 @@ import { useNeedsReassignment } from "@/hooks/useNeedsReassignment";
 import { useReplaceReviewer } from "@/hooks/useReplaceReviewer";
 import { listCaseVersions } from "@/lib/cases/versionApi";
 import { isCaseCreator } from "@/lib/cases/versionCreator";
-import { reviewerName } from "@/lib/reviews/reviewQueue";
-import { reviewerCandidates } from "@/lib/reviews/reviewerCandidates";
+import { activeAssignments, reviewerName } from "@/lib/reviews/reviewQueue";
+import { candidatesExcept } from "@/lib/reviews/reviewerCandidates";
 import { listActiveUsers } from "@/lib/userApi";
+import type { InReviewRow } from "@/lib/reviews/inReviewApi";
 import type {
   ReassignmentAssignment,
   ReassignmentRow,
+  ReviewerSlot,
 } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
 
 type Tab = "queue" | "decisions";
-type Target = { assignment: ReassignmentAssignment; row: ReassignmentRow };
+
+/**
+ * Penugasan yang sedang diganti, dalam bentuk yang tidak terikat pada tabel asalnya:
+ * antrean dan tab "Dalam review" memberi data yang sama lewat dua jalan berbeda (AC7, AC8).
+ */
+type Target = {
+  assignmentId: string;
+  caseId: string;
+  caseCode: string;
+  reviewerId: string;
+  reviewerName: string;
+  takenReviewerIds: string[];
+};
 
 const TAB_LABEL: Record<Tab, string> = {
   queue: "Perlu penugasan ulang",
@@ -81,7 +95,11 @@ function ReassignmentPanel({
 /** Isi tab kasus yang sedang direview, dengan urutan keadaan yang sama. */
 function InReviewPanel({
   inReview,
-}: Readonly<{ inReview: ReturnType<typeof useInReviewCases> }>) {
+  onReplace,
+}: Readonly<{
+  inReview: ReturnType<typeof useInReviewCases>;
+  onReplace: (slot: ReviewerSlot, row: InReviewRow) => void;
+}>) {
   if (inReview.status === "error") {
     return (
       <ErrorState
@@ -107,7 +125,7 @@ function InReviewPanel({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <InReviewTable rows={inReview.data} />
+      <InReviewTable rows={inReview.data} onReplace={onReplace} />
     </div>
   );
 }
@@ -167,7 +185,7 @@ export default function AdminReviewsPage() {
     if (target === null) return;
 
     let cancelled = false;
-    listCaseVersions(target.row.case_id)
+    listCaseVersions(target.caseId)
       .then((versions) => {
         if (cancelled) return;
         const author = users.find((item) => isCaseCreator(versions, item.id));
@@ -186,13 +204,47 @@ export default function AdminReviewsPage() {
   }, [target, users]);
 
   const openDialog = useCallback(
-    (assignment: ReassignmentAssignment, row: ReassignmentRow) => {
+    (next: Target) => {
       reset();
       setAuthorId(null);
       setAuthorFailed(false);
-      setTarget({ assignment, row });
+      setTarget(next);
     },
     [reset],
+  );
+
+  /** Dari antrean (AC8): yang terpakai adalah reviewer yang masih aktif di ronde itu. */
+  const openFromQueue = useCallback(
+    (assignment: ReassignmentAssignment, row: ReassignmentRow) => {
+      openDialog({
+        assignmentId: assignment.id,
+        caseId: row.case_id,
+        caseCode: row.case_code,
+        reviewerId: assignment.reviewer_id,
+        reviewerName: reviewerName(assignment),
+        takenReviewerIds: activeAssignments(row).map(
+          (item) => item.reviewer_id,
+        ),
+      });
+    },
+    [openDialog],
+  );
+
+  /** Dari tab "Dalam review" (AC7): penugasan aktif kasus mana pun, bukan hanya yang di antrean. */
+  const openFromReview = useCallback(
+    (slot: ReviewerSlot, row: InReviewRow) => {
+      openDialog({
+        assignmentId: slot.assignment_id,
+        caseId: row.case.id,
+        caseCode: row.case.case_code,
+        reviewerId: slot.reviewer.id,
+        reviewerName: slot.reviewer.name,
+        takenReviewerIds: (row.review?.reviewers ?? [])
+          .filter((item) => item.status === "active")
+          .map((item) => item.reviewer.id),
+      });
+    },
+    [openDialog],
   );
 
   /** Pola tablist: panah kiri/kanan berpindah tab dan memindahkan fokus, hanya ada dua tab. */
@@ -250,7 +302,7 @@ export default function AdminReviewsPage() {
           aria-labelledby="tab-queue"
           tabIndex={0}
         >
-          <ReassignmentPanel queue={queue} onReplace={openDialog} />
+          <ReassignmentPanel queue={queue} onReplace={openFromQueue} />
         </section>
       ) : (
         <section
@@ -259,22 +311,22 @@ export default function AdminReviewsPage() {
           aria-labelledby="tab-decisions"
           tabIndex={0}
         >
-          <InReviewPanel inReview={inReview} />
+          <InReviewPanel inReview={inReview} onReplace={openFromReview} />
         </section>
       )}
 
       {target && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/40 p-4">
           <SwapReviewerDialog
-            caseCode={target.row.case_code}
-            currentReviewerId={target.assignment.reviewer_id}
-            currentReviewerName={reviewerName(target.assignment)}
-            candidates={reviewerCandidates(users, target.row, authorId)}
+            caseCode={target.caseCode}
+            currentReviewerId={target.reviewerId}
+            currentReviewerName={target.reviewerName}
+            candidates={candidatesExcept(users, target.takenReviewerIds, authorId)}
             notice={dialogNotice(usersFailed, authorFailed)}
             pending={replacement.pending}
             error={replacement.error}
             onConfirm={(body) =>
-              void replacement.replace(target.assignment.id, body)
+              void replacement.replace(target.assignmentId, body)
             }
             onClose={() => setTarget(null)}
           />
