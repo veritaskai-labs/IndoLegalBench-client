@@ -159,6 +159,7 @@ describe("DashboardPage", () => {
 
     expect(screen.getAllByRole("listitem")[4]).toHaveTextContent("4");
   });
+
   // Review #35: admin dapat jalan pintas ke kasus yang perlu reviewer baru.
   it("links the admin to the cases that need a new reviewer", () => {
     authenticatedAs("Rina");
@@ -169,5 +170,41 @@ describe("DashboardPage", () => {
     expect(
       screen.getByRole("link", { name: /penugasan ulang/i }),
     ).toHaveAttribute("href", "/admin/reviews");
+  });
+
+  // Negatif: Viewer tidak dapat mengakses dashboard dan melihat pesan empty state khusus
+  it("shows an empty state for a viewer without rendering dashboard widgets", () => {
+    authenticatedAs("Rina", "viewer");
+    useDashboardMock.mockReturnValue({ status: "loading", reload: vi.fn() });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByText("Dasbor belum tersedia untuk peran Anda")).toBeInTheDocument();
+    expect(
+      screen.getByText("Akun Anda hanya membaca kasus, jadi belum ada ringkasan kerja yang bisa ditampilkan."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+
+  // AC1: isolasi per peran - Admin melihat needs_reassignment tanpa antrean reviewer
+  it("shows needs_reassignment for admin without review queue", () => {
+    authenticatedAs("Admin", "admin");
+    ready({ needs_reassignment: 2, review_queue: null });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByRole("link", { name: /penugasan ulang/i })).toHaveAttribute("href", "/admin/reviews");
+    expect(screen.queryByRole("heading", { name: /antrean review/i })).not.toBeInTheDocument();
+  });
+
+  // AC1: isolasi per peran - Reviewer melihat antrean review tanpa jalan pintas admin
+  it("shows review queue for reviewer without admin reassignment card", () => {
+    authenticatedAs("Reviewer", "reviewer");
+    ready({ review_queue: [QUEUED], needs_reassignment: null });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByRole("link", { name: /ILB-001/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /penugasan ulang/i })).not.toBeInTheDocument();
   });
 });

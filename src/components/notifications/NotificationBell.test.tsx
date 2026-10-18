@@ -220,6 +220,17 @@ describe("NotificationBell", () => {
 
       await waitFor(() => expect(push).toHaveBeenCalledWith("/reviews/a-1"));
     });
+
+    // Negatif: menandai notifikasi milik orang lain ditolak 403 (NOTIFICATION_NOT_YOURS), UI tetap membuka halaman dan dialog tertutup
+    it("handles 403 NOTIFICATION_NOT_YOURS gracefully without blocking navigation", async () => {
+      readMock.mockRejectedValue(new ApiError(403, "NOTIFICATION_NOT_YOURS"));
+      const user = await openBell();
+
+      await user.click(await screen.findByRole("button", { name: /Tugas review baru/ }));
+
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/reviews/a-1"));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 
   describe("tandai semua dibaca", () => {

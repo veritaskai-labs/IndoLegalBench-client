@@ -98,6 +98,24 @@ describe("markNotificationRead", () => {
     await expect(failure).rejects.toBeInstanceOf(ApiError);
     await expect(failure).rejects.toMatchObject({ status: 404 });
   });
+
+  // Negatif: menandai notifikasi milik orang lain ditolak 403 (NOTIFICATION_NOT_YOURS)
+  it("rejects with 403 when marking another user's notification as read", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(
+      jsonResponse(403, { code: "NOTIFICATION_NOT_YOURS", message: "Notifikasi ini milik pengguna lain" }),
+    );
+
+    // Act
+    const failure = markNotificationRead(NOTIFICATION_ID);
+
+    // Assert
+    await expect(failure).rejects.toBeInstanceOf(ApiError);
+    await expect(failure).rejects.toMatchObject({
+      status: 403,
+      code: "NOTIFICATION_NOT_YOURS",
+    });
+  });
 });
 
 describe("markAllNotificationsRead", () => {
