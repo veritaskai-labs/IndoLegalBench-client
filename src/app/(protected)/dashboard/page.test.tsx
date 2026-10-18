@@ -159,4 +159,15 @@ describe("DashboardPage", () => {
 
     expect(screen.getAllByRole("listitem")[4]).toHaveTextContent("4");
   });
+  // Review #35: admin dapat jalan pintas ke kasus yang perlu reviewer baru.
+  it("links the admin to the cases that need a new reviewer", () => {
+    authenticatedAs("Rina");
+    ready({ needs_reassignment: 3 });
+
+    render(<DashboardPage />);
+
+    expect(
+      screen.getByRole("link", { name: /penugasan ulang/i }),
+    ).toHaveAttribute("href", "/admin/reviews");
+  });
 });
