@@ -24,7 +24,14 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  setVisibility("visible");
 });
+
+// jsdom keeps the tab visible; this lets a test hide it and show it again.
+function setVisibility(state: DocumentVisibilityState) {
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+  document.dispatchEvent(new Event("visibilitychange"));
+}
 
 describe("useUnreadCount", () => {
   describe("saat dipasang", () => {
@@ -72,6 +79,32 @@ describe("useUnreadCount", () => {
     });
   });
 
+  describe("tab tersembunyi", () => {
+    it("skips the poll while the tab is hidden", async () => {
+      renderHook(() => useUnreadCount());
+      await flush();
+      setVisibility("hidden");
+
+      await flush(POLL_MS * 2);
+
+      expect(countMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads right away when the tab is shown again", async () => {
+      const { result } = renderHook(() => useUnreadCount());
+      await flush();
+      setVisibility("hidden");
+      await flush(POLL_MS);
+      countMock.mockResolvedValue({ count: 7 });
+
+      setVisibility("visible");
+      await flush();
+
+      expect(result.current.count).toBe(7);
+      expect(countMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe("gagal memuat", () => {
     it("keeps the last count when a poll fails", async () => {
       const { result } = renderHook(() => useUnreadCount());
@@ -98,7 +131,7 @@ describe("useUnreadCount", () => {
       expect(countMock).toHaveBeenCalledTimes(2);
     });
 
-    // Edge: a slow answer from before the refresh must not overwrite the newer one.
+    // Edge: an answer from before the refresh must not overwrite a newer one.
     it("ignores an older answer that arrives after a refresh", async () => {
       let answerOld: (value: { count: number }) => void = () => {};
       countMock.mockReturnValueOnce(new Promise((resolve) => (answerOld = resolve)));
