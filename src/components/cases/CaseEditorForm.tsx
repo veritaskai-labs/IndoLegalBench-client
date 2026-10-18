@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { get, useForm } from "react-hook-form";
+import { useLegalRefPreview } from "@/hooks/useLegalRefPreview";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import {
   emptyCaseFormValues,
@@ -25,6 +26,8 @@ import {
 type Props = {
   /** Tanpa nilai berarti kasus baru. */
   defaultValues?: CaseFormValues;
+  /** Kasus yang sedang diedit, untuk pratinjau rujukan (SCRUM-162). Tanpa nilai untuk kasus baru. */
+  caseId?: string;
   /**
    * Page yang memutuskan POST atau PUT; form hanya menyerahkan payload.
    * Bila server menolak satu field, page mengembalikan error itu agar form menempelkannya.
@@ -52,6 +55,7 @@ export const VALIDATE_DELAY_MS = 300;
 
 export function CaseEditorForm({
   defaultValues,
+  caseId,
   onSubmit,
   onDirtyChange,
   readOnly = false,
@@ -100,6 +104,8 @@ export function CaseEditorForm({
 
   // Satu kali untuk seluruh bagian rujukan, bukan di tiap baris.
   const regulationTypes = useRegulationTypes();
+  // Pratinjau dan error rujukan dari server saat mengetik; versi terkunci tidak perlu.
+  const preview = useLegalRefPreview(control, caseId ?? null, !readOnly);
 
   const { isDirty } = formState;
   useEffect(() => {
@@ -145,6 +151,7 @@ export function CaseEditorForm({
           control={control}
           rowHasError={rowHasError}
           regulationTypes={regulationTypes}
+          preview={preview}
         />
         <AnswerCriteriaSection {...sectionProps} />
         <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />

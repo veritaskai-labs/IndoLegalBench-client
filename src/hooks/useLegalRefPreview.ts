@@ -6,8 +6,8 @@ import type { CaseFormValues } from "@/lib/cases/caseFormMapping";
 import {
   alignPreviews,
   buildPreviewRequest,
-  type CitationPreview,
   type PreviewResult,
+  type PreviewState,
 } from "@/lib/cases/legalRefPreview";
 import { previewLegalRefs } from "@/lib/cases/legalRefPreviewApi";
 
@@ -23,7 +23,7 @@ export function useLegalRefPreview(
   control: Control<CaseFormValues>,
   caseId: string | null,
   enabled: boolean,
-): { previews: (CitationPreview | null)[]; failed: boolean } {
+): PreviewState {
   const refs = useWatch({ control, name: "legal_refs" });
   const request = useMemo(() => buildPreviewRequest(refs), [refs]);
   const [result, setResult] = useState<PreviewResult | null>(null);

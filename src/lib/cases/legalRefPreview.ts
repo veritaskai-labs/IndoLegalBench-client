@@ -14,6 +14,9 @@ import { fieldErrorText, mapServerFieldError, type SaveError } from "./saveError
 /** Yang tampil untuk satu rujukan: teks dari server, atau error pertamanya. */
 export type CitationPreview = { text: string | null; error: SaveError | null };
 
+/** Pratinjau semua rujukan di form, dan apakah request terakhir gagal dimuat. */
+export type PreviewState = { previews: (CitationPreview | null)[]; failed: boolean };
+
 /** Jawaban server beserta isi tiap rujukan saat request itu dikirim. */
 export type PreviewResult = { sent: readonly string[]; items: readonly LegalRefPreviewItem[] };
 
@@ -27,8 +30,9 @@ export function buildPreviewRequest(refs: readonly LegalRefFormValues[]): {
 }
 
 /**
- * Pratinjau untuk tiap rujukan di form sekarang. Null bila belum ada jawaban, atau bila rujukan
- * itu berubah, bertambah, atau bergeser sejak request dikirim.
+ * Pratinjau untuk tiap rujukan di form sekarang. Null bila belum ada jawaban, bila rujukan itu
+ * berubah, bertambah, atau bergeser sejak request dikirim, atau bila rujukan itu belum diisi sama
+ * sekali (baris baru tidak langsung penuh error, sama seperti validasi saat mengetik).
  */
 export function alignPreviews(
   refs: readonly LegalRefFormValues[],
@@ -37,9 +41,26 @@ export function alignPreviews(
   const { sent } = buildPreviewRequest(refs);
   return refs.map((ref, index) => {
     const item = result?.items[index];
-    if (item === undefined || result?.sent[index] !== sent[index]) return null;
+    if (item === undefined || result?.sent[index] !== sent[index] || !hasInput(ref)) return null;
     return toCitationPreview(ref, item);
   });
+}
+
+/** Isian link yang diketik Author. Bentuk dan penghubung punya nilai bawaan, jadi tidak dihitung. */
+const LINK_INPUTS = [
+  "regulation_type",
+  "number",
+  "year",
+  "about",
+  "pasal",
+  "angka",
+  "ayat",
+  "huruf",
+] as const;
+
+function hasInput(ref: LegalRefFormValues): boolean {
+  if (ref.kind === "free_text") return ref.free_text.trim() !== "";
+  return ref.links.some((link) => LINK_INPUTS.some((name) => link[name].trim() !== ""));
 }
 
 function toCitationPreview(ref: LegalRefFormValues, item: LegalRefPreviewItem): CitationPreview {
