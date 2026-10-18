@@ -51,5 +51,6 @@ export function useLegalRefPreview(
     };
   }, [request, caseId, enabled]);
 
-  return { previews: alignPreviews(refs, result), failed };
+  // Tanpa rujukan tidak ada pratinjau yang bisa gagal; kegagalan lama tidak ikut tampil.
+  return { previews: alignPreviews(refs, result), failed: failed && request.payload.length > 0 };
 }
