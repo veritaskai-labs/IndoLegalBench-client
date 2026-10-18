@@ -26,12 +26,21 @@ describe("navForRole", () => {
   });
 
   it("gives admin every page", () => {
-    expect(labels("admin")).toHaveLength(8);
+    expect(labels("admin")).toHaveLength(9);
   });
 
   it("drops groups left empty for the role", () => {
     expect(navForRole("author").map((group) => group.heading)).toEqual([
       "Konteks",
     ]);
+  });
+  it("offers the review monitoring page to the admin only", () => {
+    const hrefs = (role: Role) =>
+      navForRole(role).flatMap((group) => group.items.map((item) => item.href));
+
+    expect(hrefs("admin")).toContain("/admin/reviews");
+    expect(hrefs("reviewer")).not.toContain("/admin/reviews");
+    expect(hrefs("author")).not.toContain("/admin/reviews");
+    expect(hrefs("viewer")).not.toContain("/admin/reviews");
   });
 });
