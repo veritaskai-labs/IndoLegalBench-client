@@ -31,6 +31,10 @@ export function useDashboard(enabled: boolean): UseDashboard {
     let cancelled = false;
 
     const read = () => {
+      // Tab yang tersembunyi tidak dilihat siapa pun; penyegarannya ditunda
+      // sampai kembali terlihat, lalu dibaca ulang saat itu juga.
+      if (document.visibilityState === "hidden") return;
+
       getDashboard()
         .then((summary) => {
           if (cancelled) return;
@@ -45,10 +49,12 @@ export function useDashboard(enabled: boolean): UseDashboard {
 
     read();
     const timer = setInterval(read, DASHBOARD_POLL_MS);
+    document.addEventListener("visibilitychange", read);
 
     return () => {
       cancelled = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", read);
     };
   }, [enabled, nonce]);
 
