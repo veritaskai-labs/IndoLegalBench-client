@@ -106,7 +106,8 @@ function toLinkPayload(link: LegalRefLinkFormValues): LegalRefLinkPayload {
   };
 }
 
-function toLegalRefPayload(ref: LegalRefFormValues): LegalRefPayload {
+/** Satu rujukan form sebagai payload API, sama untuk simpan dan pratinjau (SCRUM-162). */
+export function toLegalRefPayload(ref: LegalRefFormValues): LegalRefPayload {
   if (ref.kind === "free_text") {
     return { kind: "free_text", free_text: ref.free_text, links: [] };
   }

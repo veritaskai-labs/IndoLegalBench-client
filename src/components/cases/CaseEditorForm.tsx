@@ -10,7 +10,7 @@ import {
   type CaseWritePayload,
 } from "@/lib/cases/caseFormMapping";
 import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
-import type { FieldSaveError } from "@/lib/cases/saveError";
+import { fieldErrorText, type FieldSaveError } from "@/lib/cases/saveError";
 import type { SplitTag } from "@/types/case";
 import { ErrorSummary } from "./ErrorSummary";
 import { LegalRefsSection } from "./LegalRefsSection";
@@ -49,10 +49,6 @@ function chosenTag(values: CaseFormValues | undefined): SplitTag | null {
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
 export const VALIDATE_DELAY_MS = 300;
-
-function fieldMessage({ message, detail }: FieldSaveError): string {
-  return detail === null ? message : `${message} (${detail})`;
-}
 
 export function CaseEditorForm({
   defaultValues,
@@ -121,7 +117,7 @@ export function CaseEditorForm({
     if (fieldError) {
       setError(
         fieldError.path,
-        { type: "server", message: fieldMessage(fieldError) },
+        { type: "server", message: fieldErrorText(fieldError) },
         { shouldFocus: true },
       );
     }
