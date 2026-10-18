@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { formatWib } from "@/lib/datetime/formatWib";
@@ -28,8 +28,13 @@ const markAllRead = (items: AppNotification[]) => {
 /** Lonceng di TopBar: badge belum dibaca dan daftar 10 notifikasi terbaru. */
 export function NotificationBell() {
   const router = useRouter();
+  const pathname = usePathname();
   const { count, refresh } = useUnreadCount();
-  const [open, setOpen] = useState(false);
+  // Terbuka hanya di halaman tempat ia dibuka, jadi pindah halaman menutupnya.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === pathname;
+  const wrapper = useRef<HTMLDivElement>(null);
+  const bellButton = useRef<HTMLButtonElement>(null);
   const [list, setList] = useState<ListState>({ status: "loading" });
   const badge = badgeLabel(count);
 
@@ -43,9 +48,31 @@ export function NotificationBell() {
     }
   }
 
+  useEffect(() => {
+    if (!open) return;
+    const closeOutside = (event: MouseEvent) => {
+      if (!wrapper.current?.contains(event.target as Node)) setOpenOn(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenOn(null);
+      bellButton.current?.focus();
+    };
+    document.addEventListener("mousedown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   function toggle() {
-    if (!open) void load();
-    setOpen(!open);
+    if (open) {
+      setOpenOn(null);
+      return;
+    }
+    void load();
+    setOpenOn(pathname);
   }
 
   async function markRead(id: string) {
@@ -58,7 +85,7 @@ export function NotificationBell() {
   }
 
   function openItem(item: AppNotification) {
-    setOpen(false);
+    setOpenOn(null);
     router.push(item.link);
     if (item.read_at === null) void markRead(item.id);
   }
@@ -116,8 +143,9 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="relative">
+    <div ref={wrapper} className="relative">
       <button
+        ref={bellButton}
         type="button"
         aria-label="Notifikasi"
         aria-expanded={open}
