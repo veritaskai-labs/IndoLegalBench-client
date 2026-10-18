@@ -97,5 +97,20 @@ describe("useUnreadCount", () => {
       expect(result.current.count).toBe(0);
       expect(countMock).toHaveBeenCalledTimes(2);
     });
+
+    // Edge: a slow answer from before the refresh must not overwrite the newer one.
+    it("ignores an older answer that arrives after a refresh", async () => {
+      let answerOld: (value: { count: number }) => void = () => {};
+      countMock.mockReturnValueOnce(new Promise((resolve) => (answerOld = resolve)));
+      countMock.mockResolvedValueOnce({ count: 0 });
+      const { result } = renderHook(() => useUnreadCount());
+
+      act(() => result.current.refresh());
+      await flush();
+      answerOld({ count: 9 });
+      await flush();
+
+      expect(result.current.count).toBe(0);
+    });
   });
 });
