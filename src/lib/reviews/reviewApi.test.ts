@@ -1,107 +1,184 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { apiFetch } from "@/lib/apiClient";
-import { listNeedsReassignment, replaceReviewer, getCaseReview } from "./reviewApi";
-import type {CaseReview} from "@/types/reviewAdmin";
-vi.mock("@/lib/apiClient", () => ({ apiFetch: vi.fn() }));
-const fetchMock = vi.mocked(apiFetch);
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError, BASE_URL } from "@/lib/apiClient";
+import { getCaseReview, listAssignedReviews, submitVerdict } from "./reviewApi";
 
-const ASSIGNMENT_ID = "33333333-3333-3333-3333-333333333333";
-const REVIEWER_ID = "44444444-4444-4444-4444-444444444444";
+const CASE_ID = "11111111-1111-1111-1111-111111111111";
+const ASSIGNMENT_ID = "22222222-2222-2222-2222-222222222222";
+
+// fetch is the only way out of this module, so stubbing it lets us check
+// the exact request without a server.
+const fetchMock = vi.fn<typeof fetch>();
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
 beforeEach(() => {
   fetchMock.mockReset();
-  fetchMock.mockResolvedValue([]);
+  vi.stubGlobal("fetch", fetchMock);
 });
 
-describe("listNeedsReassignment", () => {
-  // Positive: AC8
-  it("reads the admin reassignment queue", async () => {
-    await listNeedsReassignment();
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
-    expect(fetchMock).toHaveBeenCalledWith("/reviews/needs-reassignment");
-  });
-
+describe("listAssignedReviews", () => {
   // Positive
-  it("hands back the rows the server returned", async () => {
-    const rows = [
-      {
-        case_id: "c1",
-        case_code: "ILB-PT-0142",
-        case_title: "Pemberitahuan PHK",
-        round_id: "r1",
-        round_no: 1,
-        round_status: "open" as const,
-        active_reviewers_count: 1,
-        void_assignments: [],
-        assignments: [],
-      },
-    ];
-    fetchMock.mockResolvedValue(rows);
+  it("gets the reviewer's assignments from /reviews/assigned", async () => {
+    // Arrange
+    const rows = [{ assignment_id: ASSIGNMENT_ID, round_no: 1, my_verdict: null }];
+    fetchMock.mockResolvedValue(jsonResponse(200, rows));
 
-    await expect(listNeedsReassignment()).resolves.toEqual(rows);
+    // Act
+    const result = await listAssignedReviews();
+
+    // Assert
+    expect(result).toEqual(rows);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/reviews/assigned`);
+    expect(init?.method).toBeUndefined();
+    expect(init?.credentials).toBe("include");
+  });
+
+  // Edge: a reviewer with nothing to review gets an empty list, not an error.
+  it("returns an empty list when nothing is assigned", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    // Act
+    const result = await listAssignedReviews();
+
+    // Assert
+    expect(result).toEqual([]);
+  });
+
+  // Negative
+  it("rejects with the status when the caller is not a reviewer", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(403, { code: "FORBIDDEN", message: "No" }));
+
+    // Act
+    const failure = listAssignedReviews();
+
+    // Assert
+    await expect(failure).rejects.toBeInstanceOf(ApiError);
+    await expect(failure).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
   });
 });
 
-describe("replaceReviewer", () => {
-  // Positive: AC7 — alasan ikut terkirim, itu yang masuk jejak audit.
-  it("posts the new reviewer and the reason", async () => {
-    fetchMock.mockResolvedValue({});
+describe("submitVerdict", () => {
+  // Positive
+  it("posts the decision and comment as JSON to the assignment's verdict endpoint", async () => {
+    // Arrange
+    const result = { decision: "revise", comment: "Pasal salah", round_status: "open" };
+    fetchMock.mockResolvedValue(jsonResponse(201, result));
 
-    await replaceReviewer(ASSIGNMENT_ID, { new_reviewer_id: REVIEWER_ID, reason: "Cuti panjang" });
+    // Act
+    const created = await submitVerdict(ASSIGNMENT_ID, { decision: "revise", comment: "Pasal salah" });
 
-    expect(fetchMock).toHaveBeenCalledWith(`/reviews/${ASSIGNMENT_ID}/replace`, {
-      method: "POST",
-      body: JSON.stringify({ new_reviewer_id: REVIEWER_ID, reason: "Cuti panjang" }),
+    // Assert
+    expect(created).toEqual(result);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/reviews/${ASSIGNMENT_ID}/verdict`);
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init?.body))).toEqual({ decision: "revise", comment: "Pasal salah" });
+  });
+
+  // Edge: an approve may carry no comment at all.
+  it("sends a null comment when approving without one", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(201, { decision: "approve" }));
+
+    // Act
+    await submitVerdict(ASSIGNMENT_ID, { decision: "approve", comment: null });
+
+    // Assert
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(JSON.parse(String(init?.body))).toEqual({ decision: "approve", comment: null });
+  });
+
+  // Edge: an id with reserved characters must not change the route.
+  it("encodes the assignment id in the path", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(201, {}));
+
+    // Act
+    await submitVerdict("a/b?c", { decision: "approve", comment: null });
+
+    // Assert
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/reviews/a%2Fb%3Fc/verdict`);
+  });
+
+  // Negative
+  it("rejects with the field when a revision has no comment", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(
+      jsonResponse(422, { code: "COMMENT_REQUIRED", message: "Komentar wajib", field: "comment" }),
+    );
+
+    // Act
+    const failure = submitVerdict(ASSIGNMENT_ID, { decision: "revise", comment: null });
+
+    // Assert
+    await expect(failure).rejects.toMatchObject({
+      status: 422,
+      code: "COMMENT_REQUIRED",
+      field: "comment",
     });
   });
 
-  // Corner: id dari URL bisa memuat karakter yang harus di-escape.
-  it("encodes the assignment id", async () => {
-    fetchMock.mockResolvedValue({});
+  // Negative
+  it("rejects with the server code when the verdict was already sent", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(409, { code: "VERDICT_ALREADY_SUBMITTED", message: "Sudah" }));
 
-    await replaceReviewer("a/b", { new_reviewer_id: REVIEWER_ID, reason: "x" });
+    // Act
+    const failure = submitVerdict(ASSIGNMENT_ID, { decision: "approve", comment: null });
 
-    expect(fetchMock).toHaveBeenCalledWith("/reviews/a%2Fb/replace", expect.anything());
+    // Assert
+    await expect(failure).rejects.toMatchObject({ status: 409, code: "VERDICT_ALREADY_SUBMITTED" });
   });
 });
 
-const REVIEW: CaseReview = {
-  case_id: "c1",
-  case_version_id: "v1",
-  round_no: 1,
-  status: "open",
-  decision: null,
-  opened_at: "2026-10-16T03:00:00Z",
-  decided_at: null,
-  reviewers: [
-    {
-      assignment_id: "a1",
-      reviewer: { id: "u1", name: "Roben" },
-      status: "active",
-      verdict: null,
-    },
-  ],
-};
-
 describe("getCaseReview", () => {
-  beforeEach(() => {
-    fetchMock.mockReset();
+  // Positive
+  it("gets the latest review round of the case", async () => {
+    // Arrange
+    const review = { case_id: CASE_ID, round_no: 1, status: "open", reviewers: [] };
+    fetchMock.mockResolvedValue(jsonResponse(200, review));
+
+    // Act
+    const result = await getCaseReview(CASE_ID);
+
+    // Assert
+    expect(result).toEqual(review);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/cases/${CASE_ID}/review`);
   });
 
-  // Positif
-  it("reads the latest round of one case", async () => {
-    fetchMock.mockResolvedValue(REVIEW);
+  // Edge
+  it("encodes the case id in the path", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(200, {}));
 
-    await expect(getCaseReview("c1")).resolves.toEqual(REVIEW);
-    expect(fetchMock).toHaveBeenCalledWith("/cases/c1/review");
+    // Act
+    await getCaseReview("a/b?c");
+
+    // Assert
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${BASE_URL}/cases/a%2Fb%3Fc/review`);
   });
 
-  // Sudut
-  it("escapes the case id in the path", async () => {
-    fetchMock.mockResolvedValue(REVIEW);
+  // Negative
+  it("rejects with NO_REVIEW_ROUND when the case was never submitted", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(404, { code: "NO_REVIEW_ROUND", message: "Belum" }));
 
-    await getCaseReview("c 1/2");
+    // Act
+    const failure = getCaseReview(CASE_ID);
 
-    expect(fetchMock).toHaveBeenCalledWith("/cases/c%201%2F2/review");
+    // Assert
+    await expect(failure).rejects.toMatchObject({ status: 404, code: "NO_REVIEW_ROUND" });
   });
 });

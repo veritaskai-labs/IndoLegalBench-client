@@ -1,10 +1,19 @@
 import { apiFetch } from "@/lib/apiClient";
-import type {
-  CaseReview,
-  ReassignmentRow,
-  ReplaceReviewerBody,
-  ReplacedAssignment,
-} from "@/types/reviewAdmin";
+import type { AssignedReview, CaseReview, VerdictResult, VerdictWrite } from "@/types/review";
+import type { ReassignmentRow, ReplaceReviewerBody, ReplacedAssignment } from "@/types/reviewAdmin";
+
+/** GET /reviews/assigned. Penugasan aktif reviewer yang login di round yang masih terbuka. Hanya reviewer. */
+export function listAssignedReviews(): Promise<AssignedReview[]> {
+  return apiFetch<AssignedReview[]>("/reviews/assigned");
+}
+
+/** POST /reviews/{assignment_id}/verdict. Komentar wajib bila decision = revise (422 COMMENT_REQUIRED). */
+export function submitVerdict(assignmentId: string, verdict: VerdictWrite): Promise<VerdictResult> {
+  return apiFetch<VerdictResult>(`/reviews/${encodeURIComponent(assignmentId)}/verdict`, {
+    method: "POST",
+    body: JSON.stringify(verdict),
+  });
+}
 
 /** GET /reviews/needs-reassignment. Admin saja. Ronde tanpa reviewer aktif, server yang hitung. */
 export function listNeedsReassignment(): Promise<ReassignmentRow[]> {
@@ -22,7 +31,11 @@ export function replaceReviewer(
   );
 }
 
-/** GET /cases/{case_id}/review. Admin melihat semua verdict kapan pun (keputusan klien SCRUM-145). */
+/**
+ * GET /cases/{case_id}/review. Round terakhir kasus. Penilaian reviewer lain bernilai null sampai
+ * round selesai, kecuali untuk admin. Hanya admin, penulis kasus, atau reviewer yang pernah ditugaskan;
+ * selain itu server menjawab 403.
+ */
 export function getCaseReview(caseId: string): Promise<CaseReview> {
   return apiFetch<CaseReview>(`/cases/${encodeURIComponent(caseId)}/review`);
 }

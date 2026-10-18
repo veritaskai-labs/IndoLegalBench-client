@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { get, useForm } from "react-hook-form";
+import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import {
   emptyCaseFormValues,
   toCaseWritePayload,
@@ -10,11 +11,12 @@ import {
 } from "@/lib/cases/caseFormMapping";
 import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
 import type { FieldSaveError } from "@/lib/cases/saveError";
+import type { SplitTag } from "@/types/case";
 import { ErrorSummary } from "./ErrorSummary";
+import { LegalRefsSection } from "./LegalRefsSection";
 import {
   AnswerCriteriaSection,
   IdentitySection,
-  LegalRefsSection,
   SplitTagSection,
   TrapsSection,
   type ErrorLookup,
@@ -32,7 +34,18 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   /** Versi terkunci: semua kolom dinonaktifkan dan tombol simpan disembunyikan. */
   readOnly?: boolean;
+  /**
+   * Kasus sudah pernah disetujui: tag hanya diubah Admin lewat dialog "Ubah tag" (PBI-9 AC3).
+   * Pilihan tag diganti badge; nilainya tetap ikut terkirim dari defaultValues.
+   */
+  tagLocked?: boolean;
 };
+
+/** Tag tersimpan, atau null bila belum dipilih (nilai form kosong ""). */
+function chosenTag(values: CaseFormValues | undefined): SplitTag | null {
+  const tag = values?.split_tag;
+  return tag === "dev" || tag === "test" ? tag : null;
+}
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
 export const VALIDATE_DELAY_MS = 300;
@@ -41,7 +54,13 @@ function fieldMessage({ message, detail }: FieldSaveError): string {
   return detail === null ? message : `${message} (${detail})`;
 }
 
-export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnly = false }: Props) {
+export function CaseEditorForm({
+  defaultValues,
+  onSubmit,
+  onDirtyChange,
+  readOnly = false,
+  tagLocked = false,
+}: Readonly<Props>) {
   const {
     register,
     control,
@@ -83,6 +102,9 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnl
     };
   }, [subscribe, trigger]);
 
+  // Satu kali untuk seluruh bagian rujukan, bukan di tiap baris.
+  const regulationTypes = useRegulationTypes();
+
   const { isDirty } = formState;
   useEffect(() => {
     onDirtyChange?.(isDirty);
@@ -122,10 +144,15 @@ export function CaseEditorForm({ defaultValues, onSubmit, onDirtyChange, readOnl
       {/* fieldset disabled menonaktifkan semua kolom dan tombol tambah baris di dalamnya sekaligus. */}
       <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-6 border-0 p-0">
         <IdentitySection {...sectionProps} />
-        <LegalRefsSection {...sectionProps} control={control} rowHasError={rowHasError} />
+        <LegalRefsSection
+          {...sectionProps}
+          control={control}
+          rowHasError={rowHasError}
+          regulationTypes={regulationTypes}
+        />
         <AnswerCriteriaSection {...sectionProps} />
         <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
-        <SplitTagSection {...sectionProps} />
+        <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
       </fieldset>
 
       {!readOnly && (
