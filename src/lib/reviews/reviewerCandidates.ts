@@ -8,16 +8,14 @@ import type { User } from "@/types/user-management";
  * terakhir — ini supaya admin tidak kena penolakan setelah mengisi alasan.
  *
  * authorId null berarti penulisnya belum diketahui; daftar tidak disembunyikan karena itu,
- * dan server masih menolak dengan REVIEWER_IS_AUTHOR bila ternyata penulis yang dipilih.
+ * dan server masih menolak dengan CANNOT_ASSIGN_AUTHOR bila ternyata penulis yang dipilih.
  */
-export function reviewerCandidates(
+export function candidatesExcept(
   users: User[],
-  row: ReassignmentRow,
+  takenReviewerIds: string[],
   authorId: string | null,
 ): ReviewerOption[] {
-  const taken = new Set(
-    activeAssignments(row).map((assignment) => assignment.reviewer_id),
-  );
+  const taken = new Set(takenReviewerIds);
 
   return users
     .filter(
@@ -29,4 +27,17 @@ export function reviewerCandidates(
     )
     .map((user) => ({ id: user.id, name: user.name }))
     .sort((left, right) => left.name.localeCompare(right.name, "id"));
+}
+
+/** Bentuk yang dipakai tab antrean: yang terpakai adalah reviewer aktif di baris itu. */
+export function reviewerCandidates(
+  users: User[],
+  row: ReassignmentRow,
+  authorId: string | null,
+): ReviewerOption[] {
+  return candidatesExcept(
+    users,
+    activeAssignments(row).map((assignment) => assignment.reviewer_id),
+    authorId,
+  );
 }

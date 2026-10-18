@@ -7,13 +7,15 @@ import {
   ROUND_STATUS_LABEL,
   verdictLabel,
 } from "@/lib/reviews/reviewLabels";
+import type { ReviewerSlot } from "@/types/reviewAdmin";
 
 type Props = {
   rows: InReviewRow[];
+  onReplace?: (slot: ReviewerSlot, row: InReviewRow) => void;
 };
 
-/** AC3. Hanya menggambar; keputusan reviewer ditampilkan apa adanya karena Admin boleh melihat semua. */
-export function InReviewTable({ rows }: Readonly<Props>) {
+/** AC3 dan AC7. Hanya menggambar; keputusan reviewer ditampilkan apa adanya karena Admin boleh melihat semua. */
+export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
   return (
     <table className="w-full text-left text-sm">
       <thead className="border-b border-slate-200 text-xs font-medium text-slate-600">
@@ -60,7 +62,12 @@ export function InReviewTable({ rows }: Readonly<Props>) {
               : "Belum diputuskan"}
             </td>
             <td className="py-3 px-4 text-slate-700">
-              <ReviewerCell review={review} />
+              <ReviewerCell
+              review={review}
+              onReplace={
+                onReplace ? (slot) => onReplace(slot, { case: item, review }) : undefined
+                }
+              />
             </td>
           </tr>
         ))}
@@ -69,7 +76,13 @@ export function InReviewTable({ rows }: Readonly<Props>) {
   );
 }
 
-function ReviewerCell({ review }: Readonly<{ review: CaseReviewOrNull }>) {
+function ReviewerCell({
+  review,
+  onReplace,
+}: Readonly<{
+  review: CaseReviewOrNull;
+  onReplace?: (slot: ReviewerSlot) => void;
+}>) {
   if (review === null) {
     return <span className="text-slate-500">Belum ada putaran review</span>;
   }
@@ -92,10 +105,20 @@ function ReviewerCell({ review }: Readonly<{ review: CaseReviewOrNull }>) {
           {slot.verdict?.comment ? (
             <p className="mt-1 text-xs text-slate-600">{slot.verdict.comment}</p>
           ) : null}
+          {/* AC7: hanya penugasan aktif yang bisa diganti; yang replaced atau void sudah selesai. */}
+          {onReplace && slot.status === "active" ? (
+            <button
+              type="button"
+              aria-label={`Ganti reviewer ${slot.reviewer.name}`}
+              onClick={() => onReplace(slot)}
+              className="mt-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+            >
+              Ganti reviewer
+            </button>
+          ) : null}
         </li>
       ))}
     </ul>
   );
 }
-
 type CaseReviewOrNull = InReviewRow["review"];
