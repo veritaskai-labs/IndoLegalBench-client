@@ -44,8 +44,8 @@ describe("AuthDoneHandler", () => {
   it("redirects to the role's home path on a successful profile fetch", async () => {
     mockFetchOnce({ ok: true, body: { role: "author" } });
     render(<AuthDoneHandler />);
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/suites"));
-  });
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
+    });
 
   it("shows a generic failure when the role is missing or unknown", async () => {
     mockFetchOnce({ ok: true, body: { role: "not-a-real-role" } });
@@ -101,8 +101,8 @@ describe("AuthDoneHandler", () => {
       expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument(),
     );
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/admin/members"));
-  });
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
+    });
 
   it("renders the auth-error screen directly when initialErrorCode is provided, without fetching", () => {
     const fetchSpy = vi.fn();
