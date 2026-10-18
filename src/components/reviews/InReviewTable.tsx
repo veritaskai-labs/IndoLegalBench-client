@@ -55,9 +55,9 @@ export function InReviewTable({ rows }: Readonly<Props>) {
               {review === null ? "—" : ROUND_STATUS_LABEL[review.status]}
             </td>
             <td className="py-3 px-4 text-slate-700">
-              {review === null || review.decision === null
-                ? "Belum diputuskan"
-                : ROUND_DECISION_LABEL[review.decision]}
+              {review?.decision
+              ? ROUND_DECISION_LABEL[review.decision]
+              : "Belum diputuskan"}
             </td>
             <td className="py-3 px-4 text-slate-700">
               <ReviewerCell review={review} />

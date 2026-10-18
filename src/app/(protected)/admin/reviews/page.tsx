@@ -30,6 +30,74 @@ const TAB_LABEL: Record<Tab, string> = {
 
 const TABS: Tab[] = ["queue", "decisions"];
 
+/** Isi tab antrean: gagal, memuat, kosong, lalu tabelnya. Dipisah agar halamannya tetap terbaca. */
+function ReassignmentPanel({
+  queue,
+  onReplace,
+}: Readonly<{
+  queue: ReturnType<typeof useNeedsReassignment>;
+  onReplace: (assignment: ReassignmentAssignment, row: ReassignmentRow) => void;
+}>) {
+  if (queue.status === "error") {
+    return (
+      <ErrorState variant="card" message={queue.message} onRetry={queue.reload} />
+    );
+  }
+
+  if (queue.status === "loading") {
+    return <LoadingSkeleton variant="lines" rows={5} />;
+  }
+
+  if (queue.data.length === 0) {
+    return (
+      <EmptyState
+        title="Tidak ada kasus yang perlu penugasan ulang"
+        description="Semua ronde review yang berjalan masih punya reviewer aktif."
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <ReassignmentTable rows={queue.data} onReplace={onReplace} />
+    </div>
+  );
+}
+
+/** Isi tab kasus yang sedang direview, dengan urutan keadaan yang sama. */
+function InReviewPanel({
+  inReview,
+}: Readonly<{ inReview: ReturnType<typeof useInReviewCases> }>) {
+  if (inReview.status === "error") {
+    return (
+      <ErrorState
+        variant="card"
+        message={inReview.message}
+        onRetry={inReview.reload}
+      />
+    );
+  }
+
+  if (inReview.status === "loading") {
+    return <LoadingSkeleton variant="lines" rows={5} />;
+  }
+
+  if (inReview.data.length === 0) {
+    return (
+      <EmptyState
+        title="Tidak ada kasus yang sedang direview"
+        description="Kasus akan muncul di sini setelah Author mengajukannya untuk review."
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <InReviewTable rows={inReview.data} />
+    </div>
+  );
+}
+
 export default function AdminReviewsPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const [target, setTarget] = useState<Target | null>(null);
@@ -129,45 +197,11 @@ export default function AdminReviewsPage() {
 
       {tab === "queue" ? (
         <section aria-label={TAB_LABEL.queue}>
-          {queue.status === "error" ? (
-            <ErrorState
-              variant="card"
-              message={queue.message}
-              onRetry={reload}
-            />
-          ) : queue.status === "loading" ? (
-            <LoadingSkeleton variant="lines" rows={5} />
-          ) : queue.data.length === 0 ? (
-            <EmptyState
-              title="Tidak ada kasus yang perlu penugasan ulang"
-              description="Semua ronde review yang berjalan masih punya reviewer aktif."
-            />
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-              <ReassignmentTable rows={queue.data} onReplace={openDialog} />
-            </div>
-          )}
+          <ReassignmentPanel queue={queue} onReplace={openDialog} />
         </section>
       ) : (
         <section aria-label={TAB_LABEL.decisions}>
-          {inReview.status === "error" ? (
-            <ErrorState
-              variant="card"
-              message={inReview.message}
-              onRetry={inReview.reload}
-            />
-          ) : inReview.status === "loading" ? (
-            <LoadingSkeleton variant="lines" rows={5} />
-          ) : inReview.data.length === 0 ? (
-            <EmptyState
-              title="Tidak ada kasus yang sedang direview"
-              description="Kasus akan muncul di sini setelah Author mengajukannya untuk review."
-            />
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-              <InReviewTable rows={inReview.data} />
-            </div>
-          )}
+          <InReviewPanel inReview={inReview} />
         </section>
       )}
 

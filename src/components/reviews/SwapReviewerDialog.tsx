@@ -36,11 +36,11 @@ export function SwapReviewerDialog({
   const ready = chosen !== undefined && trimmed !== "";
 
   return (
-    <div
-      role="dialog"
+    <dialog
+      open
       aria-modal="true"
       aria-labelledby="swap-reviewer-title"
-      className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-lg"
+      className="static m-0 w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-lg"
     >
       <h2
         id="swap-reviewer-title"
@@ -146,6 +146,6 @@ export function SwapReviewerDialog({
           {error}
         </p>
       )}
-    </div>
+      </dialog>
   );
 }
