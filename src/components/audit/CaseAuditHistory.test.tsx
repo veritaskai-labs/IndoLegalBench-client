@@ -60,6 +60,37 @@ describe("CaseAuditHistory", () => {
     });
   });
 
+  describe("pembagian halaman", () => {
+    it("hides the pager when every entry fits on one page", async () => {
+      list.mockResolvedValue(makeAuditPage([makeAuditEntry()]));
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(await screen.findByRole("table")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Berikutnya" })).not.toBeInTheDocument();
+    });
+
+    it("shows the pager when the case has more entries than one page", async () => {
+      list.mockResolvedValue(makeAuditPage([makeAuditEntry()], 45));
+
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      expect(await screen.findByText("Halaman 1 dari 3")).toBeInTheDocument();
+    });
+
+    it("asks for the next page of this case", async () => {
+      list.mockResolvedValue(makeAuditPage([makeAuditEntry()], 45));
+      const user = userEvent.setup();
+      render(<CaseAuditHistory caseId="case-1" />);
+
+      await user.click(await screen.findByRole("button", { name: "Berikutnya" }));
+
+      expect(list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ case_id: "case-1", page: 2 }),
+      );
+    });
+  });
+
   describe("membuka satu catatan", () => {
     const entries = [
       makeAuditEntry({ id: 1, actor_name: "Herdayani", action: "case.updated" }),

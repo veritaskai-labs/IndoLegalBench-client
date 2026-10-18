@@ -19,6 +19,6 @@ export function makeAuditEntry(overrides: Partial<AuditEntry> = {}): AuditEntry 
   };
 }
 
-export function makeAuditPage(items: AuditEntry[]): AuditPage {
-  return { items, total: items.length, page: 1, size: 20 };
+export function makeAuditPage(items: AuditEntry[], total = items.length): AuditPage {
+  return { items, total, page: 1, size: 20 };
 }
