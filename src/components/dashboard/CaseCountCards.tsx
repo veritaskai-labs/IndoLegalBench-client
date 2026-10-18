@@ -49,9 +49,9 @@ export function CaseCountCards({
 
       <p className="mt-2 text-sm text-slate-600">Total {total} kasus</p>
       <p id="menunggu-review-help" className="mt-1 text-xs text-slate-500">
-        Angka ini bisa berbeda dari &quot;Dalam tinjauan&quot;: kasus yang sudah
-        disetujui tapi versi barunya sedang ditinjau ikut dihitung di sini,
-        begitu juga ronde yang belum punya reviewer.
+        Angka ini bisa lebih besar dari &quot;Dalam tinjauan&quot;: kasus yang
+        sudah disetujui tapi versi barunya sedang ditinjau tetap terhitung
+        Disetujui, tapi ikut dihitung di sini.
       </p>
     </section>
   );

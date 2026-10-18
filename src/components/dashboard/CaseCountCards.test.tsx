@@ -60,7 +60,7 @@ describe("CaseCountCards", () => {
     render(<CaseCountCards counts={COUNTS} total={10} waiting={7} />);
 
     expect(
-      screen.getByText(/bisa berbeda dari "Dalam tinjauan"/),
+      screen.getByText(/bisa lebih besar dari "Dalam tinjauan"/),
     ).toBeInTheDocument();
   });
 });
