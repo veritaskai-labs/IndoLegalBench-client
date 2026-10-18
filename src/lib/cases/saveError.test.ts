@@ -30,7 +30,7 @@ describe("mapSaveError", () => {
     const error = fieldError(
       "FIELD_REQUIRED",
       "legal_refs[1].links[0].pasal",
-      "Field legal_refs[1].links[0].pasal wajib diisi",
+      "Pasal wajib diisi untuk bentuk Pasal.",
     );
 
     // Act
@@ -40,7 +40,7 @@ describe("mapSaveError", () => {
     expect(result).toEqual({
       kind: "field",
       path: "legal_refs.1.links.0.pasal",
-      message: "Field legal_refs[1].links[0].pasal wajib diisi",
+      message: "Pasal wajib diisi untuk bentuk Pasal.",
       detail: null,
     });
   });

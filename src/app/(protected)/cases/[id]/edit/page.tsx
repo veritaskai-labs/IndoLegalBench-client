@@ -258,6 +258,7 @@ export default function EditCasePage() {
         <CaseEditorForm
           key={formKey}
           defaultValues={fromCaseRead(saved)}
+          caseId={caseId}
           onSubmit={handleSubmit}
           onDirtyChange={setDirty}
           readOnly={!editable}
