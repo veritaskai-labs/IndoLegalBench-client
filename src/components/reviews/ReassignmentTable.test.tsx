@@ -86,7 +86,7 @@ describe("ReassignmentTable", () => {
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.getByText("Belum ada penugasan aktif")).toBeInTheDocument();
+    expect(screen.getByText("Belum ada penugasan")).toBeInTheDocument();
   });
 
   // corner
@@ -110,5 +110,42 @@ describe("ReassignmentTable", () => {
     render(<ReassignmentTable rows={[]} onReplace={vi.fn()} />);
 
     expect(screen.getAllByRole("row")).toHaveLength(1);
+  });
+  // AC8: justru baris dengan reviewer nonaktif yang harus bisa diganti dari antrean.
+  it("offers a button for a deactivated reviewer too", async () => {
+    const user = userEvent.setup();
+    const onReplace = vi.fn();
+    const gone = assignment({
+      id: "a9",
+      status: "void",
+      reviewer_name: "Rina",
+    });
+    const queued = row({ void_assignments: [gone] });
+
+    render(<ReassignmentTable rows={[queued]} onReplace={onReplace} />);
+    await user.click(
+      screen.getByRole("button", { name: "Ganti reviewer nonaktif Rina" }),
+    );
+
+    expect(onReplace).toHaveBeenCalledWith(gone, queued);
+  });
+
+  // corner: satu ronde bisa punya reviewer aktif dan reviewer nonaktif sekaligus.
+  it("offers both the active and the deactivated reviewer of one row", () => {
+    const queued = row({
+      assignments: [assignment({ id: "a1", reviewer_name: "Roben" })],
+      void_assignments: [
+        assignment({ id: "a9", status: "void", reviewer_name: "Rina" }),
+      ],
+    });
+
+    render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
+
+    expect(
+      screen.getByRole("button", { name: "Ganti reviewer Roben" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ganti reviewer nonaktif Rina" }),
+    ).toBeInTheDocument();
   });
 });
