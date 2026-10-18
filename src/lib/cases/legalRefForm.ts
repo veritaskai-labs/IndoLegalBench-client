@@ -64,6 +64,14 @@ export const REF_MODE_OPTIONS: readonly { value: RefMode; label: string }[] = [
 
 const DEFAULT_FORM: LinkForm = "pasal";
 
+/** Penghubung yang bisa dipilih untuk peraturan ke-2 dan seterusnya (AC6). */
+export type ChainConnector = Exclude<LinkConnector, "none">;
+
+export const CONNECTOR_OPTIONS: readonly { value: ChainConnector; label: string }[] = [
+  { value: "jo", label: "jo." },
+  { value: "jis", label: "jis." },
+];
+
 export function visibleLinkFields(form: LinkForm): readonly LinkExtraField[] {
   return FORM_FIELDS[form];
 }
@@ -124,4 +132,19 @@ export function changeRefMode(ref: LegalRefFormValues, mode: RefMode): LegalRefF
   const [first, ...rest] = ref.links;
   if (first === undefined) return { ...ref, links: [emptyLink(mode)] };
   return { ...ref, links: [changeLinkForm(first, mode), ...rest] };
+}
+
+/** Peraturan baru dalam rangkaian: bentuk Pasal, disambung jo. (keputusan PO 18 Okt, no. 5). */
+export function chainedLink(): LegalRefLinkFormValues {
+  return emptyLink(DEFAULT_FORM, "jo");
+}
+
+/** Peraturan pertama adalah pokok rujukan; hanya peraturan ke-2 dan seterusnya yang bisa dihapus. */
+export function canRemoveLink(linkIndex: number): boolean {
+  return linkIndex > 0;
+}
+
+/** Pindah ke Teks Bebas membuang rangkaian, jadi rangkaian dua peraturan atau lebih ditanyakan dulu. */
+export function needsFreeTextConfirm(ref: LegalRefFormValues, mode: RefMode): boolean {
+  return mode === "free_text" && ref.kind === "structured" && ref.links.length > 1;
 }

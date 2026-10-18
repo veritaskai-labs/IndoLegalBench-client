@@ -122,19 +122,30 @@ export function mapSaveError(error: unknown): SaveError {
     return { kind: "form", message: "Suite atau kasus tidak ditemukan." };
   }
   if (error.status !== 422) return { kind: "form", message: GENERIC_SAVE_ERROR };
+  return mapServerFieldError(error.code, error.serverMessage, error.field);
+}
 
-  const path = error.field ? toFormPath(error.field) : null;
+/**
+ * Satu error field dari server, dari simpan (422) maupun pratinjau rujukan: ditempel ke field
+ * form-nya, atau jadi pesan di atas form bila form tidak punya field itu.
+ */
+export function mapServerFieldError(
+  code: string,
+  message: string | null,
+  field: string | null | undefined,
+): SaveError {
+  const path = field ? toFormPath(field) : null;
   if (path === null) {
-    return { kind: "form", message: error.serverMessage ?? GENERIC_SAVE_ERROR };
+    return { kind: "form", message: message ?? GENERIC_SAVE_ERROR };
   }
   // Pesan VALIDATION_ERROR berasal dari Pydantic (bahasa Inggris); tampilkan teks Indonesia dulu.
-  if (error.code === "VALIDATION_ERROR") {
-    return { kind: "field", path, message: "Isian tidak valid.", detail: error.serverMessage };
+  if (code === "VALIDATION_ERROR") {
+    return { kind: "field", path, message: "Isian tidak valid.", detail: message };
   }
-  return {
-    kind: "field",
-    path,
-    message: error.serverMessage ?? "Isian tidak valid.",
-    detail: null,
-  };
+  return { kind: "field", path, message: message ?? "Isian tidak valid.", detail: null };
+}
+
+/** Teks yang tampil di bawah field: pesan, lalu detail server dalam kurung bila ada. */
+export function fieldErrorText({ message, detail }: FieldSaveError): string {
+  return detail === null ? message : `${message} (${detail})`;
 }

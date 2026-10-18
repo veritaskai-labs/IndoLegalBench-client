@@ -14,6 +14,7 @@ import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
 import { changeSplitTag } from "@/lib/cases/splitTagApi";
 import { submitForReview } from "@/lib/cases/submitApi";
+import { previewLegalRefs } from "@/lib/cases/legalRefPreviewApi";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 
@@ -46,6 +47,9 @@ vi.mock("@/lib/cases/caseApi", () => ({
 
 // Daftar jenis peraturan datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
 vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+
+// Pratinjau rujukan (SCRUM-162) punya test sendiri; di sini hanya dicek bahwa halaman memberi case id.
+vi.mock("@/lib/cases/legalRefPreviewApi", () => ({ previewLegalRefs: vi.fn() }));
 
 // Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
@@ -159,6 +163,7 @@ function save() {
 }
 
 beforeEach(() => {
+  vi.mocked(previewLegalRefs).mockReset().mockResolvedValue([]);
   params.id = CASE_ID;
   session.role = "author";
   startVersionMock.mockReset();
@@ -273,6 +278,75 @@ describe("EditCasePage loading", () => {
   });
 });
 
+describe("EditCasePage legal reference preview (SCRUM-162)", () => {
+  it("previews the citations of an editable case with its case id", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Assert
+    await waitFor(() =>
+      expect(vi.mocked(previewLegalRefs)).toHaveBeenCalledWith(
+        expect.any(Array),
+        CASE_ID,
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+});
+
+describe("EditCasePage breadcrumb and session", () => {
+  // Perilaku lama tanpa test di staging; ditutup karena halaman ini disentuh SCRUM-162.
+  it("goes back to the suites list from the breadcrumb", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("button", {
+        name: "Suite",
+      }),
+    );
+
+    // Assert
+    expect(push).toHaveBeenCalledWith("/suites");
+  });
+
+  it("goes to the case's suite from the breadcrumb", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(await screen.findByRole("button", { name: "Suite Ketenagakerjaan" }));
+
+    // Assert
+    expect(push).toHaveBeenCalledWith("/suites/11111111-1111-1111-1111-111111111111");
+  });
+
+  // Edge: sesi belum selesai dimuat, jadi belum ada peran untuk tombol Admin.
+  it("shows the editor without the Admin tag button while the session is still loading", async () => {
+    // Arrange
+    session.role = null;
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(await screen.findByRole("heading", { name: "ILB-PT-0142" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ubah tag" })).not.toBeInTheDocument();
+  });
+});
+
 describe("EditCasePage saving", () => {
   // Positive
   it("puts the edited case, shows a toast, and refills the form from the server reply", async () => {
@@ -382,7 +456,7 @@ describe("EditCasePage saving", () => {
       new ApiError(
         422,
         "FIELD_REQUIRED",
-        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "Pasal wajib diisi untuk bentuk Pasal.",
         "legal_refs[0].links[0].pasal",
       ),
     );
@@ -394,7 +468,7 @@ describe("EditCasePage saving", () => {
     const row = screen.getByRole("group", { name: "Rujukan 1" });
     await waitFor(() =>
       expect(within(row).getByLabelText("Pasal")).toHaveAccessibleDescription(
-        "Field legal_refs[0].links[0].pasal wajib diisi",
+        "Pasal wajib diisi untuk bentuk Pasal.",
       ),
     );
   });
