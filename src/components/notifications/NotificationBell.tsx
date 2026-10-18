@@ -20,6 +20,10 @@ type ListState =
   | { status: "error" }
   | { status: "ready"; items: AppNotification[] };
 
+// Hanya path aplikasi; "//…" dan "/\…" dibaca browser sebagai situs lain.
+const isInAppLink = (link: string) =>
+  link.startsWith("/") && !link.startsWith("//") && !link.startsWith("/\\");
+
 const markAllRead = (items: AppNotification[]) => {
   const now = new Date().toISOString();
   return items.map((item) => (item.read_at === null ? { ...item, read_at: now } : item));
@@ -37,6 +41,7 @@ export function NotificationBell() {
   const bellButton = useRef<HTMLButtonElement>(null);
   const [list, setList] = useState<ListState>({ status: "loading" });
   const badge = badgeLabel(count);
+  const bellLabel = badge ? `Notifikasi, ${badge} belum dibaca` : "Notifikasi";
 
   async function load() {
     setList({ status: "loading" });
@@ -86,7 +91,7 @@ export function NotificationBell() {
 
   function openItem(item: AppNotification) {
     setOpenOn(null);
-    router.push(item.link);
+    if (isInAppLink(item.link)) router.push(item.link);
     if (item.read_at === null) void markRead(item.id);
   }
 
@@ -102,7 +107,9 @@ export function NotificationBell() {
     refresh();
   }
 
-  const hasUnread = list.status === "ready" && list.items.some((item) => item.read_at === null);
+  // Badge juga menghitung yang di luar 10 terbaru, jadi tombol ikut badge.
+  const hasUnread =
+    count > 0 || (list.status === "ready" && list.items.some((item) => item.read_at === null));
 
   let body: ReactNode;
   if (list.status === "loading") {
@@ -147,7 +154,7 @@ export function NotificationBell() {
       <button
         ref={bellButton}
         type="button"
-        aria-label="Notifikasi"
+        aria-label={bellLabel}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={toggle}

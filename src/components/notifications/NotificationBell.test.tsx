@@ -39,7 +39,7 @@ const read = makeNotification({
   read_at: "2026-10-18T04:00:00Z",
 });
 
-const bell = () => screen.getByRole("button", { name: "Notifikasi" });
+const bell = () => screen.getByRole("button", { name: /^Notifikasi/ });
 
 async function openBell() {
   const user = userEvent.setup();
@@ -70,6 +70,16 @@ describe("NotificationBell", () => {
       expect(await within(bell()).findByText(label)).toBeInTheDocument();
     });
 
+    it("tells screen readers how many are unread", async () => {
+      countMock.mockResolvedValue({ count: 3 });
+
+      render(<NotificationBell />);
+
+      expect(
+        await screen.findByRole("button", { name: "Notifikasi, 3 belum dibaca" }),
+      ).toBeInTheDocument();
+    });
+
     it("shows no badge when everything is read", async () => {
       countMock.mockResolvedValue({ count: 0 });
 
@@ -77,6 +87,7 @@ describe("NotificationBell", () => {
 
       await waitFor(() => expect(countMock).toHaveBeenCalled());
       expect(within(bell()).queryByText("0")).not.toBeInTheDocument();
+      expect(bell()).toHaveAccessibleName("Notifikasi");
     });
   });
 
@@ -211,6 +222,20 @@ describe("NotificationBell", () => {
       expect(push).toHaveBeenCalledWith("/cases/c-1/edit");
     });
 
+    // Security: follow only in-app paths, never another site (open redirect).
+    it.each(["https://evil.example/login", "//evil.example/login", "/\\evil.example/login"])(
+      "does not follow a link to another site (%s)",
+      async (link) => {
+        listMock.mockResolvedValue(makeNotificationPage([makeNotification({ title: "Aneh", link })]));
+        const user = await openBell();
+
+        await user.click(await screen.findByRole("button", { name: /Aneh/ }));
+
+        expect(push).not.toHaveBeenCalled();
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      },
+    );
+
     // Edge: a failed read mark must not block opening the page.
     it("still opens the page when marking it as read fails", async () => {
       readMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
@@ -246,7 +271,7 @@ describe("NotificationBell", () => {
       expect(screen.queryByRole("button", { name: "Tandai semua dibaca" })).not.toBeInTheDocument();
     });
 
-    // Edge: a failed request leaves things as they were, so the reader can try again.
+    // Edge: a failed request changes nothing, so the reader can try again.
     it("keeps the button and the badge when marking everything fails", async () => {
       readAllMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
       const user = await openBell();
@@ -258,7 +283,32 @@ describe("NotificationBell", () => {
       expect(within(bell()).getByText("1")).toBeInTheDocument();
     });
 
-    it("hides the button when nothing in the list is unread", async () => {
+    // Edge: the badge also counts unread ones beyond the 10 shown.
+    // Edge: the list failed, but the badge still knows there is something unread.
+    it("marks everything read even when the list failed to load", async () => {
+      listMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+      const user = await openBell();
+      expect(await screen.findByText("Gagal memuat notifikasi.")).toBeInTheDocument();
+      countMock.mockResolvedValue({ count: 0 });
+
+      await user.click(screen.getByRole("button", { name: "Tandai semua dibaca" }));
+
+      expect(readAllMock).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(bell()).toHaveAccessibleName("Notifikasi"));
+      expect(screen.getByText("Gagal memuat notifikasi.")).toBeInTheDocument();
+    });
+
+    it("offers the button when only older notifications are unread", async () => {
+      countMock.mockResolvedValue({ count: 12 });
+      listMock.mockResolvedValue(makeNotificationPage([read]));
+
+      await openBell();
+
+      expect(await screen.findByRole("button", { name: "Tandai semua dibaca" })).toBeInTheDocument();
+    });
+
+    it("hides the button when nothing is unread", async () => {
+      countMock.mockResolvedValue({ count: 0 });
       listMock.mockResolvedValue(makeNotificationPage([read]));
 
       await openBell();
