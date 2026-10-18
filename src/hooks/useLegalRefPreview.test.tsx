@@ -184,6 +184,21 @@ describe("useLegalRefPreview", () => {
     expect(result.current.preview.failed).toBe(false);
   });
 
+  // Edge (review Rafa di PR #36): tanpa rujukan tidak ada pratinjau yang bisa gagal.
+  it("drops the failure message once every citation is removed", async () => {
+    // Arrange
+    previewMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    const { result } = setup();
+    await wait(PREVIEW_DELAY_MS);
+
+    // Act
+    act(() => result.current.form.setValue("legal_refs", []));
+    await wait(PREVIEW_DELAY_MS);
+
+    // Assert
+    expect(result.current.preview).toEqual({ previews: [], failed: false });
+  });
+
   // Edge
   it("sends nothing for a read-only form", async () => {
     // Arrange
