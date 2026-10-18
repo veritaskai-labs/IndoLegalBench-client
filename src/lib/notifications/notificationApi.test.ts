@@ -99,7 +99,7 @@ describe("markNotificationRead", () => {
     await expect(failure).rejects.toMatchObject({ status: 404 });
   });
 
-  // Negatif: menandai notifikasi milik orang lain ditolak 403 (NOTIFICATION_NOT_YOURS)
+  // Negative: marking another user's notification as read is rejected with 403 (NOTIFICATION_NOT_YOURS)
   it("rejects with 403 when marking another user's notification as read", async () => {
     // Arrange
     fetchMock.mockResolvedValue(

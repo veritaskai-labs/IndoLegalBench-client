@@ -116,7 +116,7 @@ describe("DashboardPage", () => {
     expect(queue).toHaveAttribute("href", "/reviews/asg-1");
   });
 
-  // Corner: peran lain tidak punya antrean, jadi bagiannya tidak muncul sama sekali.
+  // Corner: other roles don't have a review queue, so their section doesn't appear at all.
   it("leaves the queue out for roles that do not review", () => {
     authenticatedAs("Rina");
     ready();
@@ -126,7 +126,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  // Corner: Viewer dijawab 403, jadi servernya tidak boleh dipanggil.
+  // Corner: Viewer is answered with a 403, the server can't be called.
   it("does not ask for a dashboard a viewer may not see", () => {
     authenticatedAs("Rina", "viewer");
     useDashboardMock.mockReturnValue({ status: "loading", reload: vi.fn() });
@@ -150,7 +150,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Gagal memuat dasbor.")).toBeInTheDocument();
     expect(screen.queryByText(/10 kasus/)).not.toBeInTheDocument();
   });
-  // AC1: angka menunggu review ikut tampil di halaman, bukan cuma di respons.
+  // AC1: number waiting for review should be displayed on the page, not just in the response.
   it("shows how many cases are waiting for a review", () => {
     authenticatedAs("Rina");
     ready({ waiting_for_review: 4 });
@@ -160,7 +160,7 @@ describe("DashboardPage", () => {
     expect(screen.getAllByRole("listitem")[4]).toHaveTextContent("4");
   });
 
-  // Review #35: admin dapat jalan pintas ke kasus yang perlu reviewer baru.
+  // Review #35: admin can take a shortcut to cases that need a new reviewer.
   it("links the admin to the cases that need a new reviewer", () => {
     authenticatedAs("Rina");
     ready({ needs_reassignment: 3 });
@@ -172,38 +172,58 @@ describe("DashboardPage", () => {
     ).toHaveAttribute("href", "/admin/reviews");
   });
 
-  // Negatif: Viewer tidak dapat mengakses dashboard dan melihat pesan empty state khusus
-  it("shows an empty state for a viewer without rendering dashboard widgets", () => {
+  // Negative: viewer cannot access dashboard widgets and sees a role-specific empty state
+  it("shows an empty state for a viewer and does not request dashboard data", () => {
+    // Arrange
     authenticatedAs("Rina", "viewer");
-    useDashboardMock.mockReturnValue({ status: "loading", reload: vi.fn() });
+    useDashboardMock.mockImplementation((allowed: boolean) =>
+      allowed
+        ? { status: "ready", summary: summary({ review_queue: [QUEUED] }), reload: vi.fn() }
+        : { status: "loading", reload: vi.fn() },
+    );
 
+    // Act
     render(<DashboardPage />);
 
+    // Assert
+    expect(useDashboardMock).toHaveBeenCalledWith(false);
     expect(screen.getByText("Dasbor belum tersedia untuk peran Anda")).toBeInTheDocument();
     expect(
-      screen.getByText("Akun Anda hanya membaca kasus, jadi belum ada ringkasan kerja yang bisa ditampilkan."),
+      screen.getByText(
+        "Akun Anda hanya membaca kasus, jadi belum ada ringkasan kerja yang bisa ditampilkan.",
+      ),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("list")).not.toBeInTheDocument();
-  });
-
-  // AC1: isolasi per peran - Admin melihat needs_reassignment tanpa antrean reviewer
-  it("shows needs_reassignment for admin without review queue", () => {
-    authenticatedAs("Admin", "admin");
-    ready({ needs_reassignment: 2, review_queue: null });
-
-    render(<DashboardPage />);
-
-    expect(screen.getByRole("link", { name: /penugasan ulang/i })).toHaveAttribute("href", "/admin/reviews");
+    expect(screen.queryByRole("heading", { name: /ringkasan kasus/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /antrean review/i })).not.toBeInTheDocument();
   });
 
-  // AC1: isolasi per peran - Reviewer melihat antrean review tanpa jalan pintas admin
+  // AC1: role isolation - Admin sees needs_reassignment without review queue
+  it("shows needs_reassignment for admin without review queue", () => {
+    // Arrange
+    authenticatedAs("Admin", "admin");
+    ready({ needs_reassignment: 2, review_queue: null });
+
+    // Act
+    render(<DashboardPage />);
+
+    // Assert
+    const adminLink = screen.getByRole("link", { name: /penugasan ulang/i });
+    expect(adminLink).toHaveAttribute("href", "/admin/reviews");
+    expect(screen.getByRole("region", { name: /perlu penugasan ulang/i })).toHaveTextContent("2");
+    expect(screen.queryByRole("heading", { name: /antrean review/i })).not.toBeInTheDocument();
+  });
+
+  // AC1: role isolation - Reviewer sees review queue without admin reassignment card
   it("shows review queue for reviewer without admin reassignment card", () => {
+    // Arrange
     authenticatedAs("Reviewer", "reviewer");
     ready({ review_queue: [QUEUED], needs_reassignment: null });
 
+    // Act
     render(<DashboardPage />);
 
+    // Assert
+    expect(screen.getByRole("heading", { name: /antrean review/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /ILB-001/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /penugasan ulang/i })).not.toBeInTheDocument();
   });
