@@ -80,7 +80,7 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
             aria-labelledby={tabElementId(TAB_PREFIX, "history")}
             hidden={tab !== "history"}
           >
-            {historyOpened && <CaseAuditHistory caseId={copy.case_id} />}
+            {historyOpened && <CaseAuditHistory key={result?.submitted_at ?? ""} caseId={copy.case_id} />}
           </div>
         </div>
 
