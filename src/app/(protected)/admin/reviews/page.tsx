@@ -248,8 +248,7 @@ export default function AdminReviewsPage() {
   );
 
   /** Pola tablist: panah kiri/kanan berpindah tab dan memindahkan fokus, hanya ada dua tab. */
-  const moveTab = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+  const moveTab = (event: KeyboardEvent<HTMLButtonElement>) => {    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
     const next: Tab = tab === "queue" ? "decisions" : "queue";
     setTab(next);
@@ -271,7 +270,6 @@ export default function AdminReviewsPage() {
       <div
         role="tablist"
         aria-label="Tampilan pemantauan"
-        onKeyDown={moveTab}
         className="flex gap-2 border-b border-slate-200"
       >
         {TABS.map((name) => (
@@ -284,6 +282,7 @@ export default function AdminReviewsPage() {
             aria-controls={`panel-${name}`}
             tabIndex={tab === name ? 0 : -1}
             onClick={() => setTab(name)}
+            onKeyDown={moveTab}
             className={
               tab === name
                 ? "-mb-px border-b-2 border-slate-900 px-3 py-2 text-sm font-medium text-slate-900"
@@ -300,7 +299,6 @@ export default function AdminReviewsPage() {
           id="panel-queue"
           role="tabpanel"
           aria-labelledby="tab-queue"
-          tabIndex={0}
         >
           <ReassignmentPanel queue={queue} onReplace={openFromQueue} />
         </section>
@@ -309,7 +307,6 @@ export default function AdminReviewsPage() {
           id="panel-decisions"
           role="tabpanel"
           aria-labelledby="tab-decisions"
-          tabIndex={0}
         >
           <InReviewPanel inReview={inReview} onReplace={openFromReview} />
         </section>
