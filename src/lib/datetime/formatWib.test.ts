@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatWib } from "./formatWib";
+import { formatWib, formatWibClock } from "./formatWib";
+
 
 describe("formatWib", () => {
   // Positive: the example from SCRUM-138.
@@ -77,6 +78,55 @@ describe("formatWib", () => {
 
     // Act
     const text = formatWib(iso);
+
+    // Assert
+    expect(text).toBe("");
+  });
+});
+
+describe("formatWibClock", () => {
+  // Positive: dasbor hanya butuh jamnya, tanggalnya sudah jelas dari konteks.
+  it("shows only the WIB clock of a UTC time", () => {
+    // Arrange
+    const iso = "2026-10-03T07:05:00Z";
+
+    // Act
+    const text = formatWibClock(iso);
+
+    // Assert
+    expect(text).toBe("14.05");
+  });
+
+  // Edge: pergeseran 7 jam melewati tengah malam.
+  it("reads the clock after WIB passes midnight", () => {
+    // Arrange
+    const iso = "2026-12-31T20:30:00Z";
+
+    // Act
+    const text = formatWibClock(iso);
+
+    // Assert
+    expect(text).toBe("03.30");
+  });
+
+  it("pads single digit hours and minutes", () => {
+    // Arrange
+    const iso = "2026-02-02T18:04:00Z";
+
+    // Act
+    const text = formatWibClock(iso);
+
+    // Assert
+    expect(text).toBe("01.04");
+  });
+
+  // Negative: penanda waktu yang tidak terbaca lebih baik hilang daripada tampil rusak.
+  it("returns an empty string when the input is not a date", () => {
+    // Arrange
+    const iso = "bukan tanggal";
+
+    // Act
+    const text = formatWibClock(iso);
 
     // Assert
     expect(text).toBe("");

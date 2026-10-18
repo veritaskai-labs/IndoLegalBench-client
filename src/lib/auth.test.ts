@@ -64,3 +64,13 @@ describe("isSessionExpiredCode", () => {
     expect(isSessionExpiredCode("session_expired")).toBe(false); // strict casing
   });
 });
+
+describe("ROLE_HOME_PATH", () => {
+  // Review #35 / PBI-19 AC1: dasbor adalah halaman awal setiap peran yang punya dasbor.
+  it("sends everyone but the viewer to the dashboard after login", () => {
+    expect(ROLE_HOME_PATH.author).toBe("/dashboard");
+    expect(ROLE_HOME_PATH.admin).toBe("/dashboard");
+    expect(ROLE_HOME_PATH.reviewer).toBe("/dashboard");
+    expect(ROLE_HOME_PATH.viewer).toBe("/reports");
+  });
+});

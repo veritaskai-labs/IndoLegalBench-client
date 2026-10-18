@@ -4,11 +4,15 @@ import type { components } from "./generated/api";
 export const LOGIN_URL = `${BASE_URL}/auth/login`;
 export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
 
+/**
+ * Halaman awal setelah login (PBI-19 AC1). Viewer tidak punya dasbor
+ * — servernya menjawab 403 — jadi peran itu tetap mendarat di /reports.
+ */
 export const ROLE_HOME_PATH = {
-  author: "/suites",
-  admin: "/admin/members",
-  reviewer: "/reviews", // placeholder page
-  viewer: "/reports", // placeholder page
+  author: "/dashboard",
+  admin: "/dashboard",
+  reviewer: "/dashboard",
+  viewer: "/reports",
 } as const;
 
 export type Role = components["schemas"]["Role"];
