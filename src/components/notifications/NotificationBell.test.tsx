@@ -236,15 +236,27 @@ describe("NotificationBell", () => {
       },
     );
 
-    // Edge: a failed read mark must not block opening the page.
-    it("still opens the page when marking it as read fails", async () => {
-      readMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
-      const user = await openBell();
+    // Edge: a failed read mark (e.g. 403 forbidden or 500 server error) must not block navigation or refresh.
+    it.each([
+      [403, "NOTIFICATION_NOT_YOURS"],
+      [500, "INTERNAL_ERROR"],
+    ])(
+      "still opens the page, closes the dialog and refreshes when marking read fails with %i",
+      async (status, code) => {
+        // Arrange
+        readMock.mockRejectedValue(new ApiError(status, code));
+        const user = await openBell();
 
-      await user.click(await screen.findByRole("button", { name: /Tugas review baru/ }));
+        // Act
+        await user.click(await screen.findByRole("button", { name: /Tugas review baru/ }));
 
-      await waitFor(() => expect(push).toHaveBeenCalledWith("/reviews/a-1"));
-    });
+        // Assert
+        expect(readMock).toHaveBeenCalledWith("n-baru");
+        await waitFor(() => expect(push).toHaveBeenCalledWith("/reviews/a-1"));
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        await waitFor(() => expect(countMock).toHaveBeenCalledTimes(2));
+      },
+    );
   });
 
   describe("tandai semua dibaca", () => {
