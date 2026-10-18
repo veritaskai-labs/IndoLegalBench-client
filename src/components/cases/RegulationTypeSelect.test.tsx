@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { RegulationType } from "@/types/regulationType";
+import { CONTROL_CLASS } from "./fields";
 import { MAX_VISIBLE_OPTIONS, RegulationTypeSelect } from "./RegulationTypeSelect";
 
 function regulationType(
@@ -122,6 +123,21 @@ describe("RegulationTypeSelect", () => {
     const option = screen.getByRole("option");
     expect(within(option).getByText("Undang-undang")).toBeInTheDocument();
     expect(within(option).getByText("UU")).toBeInTheDocument();
+  });
+
+  it("gives the list the same text colour as the input, so dark mode cannot whiten it", async () => {
+    // Arrange: globals.css memutihkan warna teks body saat OS memakai mode gelap (SCRUM-175).
+    // jsdom tidak menghitung kelas Tailwind, jadi yang dibandingkan kelas warnanya.
+    const user = userEvent.setup();
+    const warnaInput = CONTROL_CLASS.split(" ").find((kelas) => /^text-slate-\d+$/.test(kelas));
+    render(<Harness />);
+
+    // Act
+    await user.click(combobox());
+
+    // Assert
+    expect(warnaInput).toBeDefined();
+    expect(screen.getByRole("listbox")).toHaveClass(warnaInput ?? "");
   });
 
   it("selects the clicked option, closes the list and shows its label", async () => {
