@@ -14,6 +14,7 @@ import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
 import { changeSplitTag } from "@/lib/cases/splitTagApi";
 import { submitForReview } from "@/lib/cases/submitApi";
+import { previewLegalRefs } from "@/lib/cases/legalRefPreviewApi";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 
@@ -46,6 +47,9 @@ vi.mock("@/lib/cases/caseApi", () => ({
 
 // Daftar jenis peraturan datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
 vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+
+// Pratinjau rujukan (SCRUM-162) punya test sendiri; di sini hanya dicek bahwa halaman memberi case id.
+vi.mock("@/lib/cases/legalRefPreviewApi", () => ({ previewLegalRefs: vi.fn() }));
 
 // Who is signed in decides whether the "Edit (buat versi baru)" button is offered.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
@@ -159,6 +163,7 @@ function save() {
 }
 
 beforeEach(() => {
+  vi.mocked(previewLegalRefs).mockReset().mockResolvedValue([]);
   params.id = CASE_ID;
   session.role = "author";
   startVersionMock.mockReset();
@@ -270,6 +275,26 @@ describe("EditCasePage loading", () => {
 
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
     expect(getCaseMock).toHaveBeenCalledWith("a/b");
+  });
+});
+
+describe("EditCasePage legal reference preview (SCRUM-162)", () => {
+  it("previews the citations of an editable case with its case id", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Assert
+    await waitFor(() =>
+      expect(vi.mocked(previewLegalRefs)).toHaveBeenCalledWith(
+        expect.any(Array),
+        CASE_ID,
+        expect.any(AbortSignal),
+      ),
+    );
   });
 });
 

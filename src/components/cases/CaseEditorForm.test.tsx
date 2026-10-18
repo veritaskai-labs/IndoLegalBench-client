@@ -6,11 +6,16 @@ import type { CaseFormValues, CaseWritePayload } from "@/lib/cases/caseFormMappi
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { CASE_HELP } from "@/lib/cases/caseHelpText";
 import { emptyLink, type LegalRefFormValues } from "@/lib/cases/legalRefForm";
+import { previewLegalRefs } from "@/lib/cases/legalRefPreviewApi";
 import type { RegulationType } from "@/types/regulationType";
 import { CaseEditorForm, VALIDATE_DELAY_MS } from "./CaseEditorForm";
 
 // Daftar jenis datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
 vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+// Pratinjau rujukan juga dari server (SCRUM-162). Bawaannya tidak ada hasil, jadi test lain
+// tidak terpengaruh; test pratinjau di bawah memberi jawabannya sendiri.
+vi.mock("@/lib/cases/legalRefPreviewApi", () => ({ previewLegalRefs: vi.fn() }));
+const previewMock = vi.mocked(previewLegalRefs);
 
 const TYPES: RegulationType[] = [
   { code: "uu", label: "Undang-undang", singkatan: "UU", is_active: true },
@@ -18,6 +23,8 @@ const TYPES: RegulationType[] = [
 ];
 
 beforeEach(() => {
+  previewMock.mockReset();
+  previewMock.mockResolvedValue([]);
   vi.mocked(useRegulationTypes).mockReturnValue({
     status: "ready",
     types: TYPES,
@@ -1071,5 +1078,94 @@ describe("CaseEditorForm locked tag (PBI-9 AC3, SCRUM-165)", () => {
     // Assert
     expect(screen.getAllByRole("radio")).toHaveLength(2);
     expect(screen.queryByText(/Tag dikunci/)).not.toBeInTheDocument();
+  });
+});
+
+describe("CaseEditorForm locked tag that was never chosen", () => {
+  // Edge: tagLocked tanpa tag tersimpan tidak bisa menampilkan badge, jadi pilihan tetap muncul.
+  it("keeps the choices when there is no saved tag to show", () => {
+    // Act
+    render(<CaseEditorForm defaultValues={{ ...filled, split_tag: "" }} onSubmit={vi.fn()} tagLocked />);
+
+    // Assert
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+  });
+});
+
+describe("CaseEditorForm live legal reference preview (SCRUM-162)", () => {
+  /** KTK-001 (Sprint 1): Pasal 156 UU 13/2003. */
+  const ktk001: LegalRefFormValues = {
+    kind: "structured",
+    free_text: "",
+    links: [{ ...emptyLink("pasal"), regulation_type: "uu", number: "13", year: "2003", pasal: "156" }],
+  };
+  const withKtk001: CaseFormValues = { ...filled, legal_refs: [ktk001] };
+
+  // Positif
+  it("asks the server with the case id and shows its text under the citation (AC6, AC10)", async () => {
+    // Arrange
+    previewMock.mockResolvedValue([{ display_text: "Pasal 156 UU 13/2003", error: null }]);
+
+    // Act
+    render(<CaseEditorForm defaultValues={withKtk001} onSubmit={vi.fn()} caseId="case-1" />);
+
+    // Assert
+    const preview = screen.getByRole("status", { name: "Pratinjau rujukan 1" });
+    await vi.waitFor(() => expect(preview).toHaveTextContent("Pratinjau: Pasal 156 UU 13/2003"));
+    expect(previewMock).toHaveBeenCalledWith(
+      [expect.objectContaining({ kind: "structured" })],
+      "case-1",
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("asks without a case id for a new case", async () => {
+    // Act
+    render(<CaseEditorForm defaultValues={withKtk001} onSubmit={vi.fn()} />);
+
+    // Assert
+    await vi.waitFor(() => expect(previewMock).toHaveBeenCalled());
+    expect(previewMock.mock.calls[0]?.[1]).toBeNull();
+  });
+
+  it("shows the server's error at the field it names, before saving (AC8)", async () => {
+    // Arrange
+    previewMock.mockResolvedValue([
+      {
+        display_text: null,
+        error: {
+          code: "FIELD_REQUIRED",
+          message: "Pasal wajib diisi untuk bentuk Pasal.",
+          field: "legal_refs[0].links[0].pasal",
+        },
+      },
+    ]);
+    const noPasal: LegalRefFormValues = { ...ktk001, links: [{ ...ktk001.links[0], pasal: "" } as LegalRefFormValues["links"][number]] };
+
+    // Act
+    render(<CaseEditorForm defaultValues={{ ...filled, legal_refs: [noPasal] }} onSubmit={vi.fn()} />);
+
+    // Assert
+    await vi.waitFor(() =>
+      expect(screen.getByLabelText("Pasal")).toHaveAccessibleDescription(
+        expect.stringContaining("Pasal wajib diisi untuk bentuk Pasal."),
+      ),
+    );
+  });
+
+  // Negatif
+  it("sends nothing for a locked version", async () => {
+    // Arrange
+    vi.useFakeTimers();
+
+    // Act
+    render(<CaseEditorForm defaultValues={withKtk001} onSubmit={vi.fn()} caseId="case-1" readOnly />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    vi.useRealTimers();
+
+    // Assert
+    expect(previewMock).not.toHaveBeenCalled();
   });
 });

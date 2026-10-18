@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 import { emptyCaseFormValues, type CaseFormValues } from "@/lib/cases/caseFormMapping";
+import type { CitationPreview, PreviewState } from "@/lib/cases/legalRefPreview";
 import type { CaseFieldPath } from "@/lib/cases/saveError";
 import {
   emptyLegalRef,
@@ -37,6 +38,7 @@ type HostProps = {
   errors?: Partial<Record<CaseFieldPath, string>>;
   invalidRows?: string[];
   onValues?: (refs: LegalRefFormValues[]) => void;
+  preview?: PreviewState;
 };
 
 /** Form kecil seperti editor: menyimpan nilai dan memberi tahu nilainya saat tombol ditekan. */
@@ -46,6 +48,7 @@ function Host({
   errors = {},
   invalidRows = [],
   onValues,
+  preview,
 }: Readonly<HostProps>) {
   const { register, control, getValues } = useForm<CaseFormValues>({
     defaultValues: { ...emptyCaseFormValues(), legal_refs: refs ?? [emptyLegalRef()] },
@@ -58,6 +61,7 @@ function Host({
         regulationTypes={regulationTypes}
         errorFor={(path) => errors[path]}
         rowHasError={(row) => invalidRows.includes(row)}
+        preview={preview}
       />
       <button type="button" onClick={() => onValues?.(getValues().legal_refs)}>
         Ambil nilai
@@ -245,7 +249,7 @@ describe("LegalRefsSection", () => {
     expect(screen.getByLabelText("Nomor")).toHaveValue("13");
   });
 
-  it("shows every link of a chain with its connector and its own form, without a button to add links", async () => {
+  it("shows every link of a chain with its connector and its own form", async () => {
     // Arrange
     const user = userEvent.setup();
     const onValues = vi.fn();
@@ -267,7 +271,7 @@ describe("LegalRefsSection", () => {
     const [ref] = await readValues(user, onValues);
 
     // Assert
-    expect(screen.getByText("jo.")).toBeInTheDocument();
+    expect(formSelect("Penghubung peraturan 2")).toHaveValue("jo");
     expect(screen.getAllByLabelText("Pasal")).toHaveLength(2);
     expect(
       within(formSelect("Bentuk peraturan 2")).queryByRole("option", { name: "Teks Bebas" }),
@@ -276,9 +280,6 @@ describe("LegalRefsSection", () => {
       ["pasal", ""],
       ["pasal", ""],
     ]);
-    expect(
-      screen.queryByRole("button", { name: /rangkai|tambah peraturan/i }),
-    ).not.toBeInTheDocument();
   });
 
   // AC1: several references
@@ -458,5 +459,257 @@ describe("LegalRefsSection errors about the structure of a reference", () => {
     expect(screen.getByRole("combobox", { name: "Bentuk rujukan" })).toHaveAccessibleDescription(
       expect.stringContaining("Field legal_refs[0].links wajib diisi"),
     );
+  });
+});
+
+// --- SCRUM-162: rangkai peraturan (AC6) ---------------------------------------
+
+const ADD_LINK = "+ Rangkai peraturan";
+
+describe("LegalRefsSection chaining regulations (AC6, SCRUM-162)", () => {
+  // Positif
+  it("chains a second regulation with jo. and the Pasal form (PO decision 5)", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onValues = vi.fn();
+    render(<Host refs={[structured(link({ pasal: "156" }))]} onValues={onValues} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: ADD_LINK }));
+    const [ref] = await readValues(user, onValues);
+
+    // Assert
+    expect(formSelect("Penghubung peraturan 2")).toHaveValue("jo");
+    expect(formSelect("Bentuk peraturan 2")).toHaveValue("pasal");
+    expect(ref?.links).toEqual([link({ pasal: "156" }), emptyLink("pasal", "jo")]);
+  });
+
+  it("switches a connector to jis. and lets one chain mix jo. and jis.", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onValues = vi.fn();
+    render(<Host refs={[structured(link({ pasal: "156" }))]} onValues={onValues} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: ADD_LINK }));
+    await user.selectOptions(formSelect("Penghubung peraturan 2"), "jis");
+    await user.click(screen.getByRole("button", { name: ADD_LINK }));
+    const [ref] = await readValues(user, onValues);
+
+    // Assert
+    expect(within(formSelect("Penghubung peraturan 2")).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "jo.",
+      "jis.",
+    ]);
+    expect(ref?.links.map((item) => item.connector)).toEqual(["none", "jis", "jo"]);
+  });
+
+  it("removes a middle regulation and keeps what was typed in the others", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onValues = vi.fn();
+    const chain = structured(
+      link({ number: "13" }),
+      link({ connector: "jo", number: "6" }),
+      link({ connector: "jis", number: "1" }),
+    );
+    render(<Host refs={[chain]} onValues={onValues} />);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Hapus peraturan 2" }));
+    const [ref] = await readValues(user, onValues);
+
+    // Assert
+    expect(ref?.links.map((item) => [item.connector, item.number])).toEqual([
+      ["none", "13"],
+      ["jis", "1"],
+    ]);
+    expect(screen.getAllByLabelText("Nomor").map((input) => (input as HTMLInputElement).value)).toEqual([
+      "13",
+      "1",
+    ]);
+    expect(formSelect("Penghubung peraturan 2")).toHaveValue("jis");
+  });
+
+  // Negatif
+  it("never offers to remove the first regulation", () => {
+    // Arrange + Act
+    render(<Host refs={[structured(link(), link({ connector: "jo" }))]} />);
+
+    // Assert
+    expect(screen.queryByRole("button", { name: "Hapus peraturan 1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hapus peraturan 2" })).toBeInTheDocument();
+  });
+
+  it("offers no chaining for a Teks Bebas citation", () => {
+    // Arrange + Act
+    render(<Host refs={[{ kind: "free_text", free_text: "Format teks bebas", links: [] }]} />);
+
+    // Assert
+    expect(screen.queryByRole("button", { name: ADD_LINK })).not.toBeInTheDocument();
+  });
+
+  // Teks Bebas membuang rangkaian: tanya dulu (keputusan PO no. 8)
+  it("asks before Teks Bebas drops a chain, and keeps the chain on Batal", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onValues = vi.fn();
+    render(<Host refs={[structured(link(), link({ connector: "jo" }))]} onValues={onValues} />);
+
+    // Act
+    await user.selectOptions(formSelect(), "free_text");
+    const confirm = screen.getByRole("alertdialog", { name: "Ganti ke Teks Bebas?" });
+    const message = confirm.textContent;
+    await user.click(within(confirm).getByRole("button", { name: "Batal" }));
+    const [ref] = await readValues(user, onValues);
+
+    // Assert
+    expect(message).toContain("2 peraturan");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(ref?.kind).toBe("structured");
+    expect(ref?.links).toHaveLength(2);
+    expect(formSelect()).toHaveValue("pasal");
+  });
+
+  it("drops the chain and switches to Teks Bebas once confirmed", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const onValues = vi.fn();
+    render(<Host refs={[structured(link(), link({ connector: "jo" }))]} onValues={onValues} />);
+
+    // Act
+    await user.selectOptions(formSelect(), "free_text");
+    await user.click(screen.getByRole("button", { name: "Ganti ke Teks Bebas" }));
+    const [ref] = await readValues(user, onValues);
+
+    // Assert
+    expect(ref).toEqual({ kind: "free_text", free_text: "", links: [] });
+    expect(screen.getByLabelText("Teks bebas")).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("does not ask when the new form is not Teks Bebas", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Host refs={[structured(link(), link({ connector: "jo" }))]} />);
+
+    // Act
+    await user.selectOptions(formSelect(), "name_only");
+
+    // Assert
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(formSelect()).toHaveValue("name_only");
+  });
+});
+
+// --- SCRUM-162: pratinjau dan error dari server (AC6, AC8, AC10) --------------
+
+const TEXT_KTK_001 = "Pasal 156 UU 13/2003";
+
+function previewState(...previews: (CitationPreview | null)[]): PreviewState {
+  return { previews, failed: false };
+}
+
+describe("LegalRefsSection live preview (SCRUM-162)", () => {
+  // Positif
+  it("shows the server text under its citation", () => {
+    // Arrange + Act
+    render(
+      <Host
+        refs={[structured(link({ pasal: "156" })), emptyLegalRef()]}
+        preview={previewState({ text: TEXT_KTK_001, error: null }, null)}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByRole("status", { name: "Pratinjau rujukan 1" })).toHaveTextContent(
+      `Pratinjau: ${TEXT_KTK_001}`,
+    );
+    expect(screen.getByRole("status", { name: "Pratinjau rujukan 2" })).toBeEmptyDOMElement();
+  });
+
+  it("shows a server error at its field while the Author types (AC8)", () => {
+    // Arrange + Act
+    render(
+      <Host
+        refs={[structured(link({ number: "" }))]}
+        preview={previewState({
+          text: null,
+          error: {
+            kind: "field",
+            path: "legal_refs.0.links.0.number",
+            message: "Nomor peraturan wajib diisi.",
+            detail: null,
+          },
+        })}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByLabelText("Nomor")).toHaveAccessibleDescription(
+      expect.stringContaining("Nomor peraturan wajib diisi."),
+    );
+  });
+
+  it("shows a server error with no field of its own under the citation", () => {
+    // Arrange + Act
+    render(
+      <Host
+        refs={[structured(link(), link({ connector: "jo" }))]}
+        preview={previewState({
+          text: null,
+          error: { kind: "form", message: "Peraturan ke-2 wajib diisi." },
+        })}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByRole("status", { name: "Pratinjau rujukan 1" })).toHaveTextContent(
+      "Peraturan ke-2 wajib diisi.",
+    );
+  });
+
+  // Negatif
+  it("keeps the form's own error when both have one for the same field", () => {
+    // Arrange + Act
+    render(
+      <Host
+        refs={[structured(link({ number: "" }))]}
+        errors={{ "legal_refs.0.links.0.number": "Nomor peraturan wajib diisi (form)." }}
+        preview={previewState({
+          text: null,
+          error: {
+            kind: "field",
+            path: "legal_refs.0.links.0.number",
+            message: "Nomor peraturan wajib diisi.",
+            detail: null,
+          },
+        })}
+      />,
+    );
+
+    // Assert
+    expect(screen.getByText("Nomor peraturan wajib diisi (form).")).toBeInTheDocument();
+    expect(screen.queryByText("Nomor peraturan wajib diisi.")).not.toBeInTheDocument();
+  });
+
+  it("says the preview could not load, without blocking anything", () => {
+    // Arrange + Act
+    render(<Host preview={{ previews: [null], failed: true }} />);
+
+    // Assert
+    expect(
+      screen.getByText("Pratinjau rujukan belum bisa dimuat. Rujukan tetap bisa disimpan."),
+    ).toBeInTheDocument();
+  });
+
+  // Edge
+  it("shows no preview area content before the first answer", () => {
+    // Arrange + Act
+    render(<Host />);
+
+    // Assert
+    expect(screen.getByRole("status", { name: "Pratinjau rujukan 1" })).toBeEmptyDOMElement();
+    expect(screen.queryByText(/belum bisa dimuat/)).not.toBeInTheDocument();
   });
 });

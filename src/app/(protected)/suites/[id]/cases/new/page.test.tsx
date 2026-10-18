@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { createCase } from "@/lib/cases/caseApi";
+import { previewLegalRefs } from "@/lib/cases/legalRefPreviewApi";
 import type { CaseRead } from "@/types/case";
 import NewCasePage from "./page";
 
@@ -36,6 +37,9 @@ vi.mock("@/lib/apiClient", async (importOriginal) => {
 
 // Daftar jenis peraturan datang dari server; di sini hook-nya diganti supaya test tidak butuh jaringan.
 vi.mock("@/hooks/useRegulationTypes", () => ({ useRegulationTypes: vi.fn() }));
+
+// Pratinjau rujukan (SCRUM-162) punya test sendiri; kasus baru belum punya id.
+vi.mock("@/lib/cases/legalRefPreviewApi", () => ({ previewLegalRefs: vi.fn() }));
 
 const createCaseMock = vi.mocked(createCase);
 
@@ -89,6 +93,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
 }
 
 beforeEach(() => {
+  vi.mocked(previewLegalRefs).mockReset().mockResolvedValue([]);
   params.id = SUITE_ID;
   push.mockReset();
   createCaseMock.mockReset();
@@ -100,6 +105,22 @@ beforeEach(() => {
   });
   confirmMock.mockReset().mockReturnValue(true);
   vi.stubGlobal("confirm", confirmMock);
+});
+
+describe("NewCasePage legal reference preview (SCRUM-162)", () => {
+  it("previews without a case id, because the case does not exist yet", async () => {
+    // Act
+    renderPage();
+
+    // Assert
+    await waitFor(() =>
+      expect(vi.mocked(previewLegalRefs)).toHaveBeenCalledWith(
+        expect.any(Array),
+        null,
+        expect.any(AbortSignal),
+      ),
+    );
+  });
 });
 
 describe("NewCasePage", () => {

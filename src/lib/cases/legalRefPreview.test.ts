@@ -237,3 +237,58 @@ describe("previewFieldErrors", () => {
     expect(errors.size).toBe(0);
   });
 });
+
+describe("alignPreviews for a citation with nothing typed yet", () => {
+  // Baris baru yang kosong tidak boleh langsung penuh error (sama seperti validasi saat mengetik).
+  it("gives an empty structured citation no preview, even when the server reports its first gap", () => {
+    // Arrange
+    const refs = [emptyLegalRef()];
+    const item = failed("FIELD_REQUIRED", "Jenis peraturan wajib diisi.", "legal_refs[0].links[0].regulation_type");
+
+    // Act
+    const previews = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(previews).toEqual([null]);
+  });
+
+  it("gives an empty Teks Bebas citation no preview", () => {
+    // Arrange
+    const refs: LegalRefFormValues[] = [{ kind: "free_text", free_text: "  ", links: [] }];
+    const item = failed("FIELD_REQUIRED", "Teks bebas wajib diisi.", "legal_refs[0].free_text");
+
+    // Act
+    const previews = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(previews).toEqual([null]);
+  });
+
+  it("shows the error as soon as one field of the citation has a value", () => {
+    // Arrange
+    const refs: LegalRefFormValues[] = [
+      { kind: "structured", free_text: "", links: [{ ...emptyLink("pasal"), number: "13" }] },
+    ];
+    const item = failed("FIELD_REQUIRED", "Jenis peraturan wajib diisi.", "legal_refs[0].links[0].regulation_type");
+
+    // Act
+    const [preview] = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(preview?.error).toMatchObject({ kind: "field", path: "legal_refs.0.links.0.regulation_type" });
+  });
+
+  it("counts a value in a chained regulation too", () => {
+    // Arrange
+    const refs: LegalRefFormValues[] = [
+      { kind: "structured", free_text: "", links: [emptyLink("pasal"), { ...emptyLink("pasal", "jo"), year: "2020" }] },
+    ];
+    const item = failed("FIELD_REQUIRED", "Jenis peraturan wajib diisi.", "legal_refs[0].links[0].regulation_type");
+
+    // Act
+    const [preview] = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(preview).not.toBeNull();
+  });
+});
