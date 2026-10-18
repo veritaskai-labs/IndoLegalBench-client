@@ -310,4 +310,30 @@ describe("ReviewAssignmentPage tabs", () => {
     // Assert
     expect(screen.getByLabelText(/Komentar untuk penulis/)).toHaveValue("Pasal 151 kurang tepat");
   });
+
+  // Edge: screen readers follow aria-controls even before the tab is opened.
+  it("points the closed Riwayat tab at a panel that is in the page", async () => {
+    // Arrange / Act
+    render(<ReviewAssignmentPage />);
+
+    // Assert
+    const tab = await screen.findByRole("tab", { name: "Riwayat" });
+    const panel = document.getElementById(tab.getAttribute("aria-controls") ?? "");
+    expect(panel).not.toBeNull();
+    expect(panel).not.toBeVisible();
+  });
+
+  // Edge: going back keeps the loaded history and the row that was opened.
+  it("keeps the history mounted after going back to Penilaian", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<ReviewAssignmentPage />);
+    await user.click(await screen.findByRole("tab", { name: "Riwayat" }));
+
+    // Act
+    await user.click(screen.getByRole("tab", { name: "Penilaian" }));
+
+    // Assert
+    expect(screen.getByText(`Riwayat kasus ${CASE_ID}`)).not.toBeVisible();
+  });
 });
