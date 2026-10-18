@@ -31,7 +31,7 @@ vi.mock("@/lib/reviews/reviewApi", () => ({
 }));
 // The history has its own tests; here it only has to receive the right case.
 vi.mock("@/components/audit/CaseAuditHistory", () => ({
-  CaseAuditHistory: ({ caseId }: { caseId: string }) => <p>Riwayat kasus {caseId}</p>,
+  CaseAuditHistory: ({ caseId }: Readonly<{ caseId: string }>) => <p>Riwayat kasus {caseId}</p>,
 }));
 
 const listMock = vi.mocked(listAssignedReviews);

@@ -12,7 +12,7 @@ type Props = {
   caseId: string;
 };
 
-export function CaseAuditHistory({ caseId }: Props) {
+export function CaseAuditHistory({ caseId }: Readonly<Props>) {
   const [today] = useState(() => new Date());
   const { state, reload } = useAuditLog(today, { case_id: caseId });
   const [selected, setSelected] = useState<AuditEntry | null>(null);
