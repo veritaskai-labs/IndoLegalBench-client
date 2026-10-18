@@ -1,5 +1,6 @@
 export type CaseHistoryError = { message: string; canRetry: boolean };
 
+// Unreachable for now: apiFetch sends every 403 to /forbidden first.
 const NOT_ASSIGNED: CaseHistoryError = {
   message: "Anda tidak ditugaskan untuk mereview kasus ini.",
   canRetry: false,
