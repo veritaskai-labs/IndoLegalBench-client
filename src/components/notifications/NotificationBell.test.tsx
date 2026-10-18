@@ -96,6 +96,16 @@ describe("NotificationBell", () => {
       expect(within(panel).getByText("Pasal tidak sesuai")).toBeInTheDocument();
     });
 
+    it("does not ask again when the bell is closed", async () => {
+      const user = await openBell();
+      await screen.findByText("Tugas review baru");
+
+      await user.click(bell());
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(listMock).toHaveBeenCalledTimes(1);
+    });
+
     it("says there is nothing yet when the list is empty", async () => {
       listMock.mockResolvedValue(makeNotificationPage([]));
 
@@ -159,6 +169,18 @@ describe("NotificationBell", () => {
       expect(readAllMock).toHaveBeenCalledTimes(1);
       await waitFor(() => expect(within(bell()).queryByText("1")).not.toBeInTheDocument());
       expect(screen.queryByRole("button", { name: "Tandai semua dibaca" })).not.toBeInTheDocument();
+    });
+
+    // Edge: a failed request leaves things as they were, so the reader can try again.
+    it("keeps the button and the badge when marking everything fails", async () => {
+      readAllMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+      const user = await openBell();
+
+      await user.click(await screen.findByRole("button", { name: "Tandai semua dibaca" }));
+
+      expect(readAllMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("button", { name: "Tandai semua dibaca" })).toBeInTheDocument();
+      expect(within(bell()).getByText("1")).toBeInTheDocument();
     });
 
     it("hides the button when nothing in the list is unread", async () => {
