@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -230,6 +230,51 @@ describe("RegulationTypeSelect", () => {
     // Assert
     expect(afterUp).toBe(options().at(-1)?.getAttribute("id"));
     expect(afterDown).toBe(options()[0]?.getAttribute("id"));
+  });
+
+  it("moves the highlight up one option from the middle of the list", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(combobox());
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+
+    // Act
+    await user.keyboard("{ArrowUp}");
+
+    // Assert
+    expect(combobox()).toHaveAttribute("aria-activedescendant", options()[0].id);
+  });
+
+  it("ignores the arrow keys while no option matches", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.type(combobox(), "tidak ada");
+
+    // Act
+    await user.keyboard("{ArrowDown}{ArrowUp}");
+
+    // Assert
+    expect(options()).toHaveLength(0);
+    expect(combobox()).not.toHaveAttribute("aria-activedescendant");
+    expect(screen.getByText("Jenis peraturan tidak ditemukan.")).toBeInTheDocument();
+  });
+
+  it("leaves Enter and Escape to the form while the list is closed", () => {
+    // Arrange
+    const onChange = vi.fn();
+    render(<Harness initial="uu" onChange={onChange} />);
+
+    // Act: fireEvent mengembalikan false kalau komponen memanggil preventDefault.
+    const enterLolos = fireEvent.keyDown(combobox(), { key: "Enter" });
+    const escapeLolos = fireEvent.keyDown(combobox(), { key: "Escape" });
+
+    // Assert
+    expect(enterLolos).toBe(true);
+    expect(escapeLolos).toBe(true);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(combobox()).toHaveValue("Undang-undang");
   });
 
   it("selects nothing when Enter is pressed with no highlighted option", async () => {
