@@ -32,8 +32,8 @@ describe("AuthDoneHandler", () => {
     render(<AuthDoneHandler />);
     expect(screen.getByText("Memproses login Anda...")).toBeInTheDocument();
   });
-
-    it("shows a generic failure for an unrecognized non-401 error response", async () => {
+  
+  it("shows a generic failure for an unrecognized non-401 error response", async () => {
     mockFetchOnce({ ok: false, status: 500, body: {} });
     render(<AuthDoneHandler />);
     await waitFor(() =>
@@ -44,7 +44,7 @@ describe("AuthDoneHandler", () => {
   it("redirects to the role's home path on a successful profile fetch", async () => {
     mockFetchOnce({ ok: true, body: { role: "author" } });
     render(<AuthDoneHandler />);
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/suites"));
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
   });
 
   it("shows a generic failure when the role is missing or unknown", async () => {
@@ -101,7 +101,7 @@ describe("AuthDoneHandler", () => {
       expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument(),
     );
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
-    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/admin/members"));
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
   });
 
   it("renders the auth-error screen directly when initialErrorCode is provided, without fetching", () => {
