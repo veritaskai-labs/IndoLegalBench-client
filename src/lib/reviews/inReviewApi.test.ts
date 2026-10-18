@@ -11,6 +11,7 @@ import { listInReviewCases } from "./inReviewApi";
 import type { CaseSummary } from "@/lib/api/cases";
 import type { Suite } from "@/types/suite";
 import type { CaseReview } from "@/types/reviewAdmin";
+import { ApiError } from "@/lib/apiClient";
 
 const suitesMock = vi.mocked(listActiveSuites);
 const casesMock = vi.mocked(getCasesForSuite);
@@ -71,11 +72,11 @@ describe("listInReviewCases", () => {
     expect(rows[0].review).toEqual(review("c1"));
   });
 
-  // corner
-  it("keeps the case when its review cannot be read", async () => {
+  // corner: 404 NO_REVIEW_ROUND memang berarti kasusnya belum punya ronde.
+  it("keeps the case when it has no review round yet", async () => {
     suitesMock.mockResolvedValue([suite("s1")]);
     casesMock.mockResolvedValue([summary("c1", "ILB-PT-0142")]);
-    const failure = Promise.reject(new Error("no round"));
+    const failure = Promise.reject(new ApiError(404, "NO_REVIEW_ROUND"));
     failure.catch(() => undefined);
     reviewMock.mockReturnValue(failure);
 
@@ -83,6 +84,17 @@ describe("listInReviewCases", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0].review).toBeNull();
+  });
+
+  // Negatif: galat lain tidak boleh menyamar jadi "belum ada putaran review".
+  it("lets a real failure through so the tab can show an error", async () => {
+    suitesMock.mockResolvedValue([suite("s1")]);
+    casesMock.mockResolvedValue([summary("c1", "ILB-PT-0142")]);
+    const failure = Promise.reject(new ApiError(500, "INTERNAL_ERROR"));
+    failure.catch(() => undefined);
+    reviewMock.mockReturnValue(failure);
+
+    await expect(listInReviewCases()).rejects.toBeInstanceOf(ApiError);
   });
 
   // corner
