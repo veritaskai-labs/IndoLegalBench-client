@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  canRemoveLink,
+  chainedLink,
   changeLinkForm,
+  CONNECTOR_OPTIONS,
+  needsFreeTextConfirm,
   changeRefMode,
   emptyLegalRef,
   emptyLink,
@@ -334,5 +338,55 @@ describe("changeRefMode", () => {
     // Assert
     expect(ref.kind).toBe("structured");
     expect(ref.links).toHaveLength(1);
+  });
+});
+
+describe("chaining regulations (AC6, SCRUM-162)", () => {
+  // Positif
+  it("offers jo. and jis. as connectors, in that order", () => {
+    expect(CONNECTOR_OPTIONS).toEqual([
+      { value: "jo", label: "jo." },
+      { value: "jis", label: "jis." },
+    ]);
+  });
+
+  it("starts a chained regulation as an empty Pasal link joined with jo. (PO decision 5)", () => {
+    expect(chainedLink()).toEqual(emptyLink("pasal", "jo"));
+  });
+
+  it("returns a fresh link each time, so two chained links never share state", () => {
+    expect(chainedLink()).not.toBe(chainedLink());
+  });
+
+  it("lets the Author remove the second and later regulations", () => {
+    expect([1, 2, 5].map(canRemoveLink)).toEqual([true, true, true]);
+  });
+
+  // Negatif
+  it("never removes the first regulation of a citation", () => {
+    expect(canRemoveLink(0)).toBe(false);
+  });
+});
+
+describe("needsFreeTextConfirm", () => {
+  // Positif
+  it("asks before Teks Bebas drops a chain of two or more regulations (PO decision 8)", () => {
+    expect(needsFreeTextConfirm(structuredRef(filledLink(), filledLink()), "free_text")).toBe(true);
+  });
+
+  // Negatif
+  it("does not ask for a single regulation", () => {
+    expect(needsFreeTextConfirm(structuredRef(filledLink()), "free_text")).toBe(false);
+  });
+
+  it("does not ask when the new form is not Teks Bebas", () => {
+    expect(needsFreeTextConfirm(structuredRef(filledLink(), filledLink()), "pasal")).toBe(false);
+  });
+
+  // Edge
+  it("does not ask when the citation is already Teks Bebas", () => {
+    const ref: LegalRefFormValues = { kind: "free_text", free_text: "Format teks bebas", links: [] };
+
+    expect(needsFreeTextConfirm(ref, "free_text")).toBe(false);
   });
 });

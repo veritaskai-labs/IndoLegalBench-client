@@ -23,6 +23,7 @@ function Host({ index }: Readonly<{ index: number }>) {
       register={register}
       errorFor={() => undefined}
       invalid={false}
+      preview={null}
       regulationTypes={READY_TYPES}
       onUpdate={vi.fn()}
       onRemove={vi.fn()}
