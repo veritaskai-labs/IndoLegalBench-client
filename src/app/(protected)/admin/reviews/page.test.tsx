@@ -294,5 +294,39 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
       expect(screen.queryByRole("option", { name: "Esi" })).not.toBeInTheDocument(),
     );
   });
-  
+  // Negatif: daftar anggota gagal diambil — pilihan kosong harus ada penjelasannya.
+  it("says why the reviewer list is empty when the member list fails", async () => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValue([row({ assignments: [assignment()] })]);
+    const failure = Promise.reject(new Error("offline"));
+    failure.catch(() => undefined);
+    usersMock.mockReturnValue(failure);
+
+    render(<AdminReviewsPage />);
+    await user.click(
+      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+    );
+
+    expect(
+      await screen.findByText(/Daftar reviewer gagal dimuat/),
+    ).toBeInTheDocument();
+  });
+
+  // Negatif: pencarian penulis gagal — jangan diam-diam berhenti mengecualikan penulis.
+  it("says the author could not be checked when the versions call fails", async () => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValue([row({ assignments: [assignment()] })]);
+    const failure = Promise.reject(new Error("offline"));
+    failure.catch(() => undefined);
+    versionsMock.mockReturnValue(failure);
+
+    render(<AdminReviewsPage />);
+    await user.click(
+      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+    );
+
+    expect(
+      await screen.findByText(/Penulis kasus tidak bisa dicek/),
+    ).toBeInTheDocument();
+  });
 });
