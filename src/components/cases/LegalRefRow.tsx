@@ -171,8 +171,8 @@ export function LegalRefRow({
 function PreviewLine({ index, preview }: Readonly<{ index: number; preview: CitationPreview | null }>) {
   const error = preview?.error?.kind === "form" ? preview.error.message : null;
   return (
-    // role status: pembaca layar mengumumkan teks baru tanpa memindahkan fokus.
-    <p role="status" aria-label={`Pratinjau rujukan ${index + 1}`} className="text-sm">
+    // <output> ber-role status: pembaca layar mengumumkan teks baru tanpa memindahkan fokus.
+    <output aria-label={`Pratinjau rujukan ${index + 1}`} className="block text-sm">
       {preview?.text != null && (
         <span className="text-slate-700">
           <span className="font-medium">Pratinjau: </span>
@@ -180,7 +180,7 @@ function PreviewLine({ index, preview }: Readonly<{ index: number; preview: Cita
         </span>
       )}
       {error !== null && <span className="text-red-700">{error}</span>}
-    </p>
+    </output>
   );
 }
 

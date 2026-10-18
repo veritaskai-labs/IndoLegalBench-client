@@ -53,9 +53,9 @@ export function LegalRefsSection({
         </div>
       )}
       {preview.failed && (
-        <p role="status" className="text-xs text-slate-600">
+        <output className="block text-xs text-slate-600">
           Pratinjau rujukan belum bisa dimuat. Rujukan tetap bisa disimpan.
-        </p>
+        </output>
       )}
       {fields.map((field, index) => (
         <LegalRefRow
