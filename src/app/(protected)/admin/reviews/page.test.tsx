@@ -329,4 +329,18 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
       await screen.findByText(/Penulis kasus tidak bisa dicek/),
     ).toBeInTheDocument();
   });
+  // AC7: penggantian tidak hanya dari antrean, tapi juga dari kasus yang sedang direview.
+  it("opens the swap dialog from the in-review tab", async () => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValue([]);
+    inReviewMock.mockResolvedValue([IN_REVIEW]);
+
+    render(<AdminReviewsPage />);
+    await user.click(screen.getByRole("tab", { name: "Dalam review" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+    );
+
+    expect(screen.getByRole("dialog")).toHaveTextContent("ILB-PT-0142");
+  });
 });
