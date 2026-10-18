@@ -223,7 +223,7 @@ describe("NotificationBell", () => {
     });
 
     // Security: follow only in-app paths, never another site (open redirect).
-    it.each(["https://evil.example/login", "//evil.example/login"])(
+    it.each(["https://evil.example/login", "//evil.example/login", "/\\evil.example/login"])(
       "does not follow a link to another site (%s)",
       async (link) => {
         listMock.mockResolvedValue(makeNotificationPage([makeNotification({ title: "Aneh", link })]));
@@ -273,6 +273,20 @@ describe("NotificationBell", () => {
     });
 
     // Edge: the badge also counts unread ones beyond the 10 shown.
+    // Edge: the list failed, but the badge still knows there is something unread.
+    it("marks everything read even when the list failed to load", async () => {
+      listMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+      const user = await openBell();
+      expect(await screen.findByText("Gagal memuat notifikasi.")).toBeInTheDocument();
+      countMock.mockResolvedValue({ count: 0 });
+
+      await user.click(screen.getByRole("button", { name: "Tandai semua dibaca" }));
+
+      expect(readAllMock).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(bell()).toHaveAccessibleName("Notifikasi"));
+      expect(screen.getByText("Gagal memuat notifikasi.")).toBeInTheDocument();
+    });
+
     it("offers the button when only older notifications are unread", async () => {
       countMock.mockResolvedValue({ count: 12 });
       listMock.mockResolvedValue(makeNotificationPage([read]));
