@@ -18,6 +18,7 @@ function assignment(
     reviewer_id: "u1",
     reviewer_name: "Aileen",
     status: "active",
+    source: "system",
     assigned_at: "2026-10-16T03:00:00Z",
     ended_at: null,
     end_reason: null,

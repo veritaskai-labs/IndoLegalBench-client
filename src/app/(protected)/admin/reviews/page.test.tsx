@@ -77,6 +77,7 @@ function assignment(
     reviewer_id: "u1",
     reviewer_name: "Roben",
     status: "active",
+    source: "system",
     assigned_at: "2026-10-16T03:00:00Z",
     ended_at: null,
     end_reason: null,
@@ -126,11 +127,13 @@ const ESI: User = {
 };
 
 const REPLACED: ReplacedAssignment = {
-  id: "a2",
-  review_round_id: "r1",
-  reviewer_id: "u9",
+  id: "asg-baru",
+  review_round_id: "round-1",
+  reviewer_id: "rev-2",
+  source: "admin",                       
+  assigned_at: "2026-10-18T02:00:00Z",   
   status: "active",
-  replaced_assignment_id: "a1",
+  replaced_assignment_id: "asg-1",
 };
 
 beforeEach(() => {

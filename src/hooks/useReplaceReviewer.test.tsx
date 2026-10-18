@@ -19,11 +19,13 @@ const BODY: ReplaceReviewerBody = {
 };
 
 const REPLACED: ReplacedAssignment = {
-  id: "a2",
-  review_round_id: "r1",
-  reviewer_id: "u9",
+  id: "asg-baru",
+  review_round_id: "round-1",
+  reviewer_id: "rev-2",
   status: "active",
-  replaced_assignment_id: "a1",
+  replaced_assignment_id: "asg-1",
+  source: "admin",
+  assigned_at: "2026-10-18T02:00:00Z",
 };
 
 describe("useReplaceReviewer", () => {

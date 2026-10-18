@@ -13,47 +13,17 @@ export type ReviewerSlot = components["schemas"]["ReviewerSlot"];
 export type CaseReview = components["schemas"]["CaseReview"];
 
 /**
- * Bentuk antrean penugasan ulang dan penggantian reviewer dari SCRUM-147
- * (server PR #50, belum merge), jadi masih ditulis tangan. Diganti ke
- * components["schemas"][...] setelah PR itu masuk dan kontraknya disalin ulang.
- * Hanya field yang dipakai FE.
+ * Antrean penugasan ulang dan penggantian reviewer (SCRUM-147), ikut kontrak
+ * sejak server PR #50 merge — sebelumnya ditulis tangan di sini.
  */
-export type ReassignmentAssignment = {
-  id: string;
-  reviewer_id: string;
-  reviewer_name: string | null;
-  status: AssignmentStatus;
-  assigned_at: string;
-  ended_at: string | null;
-  end_reason: string | null;
-};
+export type AssignmentSource = components["schemas"]["AssignmentSource"];
+export type ReassignmentAssignment =
+  components["schemas"]["ReassignmentAssignmentRead"];
+export type ReassignmentRow = components["schemas"]["NeedsReassignmentResponse"];
+export type ReplaceReviewerBody = components["schemas"]["ReplaceReviewerRequest"];
+export type ReplacedAssignment = components["schemas"]["ReplaceReviewerResponse"];
 
-export type ReassignmentRow = {
-  case_id: string;
-  case_code: string;
-  case_title: string;
-  round_id: string;
-  round_no: number;
-  round_status: RoundStatus;
-  active_reviewers_count: number;
-  void_assignments: ReassignmentAssignment[];
-  assignments: ReassignmentAssignment[];
-};
-
-export type ReplaceReviewerBody = {
-  new_reviewer_id: string;
-  reason: string;
-};
-
-export type ReplacedAssignment = {
-  id: string;
-  review_round_id: string;
-  reviewer_id: string;
-  status: AssignmentStatus;
-  replaced_assignment_id: string | null;
-};
-
-/** Satu pilihan reviewer di dialog penggantian. */
+/** Satu pilihan reviewer di dialog penggantian; bentuk UI, bukan bentuk server. */
 export type ReviewerOption = {
   id: string;
   name: string;
