@@ -298,6 +298,55 @@ describe("EditCasePage legal reference preview (SCRUM-162)", () => {
   });
 });
 
+describe("EditCasePage breadcrumb and session", () => {
+  // Perilaku lama tanpa test di staging; ditutup karena halaman ini disentuh SCRUM-162.
+  it("goes back to the suites list from the breadcrumb", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(
+      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("button", {
+        name: "Suite",
+      }),
+    );
+
+    // Assert
+    expect(push).toHaveBeenCalledWith("/suites");
+  });
+
+  it("goes to the case's suite from the breadcrumb", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase());
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Act
+    await user.click(await screen.findByRole("button", { name: "Suite Ketenagakerjaan" }));
+
+    // Assert
+    expect(push).toHaveBeenCalledWith("/suites/11111111-1111-1111-1111-111111111111");
+  });
+
+  // Edge: sesi belum selesai dimuat, jadi belum ada peran untuk tombol Admin.
+  it("shows the editor without the Admin tag button while the session is still loading", async () => {
+    // Arrange
+    session.role = null;
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(await screen.findByRole("heading", { name: "ILB-PT-0142" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ubah tag" })).not.toBeInTheDocument();
+  });
+});
+
 describe("EditCasePage saving", () => {
   // Positive
   it("puts the edited case, shows a toast, and refills the form from the server reply", async () => {
