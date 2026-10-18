@@ -89,8 +89,8 @@ describe("DashboardPage", () => {
     ready();
 
     render(<DashboardPage />);
-
-    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+    
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.getByText(/10 kasus/)).toBeInTheDocument();
   });
 
@@ -149,5 +149,14 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("Gagal memuat dasbor.")).toBeInTheDocument();
     expect(screen.queryByText(/10 kasus/)).not.toBeInTheDocument();
+  });
+  // AC1: angka menunggu review ikut tampil di halaman, bukan cuma di respons.
+  it("shows how many cases are waiting for a review", () => {
+    authenticatedAs("Rina");
+    ready({ waiting_for_review: 4 });
+
+    render(<DashboardPage />);
+
+    expect(screen.getAllByRole("listitem")[4]).toHaveTextContent("4");
   });
 });

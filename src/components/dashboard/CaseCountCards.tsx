@@ -10,11 +10,12 @@ const ORDER: readonly CaseStatus[] = [
   "approved",
 ];
 
-/** AC1: jumlah kasus per status, memakai warna yang sama dengan badge di halaman kasus. */
+/** AC1: jumlah kasus per status dan jumlah yang menunggu review, dengan warna yang sama seperti badge di halaman kasus. */
 export function CaseCountCards({
   counts,
   total,
-}: Readonly<{ counts: CaseCounts; total: number }>) {
+  waiting,
+}: Readonly<{ counts: CaseCounts; total: number; waiting: number }>) {
   return (
     <section aria-labelledby="ringkasan-kasus">
       <h2
@@ -24,7 +25,7 @@ export function CaseCountCards({
         Ringkasan kasus
       </h2>
 
-      <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {ORDER.map((status) => (
           <li
             key={status}
@@ -36,9 +37,22 @@ export function CaseCountCards({
             </p>
           </li>
         ))}
+
+        <li
+          aria-describedby="menunggu-review-help"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900"
+        >
+          <p className="text-sm font-medium">Menunggu review</p>
+          <p className="mt-1 text-3xl font-semibold tabular-nums">{waiting}</p>
+        </li>
       </ul>
 
       <p className="mt-2 text-sm text-slate-600">Total {total} kasus</p>
+      <p id="menunggu-review-help" className="mt-1 text-xs text-slate-500">
+        Angka ini bisa berbeda dari &quot;Dalam tinjauan&quot;: kasus yang sudah
+        disetujui tapi versi barunya sedang ditinjau ikut dihitung di sini,
+        begitu juga ronde yang belum punya reviewer.
+      </p>
     </section>
   );
 }

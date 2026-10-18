@@ -53,6 +53,7 @@ export default function DashboardPage() {
           <CaseCountCards
             counts={dashboard.summary.case_counts}
             total={dashboard.summary.total_cases}
+            waiting={dashboard.summary.waiting_for_review}
           />
           {dashboard.summary.review_queue !== null && (
             <ReviewQueue reviews={dashboard.summary.review_queue} />
