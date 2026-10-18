@@ -6,7 +6,9 @@ import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
 import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
+import { getCaseReview } from "@/lib/reviews/reviewApi";
 import { session } from "@/test/authMock";
+import { makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
 import { makeSummary } from "@/test/versionFixtures";
 import type { CaseCompleteness, CaseRead } from "@/types/case";
 import EditCasePage from "./page";
@@ -55,6 +57,11 @@ vi.mock("@/lib/cases/versionApi", () => ({
   listCaseVersions: vi.fn(),
   getOpenCaseVersion: vi.fn(),
 }));
+
+// The feedback section reads the review of the case; the review calls have their own tests.
+vi.mock("@/lib/reviews/reviewApi", () => ({ getCaseReview: vi.fn() }));
+
+const reviewMock = vi.mocked(getCaseReview);
 
 // The PATCH itself is tested in splitTagApi.test.ts; here only the page's reaction matters.
 vi.mock("@/lib/cases/splitTagApi", () => ({ changeSplitTag: vi.fn() }));
@@ -161,6 +168,7 @@ beforeEach(() => {
   // Most cases have no draft open: the server answers 404 NO_OPEN_VERSION.
   openDraftMock.mockReset();
   openDraftMock.mockRejectedValue(new ApiError(404, "NO_OPEN_VERSION"));
+  reviewMock.mockReset();
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
   completenessMock.mockReset();
@@ -1397,5 +1405,140 @@ describe("EditCasePage dev/test tag QA (SCRUM-166)", () => {
       ["dev", false],
       ["test", true],
     ]);
+  });
+});
+
+describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
+  const feedback = () => screen.findByRole("region", { name: "Catatan peninjau" });
+  const noFeedback = () => screen.queryByRole("region", { name: "Catatan peninjau" });
+  const decidedRevision = () =>
+    makeCaseReview({
+      status: "decided",
+      decision: "revise",
+      reviewers: [
+        makeSlot({
+          reviewer: { id: "r1", name: "Anisa P." },
+          verdict: makeVerdictView({ decision: "revise", comment: "Pasal 151 salah" }),
+        }),
+      ],
+    });
+
+  // Version 1 was written by the signed-in user (id u1), so the author is the creator.
+  beforeEach(() => {
+    listVersionsMock.mockResolvedValue([makeSummary(1)]);
+    reviewMock.mockResolvedValue(decidedRevision());
+  });
+
+  // Positive: AC5, the author sees what the reviewers asked for.
+  it("shows the reviewers' comments on a case that needs revision to the author who created it", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
+
+    // Act
+    renderPage();
+    const section = await feedback();
+
+    // Assert
+    expect(within(section).getByText("Anisa P.")).toBeInTheDocument();
+    expect(within(section).getByText("Pasal 151 salah")).toBeInTheDocument();
+    expect(reviewMock).toHaveBeenCalledWith(CASE_ID);
+  });
+
+  // Positive: an admin may read any review, so no history lookup is needed.
+  it("shows the comments to an admin without asking who created the case", async () => {
+    // Arrange
+    session.role = "admin";
+    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
+
+    // Act
+    renderPage();
+    const section = await feedback();
+
+    // Assert
+    expect(within(section).getByText("Pasal 151 salah")).toBeInTheDocument();
+    expect(listVersionsMock).not.toHaveBeenCalled();
+  });
+
+  // Positive: the case still needs revision, so the editor stays open next to the comments.
+  it("keeps the editor open next to the comments", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
+
+    // Act
+    renderPage();
+    await feedback();
+
+    // Assert
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+    expect(save()).toBeEnabled();
+  });
+
+  // Negative: the server answers 403 here and a 403 sends the user to /forbidden.
+  it("shows nothing and asks for nothing for an author who did not create the case", async () => {
+    // Arrange
+    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+    await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
+
+    // Assert
+    expect(noFeedback()).not.toBeInTheDocument();
+    expect(reviewMock).not.toHaveBeenCalled();
+  });
+
+  // Edge: there is feedback to act on only after a revision was asked for.
+  it.each(["draft", "in_review", "approved"] as const)(
+    "shows nothing and asks for nothing on a %s case, even to an admin",
+    async (status) => {
+      // Arrange
+      session.role = "admin";
+      getCaseMock.mockResolvedValue(savedCase({ status }));
+
+      // Act
+      renderPage();
+      await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+      // Assert
+      expect(noFeedback()).not.toBeInTheDocument();
+      expect(reviewMock).not.toHaveBeenCalled();
+    },
+  );
+
+  // Negative
+  it.each(["reviewer", "viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
+    // Arrange
+    session.role = role;
+    getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
+
+    // Act
+    renderPage();
+    await screen.findByRole("heading", { name: "ILB-PT-0142" });
+
+    // Assert
+    expect(noFeedback()).not.toBeInTheDocument();
+    expect(reviewMock).not.toHaveBeenCalled();
+  });
+
+  // Edge: the comments are help, the author can still work on the case without them.
+  it("keeps the editor usable when the comments cannot be loaded, and retries", async () => {
+    // Arrange
+    reviewMock.mockRejectedValueOnce(new ApiError(500, "INTERNAL"));
+    reviewMock.mockResolvedValueOnce(decidedRevision());
+    getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Gagal memuat penilaian kasus. Coba lagi.");
+
+    // Act
+    expect(screen.getByLabelText("Judul")).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Coba lagi" }));
+
+    // Assert
+    expect(await feedback()).toHaveTextContent("Pasal 151 salah");
+    expect(reviewMock).toHaveBeenCalledTimes(2);
   });
 });
