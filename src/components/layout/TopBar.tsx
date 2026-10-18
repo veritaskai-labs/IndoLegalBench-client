@@ -1,5 +1,6 @@
 "use client";
 
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { LOGOUT_URL } from "@/lib/auth";
 import { ROLE_LABEL } from "@/types";
@@ -24,6 +25,7 @@ export function TopBar() {
 
       {auth.status === "authenticated" && (
         <div className="flex items-center gap-3">
+          <NotificationBell />
           <span className="grid h-8 w-8 place-items-center rounded-md bg-indigo-600 text-xs font-semibold text-white">
             {initials(auth.user.name)}
           </span>
