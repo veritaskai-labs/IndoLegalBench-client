@@ -30,6 +30,20 @@ const TAB_LABEL: Record<Tab, string> = {
 
 const TABS: Tab[] = ["queue", "decisions"];
 
+/**
+ * Dua panggilan latar menyiapkan isi dialog. Kalau salah satunya gagal, admin harus tahu,
+ * karena akibatnya terlihat sebagai daftar kosong atau penulis yang ikut muncul.
+ */
+function dialogNotice(usersFailed: boolean, authorFailed: boolean): string | null {
+  if (usersFailed) {
+    return "Daftar reviewer gagal dimuat, jadi pilihannya bisa kosong. Muat ulang halaman.";
+  }
+  if (authorFailed) {
+    return "Penulis kasus tidak bisa dicek, jadi ia mungkin ikut terdaftar. Server tetap menolak bila penulis yang dipilih.";
+  }
+  return null;
+}
+
 /** Isi tab antrean: gagal, memuat, kosong, lalu tabelnya. Dipisah agar halamannya tetap terbaca. */
 function ReassignmentPanel({
   queue,
@@ -102,7 +116,9 @@ export default function AdminReviewsPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const [target, setTarget] = useState<Target | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [usersFailed, setUsersFailed] = useState(false);
   const [authorId, setAuthorId] = useState<string | null>(null);
+  const [authorFailed, setAuthorFailed] = useState(false);
 
   const queue = useNeedsReassignment();
   const { reload } = queue;
@@ -127,8 +143,16 @@ export default function AdminReviewsPage() {
   useEffect(() => {
     let cancelled = false;
     listActiveUsers()
-      .then((rows) => !cancelled && setUsers(rows))
-      .catch(() => !cancelled && setUsers([]));
+      .then((rows) => {
+        if (cancelled) return;
+        setUsers(rows);
+        setUsersFailed(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setUsers([]);
+        setUsersFailed(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -148,9 +172,12 @@ export default function AdminReviewsPage() {
         if (cancelled) return;
         const author = users.find((item) => isCaseCreator(versions, item.id));
         setAuthorId(author?.id ?? null);
+        setAuthorFailed(false);
       })
       .catch(() => {
-        if (!cancelled) setAuthorId(null);
+        if (cancelled) return;
+        setAuthorId(null);
+        setAuthorFailed(true);
       });
 
     return () => {
@@ -162,6 +189,7 @@ export default function AdminReviewsPage() {
     (assignment: ReassignmentAssignment, row: ReassignmentRow) => {
       reset();
       setAuthorId(null);
+      setAuthorFailed(false);
       setTarget({ assignment, row });
     },
     [reset],
@@ -242,6 +270,7 @@ export default function AdminReviewsPage() {
             currentReviewerId={target.assignment.reviewer_id}
             currentReviewerName={reviewerName(target.assignment)}
             candidates={reviewerCandidates(users, target.row, authorId)}
+            notice={dialogNotice(usersFailed, authorFailed)}
             pending={replacement.pending}
             error={replacement.error}
             onConfirm={(body) =>

@@ -11,6 +11,7 @@ type Props = {
   candidates: ReviewerOption[];
   pending: boolean;
   error: string | null;
+  notice?: string | null;
   onConfirm: (body: ReplaceReviewerBody) => void;
   onClose: () => void;
 };
@@ -23,6 +24,7 @@ export function SwapReviewerDialog({
   candidates,
   pending,
   error,
+  notice,
   onConfirm,
   onClose,
 }: Readonly<Props>) {
@@ -49,7 +51,12 @@ export function SwapReviewerDialog({
         Ganti reviewer
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        {`${caseCode} · reviewer sekarang ${currentReviewerName}`}
+        {notice ? (
+          <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+            {notice}
+            </p>
+          ) : null}
+          {`${caseCode} · reviewer sekarang ${currentReviewerName}`}
       </p>
 
       {confirming && chosen ? (
