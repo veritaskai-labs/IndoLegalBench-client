@@ -14,6 +14,8 @@ export function useUnreadCount() {
     let cancelled = false;
 
     async function load() {
+      // Tab tersembunyi tidak dilihat; dibaca ulang begitu terlihat lagi.
+      if (document.visibilityState === "hidden") return;
       try {
         const result = await getUnreadCount();
         if (!cancelled) setCount(result.count);
@@ -22,11 +24,14 @@ export function useUnreadCount() {
       }
     }
 
-    void load();
-    const timer = setInterval(() => void load(), POLL_MS);
+    const readNow = () => void load();
+    readNow();
+    const timer = setInterval(readNow, POLL_MS);
+    document.addEventListener("visibilitychange", readNow);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", readNow);
     };
   }, [attempt]);
 
