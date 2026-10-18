@@ -292,3 +292,77 @@ describe("alignPreviews for a citation with nothing typed yet", () => {
     expect(preview).not.toBeNull();
   });
 });
+
+describe("alignPreviews for a chained regulation with nothing typed yet", () => {
+  // Temuan uji manual 18 Okt: "+ Rangkai peraturan" langsung memunculkan error di peraturan
+  // baru yang masih kosong. Aturan baris kosong berlaku juga untuk peraturan dalam rangkaian.
+  function withEmptyChain(): LegalRefFormValues {
+    const ref = ktk001();
+    ref.links.push(emptyLink("pasal", "jo"));
+    return ref;
+  }
+
+  it("hides the server error that points into the empty chained regulation", () => {
+    // Arrange
+    const refs = [withEmptyChain()];
+    const item = failed(
+      "FIELD_REQUIRED",
+      "Jenis peraturan wajib diisi.",
+      "legal_refs[0].links[1].regulation_type",
+    );
+
+    // Act
+    const previews = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(previews).toEqual([{ text: null, error: null }]);
+  });
+
+  it("shows it once the chained regulation has a value", () => {
+    // Arrange
+    const ref = withEmptyChain();
+    ref.links[1] = { ...emptyLink("pasal", "jo"), number: "1" };
+    const item = failed(
+      "FIELD_REQUIRED",
+      "Jenis peraturan wajib diisi.",
+      "legal_refs[0].links[1].regulation_type",
+    );
+
+    // Act
+    const [preview] = alignPreviews([ref], resultFor([ref], [item]));
+
+    // Assert
+    expect(preview?.error).toMatchObject({ path: "legal_refs.0.links.1.regulation_type" });
+  });
+
+  it("keeps an error about the citation itself, outside any regulation", () => {
+    // Arrange
+    const refs = [withEmptyChain()];
+    const item = failed(
+      "FIELD_NOT_ALLOWED",
+      "Teks bebas hanya untuk bentuk Teks Bebas.",
+      "legal_refs[0].free_text",
+    );
+
+    // Act
+    const [preview] = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(preview?.error).toMatchObject({ path: "legal_refs.0.free_text" });
+  });
+
+  it("keeps an error that names no field", () => {
+    // Arrange
+    const refs = [withEmptyChain()];
+    const item: LegalRefPreviewItem = {
+      display_text: null,
+      error: { code: "VALIDATION_ERROR", message: "Isian kasus tidak valid" },
+    };
+
+    // Act
+    const [preview] = alignPreviews(refs, resultFor(refs, [item]));
+
+    // Assert
+    expect(preview?.error).toEqual({ kind: "form", message: "Isian kasus tidak valid" });
+  });
+});
