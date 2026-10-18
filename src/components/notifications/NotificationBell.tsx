@@ -164,10 +164,11 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div
-          role="dialog"
+        // <dialog> non-modal: tetap di bawah lonceng, tanpa backdrop.
+        <dialog
+          open
           aria-label="Notifikasi"
-          className="absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+          className="absolute left-auto right-0 z-20 mx-0 mt-2 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white p-0 text-slate-900 shadow-lg"
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-900">Notifikasi</h2>
@@ -182,7 +183,7 @@ export function NotificationBell() {
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">{body}</div>
-        </div>
+        </dialog>
       )}
     </div>
   );
