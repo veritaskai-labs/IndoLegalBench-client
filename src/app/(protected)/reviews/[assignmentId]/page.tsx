@@ -36,10 +36,16 @@ const REVIEW_TABS: readonly TabItem<ReviewTab>[] = [
 function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview }>) {
   const [result, setResult] = useState<VerdictResult | null>(null);
   const [tab, setTab] = useState<ReviewTab>("verdict");
+  const [historyOpened, setHistoryOpened] = useState(false);
   const copy = assignment.case;
   const verdict = submittedVerdict(result, assignment.my_verdict);
   // Kunci muat ulang: setelah verdict terkirim, round bisa saja sudah selesai dan penilaian kedua terbuka.
   const caseReview = useCaseReview(copy.case_id, true, result?.submitted_at ?? "");
+
+  function showTab(next: ReviewTab) {
+    setTab(next);
+    if (next === "history") setHistoryOpened(true);
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -47,7 +53,7 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
-          <Tabs tabs={REVIEW_TABS} active={tab} onChange={setTab} label="Bagian penilaian" idPrefix={TAB_PREFIX} />
+          <Tabs tabs={REVIEW_TABS} active={tab} onChange={showTab} label="Bagian penilaian" idPrefix={TAB_PREFIX} />
           {/* Form tetap terpasang saat riwayat dibuka, supaya draf tidak hilang. */}
           <div
             role="tabpanel"
@@ -67,11 +73,15 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
               />
             )}
           </div>
-          {tab === "history" && (
-            <div role="tabpanel" id={tabPanelId(TAB_PREFIX, "history")} aria-labelledby={tabElementId(TAB_PREFIX, "history")}>
-              <CaseAuditHistory caseId={copy.case_id} />
-            </div>
-          )}
+          {/* Riwayat dimuat saat tab pertama dibuka, lalu tetap terpasang. */}
+          <div
+            role="tabpanel"
+            id={tabPanelId(TAB_PREFIX, "history")}
+            aria-labelledby={tabElementId(TAB_PREFIX, "history")}
+            hidden={tab !== "history"}
+          >
+            {historyOpened && <CaseAuditHistory caseId={copy.case_id} />}
+          </div>
         </div>
 
         <aside>
