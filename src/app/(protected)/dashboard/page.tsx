@@ -1,6 +1,7 @@
 "use client";
 
 import { CaseCountCards } from "@/components/dashboard/CaseCountCards";
+import { NeedsReassignmentCard } from "@/components/dashboard/NeedsReassignmentCard";
 import { ReviewQueue } from "@/components/dashboard/ReviewQueue";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -22,7 +23,9 @@ export default function DashboardPage() {
   const dashboard = useDashboard(allowed);
 
   const refreshedAt =
-    dashboard.status === "ready" ? formatWibClock(dashboard.summary.generated_at) : "";
+    dashboard.status === "ready"
+      ? formatWibClock(dashboard.summary.generated_at)
+      : "";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -42,10 +45,16 @@ export default function DashboardPage() {
         />
       )}
 
-      {allowed && dashboard.status === "loading" && <LoadingState label="Memuat ringkasan…" />}
+      {allowed && dashboard.status === "loading" && (
+        <LoadingState label="Memuat ringkasan…" />
+      )}
 
       {dashboard.status === "error" && (
-        <ErrorState variant="card" message={dashboard.message} onRetry={dashboard.reload} />
+        <ErrorState
+          variant="card"
+          message={dashboard.message}
+          onRetry={dashboard.reload}
+        />
       )}
 
       {dashboard.status === "ready" && (
@@ -55,6 +64,11 @@ export default function DashboardPage() {
             total={dashboard.summary.total_cases}
             waiting={dashboard.summary.waiting_for_review}
           />
+          {dashboard.summary.needs_reassignment !== null && (
+            <NeedsReassignmentCard
+              count={dashboard.summary.needs_reassignment}
+            />
+          )}
           {dashboard.summary.review_queue !== null && (
             <ReviewQueue reviews={dashboard.summary.review_queue} />
           )}
