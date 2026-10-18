@@ -132,7 +132,7 @@ export function mapSaveError(error: unknown): SaveError {
 export function mapServerFieldError(
   code: string,
   message: string | null,
-  field: string | null,
+  field: string | null | undefined,
 ): SaveError {
   const path = field ? toFormPath(field) : null;
   if (path === null) {
