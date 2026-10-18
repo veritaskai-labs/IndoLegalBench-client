@@ -826,6 +826,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ringkasan dashboard sesuai peran
+         * @description PBI-19 AC1, AC2, AC6. Safe to poll every 60 s.
+         */
+        get: operations["get_dashboard_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1036,6 +1056,20 @@ export interface components {
             legal_ref_count: number;
         };
         /**
+         * CaseCounts
+         * @description Jumlah kasus per status versi yang berlaku, sama seperti daftar kasus.
+         */
+        CaseCounts: {
+            /** Draft */
+            draft: number;
+            /** In Review */
+            in_review: number;
+            /** Needs Revision */
+            needs_revision: number;
+            /** Approved */
+            approved: number;
+        };
+        /**
          * CaseIdentity
          * @description Title, question, and optional category for one case.
          */
@@ -1225,6 +1259,38 @@ export interface components {
             message?: string | null;
             error_category?: components["schemas"]["ConnectionTestErrorCategory"] | null;
         };
+        /**
+         * DashboardSummary
+         * @description GET /dashboard: ringkasan kerja pengguna yang login, sesuai perannya.
+         */
+        DashboardSummary: {
+            /**
+             * Generated At
+             * Format: date-time
+             * @description Waktu data dihitung (AC2)
+             */
+            generated_at: string;
+            case_counts: components["schemas"]["CaseCounts"];
+            /** Total Cases */
+            total_cases: number;
+            /**
+             * Waiting For Review
+             * @description Kasus in_review yang round berjalannya belum punya verdict sah dari kedua slot reviewer, termasuk kasus dengan 0 atau 1 reviewer. Bisa lebih besar dari total antrean reviewer.
+             */
+            waiting_for_review: number;
+            /**
+             * Review Queue
+             * @description Hanya Reviewer: kasus yang ditugaskan dan belum dinilai, terlama dulu (AC6). null untuk peran lain.
+             */
+            review_queue: components["schemas"]["PendingReview"][] | null;
+            /**
+             * Needs Reassignment
+             * @description Hanya Admin: kasus yang perlu penugasan ulang reviewer. null untuk peran lain.
+             */
+            needs_reassignment: number | null;
+            /** @description Sesi pengukuran terakhir. null sampai PBI-11 ada. */
+            latest_run?: components["schemas"]["LatestRunSummary"] | null;
+        };
         /** ErrorBody */
         ErrorBody: {
             /** Code */
@@ -1264,6 +1330,11 @@ export interface components {
          * @enum {string}
          */
         LastTestStatus: "ok" | "failed";
+        /**
+         * LatestRunSummary
+         * @description Sesi pengukuran terakhir. Selalu null sampai PBI-11 mengisinya (AC1).
+         */
+        LatestRunSummary: Record<string, never>;
         /**
          * LegalRefLinkRead
          * @description One regulation in a citation, as stored.
@@ -1543,6 +1614,41 @@ export interface components {
             page: number;
             /** Size */
             size: number;
+        };
+        /**
+         * PendingReview
+         * @description Satu baris antrean dashboard reviewer (PBI-19 AC6, SCRUM-154).
+         *
+         *     waiting_since adalah saat round dibuka; antrean diurutkan dari yang
+         *     terlama. assigned_at bisa lebih baru bila reviewer ini pengganti.
+         */
+        PendingReview: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** Round No */
+            round_no: number;
+            /**
+             * Waiting Since
+             * Format: date-time
+             */
+            waiting_since: string;
+            /**
+             * Assigned At
+             * Format: date-time
+             */
+            assigned_at: string;
         };
         /**
          * ProviderType
@@ -4274,6 +4380,35 @@ export interface operations {
             };
             /** @description Body bukan daftar rujukan, atau lebih dari 100. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_dashboard_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardSummary"];
+                };
+            };
+            /** @description Viewer tidak punya dashboard. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
