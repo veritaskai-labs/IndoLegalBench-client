@@ -93,6 +93,20 @@ describe("AuditDetailPanel", () => {
     expect(screen.getByRole("heading", { name: "measurement.started" })).toBeInTheDocument();
   });
 
+  // Positive: F-06
+  it("shows the readable object name next to its id", () => {
+    render(
+      <AuditDetailPanel
+        entry={entry({ entity_id: "7bc7f6f3-uuid", entity_label: "UAT-PHK-001" })}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Detail catatan audit" })).toHaveTextContent(
+      "Kasus UAT-PHK-001 · 7bc7f6f3-uuid",
+    );
+  });
+
   it("shows the actor name, not the id", () => {
     render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
 

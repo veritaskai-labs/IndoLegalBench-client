@@ -33,7 +33,9 @@ export function AuditTable({ entries, onRowClick }: Props) {
             <td className="py-3 px-4 text-slate-700">{auditActionLabel(item.action)}</td>
             <td className="py-3 px-4 text-slate-700">
               {entityLabel(item.entity_type)}{" "}
-              <span className="font-mono text-xs text-slate-500">{item.entity_id}</span>
+              {item.entity_label ?? (
+                <span className="font-mono text-xs text-slate-500">{item.entity_id}</span>
+              )}
             </td>
           </tr>
         ))}

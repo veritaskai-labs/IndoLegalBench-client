@@ -125,6 +125,49 @@ describe("AuditPage (SCRUM-141)", () => {
     );
   });
 
+  // Positive: F-06
+  it("searches by case code and downloads the same result", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue(page([entry()]));
+    render(<AuditPageComponent />);
+    await screen.findByText("ILB-PT-0142");
+
+    await user.type(screen.getByLabelText("Kode kasus"), "UAT-PHK-001{Enter}");
+
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ case_code: "UAT-PHK-001", page: 1 }),
+      ),
+    );
+    expect(await screen.findByRole("link", { name: "Unduh CSV" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("case_code=UAT-PHK-001"),
+    );
+  });
+
+  // Negative
+  it("still lists entries when the user list cannot be loaded", async () => {
+    listActors.mockRejectedValue(new Error("boom"));
+    list.mockResolvedValue(page([entry()]));
+    render(<AuditPageComponent />);
+
+    expect(await screen.findByText("ILB-PT-0142")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pelaku")).toHaveTextContent("Semua pengguna");
+  });
+
+  // Positive
+  it("closes the detail panel", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue(page([entry()]));
+    render(<AuditPageComponent />);
+    await screen.findByText("ILB-PT-0142");
+    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+
+    await user.click(await screen.findByRole("button", { name: "Tutup" }));
+
+    expect(screen.queryByRole("dialog", { name: "Detail catatan audit" })).not.toBeInTheDocument();
+  });
+
   // Corner
   it("says there is nothing to show when the filter matches no record", async () => {
     list.mockResolvedValue(page([]));

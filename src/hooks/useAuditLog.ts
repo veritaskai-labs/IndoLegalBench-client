@@ -11,6 +11,7 @@ export type AuditQuery = {
   entity_type?: AuditEntityType;
   actor_id?: string;
   case_id?: string;
+  case_code?: string;
 };
 
 export type AuditState =
@@ -35,6 +36,7 @@ export function useAuditLog(today: Date, initial?: Partial<AuditQuery>) {
     entity_type: query.entity_type,
     actor_id: query.actor_id,
     case_id: query.case_id,
+    case_code: query.case_code,
     page,
   };
 
