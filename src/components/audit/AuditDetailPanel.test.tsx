@@ -100,4 +100,18 @@ describe("AuditDetailPanel", () => {
       "Herdayani",
     );
   });
+
+  // Corner
+  it("says the system did it when there is no actor", () => {
+    render(
+      <AuditDetailPanel
+        entry={entry({ actor_user_id: null, actor_name: null })}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Detail catatan audit" })).toHaveTextContent(
+      "Sistem",
+    );
+  });
 });
