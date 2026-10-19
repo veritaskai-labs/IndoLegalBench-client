@@ -1045,6 +1045,11 @@ export interface components {
              * Format: uuid
              */
             entity_id: string;
+            /**
+             * Entity Label
+             * @description Nama objek yang terbaca: kode kasus (catatan kasus dan review), nama suite, nama produk AI, atau nama pengguna. Null kalau objeknya sudah tidak ada
+             */
+            entity_label?: string | null;
             /** Case Id */
             case_id: string | null;
             /** Before */
@@ -4224,6 +4229,8 @@ export interface operations {
                 /** @description Sebagian nama atau email pelaku */
                 actor?: string | null;
                 case_id?: string | null;
+                /** @description Sebagian kode kasus, misalnya UAT-PHK-001 */
+                case_code?: string | null;
                 page?: number;
                 size?: number;
             };
@@ -4276,6 +4283,8 @@ export interface operations {
                 /** @description Sebagian nama atau email pelaku */
                 actor?: string | null;
                 case_id?: string | null;
+                /** @description Sebagian kode kasus, misalnya UAT-PHK-001 */
+                case_code?: string | null;
                 page?: number;
                 size?: number;
             };
