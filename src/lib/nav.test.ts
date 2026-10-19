@@ -14,15 +14,11 @@ describe("navForRole", () => {
   });
 
   it("adds the review queue for reviewer", () => {
-    expect(labels("reviewer")).toEqual([
-      "Dasbor",
-      "Suite dan kasus",
-      "Antrean tinjauan",
-    ]);
+    expect(labels("reviewer")).toEqual(["Dasbor", "Antrean tinjauan"]);
   });
 
   it("gives viewer reports but no admin pages", () => {
-    expect(labels("viewer")).toEqual(["Dasbor", "Suite dan kasus", "Laporan"]);
+    expect(labels("viewer")).toEqual(["Dasbor", "Laporan"]);
   });
 
   it("gives admin every page", () => {
@@ -34,6 +30,20 @@ describe("navForRole", () => {
       "Konteks",
     ]);
   });
+  it("offers the suites page to author and admin only", () => {
+    // Arrange
+    const hrefs = (role: Role) =>
+      navForRole(role).flatMap((group) => group.items.map((item) => item.href));
+
+    // Act
+    const withSuites = (["author", "reviewer", "admin", "viewer"] as const).filter((role) =>
+      hrefs(role).includes("/suites"),
+    );
+
+    // Assert
+    expect(withSuites).toEqual(["author", "admin"]);
+  });
+
   it("offers the review monitoring page to the admin only", () => {
     const hrefs = (role: Role) =>
       navForRole(role).flatMap((group) => group.items.map((item) => item.href));

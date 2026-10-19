@@ -11,7 +11,7 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Konteks",
     items: [
       { label: "Dasbor", href: "/dashboard", roles: ALL },
-      { label: "Suite dan kasus", href: "/suites", roles: ALL },
+      { label: "Suite dan kasus", href: "/suites", roles: ["author", "admin"] },
       {
         label: "Antrean tinjauan",
         href: "/reviews",
