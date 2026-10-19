@@ -28,11 +28,28 @@ describe("AuditTable", () => {
   it("shows the time in WIB, the actor, the action, and the object", () => {
     render(<AuditTable entries={[entry()]} onRowClick={vi.fn()} />);
 
-    const row = screen.getByRole("row", { name: /case.updated/ });
+    const row = screen.getByRole("row", { name: /Kasus diubah/ });
     expect(row).toHaveTextContent("6 Okt 2026, 10:30 WIB");
     expect(row).toHaveTextContent("Herdayani");
     expect(row).toHaveTextContent("Kasus");
     expect(row).toHaveTextContent("c1");
+  });
+
+  // Positive: F-06, readers outside the team cannot read system codes.
+  it("shows the action in Indonesian instead of the system code", () => {
+    render(<AuditTable entries={[entry({ action: "case.submitted" })]} onRowClick={vi.fn()} />);
+
+    const row = screen.getByRole("row", { name: /Kasus diajukan review/ });
+    expect(row).not.toHaveTextContent("case.submitted");
+  });
+
+  // Negative
+  it("shows the raw code for an action it does not know", () => {
+    render(
+      <AuditTable entries={[entry({ action: "measurement.started" })]} onRowClick={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("row", { name: /measurement\.started/ })).toBeInTheDocument();
   });
 
   // Positive
@@ -42,7 +59,7 @@ describe("AuditTable", () => {
     const only = entry();
     render(<AuditTable entries={[only]} onRowClick={onRowClick} />);
 
-    await user.click(screen.getByRole("row", { name: /case.updated/ }));
+    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
 
     expect(onRowClick).toHaveBeenCalledWith(only);
   });
@@ -56,7 +73,7 @@ describe("AuditTable", () => {
       />,
     );
 
-    expect(screen.getByRole("row", { name: /case.updated/ })).toHaveTextContent(
+    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(
       "measurement_session",
     );
   });
@@ -68,7 +85,7 @@ describe("AuditTable", () => {
       <AuditTable entries={[entry({ entity_id: id })]} onRowClick={vi.fn()} />,
     );
 
-    expect(screen.getByRole("row", { name: /case.updated/ })).toHaveTextContent(id);
+    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(id);
     expect(container.querySelector("img")).toBeNull();
   });
 
@@ -86,6 +103,6 @@ describe("AuditTable", () => {
     onRowClick={vi.fn()}
     />,
   );
-  expect(screen.getByRole("row", { name: /case.updated/ })).toHaveTextContent("Sistem");
+  expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent("Sistem");
   });
 });

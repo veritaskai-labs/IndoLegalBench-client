@@ -76,6 +76,23 @@ describe("AuditDetailPanel", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 
+  // Positive: F-06
+  it("titles the panel with the Indonesian action and keeps the code for reference", () => {
+    render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "Kasus diubah" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Detail catatan audit" })).toHaveTextContent(
+      "case.updated",
+    );
+  });
+
+  // Negative
+  it("titles the panel with the raw code for an action it does not know", () => {
+    render(<AuditDetailPanel entry={entry({ action: "measurement.started" })} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("heading", { name: "measurement.started" })).toBeInTheDocument();
+  });
+
   it("shows the actor name, not the id", () => {
     render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
 
