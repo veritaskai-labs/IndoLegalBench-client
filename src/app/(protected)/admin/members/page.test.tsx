@@ -103,3 +103,82 @@ describe("AdminMembersPage", () => {
     expect(alert).not.toHaveTextContent("UNKNOWN_ERROR");
   });
 });
+
+// Pre-UAT F-08 (TC-30): akun yang dinonaktifkan harus bisa diaktifkan lagi.
+describe("AdminMembersPage, reactivating a member", () => {
+  const INACTIVE: User = { ...AUTHOR, is_active: false };
+
+  async function openReactivate() {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValueOnce([ADMIN, INACTIVE]);
+    render(<AdminMembersPage />);
+    await userEvent.click(await screen.findByLabelText("Toggle aktif Budi Author"));
+  }
+
+  // Positif
+  it("unlocks the switch on an inactive row", async () => {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValue([ADMIN, INACTIVE]);
+
+    render(<AdminMembersPage />);
+
+    expect(await screen.findByLabelText("Toggle aktif Budi Author")).toBeEnabled();
+    expect(screen.getByLabelText("Ubah peran Budi Author")).toBeDisabled();
+  });
+
+  it("asks first, calls the activate endpoint, then shows the row as active", async () => {
+    await openReactivate();
+    expect(screen.getByRole("heading", { name: "Aktifkan kembali akun ini?" })).toBeInTheDocument();
+    apiFetchMock.mockResolvedValueOnce({ ...INACTIVE, is_active: true });
+
+    await userEvent.click(screen.getByRole("button", { name: "Aktifkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}/activate`, {
+      method: "POST",
+    });
+    await waitFor(() => expect(screen.getByLabelText("Ubah peran Budi Author")).toBeEnabled());
+    expect(screen.queryByRole("heading", { name: "Aktifkan kembali akun ini?" })).toBeNull();
+  });
+
+  it("still opens the deactivate confirmation for an active row", async () => {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValueOnce([ADMIN, AUTHOR]);
+    render(<AdminMembersPage />);
+
+    await userEvent.click(await screen.findByLabelText("Toggle aktif Budi Author"));
+
+    expect(screen.getByRole("heading", { name: "Nonaktifkan Pengguna?" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Aktifkan kembali akun ini?" })).toBeNull();
+  });
+
+  // Negatif
+  it("keeps the row inactive and explains why when the server refuses", async () => {
+    await openReactivate();
+    apiFetchMock.mockRejectedValueOnce(new ApiError(404, "not_found"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Aktifkan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Pengguna tidak ditemukan.");
+    expect(screen.getByLabelText("Ubah peran Budi Author")).toBeDisabled();
+  });
+
+  it("closes without calling the server when the admin clicks Batal", async () => {
+    await openReactivate();
+
+    await userEvent.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(apiFetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("heading", { name: "Aktifkan kembali akun ini?" })).toBeNull();
+  });
+
+  // Corner
+  it("does nothing when the locked own row is clicked", async () => {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValueOnce([ADMIN, AUTHOR]);
+    render(<AdminMembersPage />);
+
+    await userEvent.click(await screen.findByLabelText("Toggle aktif Ani Admin"));
+
+    expect(screen.queryByRole("heading")).toBeNull();
+  });
+});
