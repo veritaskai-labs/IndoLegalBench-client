@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/apiClient";
 const MESSAGES: Record<string, string> = {
   CANNOT_DEACTIVATE_SELF: "Anda tidak dapat menonaktifkan akun Anda sendiri.",
   CANNOT_CHANGE_OWN_ROLE: "Anda tidak dapat mengubah peran akun Anda sendiri.",
+  FORBIDDEN: "Anda tidak memiliki akses untuk tindakan ini.",
   not_found: "Pengguna tidak ditemukan. Muat ulang daftar lalu coba lagi.",
   validation_error: "Data yang dikirim tidak valid.",
 };

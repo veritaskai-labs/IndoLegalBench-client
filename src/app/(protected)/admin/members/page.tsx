@@ -7,9 +7,12 @@ import { apiFetch } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { User, UserCreateRequest, StatusFilter } from "@/types/user-management";
 import { CreateUserModal } from "@/components/admin/CreateUserModal";
+import { ActivateConfirmModal } from "@/components/admin/ActivateConfirmModal";
 import { DeactivateConfirmModal } from "@/components/admin/DeactivateConfirmModal";
 import { FilterPopover } from "@/components/admin/FilterPopover";
 import { adminErrorMessage } from "@/components/admin/errorMessage";
+import { memberToggleAction, replaceMember } from "@/lib/members/memberToggle";
+import { activateUser } from "@/lib/userApi";
 
 const LOAD_ERROR = "Gagal memuat daftar anggota.";
 const SELF_LOCKED = "Anda tidak dapat mengubah akun Anda sendiri.";
@@ -41,6 +44,7 @@ export default function AdminMembersPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deactivatingUser, setDeactivatingUser] = useState<User | null>(null);
+  const [activatingUser, setActivatingUser] = useState<User | null>(null);
 
   // 2. Hook RBAC: Redirect jika bukan admin
   useEffect(() => {
@@ -142,16 +146,19 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleConfirmDeactivate = async () => {
-    if (!deactivatingUser) return;
-
-    await apiFetch<User>(`/admin/users/${deactivatingUser.id}/deactivate`, {
+  const handleConfirmDeactivate = async (target: User) => {
+    await apiFetch<User>(`/admin/users/${target.id}/deactivate`, {
       method: "POST",
     });
 
     setUsers((prev) =>
-      prev.map((u) => (u.id === deactivatingUser.id ? { ...u, is_active: false } : u))
+      prev.map((u) => (u.id === target.id ? { ...u, is_active: false } : u))
     );
+  };
+
+  const handleConfirmActivate = async (target: User) => {
+    const updated = await activateUser(target.id);
+    setUsers((prev) => replaceMember(prev, updated));
   };
 
   // 6. Early returns setelah semua hook
@@ -259,7 +266,7 @@ export default function AdminMembersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
+            {isLoading && (
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
                   <td className="py-4 pl-6 pr-2"><div className="h-3.5 w-20 bg-slate-200 rounded" /></td>
@@ -269,7 +276,8 @@ export default function AdminMembersPage() {
                   <td className="py-4 px-6 text-right"><div className="inline-block h-5 w-9 bg-slate-200 rounded-full" /></td>
                 </tr>
               ))
-            ) : displayedUsers.length === 0 ? (
+            )}
+            {!isLoading && displayedUsers.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-400">
                   <p className="font-medium text-slate-600 mb-1">Tidak ada anggota ditemukan</p>
@@ -280,12 +288,14 @@ export default function AdminMembersPage() {
                   </p>
                 </td>
               </tr>
-            ) : (
+            )}
+            {!isLoading && displayedUsers.length > 0 && (
               displayedUsers.map((user) => {
                 // Backend menolak ubah peran / nonaktifkan akun sendiri
                 // (CANNOT_CHANGE_OWN_ROLE, CANNOT_DEACTIVATE_SELF), jadi
                 // kontrolnya dikunci di sini juga.
                 const isSelf = user.id === currentUserId;
+                const toggleAction = memberToggleAction(user, currentUserId);
                 return (
                 <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="py-3 pl-6 pr-2 font-mono text-slate-500 whitespace-nowrap">
@@ -316,14 +326,15 @@ export default function AdminMembersPage() {
                     <button
                       type="button"
                       aria-label={`Toggle aktif ${user.name}`}
-                      disabled={!user.is_active || isSelf}
+                      disabled={toggleAction === null}
                       title={isSelf ? SELF_LOCKED : undefined}
                       onClick={() => {
-                        if (user.is_active && !isSelf) setDeactivatingUser(user);
+                        if (toggleAction === "deactivate") setDeactivatingUser(user);
+                        if (toggleAction === "activate") setActivatingUser(user);
                       }}
                       className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:cursor-not-allowed ${
-                        user.is_active ? "bg-indigo-600 cursor-pointer" : "bg-slate-200"
-                      } ${isSelf ? "opacity-50" : ""}`}
+                        user.is_active ? "bg-indigo-600" : "bg-slate-200"
+                      } ${toggleAction ? "cursor-pointer" : "opacity-50"}`}
                     >
                       <span
                         className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
@@ -351,6 +362,13 @@ export default function AdminMembersPage() {
         isOpen={!!deactivatingUser}
         onClose={() => setDeactivatingUser(null)}
         onConfirm={handleConfirmDeactivate}
+      />
+
+      <ActivateConfirmModal
+        user={activatingUser}
+        isOpen={!!activatingUser}
+        onClose={() => setActivatingUser(null)}
+        onConfirm={handleConfirmActivate}
       />
     </div>
   );
