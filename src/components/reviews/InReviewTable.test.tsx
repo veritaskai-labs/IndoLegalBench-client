@@ -145,6 +145,20 @@ describe("InReviewTable", () => {
     expect(screen.getByText("Sudah diputuskan")).toBeInTheDocument();
   });
 
+  // corner: ronde versi baru bisa terbuka sebelum dua reviewer terpasang (awaiting_assignment).
+  it("says so when the round has no reviewer yet", () => {
+    const queued = row({
+      newVersion: 2,
+      review: review({ status: "awaiting_assignment", reviewers: [] }),
+    });
+
+    render(<InReviewTable rows={[queued]} onReplace={vi.fn()} />);
+
+    expect(screen.getByText("Belum ada reviewer")).toBeInTheDocument();
+    expect(screen.getByText("Menunggu penugasan")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
   // Negatif
   it("says so when the case has no round yet", () => {
     render(<InReviewTable rows={[row({ review: null })]} />);
