@@ -2,16 +2,13 @@
 
 import { MemberConfirmModal, type MemberConfirmModalProps } from "./MemberConfirmModal";
 
-export function ActivateConfirmModal(props: MemberConfirmModalProps) {
+export function ActivateConfirmModal(props: Readonly<MemberConfirmModalProps>) {
   return (
     <MemberConfirmModal
       {...props}
       title="Aktifkan kembali akun ini?"
-      question={(name, user) => (
-        <>
-          Akun {name} ({user.email}) akan dapat masuk kembali.
-        </>
-      )}
+      questionBefore="Akun "
+      questionAfter=" akan dapat masuk kembali."
       note="Peran akun tetap seperti sebelum dinonaktifkan. Penugasan reviewer yang dibatalkan saat penonaktifan tidak dipulihkan; tugaskan ulang dari halaman pemantauan review bila perlu."
       confirmLabel="Aktifkan"
       failureMessage="Gagal mengaktifkan kembali akun."

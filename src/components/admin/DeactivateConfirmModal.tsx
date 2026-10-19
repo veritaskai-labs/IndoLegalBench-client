@@ -2,16 +2,13 @@
 
 import { MemberConfirmModal, type MemberConfirmModalProps } from "./MemberConfirmModal";
 
-export function DeactivateConfirmModal(props: MemberConfirmModalProps) {
+export function DeactivateConfirmModal(props: Readonly<MemberConfirmModalProps>) {
   return (
     <MemberConfirmModal
       {...props}
       title="Nonaktifkan Pengguna?"
-      question={(name, user) => (
-        <>
-          Apakah Anda yakin ingin menonaktifkan akun {name} ({user.email})?
-        </>
-      )}
+      questionBefore="Apakah Anda yakin ingin menonaktifkan akun "
+      questionAfter="?"
       note="Akun tidak akan dapat masuk kembali dan seluruh sesi aktifnya akan dihapus. Riwayat kontribusi kasus dan tinjauan tetap tercatat atas nama pengguna ini."
       confirmLabel="Nonaktifkan"
       failureMessage="Gagal menonaktifkan akun."

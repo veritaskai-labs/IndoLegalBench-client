@@ -266,7 +266,7 @@ export default function AdminMembersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
+            {isLoading && (
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
                   <td className="py-4 pl-6 pr-2"><div className="h-3.5 w-20 bg-slate-200 rounded" /></td>
@@ -276,7 +276,8 @@ export default function AdminMembersPage() {
                   <td className="py-4 px-6 text-right"><div className="inline-block h-5 w-9 bg-slate-200 rounded-full" /></td>
                 </tr>
               ))
-            ) : displayedUsers.length === 0 ? (
+            )}
+            {!isLoading && displayedUsers.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-400">
                   <p className="font-medium text-slate-600 mb-1">Tidak ada anggota ditemukan</p>
@@ -287,7 +288,8 @@ export default function AdminMembersPage() {
                   </p>
                 </td>
               </tr>
-            ) : (
+            )}
+            {!isLoading && displayedUsers.length > 0 && (
               displayedUsers.map((user) => {
                 // Backend menolak ubah peran / nonaktifkan akun sendiri
                 // (CANNOT_CHANGE_OWN_ROLE, CANNOT_DEACTIVATE_SELF), jadi

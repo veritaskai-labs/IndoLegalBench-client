@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import type { User } from "@/types/user-management";
 import { adminErrorMessage } from "./errorMessage";
 
@@ -14,7 +14,9 @@ export interface MemberConfirmModalProps {
 
 interface MemberConfirmCopy {
   title: string;
-  question: (name: ReactNode, user: User) => ReactNode;
+  /** Teks sebelum dan sesudah "nama (email)" di kalimat pertanyaan. */
+  questionBefore: string;
+  questionAfter: string;
   note: string;
   confirmLabel: string;
   failureMessage: string;
@@ -28,12 +30,13 @@ export function MemberConfirmModal({
   onClose,
   onConfirm,
   title,
-  question,
+  questionBefore,
+  questionAfter,
   note,
   confirmLabel,
   failureMessage,
   confirmClassName,
-}: MemberConfirmModalProps & MemberConfirmCopy) {
+}: Readonly<MemberConfirmModalProps & MemberConfirmCopy>) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -52,14 +55,16 @@ export function MemberConfirmModal({
     }
   };
 
-  const name = <span className="font-semibold text-slate-900">{user.name}</span>;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl border border-slate-100 text-center">
         <h3 className="text-base font-bold text-slate-900 mb-2">{title}</h3>
 
-        <p className="text-xs text-slate-600 mb-4 leading-relaxed">{question(name, user)}</p>
+        <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+          {questionBefore}
+          <span className="font-semibold text-slate-900">{user.name}</span> ({user.email})
+          {questionAfter}
+        </p>
 
         <p className="text-[11px] text-slate-500 mb-6 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-left">
           {note}
