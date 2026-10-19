@@ -8,7 +8,8 @@ export interface MemberConfirmModalProps {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => Promise<void>;
+  /** Menerima anggota yang sedang dikonfirmasi, jadi pemanggil tidak perlu cek null. */
+  onConfirm: (user: User) => Promise<void>;
 }
 
 interface MemberConfirmCopy {
@@ -42,7 +43,7 @@ export function MemberConfirmModal({
     try {
       setIsProcessing(true);
       setErrorMessage(null);
-      await onConfirm();
+      await onConfirm(user);
       onClose();
     } catch (err: unknown) {
       setErrorMessage(adminErrorMessage(err, failureMessage));

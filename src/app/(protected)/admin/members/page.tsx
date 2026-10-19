@@ -146,22 +146,18 @@ export default function AdminMembersPage() {
     }
   };
 
-  const handleConfirmDeactivate = async () => {
-    if (!deactivatingUser) return;
-
-    await apiFetch<User>(`/admin/users/${deactivatingUser.id}/deactivate`, {
+  const handleConfirmDeactivate = async (target: User) => {
+    await apiFetch<User>(`/admin/users/${target.id}/deactivate`, {
       method: "POST",
     });
 
     setUsers((prev) =>
-      prev.map((u) => (u.id === deactivatingUser.id ? { ...u, is_active: false } : u))
+      prev.map((u) => (u.id === target.id ? { ...u, is_active: false } : u))
     );
   };
 
-  const handleConfirmActivate = async () => {
-    if (!activatingUser) return;
-
-    const updated = await activateUser(activatingUser.id);
+  const handleConfirmActivate = async (target: User) => {
+    const updated = await activateUser(target.id);
     setUsers((prev) => replaceMember(prev, updated));
   };
 
