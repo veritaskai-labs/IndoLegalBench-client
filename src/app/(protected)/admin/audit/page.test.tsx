@@ -77,7 +77,7 @@ describe("AuditPage (SCRUM-141)", () => {
     render(<AuditPageComponent />);
     await screen.findByText("ILB-PT-0142");
 
-    await user.click(screen.getByRole("row", { name: /case.updated/ }));
+    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
 
     const panel = await screen.findByRole("dialog", { name: "Detail catatan audit" });
     expect(panel).toHaveTextContent("Judul lama");
