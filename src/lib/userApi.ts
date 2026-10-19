@@ -9,6 +9,7 @@ import type { User } from "@/types/user-management";
 export function listActiveUsers(): Promise<User[]> {
   return apiFetch<User[]>("/admin/users?is_active=true");
 }
+
 /**
  * POST /admin/users/{id}/activate. Admin saja.
  * Membatalkan penonaktifan (Pre-UAT F-08). Penugasan reviewer yang
