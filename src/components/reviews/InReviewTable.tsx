@@ -8,7 +8,7 @@ import {
   newVersionLabel,
   verdictLabel,
 } from "@/lib/reviews/reviewLabels";
-import type { ReviewerSlot } from "@/types/reviewAdmin";
+import type { CaseReview, ReviewerSlot } from "@/types/reviewAdmin";
 
 type Props = {
   rows: InReviewRow[];
@@ -68,13 +68,13 @@ function InReviewTableRow({
         )}
       </td>
       <td className="py-3 px-4 text-slate-700">
-        {review === null ? "—" : `Ronde ${review.round_no}`}
+        Ronde {review.round_no}
       </td>
       <td className="py-3 px-4 text-slate-700">
-        {review === null ? "—" : ROUND_STATUS_LABEL[review.status]}
+        {ROUND_STATUS_LABEL[review.status]}
       </td>
       <td className="py-3 px-4 text-slate-700">
-        {review?.decision ? ROUND_DECISION_LABEL[review.decision] : "Belum diputuskan"}
+        {review.decision ? ROUND_DECISION_LABEL[review.decision] : "Belum diputuskan"}
       </td>
       <td className="py-3 px-4 text-slate-700">
         <ReviewerCell
@@ -90,13 +90,9 @@ function ReviewerCell({
   review,
   onReplace,
 }: Readonly<{
-  review: CaseReviewOrNull;
+  review: CaseReview;
   onReplace?: (slot: ReviewerSlot) => void;
 }>) {
-  if (review === null) {
-    return <span className="text-slate-500">Belum ada putaran review</span>;
-  }
-
   if (review.reviewers.length === 0) {
     return <span className="text-slate-500">Belum ada reviewer</span>;
   }
@@ -131,4 +127,3 @@ function ReviewerCell({
     </ul>
   );
 }
-type CaseReviewOrNull = InReviewRow["review"];

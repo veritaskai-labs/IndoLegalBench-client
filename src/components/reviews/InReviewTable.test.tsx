@@ -32,15 +32,7 @@ function review(overrides: Partial<CaseReview> = {}): CaseReview {
 
 function row(overrides: Partial<InReviewRow> = {}): InReviewRow {
   return {
-    case: {
-      id: "c1",
-      case_code: "ILB-PT-0142",
-      title: "Sengketa tanah warisan",
-      split_tag: "dev",
-      status: "in_review",
-      completeness_pct: 100,
-      updated_at: "2026-10-16T03:00:00Z",
-    },
+    case: { id: "c1", case_code: "ILB-PT-0142", title: "Sengketa tanah warisan" },
     review: review(),
     newVersion: null,
     ...overrides,
@@ -157,13 +149,6 @@ describe("InReviewTable", () => {
     expect(screen.getByText("Belum ada reviewer")).toBeInTheDocument();
     expect(screen.getByText("Menunggu penugasan")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  // Negatif
-  it("says so when the case has no round yet", () => {
-    render(<InReviewTable rows={[row({ review: null })]} />);
-
-    expect(screen.getByText("Belum ada putaran review")).toBeInTheDocument();
   });
 
   // corner
