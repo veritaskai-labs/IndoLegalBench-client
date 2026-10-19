@@ -5,6 +5,7 @@ import {
   ROUND_DECISION_LABEL,
   ROUND_STATUS_LABEL,
   VERDICT_DECISION_LABEL,
+  newVersionLabel,
   verdictLabel,
 } from "./reviewLabels";
 
@@ -87,5 +88,16 @@ describe("verdictLabel", () => {
   // Negatif
   it("says not yet when there is no verdict", () => {
     expect(verdictLabel(null)).toBe("Belum menilai");
+  });
+});
+describe("newVersionLabel", () => {
+  // Positif (F-02): Admin tahu yang dinilai versi baru, bukan kasus baru.
+  it("names the version in review and says the approved one still holds", () => {
+    expect(newVersionLabel(2)).toBe("Versi 2 · versi yang disetujui tetap berlaku");
+  });
+
+  // Negatif: kasus yang baru pertama kali direview tidak diberi penanda.
+  it("gives no label to a case in its first review", () => {
+    expect(newVersionLabel(null)).toBeNull();
   });
 });

@@ -42,6 +42,7 @@ function row(overrides: Partial<InReviewRow> = {}): InReviewRow {
       updated_at: "2026-10-16T03:00:00Z",
     },
     review: review(),
+    newVersion: null,
     ...overrides,
   };
 }
@@ -107,6 +108,22 @@ describe("InReviewTable", () => {
 
     expect(screen.getByText("Minta revisi")).toBeInTheDocument();
     expect(screen.getByText("Pasal 1320 belum dikutip.")).toBeInTheDocument();
+  });
+
+  // Positif (F-02)
+  it("marks a new version of an approved case", () => {
+    render(<InReviewTable rows={[row({ newVersion: 2 })]} />);
+
+    expect(
+      screen.getByText("Versi 2 · versi yang disetujui tetap berlaku"),
+    ).toBeInTheDocument();
+  });
+
+  // Negatif
+  it("adds no version mark to a case in its first review", () => {
+    render(<InReviewTable rows={[row()]} />);
+
+    expect(screen.queryByText(/versi yang disetujui/)).not.toBeInTheDocument();
   });
 
   // corner

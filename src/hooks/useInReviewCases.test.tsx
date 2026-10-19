@@ -30,6 +30,7 @@ const ROW: InReviewRow = {
     decided_at: null,
     reviewers: [],
   },
+  newVersion: null,
 };
 
 /** Ditangkap di sini supaya penolakan tidak jadi unhandled rejection di runner. */
