@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "@/lib/apiClient";
 import type { AuditFilter } from "@/types/audit";
-import { auditExportUrl, listAuditActors } from "./auditApi";
+import { auditExportUrl, listAuditActors, listAuditLogs } from "./auditApi";
 
 vi.mock("@/lib/apiClient", () => ({
   apiFetch: vi.fn(),
@@ -40,5 +40,30 @@ describe("auditExportUrl", () => {
 
     expect(q.get("from")).toBe("2026-07-09T00:00:00");
     expect(q.get("to")).toBe("2026-10-07T23:59:59");
+  });
+});
+
+describe("case code search (F-06)", () => {
+  // Positive
+  it("sends the case code the reader typed, without surrounding spaces", () => {
+    const q = new URLSearchParams(
+      auditExportUrl({ ...FILTER, case_code: "  UAT-PHK-001 " }, "csv").split("?")[1],
+    );
+
+    expect(q.get("case_code")).toBe("UAT-PHK-001");
+  });
+
+  // Positive
+  it("sends the case code on the list request too", async () => {
+    await listAuditLogs({ ...FILTER, case_code: "PHK" });
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("case_code=PHK"));
+  });
+
+  // Negative
+  it.each([undefined, "", "   "])("leaves the case code out when it is %j", (code) => {
+    const q = new URLSearchParams(auditExportUrl({ ...FILTER, case_code: code }, "csv").split("?")[1]);
+
+    expect(q.has("case_code")).toBe(false);
   });
 });

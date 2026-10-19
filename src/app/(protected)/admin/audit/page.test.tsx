@@ -125,6 +125,26 @@ describe("AuditPage (SCRUM-141)", () => {
     );
   });
 
+  // Positive: F-06
+  it("searches by case code and downloads the same result", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue(page([entry()]));
+    render(<AuditPageComponent />);
+    await screen.findByText("ILB-PT-0142");
+
+    await user.type(screen.getByLabelText("Kode kasus"), "UAT-PHK-001{Enter}");
+
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ case_code: "UAT-PHK-001", page: 1 }),
+      ),
+    );
+    expect(await screen.findByRole("link", { name: "Unduh CSV" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("case_code=UAT-PHK-001"),
+    );
+  });
+
   // Corner
   it("says there is nothing to show when the filter matches no record", async () => {
     list.mockResolvedValue(page([]));

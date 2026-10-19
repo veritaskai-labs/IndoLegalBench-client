@@ -52,6 +52,52 @@ describe("AuditTable", () => {
     expect(screen.getByRole("row", { name: /measurement\.started/ })).toBeInTheDocument();
   });
 
+  // Positive: F-06
+  it("shows the readable object name instead of the id", () => {
+    render(
+      <AuditTable
+        entries={[entry({ entity_id: "7bc7f6f3-uuid", entity_label: "UAT-PHK-001" })]}
+        onRowClick={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    expect(row).toHaveTextContent("Kasus UAT-PHK-001");
+    expect(row).not.toHaveTextContent("7bc7f6f3-uuid");
+  });
+
+  // Negative: the object is gone, so the id is all there is.
+  it("falls back to the id when there is no readable name", () => {
+    render(
+      <AuditTable
+        entries={[entry({ entity_id: "7bc7f6f3-uuid", entity_label: null })]}
+        onRowClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(
+      "Kasus 7bc7f6f3-uuid",
+    );
+  });
+
+  // Corner: a server without the field yet.
+  it("falls back to the id when the server does not send a name", () => {
+    render(<AuditTable entries={[entry({ entity_id: "7bc7f6f3-uuid" })]} onRowClick={vi.fn()} />);
+
+    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent("7bc7f6f3-uuid");
+  });
+
+  // Security: suite names are typed by users.
+  it("shows markup in the object name as plain text", () => {
+    const name = '<img src=x onerror="alert(1)">';
+    const { container } = render(
+      <AuditTable entries={[entry({ entity_label: name })]} onRowClick={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(name);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
   // Positive
   it("hands the whole entry back when a row is clicked", async () => {
     const user = userEvent.setup();

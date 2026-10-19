@@ -75,4 +75,80 @@ describe("AuditFilterBar", () => {
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ actor_id: undefined }));
   });
   
+
+  // Positive: F-06
+  it("hands over the case code when the reader presses Enter", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup();
+
+    await user.type(screen.getByLabelText("Kode kasus"), "UAT-PHK-001{Enter}");
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ case_code: "UAT-PHK-001" }),
+    );
+  });
+
+  // Positive
+  it("hands over the case code when the reader leaves the field", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup();
+
+    await user.type(screen.getByLabelText("Kode kasus"), "  PHK ");
+    await user.tab();
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ case_code: "PHK" }));
+  });
+
+  // Positive
+  it("does not search on every keystroke", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup();
+
+    await user.type(screen.getByLabelText("Kode kasus"), "PHK");
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // Negative
+  it("drops the case code again when the reader clears the field", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup({ ...FILTER, case_code: "PHK" });
+
+    await user.clear(screen.getByLabelText("Kode kasus"));
+    await user.keyboard("{Enter}");
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ case_code: undefined }));
+  });
+
+  // Corner
+  it("does not ask again when the code did not change", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup({ ...FILTER, case_code: "PHK" });
+
+    await user.click(screen.getByLabelText("Kode kasus"));
+    await user.keyboard("{Enter}");
+    await user.tab();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // Corner: spaces only count as empty.
+  it("does not search for spaces only", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup();
+
+    await user.type(screen.getByLabelText("Kode kasus"), "   {Enter}");
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // Corner: the server accepts at most 64 characters.
+  it("shows the current code and stops at 64 characters", () => {
+    setup({ ...FILTER, case_code: "PHK" });
+
+    const input = screen.getByLabelText("Kode kasus");
+    expect(input).toHaveValue("PHK");
+    expect(input).toHaveAttribute("maxLength", "64");
+  });
 });

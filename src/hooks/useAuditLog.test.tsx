@@ -75,6 +75,23 @@ describe("useAuditLog", () => {
     );
   });
 
+  // Positive: F-06
+  it("asks with the case code and goes back to the first page", async () => {
+    list.mockResolvedValue(page([]));
+    const { result } = renderHook(() => useAuditLog(TODAY));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(1));
+    act(() => result.current.setPage(3));
+
+    act(() => result.current.setFilter({ case_code: "UAT-PHK-001" }));
+
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ case_code: "UAT-PHK-001", page: 1 }),
+      ),
+    );
+    expect(result.current.query.case_code).toBe("UAT-PHK-001");
+  });
+
   // Negative
   it("reports an error when the request fails, and loads again on retry", async () => {
     list.mockRejectedValueOnce(new Error("boom"));
