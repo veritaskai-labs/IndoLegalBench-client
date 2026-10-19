@@ -23,6 +23,8 @@ function toQuery(filter: AuditFilter | Omit<AuditFilter, "page">): URLSearchPara
   if (filter.entity_type) q.set("entity_type", filter.entity_type);
   if (filter.actor_id) q.set("actor_id", filter.actor_id);
   if (filter.case_id) q.set("case_id", filter.case_id);
+  const caseCode = filter.case_code?.trim();
+  if (caseCode) q.set("case_code", caseCode);
   return q;
 }
 

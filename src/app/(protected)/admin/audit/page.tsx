@@ -36,6 +36,7 @@ export default function AuditPage() {
     to: range.to,
     entity_type: query.entity_type,
     actor_id: query.actor_id,
+    case_code: query.case_code,
   };
 
   const lastPage = state.status === "ready" ? Math.ceil(state.total / state.size) : 1;

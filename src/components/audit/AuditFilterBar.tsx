@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { AuditActor } from "@/lib/audit/auditApi";
 import { ENTITY_LABEL } from "@/lib/audit/entityLabels";
 import type { AuditEntityType, AuditFilter } from "@/types/audit";
@@ -18,8 +19,16 @@ const FIELD =
   "focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
 export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Props) {
+  // Kode kasus baru dicari saat Enter atau keluar dari kolom, bukan per ketikan.
+  const [caseCode, setCaseCode] = useState(value.case_code ?? "");
+
   function patch(next: Partial<AuditFilter>) {
     onChange({ ...value, ...next });
+  }
+
+  function commitCaseCode() {
+    const next = caseCode.trim() || undefined;
+    if (next !== value.case_code) patch({ case_code: next });
   }
 
   return (
@@ -92,6 +101,25 @@ export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Pr
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="audit-case-code" className="text-xs font-medium text-slate-600">
+          Kode kasus
+        </label>
+        <input
+          id="audit-case-code"
+          type="search"
+          className={FIELD}
+          placeholder="mis. UAT-PHK-001"
+          maxLength={64}
+          value={caseCode}
+          onChange={(e) => setCaseCode(e.target.value)}
+          onBlur={commitCaseCode}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitCaseCode();
+          }}
+        />
       </div>
     </div>
   );

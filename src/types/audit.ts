@@ -12,6 +12,8 @@ export type AuditFilter = {
   entity_type?: AuditEntityType;
   actor_id?: string;
   case_id?: string;
+  /** Sebagian kode kasus (F-06). Server mencocokkan tanpa peduli kapital. */
+  case_code?: string;
   page: number;
   size?: number;
 };

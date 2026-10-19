@@ -1,6 +1,7 @@
 "use client";
 
 import { auditActionLabel } from "@/lib/audit/actionLabels";
+import { entityLabel } from "@/lib/audit/entityLabels";
 import { formatWib } from "@/lib/audit/formatWib";
 import type { AuditEntry } from "@/types/audit";
 
@@ -35,7 +36,9 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
           </h2>
           <p className="mt-1 font-mono text-xs text-slate-500">{entry.action}</p>
           <p className="mt-1 text-xs text-slate-500">
-            {formatWib(entry.occurred_at)} · {entry.actor_name ?? "Sistem"} · {entry.entity_id}
+            {formatWib(entry.occurred_at)} · {entry.actor_name ?? "Sistem"} ·{" "}
+            {entry.entity_label && `${entityLabel(entry.entity_type)} ${entry.entity_label} · `}
+            {entry.entity_id}
           </p>
         </div>
         <button
