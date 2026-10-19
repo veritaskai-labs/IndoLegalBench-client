@@ -5,6 +5,7 @@ import {
   ASSIGNMENT_STATUS_LABEL,
   ROUND_DECISION_LABEL,
   ROUND_STATUS_LABEL,
+  newVersionLabel,
   verdictLabel,
 } from "@/lib/reviews/reviewLabels";
 import type { ReviewerSlot } from "@/types/reviewAdmin";
@@ -41,7 +42,10 @@ export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
         </tr>
       </thead>
       <tbody>
-        {rows.map(({ case: item, review }) => (
+        {rows.map((row) => {
+          const { case: item, review } = row;
+          const versionMark = newVersionLabel(row.newVersion);
+          return (
           <tr
             key={item.id}
             className="border-b border-slate-100 align-top hover:bg-slate-50"
@@ -49,7 +53,12 @@ export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
             <td className="py-3 px-4 font-mono text-xs text-slate-700">
               {item.case_code}
             </td>
-            <td className="py-3 px-4 text-slate-900">{item.title}</td>
+            <td className="py-3 px-4 text-slate-900">
+              {item.title}
+              {versionMark === null ? null : (
+                <div className="mt-1 text-xs text-indigo-700">{versionMark}</div>
+              )}
+            </td>
             <td className="py-3 px-4 text-slate-700">
               {review === null ? "—" : `Ronde ${review.round_no}`}
             </td>
@@ -65,12 +74,13 @@ export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
               <ReviewerCell
               review={review}
               onReplace={
-                onReplace ? (slot) => onReplace(slot, { case: item, review }) : undefined
+                onReplace ? (slot) => onReplace(slot, row) : undefined
                 }
               />
             </td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );
