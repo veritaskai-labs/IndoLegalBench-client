@@ -1,5 +1,6 @@
 "use client";
 
+import { auditActionLabel } from "@/lib/audit/actionLabels";
 import { formatWib } from "@/lib/audit/formatWib";
 import { entityLabel } from "@/lib/audit/entityLabels";
 import type { AuditEntry } from "@/types/audit";
@@ -29,7 +30,7 @@ export function AuditTable({ entries, onRowClick }: Props) {
           >
             <td className="py-3 px-4 text-slate-600">{formatWib(item.occurred_at)}</td>
             <td className="py-3 px-4 text-slate-900">{item.actor_name ?? "Sistem"}</td>
-            <td className="py-3 px-4 font-mono text-xs text-slate-700">{item.action}</td>
+            <td className="py-3 px-4 text-slate-700">{auditActionLabel(item.action)}</td>
             <td className="py-3 px-4 text-slate-700">
               {entityLabel(item.entity_type)}{" "}
               <span className="font-mono text-xs text-slate-500">{item.entity_id}</span>
