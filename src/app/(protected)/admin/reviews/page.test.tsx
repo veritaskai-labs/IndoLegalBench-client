@@ -63,6 +63,7 @@ const IN_REVIEW: InReviewRow = {
       },
     ],
   },
+  newVersion: null,
 };
 
 const queueMock = vi.mocked(listNeedsReassignment);

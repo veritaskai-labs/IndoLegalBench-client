@@ -57,3 +57,7 @@ export function verdictLabel(
 ): string {
   return verdict ? VERDICT_DECISION_LABEL[verdict.decision] : "Belum menilai";
 }
+/** F-02: versi baru kasus yang sudah disetujui. Versi lama tetap berlaku sampai versi ini diputuskan. */
+export function newVersionLabel(version: number | null): string | null {
+  return version === null ? null : `Versi ${version} · versi yang disetujui tetap berlaku`;
+}

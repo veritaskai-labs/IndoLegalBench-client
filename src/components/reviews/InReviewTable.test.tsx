@@ -42,6 +42,7 @@ function row(overrides: Partial<InReviewRow> = {}): InReviewRow {
       updated_at: "2026-10-16T03:00:00Z",
     },
     review: review(),
+    newVersion: null,
     ...overrides,
   };
 }
@@ -109,6 +110,22 @@ describe("InReviewTable", () => {
     expect(screen.getByText("Pasal 1320 belum dikutip.")).toBeInTheDocument();
   });
 
+  // Positif (F-02)
+  it("marks a new version of an approved case", () => {
+    render(<InReviewTable rows={[row({ newVersion: 2 })]} />);
+
+    expect(
+      screen.getByText("Versi 2 · versi yang disetujui tetap berlaku"),
+    ).toBeInTheDocument();
+  });
+
+  // Negatif
+  it("adds no version mark to a case in its first review", () => {
+    render(<InReviewTable rows={[row()]} />);
+
+    expect(screen.queryByText(/versi yang disetujui/)).not.toBeInTheDocument();
+  });
+
   // corner
   it("says the round has not decided yet", () => {
     render(<InReviewTable rows={[row()]} />);
@@ -126,6 +143,20 @@ describe("InReviewTable", () => {
 
     expect(screen.getByText("Perlu revisi")).toBeInTheDocument();
     expect(screen.getByText("Sudah diputuskan")).toBeInTheDocument();
+  });
+
+  // corner: ronde versi baru bisa terbuka sebelum dua reviewer terpasang (awaiting_assignment).
+  it("says so when the round has no reviewer yet", () => {
+    const queued = row({
+      newVersion: 2,
+      review: review({ status: "awaiting_assignment", reviewers: [] }),
+    });
+
+    render(<InReviewTable rows={[queued]} onReplace={vi.fn()} />);
+
+    expect(screen.getByText("Belum ada reviewer")).toBeInTheDocument();
+    expect(screen.getByText("Menunggu penugasan")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   // Negatif
