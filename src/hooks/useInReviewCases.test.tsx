@@ -11,15 +11,7 @@ import type { InReviewRow } from "@/lib/reviews/inReviewApi";
 const listMock = vi.mocked(listInReviewCases);
 
 const ROW: InReviewRow = {
-  case: {
-    id: "c1",
-    case_code: "ILB-PT-0142",
-    title: "Sengketa tanah warisan",
-    split_tag: "dev",
-    status: "in_review",
-    completeness_pct: 100,
-    updated_at: "2026-10-16T03:00:00Z",
-  },
+  case: { id: "c1", case_code: "ILB-PT-0142", title: "Sengketa tanah warisan" },
   review: {
     case_id: "c1",
     case_version_id: "v1",
