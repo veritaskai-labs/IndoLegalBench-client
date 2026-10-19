@@ -42,47 +42,47 @@ export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
         </tr>
       </thead>
       <tbody>
-        {rows.map((row) => {
-          const { case: item, review } = row;
-          const versionMark = newVersionLabel(row.newVersion);
-          return (
-          <tr
-            key={item.id}
-            className="border-b border-slate-100 align-top hover:bg-slate-50"
-          >
-            <td className="py-3 px-4 font-mono text-xs text-slate-700">
-              {item.case_code}
-            </td>
-            <td className="py-3 px-4 text-slate-900">
-              {item.title}
-              {versionMark === null ? null : (
-                <div className="mt-1 text-xs text-indigo-700">{versionMark}</div>
-              )}
-            </td>
-            <td className="py-3 px-4 text-slate-700">
-              {review === null ? "—" : `Ronde ${review.round_no}`}
-            </td>
-            <td className="py-3 px-4 text-slate-700">
-              {review === null ? "—" : ROUND_STATUS_LABEL[review.status]}
-            </td>
-            <td className="py-3 px-4 text-slate-700">
-              {review?.decision
-              ? ROUND_DECISION_LABEL[review.decision]
-              : "Belum diputuskan"}
-            </td>
-            <td className="py-3 px-4 text-slate-700">
-              <ReviewerCell
-              review={review}
-              onReplace={
-                onReplace ? (slot) => onReplace(slot, row) : undefined
-                }
-              />
-            </td>
-          </tr>
-          );
-        })}
+        {rows.map((row) => (
+          <InReviewTableRow key={row.case.id} row={row} onReplace={onReplace} />
+        ))}
       </tbody>
     </table>
+  );
+}
+
+/** Satu kasus: kode, judul dengan penanda versi baru (F-02), ronde, keputusan, dan reviewernya. */
+function InReviewTableRow({
+  row,
+  onReplace,
+}: Readonly<{ row: InReviewRow; onReplace?: Props["onReplace"] }>) {
+  const { case: item, review } = row;
+  const versionMark = newVersionLabel(row.newVersion);
+
+  return (
+    <tr className="border-b border-slate-100 align-top hover:bg-slate-50">
+      <td className="py-3 px-4 font-mono text-xs text-slate-700">{item.case_code}</td>
+      <td className="py-3 px-4 text-slate-900">
+        {item.title}
+        {versionMark === null ? null : (
+          <div className="mt-1 text-xs text-indigo-700">{versionMark}</div>
+        )}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        {review === null ? "—" : `Ronde ${review.round_no}`}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        {review === null ? "—" : ROUND_STATUS_LABEL[review.status]}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        {review?.decision ? ROUND_DECISION_LABEL[review.decision] : "Belum diputuskan"}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        <ReviewerCell
+          review={review}
+          onReplace={onReplace ? (slot) => onReplace(slot, row) : undefined}
+        />
+      </td>
+    </tr>
   );
 }
 
