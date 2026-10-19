@@ -164,6 +164,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/users/{user_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate User */
+        post: operations["activate_user_admin_users__user_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/suites": {
         parameters: {
             query?: never;
@@ -591,6 +608,29 @@ export interface paths {
          *     Kasus yang reviewer-nya dinonaktifkan (void) otomatis muncul di antrean ini (AC8).
          */
         get: operations["get_needs_reassignment_reviews_needs_reassignment_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/in-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kasus yang round-nya belum diputuskan, untuk pemantauan Admin (AC3)
+         * @description Every case whose latest round is open or awaiting assignment, oldest first.
+         *
+         *     Includes a new version of an approved case, which keeps the status approved
+         *     while that version is in review (Pre-UAT finding F-02).
+         */
+        get: operations["list_in_review_reviews_in_review_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1324,6 +1364,28 @@ export interface components {
             app_env: string;
             /** Database */
             database: string;
+        };
+        /**
+         * InReviewCase
+         * @description GET /reviews/in-review: satu kasus yang round terakhirnya belum diputuskan (AC3).
+         *
+         *     Termasuk versi baru dari kasus yang sudah disetujui; status kasusnya tetap
+         *     approved selama versi itu direview (temuan Pra-UAT F-02). version_no di atas 1
+         *     berarti ada versi lama yang disetujui dan masih berlaku.
+         */
+        InReviewCase: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** Version No */
+            version_no: number;
+            review: components["schemas"]["CaseReview"];
         };
         /**
          * LastTestStatus
@@ -2479,6 +2541,37 @@ export interface operations {
         };
     };
     deactivate_user_admin_users__user_id__deactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_user_admin_users__user_id__activate_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -3813,6 +3906,44 @@ export interface operations {
                 };
             };
             /** @description Hanya admin yang boleh mengakses antrean ini. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_in_review_reviews_in_review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InReviewCase"][];
+                };
+            };
+            /** @description Tidak ada sesi aktif. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya admin yang boleh membuka daftar ini. */
             403: {
                 headers: {
                     [name: string]: unknown;
