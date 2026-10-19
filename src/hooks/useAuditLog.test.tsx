@@ -92,6 +92,19 @@ describe("useAuditLog", () => {
     expect(result.current.query.case_code).toBe("UAT-PHK-001");
   });
 
+  // Corner
+  it("ignores a failure that arrives after the reader left", async () => {
+    let fail: (reason: Error) => void = () => undefined;
+    list.mockReturnValue(new Promise((_, reject) => (fail = reject)));
+    const { result, unmount } = renderHook(() => useAuditLog(TODAY));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(1));
+
+    unmount();
+    await act(async () => fail(new Error("late")));
+
+    expect(result.current.state.status).toBe("loading");
+  });
+
   // Negative
   it("reports an error when the request fails, and loads again on retry", async () => {
     list.mockRejectedValueOnce(new Error("boom"));

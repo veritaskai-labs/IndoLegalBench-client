@@ -76,6 +76,27 @@ describe("AuditFilterBar", () => {
   });
   
 
+  // Positive
+  it("hands over the new end date", () => {
+    const { onChange } = setup();
+
+    fireEvent.change(screen.getByLabelText("Sampai tanggal"), {
+      target: { value: "2026-10-01" },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ to: "2026-10-01" }));
+  });
+
+  // Positive
+  it("drops the entity type again when the reader picks every type", async () => {
+    const user = userEvent.setup();
+    const { onChange } = setup({ ...FILTER, entity_type: "suite" });
+
+    await user.selectOptions(screen.getByLabelText("Jenis data"), "");
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ entity_type: undefined }));
+  });
+
   // Positive: F-06
   it("hands over the case code when the reader presses Enter", async () => {
     const user = userEvent.setup();

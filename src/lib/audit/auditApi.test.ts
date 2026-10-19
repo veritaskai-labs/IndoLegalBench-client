@@ -66,4 +66,14 @@ describe("case code search (F-06)", () => {
 
     expect(q.has("case_code")).toBe(false);
   });
+
+  // Positive
+  it("sends the page size and the case id when they are set", () => {
+    const q = new URLSearchParams(
+      auditExportUrl({ ...FILTER, size: 50, case_id: "c1" }, "csv").split("?")[1],
+    );
+
+    expect(q.get("size")).toBe("50");
+    expect(q.get("case_id")).toBe("c1");
+  });
 });
