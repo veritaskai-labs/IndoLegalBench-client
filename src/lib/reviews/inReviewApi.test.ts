@@ -1,41 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/suites/suiteApi", () => ({ listActiveSuites: vi.fn() }));
-vi.mock("@/lib/api/cases", () => ({ getCasesForSuite: vi.fn() }));
-vi.mock("@/lib/reviews/reviewApi", () => ({ getCaseReview: vi.fn() }));
-vi.mock("@/lib/cases/versionApi", () => ({ getOpenCaseVersion: vi.fn() }));
+vi.mock("@/lib/apiClient", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/apiClient")>()),
+  apiFetch: vi.fn(),
+}));
 
-import { getCasesForSuite } from "@/lib/api/cases";
-import { getOpenCaseVersion } from "@/lib/cases/versionApi";
-import { getCaseReview } from "@/lib/reviews/reviewApi";
-import { listActiveSuites } from "@/lib/suites/suiteApi";
+import { ApiError, apiFetch } from "@/lib/apiClient";
 import { listInReviewCases } from "./inReviewApi";
-import type { CaseStatus, CaseSummary } from "@/lib/api/cases";
-import type { CaseRead } from "@/types/case";
-import type { Suite } from "@/types/suite";
+import type { components } from "@/lib/generated/api";
 import type { CaseReview } from "@/types/reviewAdmin";
-import { ApiError } from "@/lib/apiClient";
 
-const suitesMock = vi.mocked(listActiveSuites);
-const casesMock = vi.mocked(getCasesForSuite);
-const reviewMock = vi.mocked(getCaseReview);
-const openVersionMock = vi.mocked(getOpenCaseVersion);
+type InReviewCase = components["schemas"]["InReviewCase"];
 
-function suite(id: string): Suite {
-  return { id, name: `Suite ${id}` } as Suite;
-}
-
-function summary(id: string, code: string, status: CaseStatus = "in_review"): CaseSummary {
-  return {
-    id,
-    case_code: code,
-    title: `Kasus ${code}`,
-    split_tag: "dev",
-    status,
-    completeness_pct: 100,
-    updated_at: "2026-10-16T03:00:00Z",
-  };
-}
+const fetchMock = vi.mocked(apiFetch);
 
 function review(caseId: string): CaseReview {
   return {
@@ -50,15 +27,14 @@ function review(caseId: string): CaseReview {
   };
 }
 
-function openVersion(version: number, status: CaseStatus): CaseRead {
-  return { version, status } as CaseRead;
-}
-
-/** Kasus per suite dan per status, seperti GET /suites/{id}/cases?status=. */
-function casesBySuite(table: Record<string, Partial<Record<CaseStatus, CaseSummary[]>>>) {
-  casesMock.mockImplementation((suiteId, params) =>
-    Promise.resolve(table[suiteId]?.[params?.status ?? "draft"] ?? []),
-  );
+function item(caseId: string, code: string, versionNo: number): InReviewCase {
+  return {
+    case_id: caseId,
+    case_code: code,
+    title: `Kasus ${code}`,
+    version_no: versionNo,
+    review: review(caseId),
+  };
 }
 
 function rejectWith(error: ApiError) {
@@ -69,124 +45,49 @@ function rejectWith(error: ApiError) {
 
 describe("listInReviewCases", () => {
   beforeEach(() => {
-    suitesMock.mockReset();
-    casesMock.mockReset();
-    reviewMock.mockReset();
-    openVersionMock.mockReset();
+    fetchMock.mockReset();
   });
 
-  // Positif
-  it("reads the in-review cases of every active suite with their review", async () => {
-    suitesMock.mockResolvedValue([suite("s1"), suite("s2")]);
-    casesBySuite({
-      s1: { in_review: [summary("c1", "ILB-PT-0142")] },
-      s2: { in_review: [summary("c2", "ILB-PT-0143")] },
-    });
-    reviewMock.mockImplementation((caseId) => Promise.resolve(review(caseId)));
+  // Positif: satu permintaan ke daftar server, bukan per suite dan per kasus.
+  it("reads the whole tab from GET /reviews/in-review in one request", async () => {
+    fetchMock.mockResolvedValue([item("c1", "ILB-PT-0142", 1)]);
 
     const rows = await listInReviewCases();
 
-    expect(casesMock).toHaveBeenCalledWith("s1", { status: "in_review" });
-    expect(casesMock).toHaveBeenCalledWith("s2", { status: "in_review" });
-    expect(rows.map((row) => row.case.case_code)).toEqual([
-      "ILB-PT-0142",
-      "ILB-PT-0143",
-    ]);
-    expect(rows[0].review).toEqual(review("c1"));
-    expect(rows[0].newVersion).toBeNull();
-  });
-
-  // Positif (F-02): versi baru dari kasus yang sudah disetujui tetap berstatus approved.
-  it("includes an approved case whose new version is in review, with its version number", async () => {
-    suitesMock.mockResolvedValue([suite("s1")]);
-    casesBySuite({
-      s1: {
-        in_review: [summary("c1", "ILB-PT-0142")],
-        approved: [summary("c2", "ILB-PT-0150", "approved")],
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/reviews/in-review");
+    expect(rows).toEqual([
+      {
+        case: { id: "c1", case_code: "ILB-PT-0142", title: "Kasus ILB-PT-0142" },
+        review: review("c1"),
+        newVersion: null,
       },
-    });
-    openVersionMock.mockResolvedValue(openVersion(2, "in_review"));
-    reviewMock.mockImplementation((caseId) => Promise.resolve(review(caseId)));
+    ]);
+  });
+
+  // Positif (F-02): versi di atas 1 berarti ada versi disetujui yang tetap berlaku.
+  it("marks a version above 1 as a new version of an approved case", async () => {
+    fetchMock.mockResolvedValue([item("c1", "ILB-PT-0142", 1), item("c2", "ILB-PT-0150", 2)]);
 
     const rows = await listInReviewCases();
 
-    expect(casesMock).toHaveBeenCalledWith("s1", { status: "approved" });
-    expect(openVersionMock).toHaveBeenCalledWith("c2");
     expect(rows.map((row) => [row.case.case_code, row.newVersion])).toEqual([
       ["ILB-PT-0142", null],
       ["ILB-PT-0150", 2],
     ]);
-    expect(rows[1].review).toEqual(review("c2"));
-  });
-
-  // Negatif: kasus disetujui tanpa versi terbuka (404 NO_OPEN_VERSION) bukan sedang direview.
-  it("leaves out an approved case with no open version", async () => {
-    suitesMock.mockResolvedValue([suite("s1")]);
-    casesBySuite({ s1: { approved: [summary("c2", "ILB-PT-0150", "approved")] } });
-    openVersionMock.mockReturnValue(rejectWith(new ApiError(404, "NO_OPEN_VERSION")));
-
-    await expect(listInReviewCases()).resolves.toEqual([]);
-    expect(reviewMock).not.toHaveBeenCalled();
-  });
-
-  // corner: versi baru yang masih draf atau dikembalikan untuk revisi belum ada di tangan reviewer.
-  it.each(["draft", "needs_revision"] as const)(
-    "leaves out an approved case whose new version is %s",
-    async (status) => {
-      suitesMock.mockResolvedValue([suite("s1")]);
-      casesBySuite({ s1: { approved: [summary("c2", "ILB-PT-0150", "approved")] } });
-      openVersionMock.mockResolvedValue(openVersion(2, status));
-
-      await expect(listInReviewCases()).resolves.toEqual([]);
-      expect(reviewMock).not.toHaveBeenCalled();
-    },
-  );
-
-  // Negatif: galat lain saat membaca versi terbuka tidak boleh menyembunyikan kasusnya diam-diam.
-  it("lets a real failure on the open version through", async () => {
-    suitesMock.mockResolvedValue([suite("s1")]);
-    casesBySuite({ s1: { approved: [summary("c2", "ILB-PT-0150", "approved")] } });
-    openVersionMock.mockReturnValue(rejectWith(new ApiError(500, "INTERNAL_ERROR")));
-
-    await expect(listInReviewCases()).rejects.toBeInstanceOf(ApiError);
-  });
-
-  // corner: 404 NO_REVIEW_ROUND memang berarti kasusnya belum punya ronde.
-  it("keeps the case when it has no review round yet", async () => {
-    suitesMock.mockResolvedValue([suite("s1")]);
-    casesBySuite({ s1: { in_review: [summary("c1", "ILB-PT-0142")] } });
-    reviewMock.mockReturnValue(rejectWith(new ApiError(404, "NO_REVIEW_ROUND")));
-
-    const rows = await listInReviewCases();
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].review).toBeNull();
-  });
-
-  // Negatif: galat lain tidak boleh menyamar jadi "belum ada putaran review".
-  it("lets a real failure through so the tab can show an error", async () => {
-    suitesMock.mockResolvedValue([suite("s1")]);
-    casesBySuite({ s1: { in_review: [summary("c1", "ILB-PT-0142")] } });
-    reviewMock.mockReturnValue(rejectWith(new ApiError(500, "INTERNAL_ERROR")));
-
-    await expect(listInReviewCases()).rejects.toBeInstanceOf(ApiError);
   });
 
   // corner
-  it("asks for no review when no suite has an in-review or approved case", async () => {
-    suitesMock.mockResolvedValue([suite("s1")]);
-    casesBySuite({});
+  it("returns an empty list when nothing is in review", async () => {
+    fetchMock.mockResolvedValue([]);
 
     await expect(listInReviewCases()).resolves.toEqual([]);
-    expect(reviewMock).not.toHaveBeenCalled();
-    expect(openVersionMock).not.toHaveBeenCalled();
   });
 
-  // corner
-  it("asks for no case when there is no active suite", async () => {
-    suitesMock.mockResolvedValue([]);
+  // Negatif: 403 dan galat lain naik ke hook, yang memilih pesannya.
+  it.each([403, 500])("lets a %i through so the tab can explain it", async (status) => {
+    fetchMock.mockReturnValue(rejectWith(new ApiError(status, "ERROR")));
 
-    await expect(listInReviewCases()).resolves.toEqual([]);
-    expect(casesMock).not.toHaveBeenCalled();
+    await expect(listInReviewCases()).rejects.toMatchObject({ status });
   });
 });
