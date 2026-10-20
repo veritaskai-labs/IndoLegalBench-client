@@ -27,7 +27,7 @@ describe("SecondReviewerPanel", () => {
 
     // Assert
     expect(screen.getByRole("heading", { name: /Peninjau kedua/ })).toBeInTheDocument();
-    expect(screen.getByText("BUTA")).toBeInTheDocument();
+    expect(screen.getByText("HIDDEN")).toBeInTheDocument();
     expect(screen.getByText(/Disembunyikan sampai kedua peninjau selesai menilai/)).toBeInTheDocument();
     expect(screen.getByText("Ditugaskan ke Anisa P.")).toBeInTheDocument();
   });
@@ -83,7 +83,7 @@ describe("SecondReviewerPanel", () => {
     expect(screen.getByText("Perlu revisi")).toBeInTheDocument();
     expect(screen.getByText("Pasal 151 salah")).toBeInTheDocument();
     expect(screen.getByText("14 Okt 2026, 10.00 WIB")).toBeInTheDocument();
-    expect(screen.queryByText("BUTA")).not.toBeInTheDocument();
+    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
   });
 
   // Edge: an approval may carry no comment.
@@ -110,7 +110,7 @@ describe("SecondReviewerPanel", () => {
     render(<SecondReviewerPanel review={review} myAssignmentId={ASSIGNMENT_ID} />);
 
     // Assert
-    expect(screen.queryByText("BUTA")).not.toBeInTheDocument();
+    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
     expect(screen.getByText("Dapat dipertahankan sebagaimana tertulis")).toBeInTheDocument();
   });
 
@@ -125,7 +125,7 @@ describe("SecondReviewerPanel", () => {
     // Assert
     expect(screen.getByText("Anisa P.")).toBeInTheDocument();
     expect(screen.getByText("Tidak ada penilaian.")).toBeInTheDocument();
-    expect(screen.queryByText("BUTA")).not.toBeInTheDocument();
+    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
   });
 
   // Edge: the second reviewer was replaced and no one has taken the slot yet.
@@ -138,6 +138,6 @@ describe("SecondReviewerPanel", () => {
 
     // Assert
     expect(screen.getByText("Peninjau kedua belum ditugaskan.")).toBeInTheDocument();
-    expect(screen.queryByText("BUTA")).not.toBeInTheDocument();
+    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
   });
 });
