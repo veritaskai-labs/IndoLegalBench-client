@@ -54,7 +54,7 @@ export function SecondReviewerPanel({ review, myAssignmentId }: Readonly<Props>)
         <h2 className="text-base font-semibold text-slate-900">Peninjau kedua</h2>
         {blind && (
           <span className="rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-indigo-700">
-            BUTA
+            HIDDEN
           </span>
         )}
       </div>
