@@ -50,28 +50,14 @@ export function SubmitReviewButton({
     run();
   }, [blocked, run]);
 
+  // Dipasang di bar yang menempel di bawah layar. Panel error melayang di atas bar dengan tinggi
+  // terbatas, supaya bar tidak membesar menutupi formulir; petunjuk singkat tetap di alur.
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleClick}
-        aria-disabled={blocked}
-        aria-describedby={dirty ? hintId : undefined}
-        className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-indigo-600"
-      >
-        {pending ? "Mengajukan…" : "Ajukan review"}
-      </button>
-
-      {dirty && (
-        <p id={hintId} className="mt-2 text-xs text-amber-700">
-          Simpan perubahan dulu sebelum mengajukan.
-        </p>
-      )}
-
+    <div className="relative">
       {error !== null && (
         <div
           role="alert"
-          className="mt-2 rounded-md bg-red-50 p-3 text-xs text-red-800"
+          className="absolute bottom-full right-0 mb-2 max-h-40 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto rounded-md bg-red-50 p-3 text-xs text-red-800 shadow"
         >
           <p>{error}</p>
           {blockers.length > 0 && (
@@ -83,6 +69,22 @@ export function SubmitReviewButton({
           )}
         </div>
       )}
+
+      {dirty && (
+        <p id={hintId} className="mb-1 text-right text-xs text-amber-700">
+          Simpan perubahan dulu sebelum mengajukan.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-disabled={blocked}
+        aria-describedby={dirty ? hintId : undefined}
+        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-indigo-600"
+      >
+        {pending ? "Mengajukan…" : "Ajukan review"}
+      </button>
     </div>
   );
 }
