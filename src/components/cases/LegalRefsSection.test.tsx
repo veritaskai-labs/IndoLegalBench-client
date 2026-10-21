@@ -133,6 +133,20 @@ describe("LegalRefsSection", () => {
     expect(pasal.compareDocumentPosition(angka) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("tells the Author that Angka takes a plain or Roman numeral", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<Host />);
+
+    // Act
+    await user.selectOptions(formSelect(), "pasal_angka");
+
+    // Assert
+    expect(screen.getByLabelText("Angka")).toHaveAccessibleDescription(
+      /angka biasa atau Romawi.*IV/,
+    );
+  });
+
   it("hides pasal, angka, ayat and huruf for the name-only form but keeps the regulation fields", async () => {
     // Arrange
     const user = userEvent.setup();

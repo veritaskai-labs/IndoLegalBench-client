@@ -134,7 +134,7 @@ describe("validateCaseForm", () => {
       traps: [{ description: "", expected_model_behavior: "Menolak" }],
     });
 
-    expect(issues).toEqual([{ path: "traps.0.description", message: "Deskripsi jebakan wajib diisi." }]);
+    expect(issues).toEqual([{ path: "traps.0.description", message: "Deskripsi pengurang poin wajib diisi." }]);
   });
 
   it("asks to pick a split tag", () => {
@@ -183,6 +183,27 @@ describe("validateCaseForm", () => {
     // Assert
     expect(result[0]).toEqual([]);
     expect(result[1]).toEqual([
+      { path: "legal_refs.0.links.0.angka", message: "Format angka tidak valid." },
+    ]);
+  });
+
+  it.each(["5", "10", "I", "II", "IV", "XIV", "MCMXC"])(
+    "accepts angka %s, plain or Roman",
+    (angka) => {
+      // Act
+      const issues = validateCaseForm(withLink({ form: "pasal_angka", angka }));
+
+      // Assert
+      expect(issues).toEqual([]);
+    },
+  );
+
+  it.each(["ii", "IIII", "IC", "5A", "0", "01", "Angka 5"])("rejects angka %s", (angka) => {
+    // Act
+    const issues = validateCaseForm(withLink({ form: "pasal_angka", angka }));
+
+    // Assert
+    expect(issues).toEqual([
       { path: "legal_refs.0.links.0.angka", message: "Format angka tidak valid." },
     ]);
   });

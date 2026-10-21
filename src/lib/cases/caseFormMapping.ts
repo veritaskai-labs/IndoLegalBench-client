@@ -50,7 +50,7 @@ export function emptyTrap(): TrapFormValues {
   return { description: "", expected_model_behavior: "" };
 }
 
-/** Nilai awal form buat kasus. Tanpa baris jebakan: baris kosong akan ditolak server. */
+/** Nilai awal form buat kasus. Tanpa baris pengurang poin: baris kosong akan ditolak server. */
 export function emptyCaseFormValues(): CaseFormValues {
   return {
     case_code: "",

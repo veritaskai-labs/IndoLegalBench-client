@@ -12,7 +12,7 @@ describe("sectionLabel", () => {
     ["split_tag", "Tag dev/test"],
     ["legal_refs", "Rujukan hukum"],
     ["answer_criteria", "Kriteria jawaban"],
-    ["traps", "Jebakan"],
+    ["traps", "Pengurang Poin"],
   ])("labels %s as %s", (name, expected) => {
     // Arrange / Act
     const label = sectionLabel(name);

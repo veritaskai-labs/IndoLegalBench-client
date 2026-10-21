@@ -109,7 +109,7 @@ const SECTION_VIEW: Record<SectionKey, SectionView> = {
   split_tag: { label: "Tag dev/test", lines: (s) => single(s.split_tag) },
   legal_refs: { label: "Rujukan hukum", lines: (s) => legalRefLines(s.legal_refs) },
   answer_criteria: { label: "Kriteria jawaban", lines: (s) => answerCriteriaLines(s.answer_criteria) },
-  traps: { label: "Jebakan", lines: (s) => trapLines(s.traps) },
+  traps: { label: "Pengurang Poin", lines: (s) => trapLines(s.traps) },
 };
 
 /** Nama semua bagian, dalam urutan tampilan. */

@@ -7,7 +7,7 @@ import type { ReviewCopy } from "@/types/review";
 const HEADER_SECTIONS: readonly string[] = ["case_code", "identity.question", "split_tag"];
 const BODY_SECTIONS = SECTION_KEYS.filter((key) => !HEADER_SECTIONS.includes(key));
 
-/** Dua baris bisa sama persis (mis. dua jebakan sama), jadi kuncinya teks ditambah urutan kemunculan teks itu. */
+/** Dua baris bisa sama persis (mis. dua pengurang poin sama), jadi kuncinya teks ditambah urutan kemunculan teks itu. */
 function keyedLines(lines: string[]): { id: string; line: string }[] {
   const seen = new Map<string, number>();
   return lines.map((line) => {
