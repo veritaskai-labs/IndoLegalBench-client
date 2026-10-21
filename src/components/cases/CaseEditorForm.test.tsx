@@ -1200,8 +1200,9 @@ describe("CaseEditorForm action bar", () => {
     // Arrange / Act
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} actions={extra} />);
 
-    // Assert
-    expect(bar()).toHaveClass("sticky", "bottom-0");
+    // Assert: grupnya <fieldset> (semantik native), pembungkusnyalah yang menempel di layar
+    expect(bar().closest(".sticky")).toHaveClass("sticky", "bottom-0");
+    expect(bar().tagName).toBe("FIELDSET");
   });
 
   it("places the bar after the last section of the form", () => {
