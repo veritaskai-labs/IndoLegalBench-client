@@ -305,7 +305,36 @@ describe("ReviewAssignmentPage tabs", () => {
     const panel = screen.getByRole("tabpanel", { name: "Riwayat" });
     expect(within(panel).getByText(`Riwayat kasus ${CASE_ID}`)).toBeInTheDocument();
     expect(screen.queryByRole("form", { name: "Penilaian Anda" })).not.toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "Peninjau kedua" })).toBeInTheDocument();
+    await waitFor(() => expect(reviewMock).toHaveBeenCalled());
+    expect(screen.queryByRole("region", { name: "Peninjau kedua" })).not.toBeInTheDocument();
+  });
+
+  // K-09: both verdicts of a case sit next to each other, in one row of the Penilaian tab.
+  it("puts the verdict form next to the second reviewer in the Penilaian tab", async () => {
+    // Arrange / Act
+    render(<ReviewAssignmentPage />);
+
+    // Assert
+    const panel = await screen.findByRole("tabpanel", { name: "Penilaian" });
+    const own = await within(panel).findByRole("form", { name: "Penilaian Anda" });
+    const second = await within(panel).findByRole("region", { name: "Peninjau kedua" });
+    expect(second.parentElement).toBe(own.parentElement);
+    expect(own.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps the sent verdict next to the second reviewer", async () => {
+    // Arrange
+    listMock.mockResolvedValue([
+      makeAssigned({ assignment_id: ASSIGNMENT_ID, my_verdict: makeVerdictView({ decision: "approve" }) }),
+    ]);
+
+    // Act
+    render(<ReviewAssignmentPage />);
+
+    // Assert
+    const own = await screen.findByRole("region", { name: "Penilaian terkirim" });
+    const second = await screen.findByRole("region", { name: "Peninjau kedua" });
+    expect(second.parentElement).toBe(own.parentElement);
   });
 
   // Edge: the form stays mounted, so a draft survives a look at the history.
