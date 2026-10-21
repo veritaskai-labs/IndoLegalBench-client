@@ -187,6 +187,27 @@ describe("validateCaseForm", () => {
     ]);
   });
 
+  it.each(["5", "10", "I", "II", "IV", "XIV", "MCMXC"])(
+    "accepts angka %s, plain or Roman",
+    (angka) => {
+      // Act
+      const issues = validateCaseForm(withLink({ form: "pasal_angka", angka }));
+
+      // Assert
+      expect(issues).toEqual([]);
+    },
+  );
+
+  it.each(["ii", "IIII", "IC", "5A", "0", "01", "Angka 5"])("rejects angka %s", (angka) => {
+    // Act
+    const issues = validateCaseForm(withLink({ form: "pasal_angka", angka }));
+
+    // Assert
+    expect(issues).toEqual([
+      { path: "legal_refs.0.links.0.angka", message: "Format angka tidak valid." },
+    ]);
+  });
+
   it("does not check an angka the form does not use", () => {
     // Act
     const issues = validateCaseForm(withLink({ form: "pasal", angka: "bukan angka" }));
