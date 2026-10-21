@@ -1231,6 +1231,49 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
   });
   // Negative: kasus sudah diajukan dari tab lain. Pesan saja tidak cukup — badge
   // tetap "Draft" dan form masih bisa diedit, lalu simpan berikutnya kena VERSION_LOCKED.
+  // Temuan Ka Steven: tombol di bawah formulir, di samping Simpan draf, tidak lagi di atas.
+  it("puts the button in the bar next to Simpan draf, below the form", async () => {
+    // Arrange / Act
+    renderPage();
+    await screen.findByRole("button", { name: "Ajukan review" });
+
+    // Assert
+    const bar = screen.getByRole("group", { name: "Aksi kasus" });
+    expect(within(bar).getByRole("button", { name: "Simpan draf" })).toBeInTheDocument();
+    expect(within(bar).getByRole("button", { name: "Ajukan review" })).toBeInTheDocument();
+    const lastSection = screen.getByRole("group", { name: "Tag dev/test" });
+    expect(
+      lastSection.compareDocumentPosition(submitButton()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps the save hint inside the bar while the editor has unsaved changes", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("button", { name: "Ajukan review" });
+
+    // Act
+    await user.type(screen.getByLabelText("Judul"), " baru");
+
+    // Assert
+    const bar = screen.getByRole("group", { name: "Aksi kasus" });
+    expect(within(bar).getByText("Simpan perubahan dulu sebelum mengajukan.")).toBeInTheDocument();
+  });
+
+  // Negative: nothing to save or submit on a case that is already in review
+  it("shows no bar on a case that is already in review", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "in_review" }));
+
+    // Act
+    renderPage();
+    await screen.findByText("Dalam tinjauan");
+
+    // Assert
+    expect(screen.queryByRole("group", { name: "Aksi kasus" })).not.toBeInTheDocument();
+  });
+
   it("reads the case again and shows the real status after a stale submission", async () => {
     const user = userEvent.setup();
     getCaseMock
