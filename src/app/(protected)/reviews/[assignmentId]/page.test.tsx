@@ -83,7 +83,7 @@ describe("ReviewAssignmentPage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole("form", { name: "Penilaian Anda" })).toBeInTheDocument();
-    expect(await screen.findByText("HIDDEN")).toBeInTheDocument();
+    expect(await screen.findByText("Anonim")).toBeInTheDocument();
     expect(reviewMock).toHaveBeenCalledWith(CASE_ID);
     expect(listMock).toHaveBeenCalledTimes(1);
   });
@@ -112,7 +112,7 @@ describe("ReviewAssignmentPage", () => {
     expect(submitMock).toHaveBeenCalledWith(ASSIGNMENT_ID, { decision: "approve", comment: null });
     expect(await screen.findByText("Menunggu peninjau lain menilai.")).toBeInTheDocument();
     expect(screen.queryByRole("form", { name: "Penilaian Anda" })).not.toBeInTheDocument();
-    expect(screen.getByText("HIDDEN")).toBeInTheDocument();
+    expect(screen.getByText("Anonim")).toBeInTheDocument();
   });
 
   // Positive: AC3 and AC6, once both have rated the outcome and both verdicts show.
@@ -144,7 +144,7 @@ describe("ReviewAssignmentPage", () => {
     expect(await screen.findByText("Kasus disetujui")).toBeInTheDocument();
     const panel = await screen.findByRole("region", { name: "Peninjau kedua" });
     expect(within(panel).getByText("Pasal salah")).toBeInTheDocument();
-    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anonim")).not.toBeInTheDocument();
     expect(reviewMock).toHaveBeenCalledTimes(2);
   });
 
@@ -245,7 +245,7 @@ describe("ReviewAssignmentPage", () => {
     expect(await screen.findByRole("form", { name: "Penilaian Anda" })).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("Gagal memuat penilaian kasus. Coba lagi.");
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
-    expect(await screen.findByText("HIDDEN")).toBeInTheDocument();
+    expect(await screen.findByText("Anonim")).toBeInTheDocument();
   });
 
   // Edge: the id comes encoded from the URL and must be decoded once before it is matched.

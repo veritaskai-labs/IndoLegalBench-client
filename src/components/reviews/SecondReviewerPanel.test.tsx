@@ -17,8 +17,8 @@ const mine = (overrides = {}) =>
   });
 
 describe("SecondReviewerPanel", () => {
-  // Positive: AC3, while the round is open the other verdict stays hidden.
-  it("says the other reviewer is blind and who the case went to", () => {
+  // Positive: AC3 and K-06, while the round is open the other verdict is anonymous.
+  it("says the second verdict is anonymous and why, without naming the reviewer", () => {
     // Arrange
     const review = makeCaseReview({ status: "open", reviewers: [mine(), makeSlot({ verdict: null })] });
 
@@ -27,9 +27,13 @@ describe("SecondReviewerPanel", () => {
 
     // Assert
     expect(screen.getByRole("heading", { name: /Peninjau kedua/ })).toBeInTheDocument();
-    expect(screen.getByText("HIDDEN")).toBeInTheDocument();
-    expect(screen.getByText(/Disembunyikan sampai kedua peninjau selesai menilai/)).toBeInTheDocument();
-    expect(screen.getByText("Ditugaskan ke Anisa P.")).toBeInTheDocument();
+    expect(screen.getByText("Anonim")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Penilaian peninjau kedua sengaja disembunyikan sampai Anda dan peninjau kedua sama-sama selesai menilai, supaya tidak saling memengaruhi.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Anisa P\./)).not.toBeInTheDocument();
   });
 
   // Negative: nothing of a hidden verdict is made up.
@@ -50,14 +54,18 @@ describe("SecondReviewerPanel", () => {
   it("shows the other reviewer, not the one who is looking", () => {
     // Arrange
     const review = makeCaseReview({
-      reviewers: [mine({ verdict: makeVerdictView({ decision: "approve" }) }), makeSlot({ verdict: null })],
+      status: "decided",
+      reviewers: [
+        mine({ verdict: makeVerdictView({ decision: "approve" }) }),
+        makeSlot({ verdict: makeVerdictView({ decision: "approve" }) }),
+      ],
     });
 
     // Act
     render(<SecondReviewerPanel review={review} myAssignmentId={ASSIGNMENT_ID} />);
 
     // Assert
-    expect(screen.getByText("Ditugaskan ke Anisa P.")).toBeInTheDocument();
+    expect(screen.getByText("Anisa P.")).toBeInTheDocument();
     expect(screen.queryByText(/Bagus S\./)).not.toBeInTheDocument();
   });
 
@@ -83,7 +91,7 @@ describe("SecondReviewerPanel", () => {
     expect(screen.getByText("Perlu revisi")).toBeInTheDocument();
     expect(screen.getByText("Pasal 151 salah")).toBeInTheDocument();
     expect(screen.getByText("14 Okt 2026, 10.00 WIB")).toBeInTheDocument();
-    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anonim")).not.toBeInTheDocument();
   });
 
   // Edge: an approval may carry no comment.
@@ -110,7 +118,7 @@ describe("SecondReviewerPanel", () => {
     render(<SecondReviewerPanel review={review} myAssignmentId={ASSIGNMENT_ID} />);
 
     // Assert
-    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anonim")).not.toBeInTheDocument();
     expect(screen.getByText("Dapat dipertahankan sebagaimana tertulis")).toBeInTheDocument();
   });
 
@@ -125,7 +133,7 @@ describe("SecondReviewerPanel", () => {
     // Assert
     expect(screen.getByText("Anisa P.")).toBeInTheDocument();
     expect(screen.getByText("Tidak ada penilaian.")).toBeInTheDocument();
-    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anonim")).not.toBeInTheDocument();
   });
 
   // Edge: the second reviewer was replaced and no one has taken the slot yet.
@@ -138,6 +146,6 @@ describe("SecondReviewerPanel", () => {
 
     // Assert
     expect(screen.getByText("Peninjau kedua belum ditugaskan.")).toBeInTheDocument();
-    expect(screen.queryByText("HIDDEN")).not.toBeInTheDocument();
+    expect(screen.queryByText("Anonim")).not.toBeInTheDocument();
   });
 });
