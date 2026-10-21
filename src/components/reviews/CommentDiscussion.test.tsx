@@ -41,6 +41,7 @@ describe('CommentDiscussion', () => {
     expect(await screen.findByText(/literal text/)).toHaveTextContent('<script>literal text</script>');
     expect(document.querySelector('script')).toBeNull();
     expect(screen.getByLabelText('Balasan Anda')).toHaveValue('');
+    expect(screen.getByRole('status')).toHaveTextContent('Balasan terkirim.');
   });
   it('preserves the draft after a failed send and permits retry', async () => {
     send.mockRejectedValueOnce(new ApiError(409, 'ASSIGNMENT_NOT_ACTIVE'));

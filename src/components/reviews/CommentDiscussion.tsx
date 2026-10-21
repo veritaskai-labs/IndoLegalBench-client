@@ -93,7 +93,7 @@ export function CommentDiscussion({ assignmentId, embedded = false, draft, onDra
         </article>
         <div className="flex items-center gap-3"><span className="h-px flex-1 bg-slate-200" /><h2 className="text-xs font-semibold text-slate-500">{data.replies.length === 0 ? "Percakapan" : `${data.replies.length} balasan`}</h2><span className="h-px flex-1 bg-slate-200" /></div>
         {data.replies.length === 0 ? <div className="rounded-xl border border-dashed border-slate-200 px-5 py-6 text-center"><p className="text-sm font-semibold text-slate-700">Belum ada balasan.</p><p className="mt-1 text-xs leading-relaxed text-slate-500">Mulai dengan pertanyaan atau tanggapan atas catatan di atas.</p></div> : <ol className="space-y-5" aria-label="Balasan diskusi">{data.replies.map((reply) => <Message key={reply.id} reply={reply} mine={reply.author_id === data.viewer_id} />)}</ol>}
-        {sent && <p role="status" className="text-center text-xs font-medium text-emerald-700">Balasan terkirim.</p>}
+        {sent && <output className="block text-center text-xs font-medium text-emerald-700">Balasan terkirim.</output>}
       </div>
       <footer className="shrink-0 border-t border-slate-200 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
         {data.can_reply ? <ReplyForm assignmentId={assignmentId} body={body} onChange={changeDraft} onBusyChange={onBusyChange} onSent={() => { setSent(true); discussion.reload(); }} /> : <p className="rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-600">{data.round_status !== "decided" ? "Diskusi dibuka setelah kedua penilaian selesai." : "Diskusi ini hanya dapat dibalas oleh penulis kasus dan peninjau terkait pada penugasan yang masih aktif."}</p>}
