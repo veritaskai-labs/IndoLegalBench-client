@@ -134,7 +134,7 @@ describe("validateCaseForm", () => {
       traps: [{ description: "", expected_model_behavior: "Menolak" }],
     });
 
-    expect(issues).toEqual([{ path: "traps.0.description", message: "Deskripsi jebakan wajib diisi." }]);
+    expect(issues).toEqual([{ path: "traps.0.description", message: "Deskripsi pengurang poin wajib diisi." }]);
   });
 
   it("asks to pick a split tag", () => {

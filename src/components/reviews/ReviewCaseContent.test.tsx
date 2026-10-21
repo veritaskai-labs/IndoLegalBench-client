@@ -128,7 +128,7 @@ describe("ReviewCaseContent", () => {
     expect(within(criteria).getByText("Wajib ada: harus_menyebut")).toBeInTheDocument();
     expect(within(criteria).getByText("Tidak boleh ada: dilarang_menyitasi")).toBeInTheDocument();
     expect(within(criteria).getByText("Kesimpulan: Wajib tertulis")).toBeInTheDocument();
-    const traps = section("Jebakan");
+    const traps = section("Pengurang Poin");
     expect(
       within(traps).getByText("1. Menyitasi peraturan yang dicabut (perilaku yang diharapkan: Menolak menyitasi)"),
     ).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe("ReviewCaseContent", () => {
 
     // Assert
     expect(within(section("Rujukan hukum")).getByText("—")).toBeInTheDocument();
-    expect(within(section("Jebakan")).getByText("—")).toBeInTheDocument();
+    expect(within(section("Pengurang Poin")).getByText("—")).toBeInTheDocument();
     expect(within(section("Kategori")).getByText("—")).toBeInTheDocument();
   });
 

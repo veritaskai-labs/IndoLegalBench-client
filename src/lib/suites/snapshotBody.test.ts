@@ -27,7 +27,7 @@ describe("toSnapshotCaseView", () => {
       "Tag dev/test",
       "Rujukan hukum",
       "Kriteria jawaban",
-      "Jebakan",
+      "Pengurang Poin",
     ]);
   });
 
