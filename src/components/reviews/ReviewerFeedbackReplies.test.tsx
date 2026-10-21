@@ -8,7 +8,10 @@ describe('K-03 comment discussions', () => {
     render(<ReviewerFeedback review={makeCaseReview({ reviewers: [makeSlot({
       assignment_id: 'comment-owner', verdict: makeVerdictView({ comment: 'Mohon perjelas rujukan.' }),
     })] })} />);
-    expect(screen.getByRole('link', { name: 'Lihat dan balas komentar' })).toHaveAttribute('href', '/reviews/comment-owner/discussion');
+    const link = screen.getByRole('link', { name: 'Lihat dan balas komentar' });
+    expect(link).toHaveAttribute('href', '/reviews/comment-owner/discussion');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it.each([null, makeVerdictView({ comment: null })])('does not offer replies without a visible comment (%s)', (verdict) => {

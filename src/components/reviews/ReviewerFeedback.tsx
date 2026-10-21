@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { revisionRequestsFirst } from "@/lib/reviews/verdictRules";
 import type { CaseReview } from "@/types/review";
 import { VerdictSummary } from "./VerdictSummary";
 
 /**
- * Catatan peninjau untuk Author pada kasus yang perlu revisi. Hanya baca: kasusnya diubah di form.
+ * Catatan peninjau untuk Author; diskusi setiap komentar dibuka terpisah.
  * Penilaian yang dikirim server ditampilkan apa adanya; yang null ditulis belum tersedia, bukan dikarang.
  */
 export function ReviewerFeedback({ review }: Readonly<{ review: CaseReview }>) {
@@ -27,6 +28,11 @@ export function ReviewerFeedback({ review }: Readonly<{ review: CaseReview }>) {
                 <p className="text-sm text-slate-500">Penilaian belum tersedia.</p>
               ) : (
                 <VerdictSummary verdict={slot.verdict} />
+              )}
+              {slot.verdict?.comment && (
+                <Link href={`/reviews/${encodeURIComponent(slot.assignment_id)}/discussion`} target="_blank" rel="noopener noreferrer" title="Buka diskusi di tab baru agar draf kasus tetap terbuka" className="inline-block text-sm text-indigo-600 underline">
+                  Lihat dan balas komentar
+                </Link>
               )}
             </li>
           ))}
