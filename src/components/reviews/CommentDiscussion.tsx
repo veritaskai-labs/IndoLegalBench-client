@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useId, useRef, useState, type SubmitEvent } from 'react';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
@@ -16,7 +16,7 @@ function ReplyForm({ assignmentId, onSent }: Readonly<{ assignmentId: string; on
   const sending = useRef(false);
   const valid = body.trim().length > 0 && body.length <= 5000;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!valid || sending.current) return;
     sending.current = true;
