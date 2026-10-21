@@ -6,7 +6,7 @@ import { useState } from "react";
 import { CaseAuditHistory } from "@/components/audit/CaseAuditHistory";
 import { OwnVerdictNotice } from "@/components/reviews/OwnVerdictNotice";
 import { ReviewCaseContent } from "@/components/reviews/ReviewCaseContent";
-import { SecondReviewerPanel } from "@/components/reviews/SecondReviewerPanel";
+import { SecondReviewerSlot } from "@/components/reviews/SecondReviewerSlot";
 import { VerdictForm } from "@/components/reviews/VerdictForm";
 import { Breadcrumb, EmptyState, ErrorState, Tabs, tabElementId, tabPanelId, type TabItem } from "@/components/ui";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -51,46 +51,38 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
     <div className="mx-auto max-w-6xl space-y-6">
       <Breadcrumb items={[{ label: "Antrean tinjauan", href: "/reviews" }, { label: copy.case_code }]} />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="space-y-6">
-          <Tabs tabs={REVIEW_TABS} active={tab} onChange={showTab} label="Bagian penilaian" idPrefix={TAB_PREFIX} />
-          {/* Form tetap terpasang saat riwayat dibuka, supaya draf tidak hilang. */}
-          <div
-            role="tabpanel"
-            id={tabPanelId(TAB_PREFIX, "verdict")}
-            aria-labelledby={tabElementId(TAB_PREFIX, "verdict")}
-            hidden={tab !== "verdict"}
-            className="space-y-6"
-          >
-            <ReviewCaseContent copy={copy} />
-            {verdict === null ? (
-              <VerdictForm assignmentId={assignment.assignment_id} versionNo={copy.version_no} onSubmitted={setResult} />
-            ) : (
-              <OwnVerdictNotice
-                verdict={verdict}
-                roundStatus={result?.round_status ?? "open"}
-                roundDecision={result?.round_decision ?? null}
-              />
-            )}
-          </div>
-          {/* Riwayat dimuat saat tab pertama dibuka, lalu tetap terpasang. */}
-          <div
-            role="tabpanel"
-            id={tabPanelId(TAB_PREFIX, "history")}
-            aria-labelledby={tabElementId(TAB_PREFIX, "history")}
-            hidden={tab !== "history"}
-          >
-            {historyOpened && <CaseAuditHistory key={result?.submitted_at ?? ""} caseId={copy.case_id} />}
-          </div>
-        </div>
-
-        <aside>
-          {caseReview.status === "loading" && <LoadingState label="Memuat peninjau kedua…" />}
-          {caseReview.status === "error" && <ErrorState message={caseReview.message} onRetry={caseReview.reload} />}
-          {caseReview.status === "ready" && caseReview.review !== null && (
-            <SecondReviewerPanel review={caseReview.review} myAssignmentId={assignment.assignment_id} />
+      <Tabs tabs={REVIEW_TABS} active={tab} onChange={showTab} label="Bagian penilaian" idPrefix={TAB_PREFIX} />
+      {/* Form tetap terpasang saat riwayat dibuka, supaya draf tidak hilang. */}
+      <div
+        role="tabpanel"
+        id={tabPanelId(TAB_PREFIX, "verdict")}
+        aria-labelledby={tabElementId(TAB_PREFIX, "verdict")}
+        hidden={tab !== "verdict"}
+        className="space-y-6"
+      >
+        <ReviewCaseContent copy={copy} />
+        {/* K-09: penilaian sendiri dan peninjau kedua berdampingan. */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {verdict === null ? (
+            <VerdictForm assignmentId={assignment.assignment_id} versionNo={copy.version_no} onSubmitted={setResult} />
+          ) : (
+            <OwnVerdictNotice
+              verdict={verdict}
+              roundStatus={result?.round_status ?? "open"}
+              roundDecision={result?.round_decision ?? null}
+            />
           )}
-        </aside>
+          <SecondReviewerSlot caseReview={caseReview} myAssignmentId={assignment.assignment_id} />
+        </div>
+      </div>
+      {/* Riwayat dimuat saat tab pertama dibuka, lalu tetap terpasang. */}
+      <div
+        role="tabpanel"
+        id={tabPanelId(TAB_PREFIX, "history")}
+        aria-labelledby={tabElementId(TAB_PREFIX, "history")}
+        hidden={tab !== "history"}
+      >
+        {historyOpened && <CaseAuditHistory key={result?.submitted_at ?? ""} caseId={copy.case_id} />}
       </div>
     </div>
   );

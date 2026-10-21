@@ -39,11 +39,12 @@ export function ReviewCaseContent({ copy }: Readonly<{ copy: ReviewCopy }>) {
         {BODY_SECTIONS.map((key) => {
           const lines = sectionLines(key, sections);
           return (
-            <div key={key} className="px-4 py-3">
-              <dt className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            // K-08: label kecil berwarna, isi lebih besar dan gelap, supaya tidak menyatu.
+            <div key={key} className="px-4 py-4">
+              <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
                 {sectionLabel(key)}
               </dt>
-              <dd className="mt-1 space-y-1 text-sm text-slate-800">
+              <dd className="mt-2 space-y-1 text-base text-slate-900">
                 {lines.length === 0 ? (
                   <span className="text-slate-400">—</span>
                 ) : (

@@ -11,14 +11,13 @@ type Props = {
 function SecondReviewerBody({ slot, review }: Readonly<{ slot: ReviewerSlot; review: CaseReview }>) {
   const name = slot.reviewer.name;
 
+  // K-06: selama anonim, nama peninjau kedua ikut disembunyikan.
   if (otherReviewerIsBlind(slot, review.status)) {
     return (
-      <div className="space-y-2">
-        <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm text-slate-600">
-          Disembunyikan sampai kedua peninjau selesai menilai. Penilaian disimpan terpisah.
-        </p>
-        <p className="font-mono text-xs text-slate-500">Ditugaskan ke {name}</p>
-      </div>
+      <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+        Penilaian peninjau kedua sengaja disembunyikan sampai Anda dan peninjau kedua sama-sama selesai menilai,
+        supaya tidak saling memengaruhi.
+      </p>
     );
   }
 
@@ -41,7 +40,7 @@ function SecondReviewerBody({ slot, review }: Readonly<{ slot: ReviewerSlot; rev
 
 /**
  * Panel peninjau kedua. Tampilan mengikuti respons server: penilaian yang null selama round terbuka
- * ditampilkan sebagai buta, dan penilaian yang dikirim server (setelah round selesai, atau untuk admin)
+ * ditampilkan sebagai anonim, dan penilaian yang dikirim server (setelah round selesai, atau untuk admin)
  * ditampilkan apa adanya. Aturan butanya sendiri tetap milik server.
  */
 export function SecondReviewerPanel({ review, myAssignmentId }: Readonly<Props>) {
@@ -54,7 +53,7 @@ export function SecondReviewerPanel({ review, myAssignmentId }: Readonly<Props>)
         <h2 className="text-base font-semibold text-slate-900">Peninjau kedua</h2>
         {blind && (
           <span className="rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold tracking-wide text-indigo-700">
-            HIDDEN
+            Anonim
           </span>
         )}
       </div>
