@@ -1,21 +1,27 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import { makeCaseReview, makeSlot, makeVerdictView } from '@/test/reviewFixtures';
 import { ReviewerFeedback } from './ReviewerFeedback';
 
-describe('K-03 comment discussions', () => {
-  it('links each visible reviewer comment to its own discussion', () => {
-    render(<ReviewerFeedback review={makeCaseReview({ reviewers: [makeSlot({
+vi.mock('@/lib/reviews/discussionApi', async (original) => ({
+  ...await original<typeof import('@/lib/reviews/discussionApi')>(),
+  getDiscussion: vi.fn().mockResolvedValue({ assignment_id:'comment-owner',case_id:'c1',reviewer_name:'Reviewer A',comment:'Mohon perjelas rujukan.',can_reply:true,replies:[],round_no:3,viewer_id:'author',commented_at:null }),
+}));
+
+describe('K-03 visible comment actions', () => {
+  it('opens a labelled discussion drawer for a third-round comment without navigating away', async () => {
+    const user = userEvent.setup();
+    render(<ReviewerFeedback review={makeCaseReview({ round_no:3, reviewers: [makeSlot({
       assignment_id: 'comment-owner', verdict: makeVerdictView({ comment: 'Mohon perjelas rujukan.' }),
     })] })} />);
-    const link = screen.getByRole('link', { name: 'Lihat dan balas komentar' });
-    expect(link).toHaveAttribute('href', '/reviews/comment-owner/discussion');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    await user.click(screen.getByRole('button', { name: 'Balas komentar' }));
+    expect(await screen.findByRole('dialog', { name: 'Diskusi komentar peninjau' })).toBeInTheDocument();
+    expect(screen.getByText('Putaran 3')).toBeInTheDocument();
   });
 
-  it.each([null, makeVerdictView({ comment: null })])('does not offer replies without a visible comment (%s)', (verdict) => {
+  it.each([null, makeVerdictView({ comment: null })])('does not offer a discussion without a visible comment (%s)', (verdict) => {
     render(<ReviewerFeedback review={makeCaseReview({ reviewers: [makeSlot({ verdict })] })} />);
-    expect(screen.queryByRole('link', { name: 'Lihat dan balas komentar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Balas komentar' })).not.toBeInTheDocument();
   });
 });
