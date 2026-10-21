@@ -74,7 +74,7 @@ export function CaseEditorForm({
     trigger,
   } = useForm<CaseFormValues>({
     defaultValues: defaultValues ?? emptyCaseFormValues(),
-    // Aturan dari contract (gen:zod). Jebakan dan kriteria tidak wajib, jadi draf tetap bisa disimpan.
+    // Aturan dari contract (gen:zod). Pengurang Poin dan kriteria tidak wajib, jadi draf tetap bisa disimpan.
     resolver: caseFormResolver,
     mode: "onBlur",
     reValidateMode: "onBlur",

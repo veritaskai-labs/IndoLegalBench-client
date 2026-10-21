@@ -72,7 +72,7 @@ function refRow(n: number) {
 }
 
 function trapRow(n: number) {
-  return screen.getByRole("group", { name: `Jebakan ${n}` });
+  return screen.getByRole("group", { name: `Pengurang Poin ${n}` });
 }
 
 describe("CaseEditorForm", () => {
@@ -84,7 +84,7 @@ describe("CaseEditorForm", () => {
       "Identitas",
       "Rujukan hukum",
       "Kriteria jawaban",
-      "Jebakan",
+      "Pengurang Poin",
       "Tag dev/test",
     ]) {
       expect(screen.getByRole("group", { name })).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("CaseEditorForm", () => {
     expect(screen.getByLabelText("ID kasus")).toHaveValue("");
     expect(within(refRow(1)).getByLabelText("Pasal")).toHaveValue("");
     expect(screen.queryByRole("group", { name: "Rujukan 2" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: "Jebakan 1" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Pengurang Poin 1" })).not.toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /dev/ })).not.toBeChecked();
     expect(screen.getByRole("radio", { name: /test/ })).not.toBeChecked();
   });
@@ -143,7 +143,7 @@ describe("CaseEditorForm", () => {
     await user.type(ref.getByLabelText("Tahun"), "2003");
     await user.type(ref.getByLabelText("Pasal"), "151");
     await user.type(screen.getByLabelText("Wajib ada"), "a{enter}b");
-    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+    await user.click(screen.getByRole("button", { name: "+ Tambah pengurang poin" }));
     await user.type(within(trapRow(1)).getByLabelText("Deskripsi"), "Jebak");
     await user.click(screen.getByRole("radio", { name: /dev/ }));
     await user.click(screen.getByRole("button", { name: "Simpan draf" }));
@@ -259,13 +259,13 @@ describe("CaseEditorForm", () => {
     const user = userEvent.setup();
     render(<CaseEditorForm onSubmit={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
-    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+    await user.click(screen.getByRole("button", { name: "+ Tambah pengurang poin" }));
+    await user.click(screen.getByRole("button", { name: "+ Tambah pengurang poin" }));
     await user.type(within(trapRow(2)).getByLabelText("Deskripsi"), "Kedua");
-    await user.click(screen.getByRole("button", { name: "Hapus jebakan 1" }));
+    await user.click(screen.getByRole("button", { name: "Hapus pengurang poin 1" }));
 
     expect(within(trapRow(1)).getByLabelText("Deskripsi")).toHaveValue("Kedua");
-    expect(screen.queryByRole("group", { name: "Jebakan 2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Pengurang Poin 2" })).not.toBeInTheDocument();
   });
 
   // Corner case: repeated submit.
@@ -337,7 +337,7 @@ describe("CaseEditorForm unsaved changes", () => {
       <CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} onDirtyChange={onDirtyChange} />,
     );
 
-    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+    await user.click(screen.getByRole("button", { name: "+ Tambah pengurang poin" }));
 
     expect(onDirtyChange).toHaveBeenLastCalledWith(true);
   });
@@ -653,7 +653,7 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     const user = userEvent.setup();
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+    await user.click(screen.getByRole("button", { name: "+ Tambah pengurang poin" }));
     await new Promise((resolve) => setTimeout(resolve, VALIDATE_DELAY_MS + 50));
 
     expect(trapRow(2)).not.toHaveAttribute("aria-invalid", "true");
@@ -721,7 +721,7 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
   it("explains that traps test the precision of the answer and dev/test is a dataset split", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(/menguji ketelitian model/);
+    expect(screen.getByRole("group", { name: "Pengurang Poin" })).toHaveTextContent(/menguji ketelitian model/);
     expect(screen.getByRole("group", { name: "Tag dev/test" })).toHaveTextContent(
       /metodologi dataset .* bukan tingkat kesulitan/,
     );
@@ -731,35 +731,44 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
   it("says traps are optional and a case without traps can still be submitted for review", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    const traps = screen.getByRole("group", { name: "Jebakan" });
-    expect(traps).toHaveTextContent(/^Jebakan\s*Opsional\./);
-    expect(traps).toHaveTextContent(/tetap bisa diajukan review tanpa jebakan/);
+    const traps = screen.getByRole("group", { name: "Pengurang Poin" });
+    expect(traps).toHaveTextContent(/^Pengurang Poin\s*Opsional\./);
+    expect(traps).toHaveTextContent(/tetap bisa diajukan review tanpa pengurang poin/);
   });
 
   it("explains a trap with a real example: an answer that looks right but cites a revoked article", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    const traps = screen.getByRole("group", { name: "Jebakan" });
+    const traps = screen.getByRole("group", { name: "Pengurang Poin" });
     // Review Rafa di PR #23: jebakan adalah skenario yang memancing jawaban keliru, bukan jawabannya sendiri.
-    expect(traps).toHaveTextContent(/Jebakan adalah skenario yang memancing jawaban/);
+    expect(traps).toHaveTextContent(/Pengurang Poin adalah skenario yang memancing jawaban/);
     expect(traps).toHaveTextContent(/tampak benar tapi sebenarnya keliru/);
     expect(traps).toHaveTextContent(/pasal yang sudah dicabut/);
+  });
+
+  // Temuan Ka Steven: istilah final "Pengurang Poin", bantuan menjelaskan artinya untuk skor.
+  it("explains that falling into a Pengurang Poin scenario lowers the model's score", () => {
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    const traps = screen.getByRole("group", { name: "Pengurang Poin" });
+    expect(traps).toHaveTextContent(/poin penilaiannya dikurangi/);
+    expect(traps).not.toHaveTextContent(/jebakan/i);
   });
 
   // Negative: aturan lama (minimal satu jebakan) tidak boleh muncul lagi.
   it("no longer tells the Author that at least one trap is required", () => {
     render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
 
-    expect(screen.getByRole("group", { name: "Jebakan" })).not.toHaveTextContent(/minimal satu/i);
+    expect(screen.getByRole("group", { name: "Pengurang Poin" })).not.toHaveTextContent(/minimal satu/i);
   });
 
   // Corner: kasus baru belum punya baris jebakan, bantuan tetap terlihat.
   it("shows the trap help on a new case that has no trap rows yet", () => {
     render(<CaseEditorForm onSubmit={vi.fn()} />);
 
-    const traps = screen.getByRole("group", { name: "Jebakan" });
+    const traps = screen.getByRole("group", { name: "Pengurang Poin" });
     expect(within(traps).queryByRole("group")).not.toBeInTheDocument();
-    expect(traps).toHaveTextContent(/Opsional\..*tetap bisa diajukan review tanpa jebakan/);
+    expect(traps).toHaveTextContent(/Opsional\..*tetap bisa diajukan review tanpa pengurang poin/);
   });
 
   it("gives every legal reference and answer criteria field its own hint", () => {
@@ -786,7 +795,7 @@ describe("CaseEditorForm inline validation (SCRUM-109)", () => {
     render(<CaseEditorForm onSubmit={vi.fn()} />);
 
     expect(screen.getByLabelText("ID kasus")).toHaveAccessibleDescription(CASE_HELP.caseCode);
-    expect(screen.getByRole("group", { name: "Jebakan" })).toHaveTextContent(CASE_HELP.traps);
+    expect(screen.getByRole("group", { name: "Pengurang Poin" })).toHaveTextContent(CASE_HELP.traps);
   });
 });
 
@@ -811,7 +820,7 @@ describe("CaseEditorForm placeholders and optional labels (SCRUM-131)", () => {
   it("gives every input in the editor a non-empty placeholder, trap rows included", async () => {
     const user = userEvent.setup();
     render(<CaseEditorForm onSubmit={vi.fn()} />);
-    await user.click(screen.getByRole("button", { name: "+ Tambah jebakan" }));
+    await user.click(screen.getByRole("button", { name: "+ Tambah pengurang poin" }));
 
     // Dropdown jenis peraturan berperan combobox, jadi tidak ikut daftar textbox.
     const dropdown = within(refRow(1)).getByRole("combobox", { name: "Jenis peraturan" });

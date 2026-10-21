@@ -7,7 +7,7 @@ import type { CaseFieldPath } from "./saveError";
 /**
  * Validasi form kasus di browser (SCRUM-109). Aturannya diturunkan dari
  * contract lewat `npm run gen:zod`, jadi yang ditolak di sini adalah hal
- * yang pasti ditolak server juga. Jebakan dan kriteria jawaban tidak wajib
+ * yang pasti ditolak server juga. Pengurang Poin dan kriteria jawaban tidak wajib
  * untuk menyimpan draf (AC2); kekurangannya ditampilkan indikator
  * kelengkapan, bukan sebagai error.
  */
@@ -31,7 +31,7 @@ const FIELD_LABELS: Record<string, string> = {
   ayat: "Ayat",
   huruf: "Huruf",
   free_text: "Teks bebas",
-  description: "Deskripsi jebakan",
+  description: "Deskripsi pengurang poin",
   expected_model_behavior: "Perilaku model yang diharapkan",
   "answer_criteria.expected_conclusion": "Kesimpulan yang diharapkan",
 };

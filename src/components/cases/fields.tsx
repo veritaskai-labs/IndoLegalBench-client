@@ -179,7 +179,7 @@ export function FormSection({
   );
 }
 
-/** Satu baris dinamis (rujukan atau jebakan) dengan tombol hapus. */
+/** Satu baris dinamis (rujukan atau pengurang poin) dengan tombol hapus. */
 export function RowGroup({
   title,
   removeLabel,
