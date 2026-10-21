@@ -121,6 +121,37 @@ describe("SubmitReviewButton", () => {
     );
   });
   // Negative: diajukan dari tab lain → 409, halaman harus diberi tahu supaya menyegarkan status.
+  // Dipasang di bar yang menempel di bawah layar: pesan di atas tombol, tingginya dibatasi.
+  it("shows the blockers above the button in a scrollable panel with a capped height", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    submit.mockRejectedValue(
+      new ApiError(422, "CASE_NOT_READY", null, null, [
+        { field: "legal_refs", message: "Minimal satu rujukan hukum" },
+      ]),
+    );
+    render(<SubmitReviewButton caseId="c1" ready onSubmitted={vi.fn()} />);
+    const button = screen.getByRole("button", { name: "Ajukan review" });
+
+    // Act
+    await user.click(button);
+
+    // Assert
+    const alert = await screen.findByRole("alert");
+    expect(alert.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(alert).toHaveClass("max-h-40", "overflow-y-auto");
+  });
+
+  it("shows the save hint above the button", () => {
+    // Arrange / Act
+    render(<SubmitReviewButton caseId="c1" ready dirty onSubmitted={vi.fn()} />);
+
+    // Assert
+    const hint = screen.getByText("Simpan perubahan dulu sebelum mengajukan.");
+    const button = screen.getByRole("button", { name: "Ajukan review" });
+    expect(hint.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("tells the page the case is stale when the version cannot be submitted again", async () => {
     const user = userEvent.setup();
     const onStale = vi.fn();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { get, useForm } from "react-hook-form";
 import { useLegalRefPreview } from "@/hooks/useLegalRefPreview";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
@@ -13,6 +13,7 @@ import {
 import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
 import { fieldErrorText, type FieldSaveError } from "@/lib/cases/saveError";
 import type { SplitTag } from "@/types/case";
+import { EditorActionBar } from "./EditorActionBar";
 import { ErrorSummary } from "./ErrorSummary";
 import { LegalRefsSection } from "./LegalRefsSection";
 import {
@@ -37,6 +38,8 @@ type Props = {
   onDirtyChange?: (dirty: boolean) => void;
   /** Versi terkunci: semua kolom dinonaktifkan dan tombol simpan disembunyikan. */
   readOnly?: boolean;
+  /** Aksi di samping Simpan draf, dalam bar yang menempel di bawah layar. Hilang bila readOnly. */
+  actions?: ReactNode;
   /**
    * Kasus sudah pernah disetujui: tag hanya diubah Admin lewat dialog "Ubah tag" (PBI-9 AC3).
    * Pilihan tag diganti badge; nilainya tetap ikut terkirim dari defaultValues.
@@ -59,6 +62,7 @@ export function CaseEditorForm({
   onSubmit,
   onDirtyChange,
   readOnly = false,
+  actions,
   tagLocked = false,
 }: Readonly<Props>) {
   const {
@@ -158,17 +162,7 @@ export function CaseEditorForm({
         <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
       </fieldset>
 
-      {!readOnly && (
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={formState.isSubmitting}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-          >
-            Simpan draf
-          </button>
-        </div>
-      )}
+      {!readOnly && <EditorActionBar saving={formState.isSubmitting}>{actions}</EditorActionBar>}
     </form>
   );
 }

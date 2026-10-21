@@ -1178,3 +1178,59 @@ describe("CaseEditorForm live legal reference preview (SCRUM-162)", () => {
     expect(previewMock).not.toHaveBeenCalled();
   });
 });
+
+// Temuan Ka Steven: "Ajukan review" harus di samping "Simpan draf" dan selalu terlihat (SCRUM-148).
+describe("CaseEditorForm action bar", () => {
+  const extra = <button type="button">Aksi tambahan</button>;
+  const bar = () => screen.getByRole("group", { name: "Aksi kasus" });
+
+  // Positive
+  it("puts Simpan draf and the extra action side by side in one bar", () => {
+    // Arrange / Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} actions={extra} />);
+
+    // Assert
+    const names = within(bar())
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    expect(names).toEqual(["Simpan draf", "Aksi tambahan"]);
+  });
+
+  it("sticks the bar to the bottom of the screen", () => {
+    // Arrange / Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} actions={extra} />);
+
+    // Assert: grupnya <fieldset> (semantik native), pembungkusnyalah yang menempel di layar
+    expect(bar().closest(".sticky")).toHaveClass("sticky", "bottom-0");
+    expect(bar().tagName).toBe("FIELDSET");
+  });
+
+  it("places the bar after the last section of the form", () => {
+    // Arrange / Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} actions={extra} />);
+
+    // Assert
+    const lastSection = screen.getByRole("group", { name: "Tag dev/test" });
+    expect(lastSection.compareDocumentPosition(bar()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // Corner: no extra action, the bar still holds the save button
+  it("holds only Simpan draf when no extra action is given", () => {
+    // Arrange / Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} />);
+
+    // Assert
+    expect(within(bar()).getAllByRole("button")).toHaveLength(1);
+    expect(within(bar()).getByRole("button", { name: "Simpan draf" })).toBeInTheDocument();
+  });
+
+  // Negative: a locked version has nothing to save or submit
+  it("shows no bar and no extra action while the form is read only", () => {
+    // Arrange / Act
+    render(<CaseEditorForm defaultValues={filled} onSubmit={vi.fn()} actions={extra} readOnly />);
+
+    // Assert
+    expect(screen.queryByRole("group", { name: "Aksi kasus" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aksi tambahan" })).not.toBeInTheDocument();
+  });
+});
