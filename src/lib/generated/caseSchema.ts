@@ -15,7 +15,7 @@ export const LegalRefLinkWriteSchema = z.object({
   number: z.string().min(1).max(100),
   about: z.string().max(500).nullable().optional(),
   pasal: z.string().max(40).regex(new RegExp("^(?:[1-9][0-9]*[A-Z]?|M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))$")).nullable().optional(),
-  angka: z.string().max(40).regex(new RegExp("^[1-9][0-9]*$")).nullable().optional(),
+  angka: z.string().max(40).regex(new RegExp("^(?:[1-9][0-9]*|M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3}))$")).nullable().optional(),
   ayat: z.string().max(20).nullable().optional(),
   huruf: z.string().max(8).nullable().optional(),
   year: z.number().int().min(1).max(9999),
