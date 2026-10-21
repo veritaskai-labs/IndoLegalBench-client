@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { CommentDiscussion } from "./CommentDiscussion";
 
 type Props = { assignmentId: string; draft: string; onDraftChange: (value: string) => void; onClose: () => void };
 
 /** Dialog native menjaga fokus keyboard dan membuat editor di belakang tetap terpasang. */
 export function DiscussionDrawer({ assignmentId, draft, onDraftChange, onClose }: Readonly<Props>) {
-  const ref = useRef<HTMLDialogElement>(null);
   const [sending, setSending] = useState(false);
-  useEffect(() => {
-    const node = ref.current;
+  const attachDialog = useCallback((node: HTMLDialogElement) => {
     const previousFocus = document.activeElement;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    if (node !== null) {
-      if (typeof node.showModal === "function") node.showModal();
-      else node.open = true;
-    }
+    if (typeof node.showModal === "function") node.showModal();
+    else node.open = true;
     return () => {
       document.body.style.overflow = overflow;
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
@@ -25,7 +21,7 @@ export function DiscussionDrawer({ assignmentId, draft, onDraftChange, onClose }
   }, []);
 
   return (
-    <dialog ref={ref} aria-label="Diskusi komentar peninjau" onCancel={(event) => {
+    <dialog ref={attachDialog} aria-label="Diskusi komentar peninjau" onCancel={(event) => {
       event.preventDefault();
       if (!sending) onClose();
     }} className="fixed inset-y-0 right-0 m-0 ml-auto h-dvh max-h-dvh w-full max-w-none flex-col overflow-hidden border-0 border-l border-slate-200 bg-white p-0 text-slate-900 shadow-2xl open:flex sm:max-w-xl backdrop:bg-slate-900/25">

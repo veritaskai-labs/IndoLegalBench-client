@@ -53,3 +53,14 @@ it('keeps the modal open while sending, then clears the persisted draft', async 
   await user.click(screen.getByRole('button', {name:'Balas komentar'}));
   expect(await screen.findByLabelText('Balasan Anda')).toHaveValue('');
 });
+
+it('cleans up safely when the previously focused control was an SVG element', async () => {
+ render(<><svg tabIndex={0} aria-label="Kontrol diagram" data-testid="svg-focus" /><DiscussionLauncher assignmentId="a1" /></>);
+ screen.getByTestId('svg-focus').focus();
+ expect(document.activeElement).toBe(screen.getByTestId('svg-focus'));
+ fireEvent.click(screen.getByRole('button', {name:'Balas komentar'}));
+ await screen.findByLabelText('Balasan Anda');
+ fireEvent.click(screen.getByRole('button', {name:'Tutup diskusi'}));
+ expect(document.body.style.overflow).toBe('');
+ expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
