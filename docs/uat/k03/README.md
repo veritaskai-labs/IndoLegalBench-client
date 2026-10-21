@@ -1,4 +1,6 @@
-# K-03 local workflow evidence
+# K-03 initial workflow evidence
+
+**Historical one-way implementation.** The [22 Oct follow-up](v2/README.md) supersedes the new-tab/read-only reviewer behavior below with a same-page drawer and two-way replies.
 
 22 Oct 2026. Synthetic QA users and an existing test case fixture on an isolated local Next.js/FastAPI/SQLite stack; no production or dev/UAT data modified.
 

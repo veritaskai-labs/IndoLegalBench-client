@@ -8,8 +8,8 @@ import { CommentDiscussion } from './CommentDiscussion';
 vi.mock('@/lib/reviews/discussionApi', async (original) => ({ ...await original<typeof import('@/lib/reviews/discussionApi')>(), getDiscussion: vi.fn(), sendReply: vi.fn() }));
 const get = vi.mocked(getDiscussion);
 const send = vi.mocked(sendReply);
-const reply = { id: 'r1', author_id: 'author', body: '<script>literal text</script>\nSecond line', created_at: '2026-10-22T03:00:00Z' };
-const thread = (overrides: Partial<Discussion> = {}): Discussion => ({ assignment_id: 'a1', case_id: 'c1', reviewer_name: 'Reviewer A', comment: 'Mohon perjelas rujukan.', can_reply: true, replies: [], ...overrides });
+const reply = { id: 'r1', author_id: 'author', author_name: 'Author QA', author_role: 'author' as const, body: '<script>literal text</script>\nSecond line', created_at: '2026-10-22T03:00:00Z' };
+const thread = (overrides: Partial<Discussion> = {}): Discussion => ({ round_no:3, round_status:'decided', viewer_id:'author', commented_at:'2026-10-22T03:00:00Z', assignment_id: 'a1', case_id: 'c1', reviewer_name: 'Reviewer A', comment: 'Mohon perjelas rujukan.', can_reply: true, replies: [], ...overrides });
 beforeEach(() => { get.mockReset(); send.mockReset(); get.mockResolvedValue(thread()); });
 
 describe('CommentDiscussion', () => {
@@ -18,9 +18,9 @@ describe('CommentDiscussion', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Memuat diskusi');
     expect(await screen.findByText('Mohon perjelas rujukan.')).toBeInTheDocument();
     expect(get).toHaveBeenCalledWith('a1');
-    expect(screen.getByRole('link', { name: 'Lihat kasus' })).toHaveAttribute('href', '/cases/c1/edit');
+    expect(screen.getByRole('link', { name: 'Kembali ke dashboard' })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByText('Belum ada balasan.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Balasan untuk peninjau')).toHaveAccessibleDescription(/5.000/);
+    expect(screen.getByLabelText('Balasan Anda')).toHaveAccessibleDescription(/5.000/);
     expect(screen.getByRole('button', { name: 'Kirim balasan' })).toBeDisabled();
   });
   it('trims and submits once, then reloads the persisted reply', async () => {
@@ -28,10 +28,10 @@ describe('CommentDiscussion', () => {
     send.mockReturnValue(new Promise((done) => { resolve = done; }));
     const user = userEvent.setup();
     render(<CommentDiscussion assignmentId="a1" />);
-    await user.type(await screen.findByLabelText('Balasan untuk peninjau'), '  Tolong perjelas  ');
+    await user.type(await screen.findByLabelText('Balasan Anda'), '  Tolong perjelas  ');
     await user.click(screen.getByRole('button', { name: 'Kirim balasan' }));
     expect(screen.getByRole('button', { name: 'Mengirim balasan…' })).toBeDisabled();
-    const form = screen.getByLabelText('Balasan untuk peninjau').closest('form');
+    const form = screen.getByLabelText('Balasan Anda').closest('form');
     if (form === null) throw new Error('Missing reply form');
     fireEvent.submit(form);
     expect(send).toHaveBeenCalledTimes(1);
@@ -40,14 +40,14 @@ describe('CommentDiscussion', () => {
     await act(async () => resolve(reply));
     expect(await screen.findByText(/literal text/)).toHaveTextContent('<script>literal text</script>');
     expect(document.querySelector('script')).toBeNull();
-    expect(screen.getByLabelText('Balasan untuk peninjau')).toHaveValue('');
+    expect(screen.getByLabelText('Balasan Anda')).toHaveValue('');
   });
   it('preserves the draft after a failed send and permits retry', async () => {
     send.mockRejectedValueOnce(new ApiError(409, 'ASSIGNMENT_NOT_ACTIVE'));
     send.mockResolvedValueOnce(reply);
     const user = userEvent.setup();
     render(<CommentDiscussion assignmentId="a1" />);
-    const input = await screen.findByLabelText('Balasan untuk peninjau');
+    const input = await screen.findByLabelText('Balasan Anda');
     await user.type(input, 'Pertanyaan');
     await user.click(screen.getByRole('button', { name: 'Kirim balasan' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Penugasan telah berubah');
@@ -71,7 +71,7 @@ describe('CommentDiscussion', () => {
   });
   it('blocks whitespace and oversized programmatic form submission', async () => {
     render(<CommentDiscussion assignmentId="a1" />);
-    const input = await screen.findByLabelText('Balasan untuk peninjau');
+    const input = await screen.findByLabelText('Balasan Anda');
     for (const body of ['   ', 'x'.repeat(5001)]) {
       fireEvent.change(input, { target: { value: body } });
       const form = input.closest('form');
@@ -93,3 +93,20 @@ describe('CommentDiscussion', () => {
     expect(screen.queryByText('Stale first comment')).not.toBeInTheDocument();
   });
 });
+
+  it('identifies both participants and retains the draft during refresh', async () => {
+    get.mockResolvedValue(thread({ viewer_id:'reviewer', replies:[reply, {...reply, id:'r2', author_id:'reviewer', author_name:'Reviewer A', author_role:'reviewer', body:'Perjelas dasar pasalnya.'}] }));
+    const user = userEvent.setup();
+    render(<CommentDiscussion assignmentId="a1" />);
+    await user.type(await screen.findByLabelText('Balasan Anda'), 'Draf belum dikirim');
+    expect(screen.getByText(/Peninjau · Anda/)).toBeInTheDocument();
+    expect(screen.getByText(/Author QA/).parentElement).toHaveTextContent('Penulis');
+    await user.click(screen.getByRole('button', {name:'Perbarui diskusi'}));
+    expect(await screen.findByLabelText('Balasan Anda')).toHaveValue('Draf belum dikirim');
+  });
+  it('explains the blind-review wait before the round is decided', async () => {
+    get.mockResolvedValue(thread({can_reply:false, round_status:'open'}));
+    render(<CommentDiscussion assignmentId="a1" embedded />);
+    expect(await screen.findByText('Diskusi dibuka setelah kedua penilaian selesai.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });

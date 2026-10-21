@@ -733,7 +733,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Penulis membalas komentar peninjau (K-03) */
+        /** Penulis dan peninjau membalas diskusi komentar (K-03) */
         post: operations["reply_to_comment_reviews__assignment_id__replies_post"];
         delete?: never;
         options?: never;
@@ -1305,6 +1305,19 @@ export interface components {
         };
         /** CommentDiscussion */
         CommentDiscussion: {
+            /** Round No */
+            round_no: number;
+            round_status: components["schemas"]["RoundStatus"];
+            /**
+             * Viewer Id
+             * Format: uuid
+             */
+            viewer_id: string;
+            /**
+             * Commented At
+             * Format: date-time
+             */
+            commented_at: string;
             /**
              * Assignment Id
              * Format: uuid
@@ -1336,6 +1349,13 @@ export interface components {
              * Format: uuid
              */
             author_id: string;
+            /** Author Name */
+            author_name: string;
+            /**
+             * Author Role
+             * @enum {string}
+             */
+            author_role: "author" | "reviewer";
             /** Body */
             body: string;
             /**

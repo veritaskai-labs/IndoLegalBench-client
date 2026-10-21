@@ -23,7 +23,7 @@ export const ACTION_LABEL: Readonly<Record<string, string>> = {
   "review.reviewer_assigned": "Reviewer ditugaskan",
   "review.reviewer_replaced": "Reviewer diganti",
   "review.assignment_voided": "Penugasan reviewer dibatalkan",
-  "review.comment_replied": "Penulis membalas komentar peninjau",
+  "review.comment_replied": "Balasan diskusi review dikirim",
   "review.verdict_submitted": "Penilaian reviewer dikirim",
   "review.approval_carried": "Persetujuan dibawa ke ronde berikutnya",
   "ai_product.registered": "Produk AI didaftarkan",

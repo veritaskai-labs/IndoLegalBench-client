@@ -107,8 +107,8 @@ describe("ReviewerFeedback", () => {
     expect(screen.queryByRole("listitem")).not.toBeInTheDocument();
   });
 
-  // Negative: the author reads it here and edits the case in the form.
-  it("has nothing to type into or press", () => {
+  // The case editor stays separate from the discussion composer.
+  it("opens discussion from a visible action without embedding a second editor", () => {
     // Arrange
     const review = makeCaseReview({ status: "decided", reviewers: [reviseSlot("Anisa P.", "Perbaiki")] });
 
@@ -117,6 +117,6 @@ describe("ReviewerFeedback", () => {
 
     // Assert
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", {name:"Balas komentar"})).toBeInTheDocument();
   });
 });
