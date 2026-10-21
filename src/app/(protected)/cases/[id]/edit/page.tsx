@@ -219,24 +219,6 @@ export default function EditCasePage() {
           onRetry={completeness.reload}
         />
 
-        {canSubmit && completeness.status === "ready" && (
-          <SubmitReviewButton
-            caseId={caseId}
-            ready={completeness.completeness.ready_for_review}
-            dirty={dirty}
-            onStale={() => {
-              // Diajukan dari tempat lain: baca ulang supaya status dan kunci editor ikut benar.
-              detail.reload();
-            }}
-            onSubmitted={(result) => {
-              // Status diambil dari balasan server, bukan ditebak.
-              detail.replace({ ...saved, status: result.status });
-              setFormKey((key) => key + 1);
-              showToast("Kasus diajukan untuk direview");
-            }}
-          />
-        )}
-
         {saveError.message !== null && (
           <ErrorState message={saveError.message} />
         )}
@@ -263,6 +245,25 @@ export default function EditCasePage() {
           onDirtyChange={setDirty}
           readOnly={!editable}
           tagLocked={isTagLockedInEditor(saved)}
+          actions={
+            canSubmit && completeness.status === "ready" ? (
+              <SubmitReviewButton
+                caseId={caseId}
+                ready={completeness.completeness.ready_for_review}
+                dirty={dirty}
+                onStale={() => {
+                  // Diajukan dari tempat lain: baca ulang supaya status dan kunci editor ikut benar.
+                  detail.reload();
+                }}
+                onSubmitted={(result) => {
+                  // Status diambil dari balasan server, bukan ditebak.
+                  detail.replace({ ...saved, status: result.status });
+                  setFormKey((key) => key + 1);
+                  showToast("Kasus diajukan untuk direview");
+                }}
+              />
+            ) : null
+          }
         />
       </div>
 
