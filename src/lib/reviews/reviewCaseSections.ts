@@ -3,7 +3,7 @@ import type { ReviewCopy } from "@/types/review";
 
 /**
  * Salinan kasus untuk reviewer ditulis ulang dengan nama bagian yang sama dengan riwayat versi,
- * supaya rujukan hukum, kriteria jawaban, dan jebakan diformat oleh satu tempat yang sama
+ * supaya rujukan hukum, kriteria jawaban, dan pengurang poin diformat oleh satu tempat yang sama
  * (versionSections) dan tidak ditulis ulang di sini.
  */
 export function reviewCopyToSections(copy: ReviewCopy): VersionSections {

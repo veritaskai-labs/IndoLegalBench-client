@@ -99,12 +99,12 @@ export function AnswerCriteriaSection({ register, errorFor }: SectionProps) {
 export function TrapsSection({ register, control, errorFor, rowHasError }: ArrayProps) {
   const { fields, append, remove } = useFieldArray({ control, name: "traps" });
   return (
-    <FormSection title="Jebakan" help={CASE_HELP.traps} error={errorFor("traps")}>
+    <FormSection title="Pengurang Poin" help={CASE_HELP.traps} error={errorFor("traps")}>
       {fields.map((field, index) => (
         <RowGroup
           key={field.id}
-          title={`Jebakan ${index + 1}`}
-          removeLabel={`Hapus jebakan ${index + 1}`}
+          title={`Pengurang Poin ${index + 1}`}
+          removeLabel={`Hapus pengurang poin ${index + 1}`}
           onRemove={() => remove(index)}
           invalid={rowHasError(`traps.${index}`)}
         >
@@ -124,7 +124,7 @@ export function TrapsSection({ register, control, errorFor, rowHasError }: Array
           />
         </RowGroup>
       ))}
-      <AddRowButton label="+ Tambah jebakan" onClick={() => append(emptyTrap())} />
+      <AddRowButton label="+ Tambah pengurang poin" onClick={() => append(emptyTrap())} />
     </FormSection>
   );
 }
