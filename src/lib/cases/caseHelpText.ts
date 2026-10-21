@@ -22,7 +22,7 @@ export const CASE_HELP = {
   // Kolom opsional ditandai di labelnya, bukan di teks bantuan (SCRUM-131, PBI-21).
   about: "Judul peraturan setelah kata \"tentang\".",
   pasal: "Nomor pasal, angka biasa atau Romawi, misalnya 156 atau II.",
-  angka: "Nomor angka di dalam pasal, misalnya 5 untuk Pasal II Angka 5.",
+  angka: "Nomor angka di dalam pasal, angka biasa atau Romawi, misalnya 5 atau IV.",
   ayat: "Ayat di dalam pasal.",
   huruf: "Huruf di dalam ayat.",
   freeText: "Untuk rujukan yang tidak bisa ditulis terstruktur. Disimpan apa adanya.",
