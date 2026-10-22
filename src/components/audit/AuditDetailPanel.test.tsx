@@ -188,7 +188,7 @@ describe("AuditDetailPanel", () => {
     const onClose = vi.fn();
     render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
 
-    await user.keyboard("a{Enter}");
+    await user.keyboard("a{ArrowDown}");
 
     expect(onClose).not.toHaveBeenCalled();
   });
