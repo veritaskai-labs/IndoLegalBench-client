@@ -12,12 +12,12 @@ const ACTORS: AuditActor[] = [
   { id: "u2", name: "Roben", email: "r@veritask.test", role: "reviewer", is_active: false },
 ];
 
-function setup(value: AuditFilter = FILTER) {
+function setup(value: AuditFilter = FILTER, actors: AuditActor[] = ACTORS) {
   const onChange = vi.fn();
   render(
     <AuditFilterBar
       value={value}
-      actors={ACTORS}
+      actors={actors}
       minDate="2026-07-09"
       maxDate="2026-10-07"
       onChange={onChange}
@@ -53,8 +53,42 @@ describe("AuditFilterBar", () => {
   it("offers deactivated users too, marked as such", () => {
     setup();
 
-    expect(screen.getByRole("option", { name: "Herdayani" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Roben (nonaktif)" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Herdayani (h@veritask.test)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Roben (r@veritask.test) (nonaktif)" }),
+    ).toBeInTheDocument();
+  });
+
+  // Positive: the reason for this change, two people with one name.
+  it("tells apart two users who share a name by their email", () => {
+    setup(FILTER, [
+      { id: "u1", name: "Rina Sari", email: "rina.a@veritask.ai", role: "author", is_active: true },
+      { id: "u2", name: "Rina Sari", email: "rina.b@veritask.ai", role: "author", is_active: true },
+    ]);
+
+    expect(
+      screen.getByRole("option", { name: "Rina Sari (rina.a@veritask.ai)" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Rina Sari (rina.b@veritask.ai)" }),
+    ).toBeInTheDocument();
+  });
+
+  // Positive: the visible label changes, the value sent to the server does not.
+  it("hands over the id of the user picked by email", async () => {
+    const { onChange } = setup(FILTER, [
+      { id: "u1", name: "Rina Sari", email: "rina.a@veritask.ai", role: "author", is_active: true },
+      { id: "u2", name: "Rina Sari", email: "rina.b@veritask.ai", role: "author", is_active: true },
+    ]);
+
+    await userEvent.selectOptions(
+      screen.getByLabelText("Pelaku"),
+      screen.getByRole("option", { name: "Rina Sari (rina.b@veritask.ai)" }),
+    );
+
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ actor_id: "u2" }));
   });
 
   // Positive
