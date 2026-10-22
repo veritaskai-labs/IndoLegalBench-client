@@ -13,10 +13,16 @@ type ActorFields = Pick<AuditEntry, "actor_user_id" | "actor_name"> &
 
 const SYSTEM = "Sistem";
 
+/** Trimmed text, or null when it is missing or only spaces. */
+function nonBlank(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed === undefined || trimmed === "" ? null : trimmed;
+}
+
 /** One place decides how an audit actor reads, for the table and the log detail. */
 export function actorIdentity(entry: ActorFields): ActorIdentity {
-  const email = entry.actor_email?.trim() || null;
-  const name = entry.actor_name?.trim() || null;
+  const email = nonBlank(entry.actor_email);
+  const name = nonBlank(entry.actor_name);
   if (email) {
     return { primary: email, secondary: name && name !== email ? name : null };
   }

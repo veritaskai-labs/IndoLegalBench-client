@@ -69,6 +69,17 @@ describe("actorIdentity", () => {
     expect(result).toEqual({ primary: "Rina Sari", secondary: null });
   });
 
+  // Corner: same rule for the name when there is no email either.
+  it("shows Sistem when the name is only spaces and there is no email", () => {
+    const result = actorIdentity({
+      actor_user_id: "u1",
+      actor_name: "   ",
+      actor_email: null,
+    });
+
+    expect(result).toEqual({ primary: "Sistem", secondary: null });
+  });
+
   // Positive: system events keep the existing wording.
   it("calls an event without an actor Sistem", () => {
     const result = actorIdentity({
