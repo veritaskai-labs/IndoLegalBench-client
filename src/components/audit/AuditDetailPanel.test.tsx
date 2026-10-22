@@ -166,7 +166,7 @@ describe("AuditDetailPanel", () => {
     const onClose = vi.fn();
     render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
 
-    await user.click(screen.getByRole("presentation"));
+    await user.click(screen.getByTestId("audit-detail-backdrop"));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
