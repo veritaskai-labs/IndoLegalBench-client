@@ -1086,6 +1086,11 @@ export interface components {
             actor_user_id: string | null;
             /** Actor Name */
             actor_name: string | null;
+            /**
+             * Actor Email
+             * @description Email pelaku, unik sehingga membedakan pengguna yang namanya sama. Null untuk kejadian oleh sistem
+             */
+            actor_email?: string | null;
             /** Actor Role */
             actor_role: string | null;
             /** Action */
