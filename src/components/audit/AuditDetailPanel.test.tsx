@@ -129,3 +129,21 @@ describe("AuditDetailPanel", () => {
     );
   });
 });
+
+
+describe("K-03 history discussion access", () => {
+  it("links an author-reply event to the exact assignment even after the latest round changes", () => {
+    render(<AuditDetailPanel entry={entry({ action: "review.comment_replied", entity_type: "review", entity_id: "a/b" })} onClose={vi.fn()} />);
+    const link = screen.getByRole("link", { name: "Buka diskusi komentar" });
+    expect(link).toHaveAttribute("href", "/reviews/a%2Fb/discussion");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+  it.each([
+    { action: "case.updated", entity_type: "review" as const },
+    { action: "review.comment_replied", entity_type: "case" as const },
+  ])("does not invent a discussion for unrelated events (%s)", (overrides) => {
+    render(<AuditDetailPanel entry={entry(overrides)} onClose={vi.fn()} />);
+    expect(screen.queryByRole("link", { name: "Buka diskusi komentar" })).not.toBeInTheDocument();
+  });
+});

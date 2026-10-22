@@ -99,3 +99,10 @@ describe("OwnVerdictNotice", () => {
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
+
+it('offers the reviewer a discussion action only for an existing comment', () => {
+ const {rerender}=render(<OwnVerdictNotice verdict={makeVerdictView({comment:'Perjelas'})} roundStatus="decided" roundDecision="revise" assignmentId="a1" />);
+ expect(screen.getByRole('button', {name:'Buka diskusi komentar'})).toBeInTheDocument();
+ rerender(<OwnVerdictNotice verdict={makeVerdictView({comment:null})} roundStatus="decided" roundDecision="revise" assignmentId="a1" />);
+ expect(screen.queryByRole('button')).not.toBeInTheDocument();
+});

@@ -70,6 +70,15 @@ beforeEach(() => {
 });
 
 describe("ReviewAssignmentPage", () => {
+  it("waits for authentication before requesting an assignment or exposing discussion controls", () => {
+    session.role = null;
+    render(<ReviewAssignmentPage />);
+    expect(screen.getByRole("status")).toHaveTextContent("Memuat");
+    expect(listMock).not.toHaveBeenCalled();
+    expect(reviewMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Buka diskusi komentar" })).not.toBeInTheDocument();
+  });
+
   // Positive
   it("shows the case, the verdict form and the second reviewer as blind", async () => {
     // Arrange / Act
@@ -163,6 +172,7 @@ describe("ReviewAssignmentPage", () => {
 
     // Assert
     expect(await screen.findByText("Cek PP 35/2021")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Buka diskusi komentar" })).toBeInTheDocument();
     expect(screen.queryByRole("form", { name: "Penilaian Anda" })).not.toBeInTheDocument();
     expect(screen.getByText("Menunggu peninjau lain menilai.")).toBeInTheDocument();
   });

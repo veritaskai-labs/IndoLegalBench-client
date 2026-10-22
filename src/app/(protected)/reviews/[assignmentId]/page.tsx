@@ -67,6 +67,7 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
             <VerdictForm assignmentId={assignment.assignment_id} versionNo={copy.version_no} onSubmitted={setResult} />
           ) : (
             <OwnVerdictNotice
+              assignmentId={assignment.assignment_id}
               verdict={verdict}
               roundStatus={result?.round_status ?? "open"}
               roundDecision={result?.round_decision ?? null}

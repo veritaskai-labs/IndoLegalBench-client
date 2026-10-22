@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { auditActionLabel } from "@/lib/audit/actionLabels";
 import { entityLabel } from "@/lib/audit/entityLabels";
 import { formatWib } from "@/lib/audit/formatWib";
@@ -49,6 +50,13 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
           Tutup
         </button>
       </div>
+
+      {entry.action === "review.comment_replied" && entry.entity_type === "review" && (
+        <Link href={`/reviews/${encodeURIComponent(entry.entity_id)}/discussion`} target="_blank" rel="noopener noreferrer"
+          className="mt-4 inline-block text-sm text-indigo-600 underline">
+          Buka diskusi komentar
+        </Link>
+      )}
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <ValueBlock label="Sebelum" value={entry.before} />

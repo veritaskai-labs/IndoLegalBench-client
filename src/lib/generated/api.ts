@@ -707,6 +707,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/{assignment_id}/discussion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Komentar peninjau dan balasan penulis (K-03) */
+        get: operations["get_discussion_reviews__assignment_id__discussion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews/{assignment_id}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Penulis dan peninjau membalas diskusi komentar (K-03) */
+        post: operations["reply_to_comment_reviews__assignment_id__replies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications": {
         parameters: {
             query?: never;
@@ -1268,6 +1302,75 @@ export interface components {
             /** Traps */
             traps?: components["schemas"]["Trap"][];
             split_tag: components["schemas"]["SplitTag"];
+        };
+        /** CommentDiscussion */
+        CommentDiscussion: {
+            /** Round No */
+            round_no: number;
+            round_status: components["schemas"]["RoundStatus"];
+            /**
+             * Viewer Id
+             * Format: uuid
+             */
+            viewer_id: string;
+            /**
+             * Commented At
+             * Format: date-time
+             */
+            commented_at: string;
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Reviewer Name */
+            reviewer_name: string;
+            /** Comment */
+            comment: string;
+            /** Can Reply */
+            can_reply: boolean;
+            /** Replies */
+            replies: components["schemas"]["CommentReplyRead"][];
+        };
+        /** CommentReplyRead */
+        CommentReplyRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Author Id
+             * Format: uuid
+             */
+            author_id: string;
+            /** Author Name */
+            author_name: string;
+            /**
+             * Author Role
+             * @enum {string}
+             */
+            author_role: "author" | "reviewer";
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * CommentReplyWrite
+         * @description K-03: teks biasa; tidak menerima identitas pelaku dari client.
+         */
+        CommentReplyWrite: {
+            /** Body */
+            body: string;
         };
         /**
          * CompletenessIssue
@@ -4123,6 +4226,135 @@ export interface operations {
             };
             /** @description Kasus tidak ditemukan, atau belum pernah diajukan (`NO_REVIEW_ROUND`). */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_discussion_reviews__assignment_id__discussion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentDiscussion"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reply_to_comment_reviews__assignment_id__replies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentReplyWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentReplyRead"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -21,6 +21,7 @@ const SERVER_ACTIONS = [
   "review.reviewer_replaced",
   "review.assignment_voided",
   "review.verdict_submitted",
+  "review.comment_replied",
   "review.approval_carried",
   "ai_product.registered",
   "ai_product.updated",
