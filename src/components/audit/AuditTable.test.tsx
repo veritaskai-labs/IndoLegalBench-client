@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { AuditEntry } from "@/types/audit";
@@ -10,6 +10,7 @@ function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
     occurred_at: "2026-10-06T03:30:00Z",
     actor_user_id: "u1",
     actor_name: "Herdayani",
+    actor_email: "herdayani@veritask.test",
     actor_role: "author",
     action: "case.updated",
     entity_type: "case",
@@ -110,6 +111,64 @@ describe("AuditTable", () => {
     expect(onRowClick).toHaveBeenCalledWith(only);
   });
 
+  // Positive: AC3, the email is unique so it is what tells actors apart.
+  it("shows the actor's email as the main text of the Pelaku cell", () => {
+    render(<AuditTable entries={[entry()]} onRowClick={vi.fn()} />);
+
+    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    const pelaku = within(row).getAllByRole("cell")[1];
+    expect(pelaku).toHaveTextContent("herdayani@veritask.test");
+    expect(pelaku).toHaveTextContent("Herdayani");
+  });
+
+  // Positive: the reason for this change, two people with one name.
+  it("tells apart two actors who share a name", () => {
+    render(
+      <AuditTable
+        entries={[
+          entry({
+            id: 1,
+            actor_user_id: "u1",
+            actor_name: "Rina Sari",
+            actor_email: "rina.a@veritask.ai",
+          }),
+          entry({
+            id: 2,
+            actor_user_id: "u2",
+            actor_name: "Rina Sari",
+            actor_email: "rina.b@veritask.ai",
+          }),
+        ]}
+        onRowClick={vi.fn()}
+      />,
+    );
+
+    const [, first, second] = screen.getAllByRole("row");
+    expect(within(first).getAllByRole("cell")[1]).toHaveTextContent("rina.a@veritask.ai");
+    expect(within(second).getAllByRole("cell")[1]).toHaveTextContent("rina.b@veritask.ai");
+  });
+
+  // Corner: a server without the field yet, or an actor whose email is missing.
+  it("shows the name when the actor has no email", () => {
+    render(<AuditTable entries={[entry({ actor_email: null })]} onRowClick={vi.fn()} />);
+
+    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    const pelaku = within(row).getAllByRole("cell")[1];
+    expect(pelaku).toHaveTextContent("Herdayani");
+    expect(pelaku).not.toHaveTextContent("@");
+  });
+
+  // Security: an email is data from the user table, so it is text, not markup.
+  it("shows markup in the actor's email as plain text", () => {
+    const email = '<img src=x onerror="alert(1)">@veritask.ai';
+    const { container } = render(
+      <AuditTable entries={[entry({ actor_email: email })]} onRowClick={vi.fn()} />,
+    );
+
+    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(email);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
   // Corner
   it("falls back to the raw type when the server sends one it does not know", () => {
     render(
@@ -145,7 +204,7 @@ describe("AuditTable", () => {
   it("says the system did it when there is no actor", () => {
     render(
     <AuditTable
-    entries={[entry({ actor_user_id: null, actor_name: null })]}
+    entries={[entry({ actor_user_id: null, actor_name: null, actor_email: null })]}
     onRowClick={vi.fn()}
     />,
   );
