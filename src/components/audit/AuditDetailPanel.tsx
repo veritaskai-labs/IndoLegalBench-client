@@ -54,18 +54,20 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
   const { primary, secondary } = actorIdentity(entry);
 
   return createPortal(
-    <div
-      role="presentation"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-    >
-      <div
-        role="dialog"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-hidden="true"
+        data-testid="audit-detail-backdrop"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-slate-900/40"
+      />
+      <dialog
+        open
         aria-modal="true"
         aria-label="Detail catatan audit"
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-lg"
+        className="relative m-0 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 text-slate-900 shadow-lg"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -106,7 +108,7 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
           <p className="text-xs font-medium text-slate-700">Alasan</p>
           <p className="mt-1 text-sm text-slate-600">{entry.reason ?? "Tanpa alasan"}</p>
         </div>
-      </div>
+      </dialog>
     </div>,
     document.body,
   );
