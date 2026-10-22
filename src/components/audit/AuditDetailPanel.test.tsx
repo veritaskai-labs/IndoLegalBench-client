@@ -10,6 +10,7 @@ function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
     occurred_at: "2026-10-06T03:30:00Z",
     actor_user_id: "u1",
     actor_name: "Herdayani",
+    actor_email: "herdayani@veritask.test",
     actor_role: "author",
     action: "case.updated",
     entity_type: "case",
@@ -115,11 +116,88 @@ describe("AuditDetailPanel", () => {
     );
   });
 
+  // Positive: the email is unique, so the detail can be trusted to name one person.
+  it("shows the actor's email with the name", () => {
+    render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
+
+    const panel = screen.getByRole("dialog", { name: "Detail catatan audit" });
+    expect(panel).toHaveTextContent("herdayani@veritask.test (Herdayani)");
+  });
+
+  // Corner
+  it("shows only the name when the actor has no email", () => {
+    render(<AuditDetailPanel entry={entry({ actor_email: null })} onClose={vi.fn()} />);
+
+    const panel = screen.getByRole("dialog", { name: "Detail catatan audit" });
+    expect(panel).toHaveTextContent("Herdayani");
+    expect(panel).not.toHaveTextContent("@");
+  });
+
+  // Positive: SCRUM-178, the detail must not sit under the table where it is missed.
+  it("opens as a modal dialog outside the place it was rendered from", () => {
+    const { container } = render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
+
+    const panel = screen.getByRole("dialog", { name: "Detail catatan audit" });
+    expect(panel).toHaveAttribute("aria-modal", "true");
+    expect(container).not.toContainElement(panel);
+  });
+
+  // Positive
+  it("puts the focus on the close button when it opens", () => {
+    render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Tutup" })).toHaveFocus();
+  });
+
+  // Positive
+  it("closes with the Escape key", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
+
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Positive
+  it("closes when the reader clicks the dimmed area around it", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
+
+    await user.click(screen.getByRole("presentation"));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Negative: reading or selecting text inside the dialog must not throw it away.
+  it("stays open when the reader clicks inside it", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
+
+    await user.click(screen.getByRole("heading", { name: "Kasus diubah" }));
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // Corner: other keys are not a request to close.
+  it("ignores other keys", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
+
+    await user.keyboard("a{Enter}");
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   // Corner
   it("says the system did it when there is no actor", () => {
     render(
       <AuditDetailPanel
-        entry={entry({ actor_user_id: null, actor_name: null })}
+        entry={entry({ actor_user_id: null, actor_name: null, actor_email: null })}
         onClose={vi.fn()}
       />,
     );

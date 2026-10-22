@@ -83,6 +83,36 @@ describe("AuditPage (SCRUM-141)", () => {
     expect(panel).toHaveTextContent("Judul lama");
   });
 
+  // Positive: SCRUM-178, no scrolling after a click.
+  it("opens the detail as a dialog and not under the table", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue(page([entry()]));
+    const { container } = render(<AuditPageComponent />);
+    await screen.findByText("ILB-PT-0142");
+
+    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+
+    const panel = await screen.findByRole("dialog", { name: "Detail catatan audit" });
+    expect(panel).toHaveAttribute("aria-modal", "true");
+    expect(container).not.toContainElement(panel);
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  });
+
+  // Positive
+  it("closes the detail with Escape and keeps the list on screen", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue(page([entry()]));
+    render(<AuditPageComponent />);
+    await screen.findByText("ILB-PT-0142");
+    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+    await screen.findByRole("dialog", { name: "Detail catatan audit" });
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog", { name: "Detail catatan audit" })).not.toBeInTheDocument();
+    expect(screen.getByRole("table")).toBeInTheDocument();
+  });
+
   // Positive
   it("asks again with the chosen entity type", async () => {
     const user = userEvent.setup();
