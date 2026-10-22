@@ -1,5 +1,6 @@
 "use client";
 
+import { actorIdentity } from "@/lib/audit/actorLabel";
 import { auditActionLabel } from "@/lib/audit/actionLabels";
 import { formatWib } from "@/lib/audit/formatWib";
 import { entityLabel } from "@/lib/audit/entityLabels";
@@ -9,6 +10,16 @@ type Props = {
   entries: AuditEntry[];
   onRowClick: (entry: AuditEntry) => void;
 };
+
+function ActorCell({ entry }: Readonly<{ entry: AuditEntry }>) {
+  const { primary, secondary } = actorIdentity(entry);
+  return (
+    <>
+      <span className="break-all">{primary}</span>
+      {secondary && <span className="block text-xs text-slate-500">{secondary}</span>}
+    </>
+  );
+}
 
 export function AuditTable({ entries, onRowClick }: Props) {
   return (
@@ -29,7 +40,9 @@ export function AuditTable({ entries, onRowClick }: Props) {
             className="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
           >
             <td className="py-3 px-4 text-slate-600">{formatWib(item.occurred_at)}</td>
-            <td className="py-3 px-4 text-slate-900">{item.actor_name ?? "Sistem"}</td>
+            <td className="py-3 px-4 text-slate-900">
+              <ActorCell entry={item} />
+            </td>
             <td className="py-3 px-4 text-slate-700">{auditActionLabel(item.action)}</td>
             <td className="py-3 px-4 text-slate-700">
               {entityLabel(item.entity_type)}{" "}
