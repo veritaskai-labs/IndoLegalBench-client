@@ -193,7 +193,7 @@ describe("AuditPage (SCRUM-141)", () => {
     const user = userEvent.setup();
     list.mockResolvedValue(page([]));
     render(<AuditPageComponent />);
-    await screen.findByRole("option", { name: "Roben (nonaktif)" });
+    await screen.findByRole("option", { name: "Roben (r@veritask.test) (nonaktif)" });
 
     await user.selectOptions(screen.getByLabelText("Pelaku"), "u2");
 
