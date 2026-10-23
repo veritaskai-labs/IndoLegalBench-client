@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { actorOptionLabel } from "@/lib/audit/actorLabel";
 import type { AuditActor } from "@/lib/audit/auditApi";
 import { ENTITY_LABEL } from "@/lib/audit/entityLabels";
 import type { AuditEntityType, AuditFilter } from "@/types/audit";
@@ -97,7 +98,7 @@ export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Pr
           <option value="">Semua pengguna</option>
           {actors.map((actor) => (
             <option key={actor.id} value={actor.id}>
-              {actor.is_active ? actor.name : `${actor.name} (nonaktif)`}
+              {actorOptionLabel(actor)}
             </option>
           ))}
         </select>

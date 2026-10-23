@@ -116,6 +116,30 @@ describe("CaseAuditHistory", () => {
       expect(detail).toHaveTextContent("in_review");
     });
 
+    it("opens the detail as a dialog outside the history tab, not under the list", async () => {
+      list.mockResolvedValue(makeAuditPage(entries));
+      const user = userEvent.setup();
+      const { container } = render(<CaseAuditHistory caseId="case-1" />);
+
+      await user.click(await screen.findByText("Roben"));
+
+      const detail = screen.getByRole("dialog", { name: "Detail catatan audit" });
+      expect(detail).toHaveAttribute("aria-modal", "true");
+      expect(container).not.toContainElement(detail);
+    });
+
+    it("closes the detail with Escape and keeps the list", async () => {
+      list.mockResolvedValue(makeAuditPage(entries));
+      const user = userEvent.setup();
+      render(<CaseAuditHistory caseId="case-1" />);
+      await user.click(await screen.findByText("Roben"));
+
+      await user.keyboard("{Escape}");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
+    });
+
     it("closes the detail with Tutup and keeps the list", async () => {
       list.mockResolvedValue(makeAuditPage(entries));
       const user = userEvent.setup();
