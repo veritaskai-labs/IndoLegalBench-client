@@ -272,33 +272,61 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     );
   });
 
-  // SCRUM-138, AC5: the suite page carries the snapshot section.
-  it("offers the admin a button to create a snapshot", async () => {
+  // SCRUM-181: snapshots are made automatically when an execution runs, so the suite page
+  // no longer offers them by hand.
+  it.each(["admin", "author", "viewer"] as const)(
+    "does not offer the %s a button to create a snapshot",
+    async (role) => {
+      // Arrange
+      session.role = role;
+      vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+
+      // Act
+      await renderPage();
+      await screen.findByRole("table");
+
+      // Assert
+      expect(screen.queryByRole("button", { name: "Buat snapshot" })).not.toBeInTheDocument();
+    }
+  );
+
+  it("does not render a snapshot section on the suite page", async () => {
+    // Arrange
     session.role = "admin";
     vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
 
+    // Act
     await renderPage();
-
-    expect(await screen.findByRole("button", { name: "Buat snapshot" })).toBeInTheDocument();
-  });
-
-  it("does not offer the snapshot button to a viewer", async () => {
-    session.role = "viewer";
-    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
-
-    await renderPage();
-
     await screen.findByRole("table");
-    expect(screen.queryByRole("button", { name: "Buat snapshot" })).not.toBeInTheDocument();
+
+    // Assert
+    expect(screen.queryByRole("region", { name: "Snapshot" })).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/snapshot/i)).toHaveLength(0);
   });
 
-  it("lists the snapshots of the suite for a viewer", async () => {
+  it("does not request the snapshot list of the suite", async () => {
+    // Arrange
     session.role = "viewer";
     vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
 
+    // Act
+    await renderPage();
+    await screen.findByRole("table");
+
+    // Assert
+    expect(listSnapshots).not.toHaveBeenCalled();
+  });
+
+  it("still shows the empty state of the case table without the snapshot section", async () => {
+    // Arrange
+    session.role = "admin";
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue([]);
+
+    // Act
     await renderPage();
 
-    expect(await screen.findByText("Belum ada snapshot")).toBeInTheDocument();
-    expect(listSnapshots).toHaveBeenCalledWith("suite-123", 1, 10);
+    // Assert
+    expect(await screen.findByText("Belum ada kasus di suite ini")).toBeInTheDocument();
+    expect(screen.queryAllByText(/snapshot/i)).toHaveLength(0);
   });
 });
