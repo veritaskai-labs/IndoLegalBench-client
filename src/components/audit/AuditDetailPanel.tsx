@@ -25,23 +25,58 @@ function ValueBlock({ label, value }: { label: string; value: Record<string, unk
   );
 }
 
-/** Escape menutup dialog, dan fokus kembali ke elemen yang membukanya. */
-function useDialogKeyboard(onClose: () => void, closeButton: React.RefObject<HTMLElement | null>) {
+const FOCUSABLE = 'a[href], button:not([disabled]):not([tabindex="-1"])';
+
+/** Tab dan Shift+Tab berputar di dalam dialog; fokus yang lepas ditarik kembali. */
+function containTab(event: KeyboardEvent, root: HTMLElement) {
+  const focusable = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+  const outside = !(active instanceof HTMLElement) || !root.contains(active);
+
+  if (event.shiftKey && (outside || active === first)) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (outside || active === last)) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+/**
+ * Perilaku modal untuk keyboard: fokus awal di tombol tutup, halaman di
+ * belakang dibuat inert, Tab tidak keluar dari dialog, Escape menutup, dan
+ * fokus kembali ke elemen yang membukanya.
+ */
+function useDialogKeyboard(
+  onClose: () => void,
+  closeButton: React.RefObject<HTMLElement | null>,
+  root: React.RefObject<HTMLElement | null>,
+) {
   useEffect(() => {
     const opener = document.activeElement;
+    const dialogRoot = root.current;
+    const inerted = Array.from(document.body.children).filter(
+      (el) => el !== dialogRoot && !el.hasAttribute("inert"),
+    );
+    inerted.forEach((el) => el.setAttribute("inert", ""));
     closeButton.current?.focus();
     return () => {
+      inerted.forEach((el) => el.removeAttribute("inert"));
       if (opener instanceof HTMLElement) opener.focus();
     };
-  }, [closeButton]);
+  }, [closeButton, root]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
+      else if (event.key === "Tab" && root.current) containTab(event, root.current);
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, root]);
 }
 
 /**
@@ -50,11 +85,12 @@ function useDialogKeyboard(onClose: () => void, closeButton: React.RefObject<HTM
  */
 export function AuditDetailPanel({ entry, onClose }: Props) {
   const closeButton = useRef<HTMLButtonElement>(null);
-  useDialogKeyboard(onClose, closeButton);
+  const root = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(onClose, closeButton, root);
   const { primary, secondary } = actorIdentity(entry);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div ref={root} className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
         tabIndex={-1}
