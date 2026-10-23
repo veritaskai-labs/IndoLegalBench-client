@@ -332,3 +332,50 @@ describe("keyboard containment while the detail is open", () => {
     expect(opener).toHaveFocus();
   });
 });
+
+// SCRUM-178 review: a long actor email must not push the header wider than the dialog.
+// jsdom has no layout, so these pin the classes that stop the overflow; the real width
+// is checked in the browser at 320px.
+describe("long content inside the detail", () => {
+  const longEmail = "pengguna.sintetis.dengan.alamat.email.yang.panjang@departemen.hukum.contoh.test";
+  const longEntry = () => entry({ actor_email: longEmail, before: { catatan: "a".repeat(200) } });
+
+  // Positive
+  it("lets the title column shrink so the header stays inside the dialog", () => {
+    // Arrange / Act
+    render(<AuditDetailPanel entry={longEntry()} onClose={vi.fn()} />);
+
+    // Assert
+    const column = screen.getByRole("heading", { name: "Kasus diubah" }).parentElement;
+    expect(column).toHaveClass("min-w-0");
+  });
+
+  // Positive
+  it("wraps the long email instead of stretching the line", () => {
+    // Arrange / Act
+    render(<AuditDetailPanel entry={longEntry()} onClose={vi.fn()} />);
+
+    // Assert
+    expect(screen.getByText(new RegExp(longEmail))).toHaveClass("break-words");
+  });
+
+  // Negative: the close button must stay reachable and keep its size.
+  it("keeps the close button from shrinking", () => {
+    // Arrange / Act
+    render(<AuditDetailPanel entry={longEntry()} onClose={vi.fn()} />);
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Tutup" })).toHaveClass("shrink-0");
+  });
+
+  // Edge: a long recorded value wraps instead of scrolling sideways.
+  it("wraps a long recorded value and lets its column shrink", () => {
+    // Arrange / Act
+    render(<AuditDetailPanel entry={longEntry()} onClose={vi.fn()} />);
+
+    // Assert
+    const value = screen.getByText(/a{200}/);
+    expect(value).toHaveClass("whitespace-pre-wrap", "break-words");
+    expect(value.parentElement).toHaveClass("min-w-0");
+  });
+});
