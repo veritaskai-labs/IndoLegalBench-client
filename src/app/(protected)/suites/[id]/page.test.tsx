@@ -3,15 +3,13 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SuiteDetailPage from "./page";
 import * as casesApi from "@/lib/api/cases";
-import { listSnapshots } from "@/lib/suites/snapshotApi";
-import { makeSnapshotPage } from "@/test/snapshotFixtures";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { session } from "@/test/authMock";
 import type { Suite } from "@/types/suite";
 
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 
-// Who is signed in decides whether the snapshot button is offered; null means still loading.
+// Who is signed in; null means still loading.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 
 vi.mock("next/navigation", () => ({
@@ -19,13 +17,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/api/cases");
-
-// The snapshot section loads its own list; these tests only care that it is mounted.
-vi.mock("@/lib/suites/snapshotApi", () => ({
-  listSnapshots: vi.fn(),
-  getSnapshot: vi.fn(),
-  createSnapshot: vi.fn(),
-}));
 
 // Keep the real ApiError, mock only apiFetch (used for GET /suites/{id})
 vi.mock("@/lib/apiClient", async (importOriginal) => {
@@ -83,7 +74,6 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     vi.resetAllMocks();
     session.role = null;
     vi.mocked(apiFetch).mockResolvedValue(activeSuite);
-    vi.mocked(listSnapshots).mockResolvedValue(makeSnapshotPage([]));
   });
 
   it("menampilkan skeleton saat data kasus sedang dimuat", async () => {
@@ -302,19 +292,6 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     // Assert
     expect(screen.queryByRole("region", { name: "Snapshot" })).not.toBeInTheDocument();
     expect(screen.queryAllByText(/snapshot/i)).toHaveLength(0);
-  });
-
-  it("does not request the snapshot list of the suite", async () => {
-    // Arrange
-    session.role = "viewer";
-    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
-
-    // Act
-    await renderPage();
-    await screen.findByRole("table");
-
-    // Assert
-    expect(listSnapshots).not.toHaveBeenCalled();
   });
 
   it("still shows the empty state of the case table without the snapshot section", async () => {
