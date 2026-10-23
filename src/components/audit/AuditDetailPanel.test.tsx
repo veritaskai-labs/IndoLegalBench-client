@@ -225,3 +225,110 @@ describe("K-03 history discussion access", () => {
     expect(screen.queryByRole("link", { name: "Buka diskusi komentar" })).not.toBeInTheDocument();
   });
 });
+
+// SCRUM-178 review: the detail must behave as a real modal for the keyboard.
+describe("keyboard containment while the detail is open", () => {
+  const replyEntry = () =>
+    entry({ action: "review.comment_replied", entity_type: "review", entity_id: "r1" });
+
+  function renderOverBackground(panelEntry: AuditEntry) {
+    const background = render(<button type="button">Tombol latar</button>);
+    const opener = screen.getByRole("button", { name: "Tombol latar" });
+    opener.focus();
+    const panel = render(<AuditDetailPanel entry={panelEntry} onClose={vi.fn()} />);
+    return { background, panel, opener };
+  }
+
+  // Negative: Tab must not reach the page behind.
+  it("keeps Tab on the close button when it is the only control", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderOverBackground(entry());
+
+    // Act
+    await user.tab();
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Tutup" })).toHaveFocus();
+  });
+
+  // Negative: the reported case, Shift+Tab from Tutup reached a background button.
+  it("keeps Shift+Tab on the close button when it is the only control", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderOverBackground(entry());
+
+    // Act
+    await user.tab({ shift: true });
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Tutup" })).toHaveFocus();
+  });
+
+  // Positive
+  it("cycles Tab between the close button and the discussion link", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderOverBackground(replyEntry());
+    const close = screen.getByRole("button", { name: "Tutup" });
+    const link = screen.getByRole("link", { name: "Buka diskusi komentar" });
+
+    // Act / Assert
+    await user.tab();
+    expect(link).toHaveFocus();
+    await user.tab();
+    expect(close).toHaveFocus();
+  });
+
+  // Positive
+  it("cycles Shift+Tab from the close button back to the discussion link", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    renderOverBackground(replyEntry());
+
+    // Act
+    await user.tab({ shift: true });
+
+    // Assert
+    expect(screen.getByRole("link", { name: "Buka diskusi komentar" })).toHaveFocus();
+  });
+
+  // Positive: assistive tech and the pointer must not reach the page behind either.
+  it("makes the page behind inert while open and live again after closing", () => {
+    // Arrange
+    const { background, panel } = renderOverBackground(entry());
+
+    // Assert (open)
+    expect(background.container).toHaveAttribute("inert");
+
+    // Act
+    panel.unmount();
+
+    // Assert (closed)
+    expect(background.container).not.toHaveAttribute("inert");
+  });
+
+  // Edge: the dialog's own portal must never be made inert.
+  it("does not make the dialog itself inert", () => {
+    // Arrange / Act
+    renderOverBackground(entry());
+
+    // Assert
+    expect(screen.getByRole("dialog", { name: "Detail catatan audit" })).not.toHaveAttribute(
+      "inert",
+    );
+    expect(screen.getByRole("dialog").closest("[inert]")).toBeNull();
+  });
+
+  // Positive: guards the existing behaviour while the focus handling changes.
+  it("returns focus to the element that opened it", () => {
+    // Arrange
+    const { panel, opener } = renderOverBackground(entry());
+
+    // Act
+    panel.unmount();
+
+    // Assert
+    expect(opener).toHaveFocus();
+  });
+});
