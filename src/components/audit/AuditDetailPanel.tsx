@@ -16,9 +16,9 @@ type Props = {
 
 function ValueBlock({ label, value }: { label: string; value: Record<string, unknown> | null }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-xs font-medium text-slate-700">{label}</p>
-      <pre className="mt-1 overflow-x-auto rounded-md bg-slate-50 p-3 text-xs text-slate-700">
+      <pre className="mt-1 whitespace-pre-wrap break-words rounded-md bg-slate-50 p-3 text-xs text-slate-700">
         {value === null ? "Tidak ada" : JSON.stringify(value, null, 2)}
       </pre>
     </div>
@@ -106,12 +106,12 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
         className="relative m-0 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 text-slate-900 shadow-lg"
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-base font-semibold text-slate-900">
               {auditActionLabel(entry.action)}
             </h2>
             <p className="mt-1 font-mono text-xs text-slate-500">{entry.action}</p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 break-words text-xs text-slate-500">
               {formatWib(entry.occurred_at)} · {primary}
               {secondary && ` (${secondary})`} ·{" "}
               {entry.entity_label && `${entityLabel(entry.entity_type)} ${entry.entity_label} · `}
@@ -122,7 +122,7 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
             ref={closeButton}
             type="button"
             onClick={onClose}
-            className="text-xs font-medium text-slate-600 hover:text-slate-900 cursor-pointer"
+            className="shrink-0 text-xs font-medium text-slate-600 hover:text-slate-900 cursor-pointer"
           >
             Tutup
           </button>
