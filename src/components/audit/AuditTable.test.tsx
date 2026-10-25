@@ -29,19 +29,57 @@ describe("AuditTable", () => {
   it("shows the time in WIB, the actor, the action, and the object", () => {
     render(<AuditTable entries={[entry()]} onRowClick={vi.fn()} />);
 
-    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    const row = screen.getByRole("row", { name: /Author mengubah kasus/ });
     expect(row).toHaveTextContent("6 Okt 2026, 10:30 WIB");
     expect(row).toHaveTextContent("Herdayani");
     expect(row).toHaveTextContent("Kasus");
     expect(row).toHaveTextContent("c1");
   });
 
-  // Positive: F-06, readers outside the team cannot read system codes.
-  it("shows the action in Indonesian instead of the system code", () => {
+  // Positive: F-06 and K-07, the action reads as a sentence with who did it, not a system code.
+  it("shows the action as a sentence instead of the system code", () => {
     render(<AuditTable entries={[entry({ action: "case.submitted" })]} onRowClick={vi.fn()} />);
 
-    const row = screen.getByRole("row", { name: /Kasus diajukan review/ });
+    const row = screen.getByRole("row", { name: /Author mengajukan kasus untuk review/ });
     expect(row).not.toHaveTextContent("case.submitted");
+  });
+
+  // K-07: the UAT example. An admin replaced a reviewer: the action names the admin and the
+  // object is the case, not "review".
+  it("reads a reviewer replaced by an admin as a sentence about the case", () => {
+    render(
+      <AuditTable
+        entries={[
+          entry({
+            actor_role: "admin",
+            action: "review.reviewer_replaced",
+            entity_type: "review",
+            entity_label: "ILB-PT-0142",
+          }),
+        ]}
+        onRowClick={vi.fn()}
+      />,
+    );
+
+    const cells = within(screen.getByRole("row", { name: /Admin mengganti Reviewer/ })).getAllByRole("cell");
+    expect(cells[2]).toHaveTextContent("Admin mengganti Reviewer");
+    expect(cells[3]).toHaveTextContent("Kasus ILB-PT-0142");
+    expect(cells[3]).not.toHaveTextContent("Review");
+  });
+
+  // K-07: an automatic result does not name the person whose request caused it.
+  it("reads a reviewer assigned on submit as automatic", () => {
+    render(
+      <AuditTable
+        entries={[
+          entry({ action: "review.reviewer_assigned", entity_type: "review", after: { source: "system" } }),
+        ]}
+        onRowClick={vi.fn()}
+      />,
+    );
+
+    const cells = within(screen.getByRole("row", { name: /Reviewer ditugaskan otomatis/ })).getAllByRole("cell");
+    expect(cells[2]).not.toHaveTextContent("Author");
   });
 
   // Negative
@@ -62,7 +100,7 @@ describe("AuditTable", () => {
       />,
     );
 
-    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    const row = screen.getByRole("row", { name: /Author mengubah kasus/ });
     expect(row).toHaveTextContent("Kasus UAT-PHK-001");
     expect(row).not.toHaveTextContent("7bc7f6f3-uuid");
   });
@@ -76,7 +114,7 @@ describe("AuditTable", () => {
       />,
     );
 
-    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(
+    expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent(
       "Kasus 7bc7f6f3-uuid",
     );
   });
@@ -85,7 +123,7 @@ describe("AuditTable", () => {
   it("falls back to the id when the server does not send a name", () => {
     render(<AuditTable entries={[entry({ entity_id: "7bc7f6f3-uuid" })]} onRowClick={vi.fn()} />);
 
-    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent("7bc7f6f3-uuid");
+    expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent("7bc7f6f3-uuid");
   });
 
   // Security: suite names are typed by users.
@@ -95,7 +133,7 @@ describe("AuditTable", () => {
       <AuditTable entries={[entry({ entity_label: name })]} onRowClick={vi.fn()} />,
     );
 
-    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(name);
+    expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent(name);
     expect(container.querySelector("img")).toBeNull();
   });
 
@@ -106,7 +144,7 @@ describe("AuditTable", () => {
     const only = entry();
     render(<AuditTable entries={[only]} onRowClick={onRowClick} />);
 
-    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+    await user.click(screen.getByRole("row", { name: /Author mengubah kasus/ }));
 
     expect(onRowClick).toHaveBeenCalledWith(only);
   });
@@ -115,7 +153,7 @@ describe("AuditTable", () => {
   it("shows the actor's email as the main text of the Pelaku cell", () => {
     render(<AuditTable entries={[entry()]} onRowClick={vi.fn()} />);
 
-    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    const row = screen.getByRole("row", { name: /Author mengubah kasus/ });
     const pelaku = within(row).getAllByRole("cell")[1];
     expect(pelaku).toHaveTextContent("herdayani@veritask.test");
     expect(pelaku).toHaveTextContent("Herdayani");
@@ -152,7 +190,7 @@ describe("AuditTable", () => {
   it("shows the name when the actor has no email", () => {
     render(<AuditTable entries={[entry({ actor_email: null })]} onRowClick={vi.fn()} />);
 
-    const row = screen.getByRole("row", { name: /Kasus diubah/ });
+    const row = screen.getByRole("row", { name: /Author mengubah kasus/ });
     const pelaku = within(row).getAllByRole("cell")[1];
     expect(pelaku).toHaveTextContent("Herdayani");
     expect(pelaku).not.toHaveTextContent("@");
@@ -165,7 +203,7 @@ describe("AuditTable", () => {
       <AuditTable entries={[entry({ actor_email: email })]} onRowClick={vi.fn()} />,
     );
 
-    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(email);
+    expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent(email);
     expect(container.querySelector("img")).toBeNull();
   });
 
@@ -178,7 +216,7 @@ describe("AuditTable", () => {
       />,
     );
 
-    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(
+    expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent(
       "measurement_session",
     );
   });
@@ -190,7 +228,7 @@ describe("AuditTable", () => {
       <AuditTable entries={[entry({ entity_id: id })]} onRowClick={vi.fn()} />,
     );
 
-    expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent(id);
+    expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent(id);
     expect(container.querySelector("img")).toBeNull();
   });
 
@@ -208,6 +246,6 @@ describe("AuditTable", () => {
     onRowClick={vi.fn()}
     />,
   );
-  expect(screen.getByRole("row", { name: /Kasus diubah/ })).toHaveTextContent("Sistem");
+  expect(screen.getByRole("row", { name: /Sistem mengubah kasus/ })).toHaveTextContent("Sistem");
   });
 });
