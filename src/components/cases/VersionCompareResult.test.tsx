@@ -203,14 +203,15 @@ describe("VersionCompareResult", () => {
     expect(screen.queryByText(/Hanya di Versi/)).not.toBeInTheDocument();
   });
 
-  // K-05: on a narrow screen the table scrolls sideways, and the scroll area is reachable by keyboard.
-  it("puts the table in a keyboard-focusable sideways scroll area", () => {
+  // K-05: on a narrow screen the table scrolls sideways inside a named section.
+  it("puts the table in a named sideways scroll section", () => {
     // Arrange / Act
     render(<VersionCompareResult result={comparison()} />);
 
     // Assert
     const area = screen.getByRole("region", { name: "Tabel perbandingan versi, bisa digeser ke samping" });
-    expect(area).toHaveAttribute("tabindex", "0");
+    expect(area.tagName).toBe("SECTION");
+    expect(area).toHaveClass("overflow-x-auto");
     expect(within(area).getByRole("table")).toBeInTheDocument();
   });
 });

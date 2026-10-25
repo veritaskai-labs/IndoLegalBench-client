@@ -62,3 +62,17 @@ export function markedSectionLines(key: SectionKey, result: VersionCompare): { a
   const b = sectionLines(key, result.b.sections);
   return result.changed.includes(key) ? compareLines(a, b) : { a: unmarked(a), b: unmarked(b) };
 }
+
+/**
+ * Key React yang stabil untuk tiap baris tanpa memakai posisi array: teks dan tandanya, ditambah
+ * urutan kemunculan supaya dua baris yang sama persis tetap punya key berbeda.
+ */
+export function keyedLines(lines: readonly MarkedLine[]): { key: string; line: MarkedLine }[] {
+  const seen = new Map<string, number>();
+  return lines.map((line) => {
+    const base = `${line.mark}:${line.text}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return { key: `${base}:${count}`, line };
+  });
+}

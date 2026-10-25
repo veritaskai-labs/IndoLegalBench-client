@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { makeCompare, makeSections, makeSide } from "@/test/versionFixtures";
-import { COMPARE_SECTION_KEYS, changeSummary, compareLines, markedSectionLines } from "./versionCompare";
+import {
+  COMPARE_SECTION_KEYS,
+  changeSummary,
+  compareLines,
+  keyedLines,
+  markedSectionLines,
+} from "./versionCompare";
 
 describe("COMPARE_SECTION_KEYS", () => {
   // K-05: the case code is locked once a version is approved, so two versions never differ there.
@@ -191,5 +197,50 @@ describe("markedSectionLines", () => {
 
     // Assert
     expect(marked).toEqual({ a: [], b: [] });
+  });
+});
+
+describe("keyedLines", () => {
+  // Positive: every line keeps its content and gets a key.
+  it("keeps the lines in order with a key each", () => {
+    // Arrange / Act
+    const keyed = keyedLines([
+      { text: "a", mark: "both" },
+      { text: "b", mark: "only_b" },
+    ]);
+
+    // Assert
+    expect(keyed.map((item) => item.line.text)).toEqual(["a", "b"]);
+    expect(new Set(keyed.map((item) => item.key)).size).toBe(2);
+  });
+
+  // Edge: two identical lines still get different keys.
+  it("gives duplicate lines different keys", () => {
+    // Arrange
+    const same = { text: "sama", mark: "both" } as const;
+
+    // Act
+    const keys = keyedLines([same, same]).map((item) => item.key);
+
+    // Assert
+    expect(keys[0]).not.toBe(keys[1]);
+  });
+
+  // Negative: the same text with a different mark is a different line.
+  it("separates the same text with different marks", () => {
+    // Arrange / Act
+    const keys = keyedLines([
+      { text: "x", mark: "both" },
+      { text: "x", mark: "only_a" },
+    ]).map((item) => item.key);
+
+    // Assert
+    expect(keys[0]).not.toBe(keys[1]);
+  });
+
+  // Edge: no lines.
+  it("returns an empty list for no lines", () => {
+    // Arrange / Act / Assert
+    expect(keyedLines([])).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 import {
   COMPARE_SECTION_KEYS,
   changeSummary,
+  keyedLines,
   markedSectionLines,
   type MarkedLine,
 } from "@/lib/cases/versionCompare";
@@ -9,7 +10,7 @@ import { formatWib } from "@/lib/datetime/formatWib";
 import type { VersionCompare, VersionSide } from "@/types/caseVersion";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 
-function SideHeading({ side }: { side: VersionSide }) {
+function SideHeading({ side }: Readonly<{ side: VersionSide }>) {
   return (
     <th scope="col" className="min-w-72 px-4 py-3 align-top font-semibold text-slate-800">
       <span className="block">Versi {side.version_no}</span>
@@ -23,13 +24,13 @@ function SideHeading({ side }: { side: VersionSide }) {
 }
 
 /** Baris yang hanya ada di satu versi diberi tulisan "Hanya di Versi N", bukan warna saja. */
-function SectionCell({ lines, versionNo }: { lines: MarkedLine[]; versionNo: number }) {
+function SectionCell({ lines, versionNo }: Readonly<{ lines: MarkedLine[]; versionNo: number }>) {
   if (lines.length === 0) return <td className="px-4 py-3 align-top text-slate-400">—</td>;
   return (
     <td className="px-4 py-3 align-top text-slate-800">
-      {lines.map((line, index) => (
+      {keyedLines(lines).map(({ key, line }) => (
         <p
-          key={index}
+          key={key}
           data-mark={line.mark}
           className={
             line.mark === "both"
@@ -50,20 +51,19 @@ function SectionCell({ lines, versionNo }: { lines: MarkedLine[]; versionNo: num
 /**
  * Dua versi berdampingan. Ringkasan di atas menyebut bagian yang berubah. Di bagian yang berubah,
  * baris yang hanya ada di satu versi ditandai. Tabel bisa digeser ke samping di layar sempit dan
- * kolom "Bagian" tetap terlihat.
+ * kolom "Bagian" tetap terlihat. Browser modern sudah membuat area geser bisa difokus keyboard,
+ * jadi tidak perlu tabIndex sendiri (Sonar S6845).
  */
-export function VersionCompareResult({ result }: { result: VersionCompare }) {
+export function VersionCompareResult({ result }: Readonly<{ result: VersionCompare }>) {
   return (
     <div className="space-y-3">
       <p role="status" className="rounded border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
         {changeSummary(result.changed)}
       </p>
 
-      <div
-        role="region"
+      <section
         aria-label="Tabel perbandingan versi, bisa digeser ke samping"
-        tabIndex={0}
-        className="overflow-x-auto rounded border border-slate-200 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+        className="overflow-x-auto rounded border border-slate-200 bg-white"
       >
         <table className="w-full min-w-[44rem] border-collapse text-left text-xs">
           <caption className="sr-only">Perbandingan dua versi kasus</caption>
@@ -102,7 +102,7 @@ export function VersionCompareResult({ result }: { result: VersionCompare }) {
             })}
           </tbody>
         </table>
-      </div>
+      </section>
     </div>
   );
 }
