@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { auditActionLabel } from "@/lib/audit/actionLabels";
+import { auditActionSentence, auditObjectLabel } from "@/lib/audit/auditSentence";
 import { actorIdentity } from "@/lib/audit/actorLabel";
-import { entityLabel } from "@/lib/audit/entityLabels";
 import { formatWib } from "@/lib/audit/formatWib";
 import type { AuditEntry } from "@/types/audit";
 
@@ -108,13 +107,13 @@ export function AuditDetailPanel({ entry, onClose }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-slate-900">
-              {auditActionLabel(entry.action)}
+              {auditActionSentence(entry)}
             </h2>
             <p className="mt-1 font-mono text-xs text-slate-500">{entry.action}</p>
             <p className="mt-1 break-words text-xs text-slate-500">
               {formatWib(entry.occurred_at)} · {primary}
               {secondary && ` (${secondary})`} ·{" "}
-              {entry.entity_label && `${entityLabel(entry.entity_type)} ${entry.entity_label} · `}
+              {entry.entity_label && `${auditObjectLabel(entry)} · `}
               {entry.entity_id}
             </p>
           </div>
