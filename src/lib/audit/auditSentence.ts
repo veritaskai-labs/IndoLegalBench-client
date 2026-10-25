@@ -58,6 +58,13 @@ const AUTOMATIC: Readonly<Record<string, string>> = {
 
 const ASSIGNED = "review.reviewer_assigned";
 
+/** Semua kode aksi yang punya kalimat. Test menjaga daftar ini sama persis dengan katalog server. */
+export const KNOWN_AUDIT_ACTIONS: readonly string[] = [
+  ...Object.keys(DONE_BY_ACTOR),
+  ...Object.keys(AUTOMATIC),
+  ASSIGNED,
+];
+
 function subject(entry: Entry): string {
   if (entry.actor_user_id === null) return "Sistem";
   const role = entry.actor_role ?? "";

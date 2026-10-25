@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AuditEntry } from "@/types/audit";
-import { auditActionSentence, auditObjectLabel } from "./auditSentence";
+import { KNOWN_AUDIT_ACTIONS, auditActionSentence, auditObjectLabel } from "./auditSentence";
 
 function entry(overrides: Partial<AuditEntry> = {}): AuditEntry {
   return {
@@ -178,12 +178,31 @@ describe("auditActionSentence", () => {
   });
 
   // Negative: names of Object.prototype are not actions.
-  it("does not read a prototype name as an action", () => {
+  it.each(["constructor", "toString", "__proto__"])("does not read %s as an action", (code) => {
     // Arrange / Act
-    const sentence = auditActionSentence(entry({ action: "constructor" }));
+    const sentence = auditActionSentence(entry({ action: code }));
 
     // Assert
-    expect(sentence).toBe("constructor");
+    expect(sentence).toBe(code);
+  });
+
+  // Guard (moved from the removed actionLabels test): no sentence for a code the server never writes.
+  it("knows exactly the actions the server writes", () => {
+    // Arrange / Act / Assert
+    expect([...KNOWN_AUDIT_ACTIONS].sort()).toEqual([...SERVER_ACTIONS].sort());
+  });
+
+  // Corner: an empty action stays empty.
+  it("keeps an empty action empty", () => {
+    // Arrange / Act / Assert
+    expect(auditActionSentence(entry({ action: "" }))).toBe("");
+  });
+
+  // Corner: codes are matched exactly.
+  it("does not match a code with different case or spaces", () => {
+    // Arrange / Act / Assert
+    expect(auditActionSentence(entry({ action: "Case.Submitted" }))).toBe("Case.Submitted");
+    expect(auditActionSentence(entry({ action: " case.submitted " }))).toBe(" case.submitted ");
   });
 });
 
