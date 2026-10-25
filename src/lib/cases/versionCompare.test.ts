@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { COMPARE_SECTION_KEYS, changeSummary, compareLines } from "./versionCompare";
+import { makeCompare, makeSections, makeSide } from "@/test/versionFixtures";
+import { COMPARE_SECTION_KEYS, changeSummary, compareLines, markedSectionLines } from "./versionCompare";
 
 describe("COMPARE_SECTION_KEYS", () => {
   // K-05: the case code is locked once a version is approved, so two versions never differ there.
@@ -152,5 +153,43 @@ describe("compareLines", () => {
     // Assert
     expect(a).toEqual(["x", "y"]);
     expect(b).toEqual(["y"]);
+  });
+});
+
+describe("markedSectionLines", () => {
+  const result = (changed: string[]) =>
+    makeCompare({ b: makeSide(2, { sections: makeSections({ category: "Perburuhan" }) }), changed });
+
+  // Positive: a section the server reports as changed gets line marks.
+  it("marks the lines of a section the server reports as changed", () => {
+    // Arrange / Act
+    const marked = markedSectionLines("category", result(["category"]));
+
+    // Assert
+    expect(marked).toEqual({
+      a: [{ text: "Ketenagakerjaan", mark: "only_a" }],
+      b: [{ text: "Perburuhan", mark: "only_b" }],
+    });
+  });
+
+  // Negative: the server is the source of truth, so an unreported section is never marked.
+  it("leaves every line unmarked when the server reports the section as unchanged", () => {
+    // Arrange / Act
+    const marked = markedSectionLines("category", result([]));
+
+    // Assert
+    expect(marked).toEqual({
+      a: [{ text: "Ketenagakerjaan", mark: "both" }],
+      b: [{ text: "Perburuhan", mark: "both" }],
+    });
+  });
+
+  // Edge: an empty section stays empty on both sides.
+  it("returns empty lists for a section without content", () => {
+    // Arrange / Act
+    const marked = markedSectionLines("traps", result(["traps"]));
+
+    // Assert
+    expect(marked).toEqual({ a: [], b: [] });
   });
 });

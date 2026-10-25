@@ -1,5 +1,5 @@
-import type { VersionSections } from "@/types/caseVersion";
-import { SECTION_KEYS, sectionLabel } from "./versionSections";
+import type { VersionCompare, VersionSections } from "@/types/caseVersion";
+import { SECTION_KEYS, sectionLabel, sectionLines } from "./versionSections";
 
 type SectionKey = keyof VersionSections;
 
@@ -49,4 +49,16 @@ function markSide(lines: readonly string[], other: readonly string[], onlyHere: 
  */
 export function compareLines(a: readonly string[], b: readonly string[]): { a: MarkedLine[]; b: MarkedLine[] } {
   return { a: markSide(a, b, "only_a"), b: markSide(b, a, "only_b") };
+}
+
+const unmarked = (lines: string[]): MarkedLine[] => lines.map((text) => ({ text, mark: "both" }));
+
+/**
+ * Isi satu bagian di kedua sisi, siap ditampilkan. Baris hanya ditandai bila server menyebut bagian
+ * itu berubah, jadi tampilan tidak pernah menandai beda yang tidak dilaporkan server.
+ */
+export function markedSectionLines(key: SectionKey, result: VersionCompare): { a: MarkedLine[]; b: MarkedLine[] } {
+  const a = sectionLines(key, result.a.sections);
+  const b = sectionLines(key, result.b.sections);
+  return result.changed.includes(key) ? compareLines(a, b) : { a: unmarked(a), b: unmarked(b) };
 }

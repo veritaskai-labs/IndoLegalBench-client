@@ -1,5 +1,10 @@
-import { COMPARE_SECTION_KEYS, changeSummary, compareLines, type MarkedLine } from "@/lib/cases/versionCompare";
-import { sectionLabel, sectionLines } from "@/lib/cases/versionSections";
+import {
+  COMPARE_SECTION_KEYS,
+  changeSummary,
+  markedSectionLines,
+  type MarkedLine,
+} from "@/lib/cases/versionCompare";
+import { sectionLabel } from "@/lib/cases/versionSections";
 import { formatWib } from "@/lib/datetime/formatWib";
 import type { VersionCompare, VersionSide } from "@/types/caseVersion";
 import { CaseStatusBadge } from "./CaseStatusBadge";
@@ -42,8 +47,6 @@ function SectionCell({ lines, versionNo }: { lines: MarkedLine[]; versionNo: num
   );
 }
 
-const unmarked = (lines: string[]): MarkedLine[] => lines.map((text) => ({ text, mark: "both" }));
-
 /**
  * Dua versi berdampingan. Ringkasan di atas menyebut bagian yang berubah. Di bagian yang berubah,
  * baris yang hanya ada di satu versi ditandai. Tabel bisa digeser ke samping di layar sempit dan
@@ -76,9 +79,7 @@ export function VersionCompareResult({ result }: { result: VersionCompare }) {
           <tbody className="divide-y divide-slate-100">
             {COMPARE_SECTION_KEYS.map((key) => {
               const changed = result.changed.includes(key);
-              const a = sectionLines(key, result.a.sections);
-              const b = sectionLines(key, result.b.sections);
-              const marked = changed ? compareLines(a, b) : { a: unmarked(a), b: unmarked(b) };
+              const marked = markedSectionLines(key, result);
               return (
                 <tr key={key} data-changed={changed} className={changed ? "bg-amber-50" : undefined}>
                   <th
