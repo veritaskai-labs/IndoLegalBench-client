@@ -11,6 +11,11 @@ import {
 } from "@/lib/providers/format";
 import type { AiProduct, ProviderType } from "@/types/provider";
 
+import {
+  MeasurementTypeField,
+  type MeasurementType,
+} from "@/components/providers/MeasurementTypeField";
+
 type Props = {
   /** Tanpa produk berarti daftar baru, dengan produk berarti ubah. */
   product?: AiProduct;
@@ -39,9 +44,24 @@ function isHttpUrl(text: string): boolean {
  */
 export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const editing = product !== undefined;
-  const ids = { name: useId(), type: useId(), url: useId(), model: useId(), limit: useId(), budget: useId() };
-
+  const ids = {
+    name: useId(),
+    type: useId(),
+    url: useId(),
+    model: useId(),
+    limit: useId(),
+    budget: useId(),
+    company: useId(),
+    site: useId(),
+    note: useId(),
+    params: useId(),
+  };
   const [name, setName] = useState(product?.name ?? "");
+  const [measurementType, setMeasurementType] = useState<MeasurementType>("otomatis");
+  const [company, setCompany] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
+  const [accessNote, setAccessNote] = useState("");
+  const [parameters, setParameters] = useState("");
   const [providerType, setProviderType] = useState<ProviderType | "">(product?.provider_type ?? "");
   const [baseUrl, setBaseUrl] = useState(product?.base_url ?? "");
   const [modelName, setModelName] = useState(product?.model_name ?? "");
@@ -72,7 +92,10 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   }
 
   async function handleSubmit() {
-    const found = validate();
+    if (measurementType === "manual") {
+      setFormError("Menyimpan produk manual menunggu dukungan server (PBI-23-BE-1).");
+      return;
+    }    const found = validate();
     setErrors(found);
     setFormError(null);
     if (Object.keys(found).length > 0) return;
@@ -127,59 +150,92 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
         <p className="mt-2 text-xs text-slate-500">
           Isian bertanda <span className="text-red-700">*</span> wajib diisi.
         </p>
-
         <div className="mt-4 space-y-4">
+          <MeasurementTypeField
+            value={measurementType}
+            onChange={setMeasurementType}
+            readOnly={editing}
+          />
+
           <Labeled id={ids.name} label="Nama" required error={errors.name}>
             <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} {...invalid(ids.name, errors.name)} className={INPUT} />
           </Labeled>
 
-          <Labeled id={ids.type} label="Jenis API" required error={errors.provider_type}>
-            <select
-              id={ids.type}
-              value={providerType}
-              onChange={(e) => setProviderType(e.target.value as ProviderType | "")}
-              {...invalid(ids.type, errors.provider_type)}
-              className={INPUT}
-            >
-              <option value="">Pilih jenis API</option>
-              {PROVIDER_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {PROVIDER_TYPE_LABEL[type]}
-                </option>
-              ))}
-            </select>
-          </Labeled>
+          {measurementType === "otomatis" ? (
+            <>
+              <Labeled id={ids.type} label="Jenis API" required error={errors.provider_type}>
+                <select
+                  id={ids.type}
+                  value={providerType}
+                  onChange={(e) => setProviderType(e.target.value as ProviderType | "")}
+                  {...invalid(ids.type, errors.provider_type)}
+                  className={INPUT}
+                >
+                  <option value="">Pilih jenis API</option>
+                  {PROVIDER_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {PROVIDER_TYPE_LABEL[type]}
+                    </option>
+                  ))}
+                </select>
+              </Labeled>
 
-          <Labeled id={ids.url} label="URL endpoint" required error={errors.base_url}>
-            <input id={ids.url} type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.contoh.com/v1/chat/completions" {...invalid(ids.url, errors.base_url)} className={INPUT} />
-          </Labeled>
+              <Labeled id={ids.url} label="URL endpoint" required error={errors.base_url}>
+                <input id={ids.url} type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.contoh.com/v1/chat/completions" {...invalid(ids.url, errors.base_url)} className={INPUT} />
+              </Labeled>
 
-          <Labeled id={ids.model} label="Model" required error={errors.model_name}>
-            <input id={ids.model} value={modelName} onChange={(e) => setModelName(e.target.value)} {...invalid(ids.model, errors.model_name)} className={INPUT} />
-          </Labeled>
+              <Labeled id={ids.model} label="Model" required error={errors.model_name}>
+                <input id={ids.model} value={modelName} onChange={(e) => setModelName(e.target.value)} {...invalid(ids.model, errors.model_name)} className={INPUT} />
+              </Labeled>
 
-          <SecretInput
-            label="Kredensial"
-            required={!editing}
-            value={credential}
-            onChange={setCredential}
-            error={errors.credential}
-            hint={
-              editing
-                ? `Kredensial tersimpan (…${product.credential_hint}), isi untuk mengganti. Kosongkan bila tidak diganti.`
-                : "Disimpan terenkripsi dan tidak pernah ditampilkan lagi."
-            }
-          />
+              <SecretInput
+                label="Kredensial"
+                required={!editing}
+                value={credential}
+                onChange={setCredential}
+                error={errors.credential}
+                hint={
+                  editing && product !== undefined
+                    ? `Kredensial tersimpan (…${product.credential_hint}), isi untuk mengganti. Kosongkan bila tidak diganti.`
+                    : "Disimpan terenkripsi dan tidak pernah ditampilkan lagi."
+                }
+              />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Labeled id={ids.limit} label="Limit panggilan per menit" required error={errors.rate_limit}>
-              <input id={ids.limit} type="number" min={1} step={1} inputMode="numeric" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} {...invalid(ids.limit, errors.rate_limit)} className={INPUT} />
-            </Labeled>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Labeled id={ids.limit} label="Limit panggilan per menit" required error={errors.rate_limit}>
+                  <input id={ids.limit} type="number" min={1} step={1} inputMode="numeric" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} {...invalid(ids.limit, errors.rate_limit)} className={INPUT} />
+                </Labeled>
 
-            <Labeled id={ids.budget} label="Budget per bulan (Rp)" required error={errors.budget}>
-              <input id={ids.budget} inputMode="numeric" value={budget} onChange={(e) => setBudget(formatRupiahInput(e.target.value))} placeholder="1.500.000" {...invalid(ids.budget, errors.budget)} className={INPUT} />
-            </Labeled>
-          </div>
+                <Labeled id={ids.budget} label="Budget per bulan (Rp)" required error={errors.budget}>
+                  <input id={ids.budget} inputMode="numeric" value={budget} onChange={(e) => setBudget(formatRupiahInput(e.target.value))} placeholder="1.500.000" {...invalid(ids.budget, errors.budget)} className={INPUT} />
+                </Labeled>
+              </div>
+            </>
+          ) : (
+            <>
+              <Labeled id={ids.company} label="Nama penyedia" required>
+                <input id={ids.company} value={company} onChange={(e) => setCompany(e.target.value)} className={INPUT} />
+              </Labeled>
+
+              <Labeled id={ids.site} label="Alamat situs" required>
+                <input id={ids.site} type="url" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} placeholder="https://contoh.ai" className={INPUT} />
+              </Labeled>
+
+              <Labeled id={ids.note} label="Catatan akses">
+                <textarea id={ids.note} rows={3} value={accessNote} onChange={(e) => setAccessNote(e.target.value)} className={INPUT} />
+                <p className="mt-1 text-xs text-slate-500">
+                  Cara tim legal mengakses platform ini. Jangan isi kata sandi di sini.
+                </p>
+              </Labeled>
+
+              <Labeled id={ids.params} label="Parameter">
+                <textarea id={ids.params} rows={2} value={parameters} onChange={(e) => setParameters(e.target.value)} className={INPUT} />
+                <p className="mt-1 text-xs text-slate-500">
+                  Teks bebas. Versi atau paket berbeda didaftarkan sebagai produk terpisah, misalnya &quot;HO Pro&quot; dan &quot;HO Premium&quot;.
+                </p>
+              </Labeled>
+            </>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
