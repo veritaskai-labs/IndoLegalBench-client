@@ -81,7 +81,7 @@ describe("AuditDetailPanel", () => {
   it("titles the panel with the Indonesian action and keeps the code for reference", () => {
     render(<AuditDetailPanel entry={entry()} onClose={vi.fn()} />);
 
-    expect(screen.getByRole("heading", { name: "Kasus diubah" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Author mengubah kasus" })).toBeInTheDocument();
     expect(screen.getByRole("dialog", { name: "Detail catatan audit" })).toHaveTextContent(
       "case.updated",
     );
@@ -177,7 +177,7 @@ describe("AuditDetailPanel", () => {
     const onClose = vi.fn();
     render(<AuditDetailPanel entry={entry()} onClose={onClose} />);
 
-    await user.click(screen.getByRole("heading", { name: "Kasus diubah" }));
+    await user.click(screen.getByRole("heading", { name: "Author mengubah kasus" }));
 
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -346,7 +346,7 @@ describe("long content inside the detail", () => {
     render(<AuditDetailPanel entry={longEntry()} onClose={vi.fn()} />);
 
     // Assert
-    const column = screen.getByRole("heading", { name: "Kasus diubah" }).parentElement;
+    const column = screen.getByRole("heading", { name: "Author mengubah kasus" }).parentElement;
     expect(column).toHaveClass("min-w-0");
   });
 

@@ -1,9 +1,8 @@
 "use client";
 
 import { actorIdentity } from "@/lib/audit/actorLabel";
-import { auditActionLabel } from "@/lib/audit/actionLabels";
+import { auditActionSentence, auditObjectNoun } from "@/lib/audit/auditSentence";
 import { formatWib } from "@/lib/audit/formatWib";
-import { entityLabel } from "@/lib/audit/entityLabels";
 import type { AuditEntry } from "@/types/audit";
 
 type Props = {
@@ -43,9 +42,9 @@ export function AuditTable({ entries, onRowClick }: Props) {
             <td className="py-3 px-4 text-slate-900">
               <ActorCell entry={item} />
             </td>
-            <td className="py-3 px-4 text-slate-700">{auditActionLabel(item.action)}</td>
+            <td className="py-3 px-4 text-slate-700">{auditActionSentence(item)}</td>
             <td className="py-3 px-4 text-slate-700">
-              {entityLabel(item.entity_type)}{" "}
+              {auditObjectNoun(item.entity_type)}{" "}
               {item.entity_label ?? (
                 <span className="font-mono text-xs text-slate-500">{item.entity_id}</span>
               )}

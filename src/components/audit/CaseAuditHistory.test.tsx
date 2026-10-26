@@ -56,7 +56,7 @@ describe("CaseAuditHistory", () => {
       ).toBeInTheDocument();
       expect(screen.getByRole("table")).toBeInTheDocument();
       expect(screen.getByText("Herdayani")).toBeInTheDocument();
-      expect(screen.getByText("Kasus diajukan review")).toBeInTheDocument();
+      expect(screen.getByText("Author mengajukan kasus untuk review")).toBeInTheDocument();
     });
   });
 

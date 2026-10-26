@@ -77,7 +77,7 @@ describe("AuditPage (SCRUM-141)", () => {
     render(<AuditPageComponent />);
     await screen.findByText("ILB-PT-0142");
 
-    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+    await user.click(screen.getByRole("row", { name: /Author mengubah kasus/ }));
 
     const panel = await screen.findByRole("dialog", { name: "Detail catatan audit" });
     expect(panel).toHaveTextContent("Judul lama");
@@ -90,7 +90,7 @@ describe("AuditPage (SCRUM-141)", () => {
     const { container } = render(<AuditPageComponent />);
     await screen.findByText("ILB-PT-0142");
 
-    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+    await user.click(screen.getByRole("row", { name: /Author mengubah kasus/ }));
 
     const panel = await screen.findByRole("dialog", { name: "Detail catatan audit" });
     expect(panel).toHaveAttribute("aria-modal", "true");
@@ -104,7 +104,7 @@ describe("AuditPage (SCRUM-141)", () => {
     list.mockResolvedValue(page([entry()]));
     render(<AuditPageComponent />);
     await screen.findByText("ILB-PT-0142");
-    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+    await user.click(screen.getByRole("row", { name: /Author mengubah kasus/ }));
     await screen.findByRole("dialog", { name: "Detail catatan audit" });
 
     await user.keyboard("{Escape}");
@@ -191,7 +191,7 @@ describe("AuditPage (SCRUM-141)", () => {
     list.mockResolvedValue(page([entry()]));
     render(<AuditPageComponent />);
     await screen.findByText("ILB-PT-0142");
-    await user.click(screen.getByRole("row", { name: /Kasus diubah/ }));
+    await user.click(screen.getByRole("row", { name: /Author mengubah kasus/ }));
 
     await user.click(await screen.findByRole("button", { name: "Tutup" }));
 
