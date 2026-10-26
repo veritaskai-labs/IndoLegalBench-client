@@ -49,7 +49,8 @@ describe("VersionCompareResult", () => {
     expect(screen.getAllByText("Berubah")).toHaveLength(1);
   });
 
-  it("shows every section of the case, in order", () => {
+  // K-05: the case code never differs between versions, so it is not a compare row.
+  it("shows every section of the case except the case code, in order", () => {
     // Arrange / Act
     render(<VersionCompareResult result={comparison()} />);
 
@@ -59,7 +60,6 @@ describe("VersionCompareResult", () => {
       "Judul",
       "Pertanyaan",
       "Kategori",
-      "ID kasus",
       "Tag dev/test",
       "Rujukan hukum",
       "Kriteria jawaban",
@@ -127,11 +127,91 @@ describe("VersionCompareResult", () => {
     expect(screen.queryByText("Berubah")).not.toBeInTheDocument();
   });
 
-  it("does not show the nothing-changed note when something changed", () => {
+  // K-05: a summary above the table, so many changes can be read without scanning every row.
+  it("summarises the changed sections above the table", () => {
+    // Arrange
+    const result = comparison({ changed: ["traps", "category"] });
+
+    // Act
+    render(<VersionCompareResult result={result} />);
+
+    // Assert
+    expect(screen.getByRole("status")).toHaveTextContent("2 bagian berubah: Kategori, Pengurang Poin.");
+  });
+
+  // Negative: even if the server reports it, the case code has no row.
+  it("never shows a case code row", () => {
+    // Arrange
+    const result = comparison({ changed: ["case_code"] });
+
+    // Act
+    render(<VersionCompareResult result={result} />);
+
+    // Assert
+    expect(screen.queryByRole("row", { name: /^ID kasus/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("ILB-PT-0142")).not.toBeInTheDocument();
+  });
+
+  // K-05: the line that differs inside a changed section gets a text marker, not only colour.
+  it("marks the lines that are only in one version inside a changed section", () => {
+    // Arrange
+    const shared = { kind: "free_text", free_text: "UU No. 13 Tahun 2003, Pasal 151" };
+    const added = { kind: "free_text", free_text: "UU No. 6 Tahun 2023, Pasal 81" };
+    const result = comparison({
+      a: makeSide(1, { sections: makeSections({ legal_refs: [shared] }) }),
+      b: makeSide(2, { sections: makeSections({ legal_refs: [shared, added] }) }),
+      changed: ["legal_refs"],
+    });
+
+    // Act
+    render(<VersionCompareResult result={result} />);
+
+    // Assert
+    const refs = row("Rujukan hukum");
+    const addedLine = within(refs).getByText("UU No. 6 Tahun 2023, Pasal 81").closest("p");
+    expect(addedLine).toHaveAttribute("data-mark", "only_b");
+    expect(addedLine).toHaveTextContent("Hanya di Versi 2");
+    expect(within(refs).getAllByText("UU No. 13 Tahun 2003, Pasal 151")).toHaveLength(2);
+    expect(within(refs).queryByText(/Hanya di Versi 1/)).not.toBeInTheDocument();
+  });
+
+  it("marks a line that was removed in the other version on the left side", () => {
+    // Arrange
+    const result = comparison({
+      b: makeSide(2, { sections: makeSections({ category: "Perburuhan" }) }),
+      changed: ["category"],
+    });
+
+    // Act
+    render(<VersionCompareResult result={result} />);
+
+    // Assert
+    const left = within(row("Kategori")).getByText("Ketenagakerjaan").closest("p");
+    expect(left).toHaveAttribute("data-mark", "only_a");
+    expect(left).toHaveTextContent("Hanya di Versi 1");
+  });
+
+  // Edge: a section the server did not report as changed is shown plainly, without line markers.
+  it("does not mark lines in a section the server reports as unchanged", () => {
+    // Arrange
+    const result = comparison({ changed: [] });
+
+    // Act
+    render(<VersionCompareResult result={result} />);
+
+    // Assert
+    expect(screen.queryByText(/Hanya di Versi/)).not.toBeInTheDocument();
+  });
+
+  // K-05: on a narrow screen the table scrolls sideways inside a named section.
+  it("puts the table in a named sideways scroll section", () => {
     // Arrange / Act
     render(<VersionCompareResult result={comparison()} />);
 
     // Assert
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    const area = screen.getByRole("region", { name: "Tabel perbandingan versi, bisa digeser ke samping" });
+    expect(area.tagName).toBe("SECTION");
+    expect(area).toHaveClass("overflow-x-auto");
+    expect(within(area).getByRole("table")).toBeInTheDocument();
   });
 });
