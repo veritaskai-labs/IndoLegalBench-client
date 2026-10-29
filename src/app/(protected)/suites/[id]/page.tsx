@@ -15,6 +15,7 @@ import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import type { Suite } from "@/types/suite";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,8 +28,9 @@ const ALL_STATUSES: { value: CaseStatus; label: string }[] = [
   { value: "approved", label: CASE_STATUS_LABEL.approved },
 ];
 
-/** Editor kasus dari SCRUM-108; belum ada halaman /cases/{id} tanpa /edit. */
+/** Editor kasus dari SCRUM-108; Developer AI membuka halaman baca /cases/{id} (SCRUM-184). */
 const editPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}/edit`;
+const readPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}`;
 
 const completenessColor = (pct: number) =>
   pct === 100 ? "bg-emerald-600" : pct >= 60 ? "bg-teal-600" : "bg-amber-500";
@@ -51,6 +53,11 @@ function toPageError(err: unknown, scope: PageError["scope"]): PageError {
 export default function SuiteDetailPage({ params }: PageProps) {
   const { id: suiteId } = use(params);
   const router = useRouter();
+  const auth = useAuth();
+  // Developer AI hanya melihat kasus approved dan tidak menulis kasus (SCRUM-183).
+  const isDeveloperAi =
+    auth.status === "authenticated" && auth.user.role === "developer_ai";
+  const casePath = isDeveloperAi ? readPath : editPath;
 
   const [suite, setSuite] = useState<Suite | null>(null);
   const [suiteError, setSuiteError] = useState<PageError | null>(null);
@@ -222,6 +229,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
           </p>
         </div>
 
+        {!isDeveloperAi && (
         <div className="flex flex-col items-start sm:items-end gap-1">
           <button
             type="button"
@@ -235,11 +243,13 @@ export default function SuiteDetailPage({ params }: PageProps) {
             <p className="text-[11px] text-slate-500">{writeDisabledReason}</p>
           )}
         </div>
+        )}
       </div>
 
       {/* Filter bar */}
       <div className="bg-white p-3.5 border border-slate-200 rounded text-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+          {!isDeveloperAi && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-slate-700">Filter Status:</span>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter status kasus">
@@ -262,6 +272,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
               })}
             </div>
           </div>
+          )}
 
           {hasActiveFilters && (
             <button
@@ -330,14 +341,16 @@ export default function SuiteDetailPage({ params }: PageProps) {
                     description={
                       hasActiveFilters
                         ? "Coba ubah atau reset filter status dan tag di atas."
-                        : canWrite
-                          ? "Mulai buat kasus hukum pertama untuk suite ini."
-                          : "Suite ini diarsipkan, jadi kasus baru tidak bisa ditulis."
+                        : isDeveloperAi
+                          ? "Belum ada kasus yang disetujui di suite ini."
+                          : canWrite
+                            ? "Mulai buat kasus hukum pertama untuk suite ini."
+                            : "Suite ini diarsipkan, jadi kasus baru tidak bisa ditulis."
                     }
                     action={
                       hasActiveFilters
                         ? { label: "Reset Filter", onClick: resetFilters }
-                        : canWrite
+                        : canWrite && !isDeveloperAi
                           ? { label: "Tulis Kasus Sekarang", onClick: goNewCase }
                           : undefined
                     }
@@ -346,15 +359,38 @@ export default function SuiteDetailPage({ params }: PageProps) {
 
                 {!loading &&
                   displayedCases.map((item) => {
+                    // Kasus test untuk Developer AI: kode dan judul sudah diganti server, dan tidak bisa dibuka.
+                    if (item.masked) {
+                      return (
+                        <tr key={item.id} className="bg-slate-50/60">
+                          <td className="py-3.5 px-4 font-mono font-medium text-slate-400">
+                            {item.case_code}
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-500 italic max-w-xs md:max-w-md truncate">
+                            {item.title}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <SplitTagBadge tag={item.split_tag} />
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <CaseStatusBadge status={item.status} />
+                          </td>
+                          <td className="py-3.5 px-4 text-slate-400">—</td>
+                          <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                            {formatDate(item.updated_at)}
+                          </td>
+                        </tr>
+                      );
+                    }
                     return (
                       <tr
                         key={item.id}
                         className="hover:bg-slate-50 transition-colors cursor-pointer"
-                        onClick={() => router.push(editPath(item.id))}
+                        onClick={() => router.push(casePath(item.id))}
                       >
                         <td className="py-3.5 px-4 font-mono font-medium text-slate-800">
                           <Link
-                            href={editPath(item.id)}
+                            href={casePath(item.id)}
                             onClick={(e) => e.stopPropagation()}
                             className="hover:underline"
                           >
