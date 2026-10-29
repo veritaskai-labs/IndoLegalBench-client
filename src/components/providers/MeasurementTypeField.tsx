@@ -1,5 +1,5 @@
-/** Jenis pengukuran produk AI (AC1). Diganti tipe dari kontrak begitu PBI-23-BE-1 turun. */
-export type MeasurementType = "otomatis" | "manual";
+/** Jenis pengukuran produk AI (AC1). Nilainya ikut enum server: automatic | manual. */
+export type MeasurementType = "automatic" | "manual";
 
 const OPTIONS: ReadonlyArray<{
   value: MeasurementType;
@@ -7,7 +7,7 @@ const OPTIONS: ReadonlyArray<{
   helper: string;
 }> = [
   {
-    value: "otomatis",
+    value: "automatic",
     label: "Otomatis",
     helper: "Dijalankan oleh sistem lewat API produk.",
   },

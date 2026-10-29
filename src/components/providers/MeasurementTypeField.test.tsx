@@ -36,7 +36,7 @@ describe("MeasurementTypeField", () => {
   // AC4: saat mengedit produk, jenisnya hanya bisa dibaca.
   it("locks the choice when the product is being edited", () => {
     render(
-      <MeasurementTypeField value="otomatis" onChange={vi.fn()} readOnly />,
+      <MeasurementTypeField value="automatic" onChange={vi.fn()} readOnly />,
     );
 
     expect(screen.getByRole("radio", { name: /Otomatis/ })).toBeDisabled();

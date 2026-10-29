@@ -51,17 +51,17 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     model: useId(),
     limit: useId(),
     budget: useId(),
-    company: useId(),
+    vendorName: useId(),
     site: useId(),
     note: useId(),
     params: useId(),
   };
   const [name, setName] = useState(product?.name ?? "");
-  const [measurementType, setMeasurementType] = useState<MeasurementType>("otomatis");
-  const [company, setCompany] = useState("");
+  const [measurementType, setMeasurementType] = useState<MeasurementType>("automatic");
+  const [vendorName, setVendorName] = useState("");
   const [siteUrl, setSiteUrl] = useState("");
   const [accessNote, setAccessNote] = useState("");
-  const [parameters, setParameters] = useState("");
+  const [manualParams, setManualParams] = useState("");
   const [providerType, setProviderType] = useState<ProviderType | "">(product?.provider_type ?? "");
   const [baseUrl, setBaseUrl] = useState(product?.base_url ?? "");
   const [modelName, setModelName] = useState(product?.model_name ?? "");
@@ -161,7 +161,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
             <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} {...invalid(ids.name, errors.name)} className={INPUT} />
           </Labeled>
 
-          {measurementType === "otomatis" ? (
+          {measurementType === "automatic" ? (
             <>
               <Labeled id={ids.type} label="Jenis API" required error={errors.provider_type}>
                 <select
@@ -213,8 +213,8 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
             </>
           ) : (
             <>
-              <Labeled id={ids.company} label="Nama penyedia" required>
-                <input id={ids.company} value={company} onChange={(e) => setCompany(e.target.value)} className={INPUT} />
+              <Labeled id={ids.vendorName} label="Nama penyedia" required>
+                <input id={ids.vendorName} value={vendorName} onChange={(e) => setVendorName(e.target.value)} className={INPUT} />
               </Labeled>
 
               <Labeled id={ids.site} label="Alamat situs" required>
@@ -229,7 +229,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
               </Labeled>
 
               <Labeled id={ids.params} label="Parameter">
-                <textarea id={ids.params} rows={2} value={parameters} onChange={(e) => setParameters(e.target.value)} className={INPUT} />
+                <textarea id={ids.params} rows={2} value={manualParams} onChange={(e) => setManualParams(e.target.value)} className={INPUT} />
                 <p className="mt-1 text-xs text-slate-500">
                   Teks bebas. Versi atau paket berbeda didaftarkan sebagai produk terpisah, misalnya &quot;HO Pro&quot; dan &quot;HO Premium&quot;.
                 </p>
