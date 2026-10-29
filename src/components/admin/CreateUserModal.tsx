@@ -114,6 +114,7 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               <option value="author">Author</option>
               <option value="reviewer">Reviewer</option>
               <option value="viewer">Viewer</option>
+              <option value="developer_ai">Developer AI</option>
             </select>
           </div>
 

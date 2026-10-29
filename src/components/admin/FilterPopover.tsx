@@ -17,6 +17,7 @@ const ROLES: { label: string; value: Role }[] = [
   { label: "Author", value: "author" },
   { label: "Reviewer", value: "reviewer" },
   { label: "Viewer", value: "viewer" },
+  { label: "Developer AI", value: "developer_ai" },
 ];
 
 export function FilterPopover({

@@ -12,14 +12,16 @@ import { formatWibClock } from "@/lib/datetime/formatWib";
 
 /**
  * Dasbor sesuai peran (PBI-19 AC1, AC2, AC6).
- * Viewer dijawab 403 oleh server, jadi untuk peran itu dasbornya tidak dipanggil sama sekali.
+ * Viewer dan Developer AI dijawab 403 oleh server, jadi untuk peran itu dasbornya tidak
+ * dipanggil sama sekali.
  */
 export default function DashboardPage() {
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
   const firstName = user === null ? "" : user.name.split(" ")[0];
 
-  const allowed = user !== null && user.role !== "viewer";
+  const allowed =
+    user !== null && user.role !== "viewer" && user.role !== "developer_ai";
   const dashboard = useDashboard(allowed);
 
   const refreshedAt =
