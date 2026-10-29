@@ -46,11 +46,28 @@ describe("mockAuth", () => {
     expect(getMockMe().role).toBe("admin");
   });
 
-  it("falls back to author for an unknown role", async () => {
+  it("reads the contributor role", async () => {
+    vi.stubEnv("NEXT_PUBLIC_MOCK_ROLE", "contributor");
+
+    const { getMockMe } = await import("./mockAuth");
+
+    expect(getMockMe().role).toBe("contributor");
+  });
+
+  it("falls back to contributor for an unknown role", async () => {
     vi.stubEnv("NEXT_PUBLIC_MOCK_ROLE", "superuser");
 
     const { getMockMe } = await import("./mockAuth");
 
-    expect(getMockMe().role).toBe("author");
+    expect(getMockMe().role).toBe("contributor");
+  });
+
+  it("falls back to contributor for the retired author and reviewer roles", async () => {
+    const { getMockMe } = await import("./mockAuth");
+
+    for (const retired of ["author", "reviewer"]) {
+      vi.stubEnv("NEXT_PUBLIC_MOCK_ROLE", retired);
+      expect(getMockMe().role).toBe("contributor");
+    }
   });
 });

@@ -3,14 +3,20 @@ import { parseRole, isAuthErrorCode, isSessionExpiredCode, ROLE_HOME_PATH } from
 
 describe("parseRole", () => {
   it("returns the role for a known lowercase value", () => {
-    expect(parseRole("author")).toBe("author");
+    expect(parseRole("contributor")).toBe("contributor");
     expect(parseRole("admin")).toBe("admin");
-    expect(parseRole("reviewer")).toBe("reviewer");
     expect(parseRole("viewer")).toBe("viewer");
   });
 
+  // PBI-24 AC1: the server no longer sends or accepts these, so a stale session must not
+  // be treated as a signed-in user with a role the client has no menu or guard for.
+  it("returns null for the retired author and reviewer roles", () => {
+    expect(parseRole("author")).toBeNull();
+    expect(parseRole("reviewer")).toBeNull();
+  });
+
   it("returns null for uppercase input (regression test for the casing bug)", () => {
-    expect(parseRole("AUTHOR")).toBeNull();
+    expect(parseRole("CONTRIBUTOR")).toBeNull();
   });
 
   it("returns null for an unknown role string", () => {
@@ -68,9 +74,13 @@ describe("isSessionExpiredCode", () => {
 describe("ROLE_HOME_PATH", () => {
   // Review #35 / PBI-19 AC1: dasbor adalah halaman awal setiap peran yang punya dasbor.
   it("sends everyone but the viewer to the dashboard after login", () => {
-    expect(ROLE_HOME_PATH.author).toBe("/dashboard");
+    expect(ROLE_HOME_PATH.contributor).toBe("/dashboard");
     expect(ROLE_HOME_PATH.admin).toBe("/dashboard");
-    expect(ROLE_HOME_PATH.reviewer).toBe("/dashboard");
     expect(ROLE_HOME_PATH.viewer).toBe("/reports");
+  });
+
+  it("has no entry left for the retired author and reviewer roles", () => {
+    expect(Object.keys(ROLE_HOME_PATH)).not.toContain("author");
+    expect(Object.keys(ROLE_HOME_PATH)).not.toContain("reviewer");
   });
 });
