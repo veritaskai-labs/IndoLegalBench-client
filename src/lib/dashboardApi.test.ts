@@ -12,6 +12,7 @@ const SUMMARY: DashboardSummary = {
   case_counts: { draft: 2, in_review: 1, needs_revision: 0, approved: 3 },
   total_cases: 6,
   waiting_for_review: 1,
+  own_cases: null,
   review_queue: null,
   needs_reassignment: null,
   latest_run: null,

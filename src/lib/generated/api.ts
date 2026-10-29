@@ -1477,6 +1477,8 @@ export interface components {
              * @description Kasus in_review yang round berjalannya belum punya verdict sah dari kedua slot reviewer, termasuk kasus dengan 0 atau 1 reviewer. Bisa lebih besar dari total antrean reviewer.
              */
             waiting_for_review: number;
+            /** @description Hanya Kontributor: kasus yang ia tulis per status versi yang berlaku, berisi nol bila belum ada (PBI-24 AC6). null untuk peran lain. case_counts dan total_cases di atas tetap menghitung semua kasus. */
+            own_cases: components["schemas"]["OwnCaseSummary"] | null;
             /**
              * Review Queue
              * @description Hanya Reviewer: kasus yang ditugaskan dan belum dinilai, terlama dulu (AC6). null untuk peran lain.
@@ -1791,6 +1793,15 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * OwnCaseSummary
+         * @description Kasus yang ditulis pengguna yang login, per status versi yang berlaku (PBI-24 AC6).
+         */
+        OwnCaseSummary: {
+            case_counts: components["schemas"]["CaseCounts"];
+            /** Total Cases */
+            total_cases: number;
         };
         /** Page[AuditLogRead] */
         Page_AuditLogRead_: {

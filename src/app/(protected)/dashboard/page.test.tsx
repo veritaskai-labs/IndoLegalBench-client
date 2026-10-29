@@ -30,6 +30,7 @@ function summary(overrides: Partial<DashboardSummary> = {}): DashboardSummary {
     case_counts: { draft: 3, in_review: 2, needs_revision: 0, approved: 5 },
     total_cases: 10,
     waiting_for_review: 2,
+    own_cases: null,
     review_queue: null,
     needs_reassignment: null,
     latest_run: null,
