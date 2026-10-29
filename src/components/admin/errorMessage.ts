@@ -14,3 +14,8 @@ export function adminErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof ApiError) return MESSAGES[err.code] ?? fallback;
   return "Terjadi kesalahan jaringan.";
 }
+
+/** Pertanyaan di dialog konfirmasi ubah peran atau nonaktifkan (PBI-24 AC8). */
+export function confirmationQuestion(count: number): string {
+  return `${count} kasus menunggu penilaian akan masuk daftar penugasan ulang. Lanjutkan?`;
+}
