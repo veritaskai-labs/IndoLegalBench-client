@@ -79,7 +79,8 @@ export function useMemberChange(
       setPending(null);
       onChanged(updated);
     } catch (failure) {
-      // Jumlahnya bisa berubah selama dialog terbuka: tampilkan lagi dengan angka terbaru.
+      // Server saat ini tidak menjawab 409 lagi bila confirm=true: ia melepas semua kasus yang
+      // menunggu saat itu tanpa bertanya. Cabang ini hanya berjaga bila kontraknya berubah.
       const count = confirmationCount(failure);
       if (count !== null) {
         setPending({ ...pending, count });
