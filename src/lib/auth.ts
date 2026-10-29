@@ -30,6 +30,16 @@ export function parseRole(value: unknown): HomeRole | null {
   return Object.keys(ROLE_HOME_PATH).includes(value) ? (value as HomeRole) : null;
 }
 
+/**
+ * Peran yang boleh membuka /dashboard (PBI-19, PBI-24 AC6): Kontributor dan Admin. Server menjawab
+ * 403 untuk peran lain, dan setiap 403 memindahkan pengguna ke /forbidden, jadi peran itu tidak
+ * boleh sampai memanggilnya. Daftar positif, supaya peran baru tidak ikut terbuka tanpa disengaja.
+ * null berarti belum ada sesi.
+ */
+export function canViewDashboard(role: Role | null): boolean {
+  return role === "contributor" || role === "admin";
+}
+
 export const AUTH_ERROR_CODES = [
   "USER_NOT_REGISTERED",
   "USER_DEACTIVATED",
