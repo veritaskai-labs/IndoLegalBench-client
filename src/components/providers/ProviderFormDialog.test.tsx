@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -38,5 +38,63 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
 
     expect(screen.getByText(/jangan isi kata sandi/i)).toBeInTheDocument();
+  });
+});
+
+describe("ProviderFormDialog save warning (AC2, AC3)", () => {
+  it("asks for confirmation before a new product is saved", async () => {
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Simpan sebagai produk Manual?" }),
+    ).toBeInTheDocument();
+  });
+
+  it("goes back to the form when the admin cancels the warning", async () => {
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    const warning = screen
+      .getByRole("heading", { name: "Simpan sebagai produk Manual?" })
+      .closest("dialog") as HTMLElement;
+    await userEvent.click(
+      within(warning).getByRole("button", { name: "Batal" }),
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "Simpan sebagai produk Manual?" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Nama penyedia")).toBeInTheDocument();
+  });
+
+  it("says a manual product still waits for the server once the admin confirms", async () => {
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Menyimpan produk manual menunggu dukungan server (PBI-23-BE-1).",
+    );
+  });
+
+  it("refuses a temperature outside the range before asking for confirmation", async () => {
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText("Temperature"), "2.5");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Temperature harus angka antara 0 dan 2.",
+    );
+    expect(
+      screen.queryByRole("heading", { name: /^Simpan sebagai produk/ }),
+    ).not.toBeInTheDocument();
   });
 });
