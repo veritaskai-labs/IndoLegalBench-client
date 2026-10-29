@@ -43,7 +43,7 @@ const PENGGUNA: Me = {
   id: "11111111-1111-1111-1111-111111111111",
   name: "Rina Author",
   email: "rina@veritask.ai",
-  role: "author",
+  role: "contributor",
 };
 
 const ISI_HALAMAN = "isi halaman yang dilindungi";

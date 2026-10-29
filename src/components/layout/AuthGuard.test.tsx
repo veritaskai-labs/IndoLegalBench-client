@@ -37,7 +37,7 @@ describe("AuthGuard", () => {
   it("renders the page when authenticated", () => {
     useAuthMock.mockReturnValue({
       status: "authenticated",
-      user: { id: "1", name: "Rina", email: "r@v.id", role: "author" },
+      user: { id: "1", name: "Rina", email: "r@v.id", role: "contributor" },
     });
 
     renderGuard();

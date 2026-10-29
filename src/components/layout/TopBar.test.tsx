@@ -16,7 +16,7 @@ const signedIn = {
     id: "11111111-1111-1111-1111-111111111111",
     name: "Rina Hapsari",
     email: "rina@veritask.id",
-    role: "author",
+    role: "contributor",
   },
 };
 
@@ -32,7 +32,7 @@ describe("TopBar", () => {
 
     expect(screen.getByText("RH")).toBeInTheDocument();
     expect(screen.getByText("Rina Hapsari")).toBeInTheDocument();
-    expect(screen.getByText("Penulis")).toBeInTheDocument();
+    expect(screen.getByText("Kontributor")).toBeInTheDocument();
   });
 
   it("keeps the brand but hides the user while loading", () => {

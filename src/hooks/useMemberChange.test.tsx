@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import type { User } from "@/types/user-management";
 import { useMemberChange, type MemberChangeApi } from "./useMemberChange";
@@ -15,7 +15,7 @@ const MEMBER: User = {
 const WAITING = (count: number) => new ApiError(409, "CONFIRMATION_REQUIRED", null, null, [], count);
 
 let api: { changeUserRole: ReturnType<typeof vi.fn>; deactivateUser: ReturnType<typeof vi.fn> };
-let onChanged: ReturnType<typeof vi.fn>;
+let onChanged: Mock<(user: User) => void>;
 
 function setup() {
   return renderHook(() => useMemberChange(onChanged, api as unknown as MemberChangeApi));

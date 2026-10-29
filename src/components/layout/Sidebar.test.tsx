@@ -32,7 +32,7 @@ describe("Sidebar", () => {
   });
 
   it("shows only the links for the role", () => {
-    signedInAs("author");
+    signedInAs("contributor");
 
     render(<Sidebar />);
 

@@ -62,7 +62,7 @@ beforeEach(() => {
   listMock.mockReset();
   submitMock.mockReset();
   reviewMock.mockReset();
-  session.role = "reviewer";
+  session.role = "contributor";
   params.assignmentId = ASSIGNMENT_ID;
   historyMounts.count = 0;
   listMock.mockResolvedValue([makeAssigned({ assignment_id: ASSIGNMENT_ID })]);
@@ -209,7 +209,7 @@ describe("ReviewAssignmentPage", () => {
   });
 
   // Edge
-  it.each(["admin", "author", "viewer"] as const)(
+  it.each(["admin", "viewer", "developer_ai"] as const)(
     "asks the server for nothing when the role is %s",
     async (role) => {
       // Arrange

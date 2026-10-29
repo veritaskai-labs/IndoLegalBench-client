@@ -264,7 +264,7 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
 
   // SCRUM-181: snapshots are made automatically when an execution runs, so the suite page
   // no longer offers them by hand.
-  it.each(["admin", "author", "viewer"] as const)(
+  it.each(["admin", "contributor", "viewer"] as const)(
     "does not offer the %s a button to create a snapshot",
     async (role) => {
       // Arrange

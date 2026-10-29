@@ -165,7 +165,7 @@ function save() {
 beforeEach(() => {
   vi.mocked(previewLegalRefs).mockReset().mockResolvedValue([]);
   params.id = CASE_ID;
-  session.role = "author";
+  session.role = "contributor";
   startVersionMock.mockReset();
   listVersionsMock.mockReset();
   // An author on an approved case reads the history to learn who created it.
@@ -780,7 +780,7 @@ describe("EditCasePage locked versions (SCRUM-138)", () => {
     expect(noStartButton()).not.toBeInTheDocument();
   });
 
-  it.each(["reviewer", "viewer"] as const)(
+  it.each(["viewer"] as const)(
     "shows the approved case without a start button to the %s",
     async (role) => {
       // Arrange
@@ -1040,7 +1040,7 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
   // Edge: the history is only requested when somebody looks at it.
   it("does not ask for the history until the tab is opened", async () => {
     // Arrange
-    session.role = "reviewer";
+    session.role = "viewer";
     getCaseMock.mockResolvedValue(savedCase());
 
     // Act
@@ -1099,7 +1099,7 @@ describe("EditCasePage version history tab (SCRUM-138)", () => {
   });
 
   // Edge: every role may read the history (the server allows it).
-  it.each(["author", "reviewer", "admin", "viewer"] as const)(
+  it.each(["contributor", "admin", "viewer"] as const)(
     "lets the %s open the history",
     async (role) => {
       // Arrange
@@ -1175,10 +1175,10 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  // Negative: the server only accepts the submission from the author who wrote the case,
-  // so the reviewer must not see an enabled button and learn that on click.
-  it("does not offer the button to the reviewer", async () => {
-    session.role = "reviewer";
+  // Negative: the server only accepts the submission from the contributor who wrote the case,
+  // so a viewer must not see an enabled button and learn that on click.
+  it("does not offer the button to the viewer", async () => {
+    session.role = "viewer";
     renderPage();
     await screen.findByText("Siap diajukan review");
 
@@ -1626,7 +1626,7 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
   );
 
   // Negative
-  it.each(["reviewer", "viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
+  it.each(["viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
     // Arrange
     session.role = role;
     getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));

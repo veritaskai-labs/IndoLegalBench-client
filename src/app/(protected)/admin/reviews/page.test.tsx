@@ -97,7 +97,7 @@ const ROBEN: User = {
   id: "u1",
   name: "Roben",
   email: "roben@example.com",
-  role: "reviewer",
+  role: "contributor",
   is_active: true,
 };
 
@@ -105,7 +105,7 @@ const AILEEN: User = {
   id: "u9",
   name: "Aileen",
   email: "aileen@example.com",
-  role: "reviewer",
+  role: "contributor",
   is_active: true,
 };
 
@@ -115,7 +115,7 @@ const ESI: User = {
   id: "u5",
   name: "Esi",
   email: "esi@example.com",
-  role: "reviewer",
+  role: "contributor",
   is_active: true,
 };
 

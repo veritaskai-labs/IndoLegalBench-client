@@ -15,7 +15,7 @@ const user: Me = {
   id: "11111111-1111-1111-1111-111111111111",
   name: "Rina Hapsari",
   email: "rina@veritask.id",
-  role: "author",
+  role: "contributor",
 };
 
 /** Tampilkan state auth sebagai teks supaya gampang dicek */

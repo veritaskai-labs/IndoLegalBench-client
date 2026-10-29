@@ -44,7 +44,7 @@ const apiFetchMock = vi.mocked(apiFetch);
 
 beforeEach(() => {
   useAuthMock.mockReset();
-  signedInAs("author");
+  signedInAs("contributor");
   useSuitesMock.mockReset();
   useSuitesMock.mockReturnValue({
     status: "ready",
@@ -329,7 +329,7 @@ describe("SuitesPage", () => {
       });
     }
 
-    it.each(["author", "admin"] as const)("shows the link to %s", (role) => {
+    it.each(["contributor", "admin"] as const)("shows the link to %s", (role) => {
       signedInAs(role);
       showOneSuite();
 
@@ -340,7 +340,7 @@ describe("SuitesPage", () => {
       ).toBeInTheDocument();
     });
 
-    it.each(["reviewer", "viewer"] as const)("hides the link from %s", (role) => {
+    it.each(["viewer", "developer_ai"] as const)("hides the link from %s", (role) => {
       signedInAs(role);
       showOneSuite();
 
