@@ -9,12 +9,15 @@ import {
   parseRupiahInput,
   PROVIDER_TYPE_LABEL,
 } from "@/lib/providers/format";
+import { modelParamsError } from "@/lib/providers/modelParameters";
 import type { AiProduct, ProviderType } from "@/types/provider";
 
 import {
   MeasurementTypeField,
   type MeasurementType,
 } from "@/components/providers/MeasurementTypeField";
+import { ModelParameterFields } from "@/components/providers/ModelParameterFields";
+import { SaveTypeWarningDialog } from "@/components/providers/SaveTypeWarningDialog";
 
 type Props = {
   /** Tanpa produk berarti daftar baru, dengan produk berarti ubah. */
@@ -68,6 +71,10 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [credential, setCredential] = useState("");
   const [rateLimit, setRateLimit] = useState(product ? String(product.rate_limit_per_minute) : "");
   const [budget, setBudget] = useState(product ? formatRupiahInput(product.monthly_budget_idr.split(".")[0]) : "");
+  // AC2: parameter model dikumpulkan dan divalidasi di sini; pengirimannya ke
+  // kolom model_params menyusul begitu kontrak memuat PBI-23-BE-1.
+  const [modelParams, setModelParams] = useState<Record<string, string | boolean>>({});
+  const [confirming, setConfirming] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,14 +98,29 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     return found;
   }
 
-  async function handleSubmit() {
+  /** AC3: produk baru dikonfirmasi dulu, karena jenis pengukurannya tidak bisa diubah lagi. */
+  function requestSave() {
+    setFormError(null);
+    if (measurementType === "automatic") {
+      const found = validate();
+      const paramsError = modelParamsError(modelParams);
+      setErrors(found);
+      if (paramsError !== null) setFormError(paramsError);
+      if (paramsError !== null || Object.keys(found).length > 0) return;
+    }
+    if (!editing) {
+      setConfirming(true);
+      return;
+    }
+    void save();
+  }
+
+  async function save() {
+    setConfirming(false);
     if (measurementType === "manual") {
       setFormError("Menyimpan produk manual menunggu dukungan server (PBI-23-BE-1).");
       return;
-    }    const found = validate();
-    setErrors(found);
-    setFormError(null);
-    if (Object.keys(found).length > 0) return;
+    }
 
     const payload = {
       name: name.trim(),
@@ -210,6 +232,13 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                   <input id={ids.budget} inputMode="numeric" value={budget} onChange={(e) => setBudget(formatRupiahInput(e.target.value))} placeholder="1.500.000" {...invalid(ids.budget, errors.budget)} className={INPUT} />
                 </Labeled>
               </div>
+
+              <ModelParameterFields
+                values={modelParams}
+                onChange={(key, value) =>
+                  setModelParams((current) => ({ ...current, [key]: value }))
+                }
+              />
             </>
           ) : (
             <>
@@ -242,11 +271,19 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
           <button type="button" onClick={onClose} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
             Batal
           </button>
-          <button type="button" onClick={handleSubmit} disabled={saving} className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">
+          <button type="button" onClick={requestSave} disabled={saving} className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">
             {saving ? "Menyimpan…" : "Simpan"}
           </button>
         </div>
       </div>
+
+      {confirming && (
+        <SaveTypeWarningDialog
+          measurementType={measurementType}
+          onConfirm={() => void save()}
+          onCancel={() => setConfirming(false)}
+        />
+      )}
     </div>
   );
 }
