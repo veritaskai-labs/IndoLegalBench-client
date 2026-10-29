@@ -10,6 +10,7 @@ import { Breadcrumb } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useSuiteName } from "@/hooks/useSuiteName";
 import { fromCaseRead } from "@/lib/cases/caseFormMapping";
@@ -25,8 +26,7 @@ export default function CaseReadPage() {
   const caseId = decodeRouteParam(useParams<{ id: string }>().id);
   const auth = useAuth();
   const router = useRouter();
-  const isDeveloperAi =
-    auth.status === "authenticated" && auth.user.role === "developer_ai";
+  const isDeveloperAi = isDeveloperAiSession(auth);
 
   useEffect(() => {
     if (auth.status === "authenticated" && !isDeveloperAi) {

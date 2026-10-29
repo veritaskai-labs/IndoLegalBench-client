@@ -21,6 +21,7 @@ import { SubmitReviewButton } from "@/components/cases/SubmitReviewButton";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
 import { ReviewerFeedbackGate } from "@/components/reviews/ReviewerFeedbackGate";
 import { useAuth } from "@/hooks/useAuth";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
 import { useCanSubmitForReview } from "@/hooks/useCanSubmitForReview";
@@ -50,8 +51,7 @@ export default function EditCasePage() {
   const router = useRouter();
   // Developer AI hanya membaca: editor memanggil kelengkapan, versi, dan draf yang dijawab 403,
   // jadi peran ini dipindah ke halaman baca sebelum editor memuat apa pun (SCRUM-184).
-  const isDeveloperAi =
-    auth.status === "authenticated" && auth.user.role === "developer_ai";
+  const isDeveloperAi = isDeveloperAiSession(auth);
 
   useEffect(() => {
     if (isDeveloperAi) router.replace(caseReadPath(caseId));

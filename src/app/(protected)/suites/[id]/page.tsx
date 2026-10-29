@@ -16,6 +16,7 @@ import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import type { Suite } from "@/types/suite";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { caseEditPath, caseReadPath } from "@/lib/cases/casePaths";
 
 interface PageProps {
@@ -179,8 +180,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
   const router = useRouter();
   const auth = useAuth();
   // Developer AI hanya melihat kasus approved dan tidak menulis kasus (SCRUM-183).
-  const isDeveloperAi =
-    auth.status === "authenticated" && auth.user.role === "developer_ai";
+  const isDeveloperAi = isDeveloperAiSession(auth);
   const casePath = isDeveloperAi ? caseReadPath : caseEditPath;
 
   const [suite, setSuite] = useState<Suite | null>(null);

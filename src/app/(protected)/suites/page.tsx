@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SuiteFormDialog } from "@/components/suites/SuiteFormDialog";
 import { SuiteList } from "@/components/suites/SuiteList";
 import { useAuth } from "@/hooks/useAuth";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { useSuites } from "@/hooks/useSuites";
 import type { Suite, SuiteStatus } from "@/types/suite";
 import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
@@ -24,8 +25,7 @@ export default function SuitesPage() {
     auth.status === "authenticated" &&
     (auth.user.role === "author" || auth.user.role === "admin");
   // Developer AI hanya membaca: tanpa buat, ubah, arsip, atau hapus suite (SCRUM-184).
-  const canManage =
-    auth.status === "authenticated" && auth.user.role !== "developer_ai";
+  const canManage = auth.status === "authenticated" && !isDeveloperAiSession(auth);
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   const [actionError, setActionError] = useState<string | null>(null);
 

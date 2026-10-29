@@ -1,5 +1,6 @@
 import { BASE_URL } from "./apiClient";
 import type { components } from "./generated/api";
+import type { AuthState } from "@/hooks/useAuth";
 
 export const LOGIN_URL = `${BASE_URL}/auth/login`;
 export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
@@ -27,6 +28,11 @@ export type Role = components["schemas"]["Role"];
 export function parseRole(value: unknown): Role | null {
   if (typeof value !== "string") return null;
   return Object.keys(ROLE_HOME_PATH).includes(value) ? (value as Role) : null;
+}
+
+/** Developer AI hanya membaca suite dan kasus dev (SCRUM-184). Sesi yang masih dimuat bukan Developer AI. */
+export function isDeveloperAiSession(auth: AuthState): boolean {
+  return auth.status === "authenticated" && auth.user.role === "developer_ai";
 }
 
 export const AUTH_ERROR_CODES = [
