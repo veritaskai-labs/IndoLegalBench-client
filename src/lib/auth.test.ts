@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRole, isAuthErrorCode, isSessionExpiredCode, ROLE_HOME_PATH } from "./auth";
+import { parseRole, isAuthErrorCode, isSessionExpiredCode, canViewDashboard, ROLE_HOME_PATH } from "./auth";
 
 describe("parseRole", () => {
   it("returns the role for a known lowercase value", () => {
@@ -82,5 +82,46 @@ describe("ROLE_HOME_PATH", () => {
   it("has no entry left for the retired author and reviewer roles", () => {
     expect(Object.keys(ROLE_HOME_PATH)).not.toContain("author");
     expect(Object.keys(ROLE_HOME_PATH)).not.toContain("reviewer");
+  });
+});
+
+describe("canViewDashboard", () => {
+  // Positive: the roles the server answers 200 to on /dashboard.
+  it.each(["contributor", "admin"] as const)("is true for the %s role", (role) => {
+    // Arrange / Act
+    const allowed = canViewDashboard(role);
+
+    // Assert
+    expect(allowed).toBe(true);
+  });
+
+  // Negative: the server answers 403 here, which would send the user to /forbidden.
+  it.each(["viewer", "developer_ai"] as const)("is false for the %s role", (role) => {
+    // Arrange / Act
+    const allowed = canViewDashboard(role);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: no session yet.
+  it("is false while there is no session", () => {
+    // Arrange / Act
+    const allowed = canViewDashboard(null);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: the login landing page and the dashboard access must not drift apart.
+  it("agrees with ROLE_HOME_PATH: every role that lands on /dashboard can open it", () => {
+    const landingOnDashboard = Object.entries(ROLE_HOME_PATH)
+      .filter(([, path]) => path === "/dashboard")
+      .map(([role]) => role);
+
+    expect(landingOnDashboard.length).toBeGreaterThan(0);
+    for (const role of landingOnDashboard) {
+      expect(canViewDashboard(role as Parameters<typeof canViewDashboard>[0])).toBe(true);
+    }
   });
 });

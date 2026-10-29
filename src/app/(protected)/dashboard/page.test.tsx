@@ -17,7 +17,7 @@ afterEach(() => {
   useDashboardMock.mockReset();
 });
 
-function authenticatedAs(name: string, role = "author") {
+function authenticatedAs(name: string, role = "contributor") {
   useAuthMock.mockReturnValue({
     status: "authenticated",
     user: { name, email: "rina@veritask.test", role },
@@ -105,8 +105,8 @@ describe("DashboardPage", () => {
   });
 
   // AC6
-  it("shows the review queue for a reviewer", () => {
-    authenticatedAs("Rina", "reviewer");
+  it("shows the review queue for a contributor", () => {
+    authenticatedAs("Rina", "contributor");
     ready({ review_queue: [QUEUED] });
 
     render(<DashboardPage />);
@@ -116,10 +116,36 @@ describe("DashboardPage", () => {
     expect(queue).toHaveAttribute("href", "/reviews/asg-1");
   });
 
-  // Corner: other roles don't have a review queue, so their section doesn't appear at all.
-  it("leaves the queue out for roles that do not review", () => {
+  // PBI-24 AC6: writing work and the review queue are on one page for the contributor.
+  it("shows the case counts and the review queue together for a contributor", () => {
+    // Arrange
+    authenticatedAs("Rina", "contributor");
+    ready({ review_queue: [QUEUED] });
+
+    // Act
+    render(<DashboardPage />);
+
+    // Assert
+    expect(screen.getByRole("heading", { name: /ringkasan kasus/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /antrean review/i })).toBeInTheDocument();
+    expect(screen.getByText("Total 10 kasus")).toBeInTheDocument();
+  });
+
+  // Empty: a contributor with nothing to review still sees the counts and a plain message.
+  it("says nothing waits for the contributor when the queue is empty", () => {
+    authenticatedAs("Rina", "contributor");
+    ready({ review_queue: [] });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByText("Tidak ada kasus yang menunggu review Anda.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /ringkasan kasus/i })).toBeInTheDocument();
+  });
+
+  // Corner: the admin does not review, so the queue section does not appear at all.
+  it("leaves the queue out when the server sends none", () => {
     authenticatedAs("Rina");
-    ready();
+    ready({ review_queue: null });
 
     render(<DashboardPage />);
 
@@ -134,6 +160,18 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(useDashboardMock).toHaveBeenCalledWith(false);
+  });
+
+  // Corner: the server answers 403 to every role but contributor and admin, so asking would
+  // only send the user to /forbidden.
+  it("does not ask for a dashboard a developer AI may not see", () => {
+    authenticatedAs("Rina", "developer_ai");
+    useDashboardMock.mockReturnValue({ status: "loading", reload: vi.fn() });
+
+    render(<DashboardPage />);
+
+    expect(useDashboardMock).toHaveBeenCalledWith(false);
+    expect(screen.getByText("Dasbor belum tersedia untuk peran Anda")).toBeInTheDocument();
   });
 
   // Negative
@@ -213,10 +251,10 @@ describe("DashboardPage", () => {
     expect(screen.queryByRole("heading", { name: /antrean review/i })).not.toBeInTheDocument();
   });
 
-  // AC1: role isolation - Reviewer sees review queue without admin reassignment card
-  it("shows review queue for reviewer without admin reassignment card", () => {
+  // AC1: role isolation - Contributor sees review queue without admin reassignment card
+  it("shows review queue for contributor without admin reassignment card", () => {
     // Arrange
-    authenticatedAs("Reviewer", "reviewer");
+    authenticatedAs("Kontributor", "contributor");
     ready({ review_queue: [QUEUED], needs_reassignment: null });
 
     // Act
