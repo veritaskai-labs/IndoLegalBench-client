@@ -7,19 +7,21 @@ export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
 /**
  * Halaman awal setelah login (PBI-19 AC1). Viewer tidak punya dasbor
  * — servernya menjawab 403 — jadi peran itu tetap mendarat di /reports.
+ * Developer AI juga tanpa dasbor; yang boleh dibukanya hanya suite dan kasus dev (SCRUM-184).
  */
 export const ROLE_HOME_PATH = {
   author: "/dashboard",
   admin: "/dashboard",
   reviewer: "/dashboard",
   viewer: "/reports",
+  developer_ai: "/suites",
 } as const;
 
 export type Role = components["schemas"]["Role"];
 
 /**
  * Strict on purpose: role values are lowercase ("author", "admin",
- * "reviewer", "viewer"), as sent by the backend /me endpoint. Any other
+ * "reviewer", "viewer", "developer_ai"), as sent by the backend /me endpoint. Any other
  * casing or unknown value returns null.
  */
 export function parseRole(value: unknown): Role | null {

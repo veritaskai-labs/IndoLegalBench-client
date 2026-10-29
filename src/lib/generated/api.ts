@@ -188,7 +188,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Daftar suite */
+        /**
+         * Daftar suite
+         * @description For Developer AI, case_count is the approved cases, dev and test together.
+         */
         get: operations["list_suites_suites_get"];
         put?: never;
         /** Buat suite baru */
@@ -206,7 +209,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Detail satu suite */
+        /**
+         * Detail satu suite
+         * @description For Developer AI, case_count is the approved cases, dev and test together.
+         */
         get: operations["get_suite_suites__suite_id__get"];
         put?: never;
         post?: never;
@@ -312,6 +318,9 @@ export interface paths {
         /**
          * Daftar ringkas kasus di dalam satu suite
          * @description List the short case summary for one suite.
+         *
+         *     Developer AI gets approved cases only. Test rows come back with
+         *     `masked` = true and placeholder `case_code` and `title`.
          */
         get: operations["list_cases_suites__suite_id__cases_get"];
         put?: never;
@@ -336,6 +345,8 @@ export interface paths {
         /**
          * Detail satu kasus
          * @description Return the full case.
+         *
+         *     Developer AI gets the approved version of a dev case only.
          */
         get: operations["get_case_cases__case_id__get"];
         /**
@@ -1286,6 +1297,12 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Masked
+             * @description True for a test case shown to Developer AI: case_code and title are server placeholders and the case cannot be opened (SCRUM-183).
+             * @default false
+             */
+            masked: boolean;
         };
         /**
          * CaseWrite
@@ -2025,7 +2042,7 @@ export interface components {
          * Role
          * @enum {string}
          */
-        Role: "author" | "reviewer" | "admin" | "viewer";
+        Role: "author" | "reviewer" | "admin" | "viewer" | "developer_ai";
         /**
          * RoundDecision
          * @enum {string}
@@ -3213,7 +3230,16 @@ export interface operations {
                     "application/json": components["schemas"]["CaseRead"];
                 };
             };
-            /** @description Kasus atau suite tidak ditemukan. */
+            /** @description Developer AI membuka kasus test (`TEST_CASE_HIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus tidak ditemukan. Untuk Developer AI juga kasus yang belum disetujui. */
             404: {
                 headers: {
                     [name: string]: unknown;

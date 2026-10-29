@@ -7,6 +7,7 @@ describe("parseRole", () => {
     expect(parseRole("admin")).toBe("admin");
     expect(parseRole("reviewer")).toBe("reviewer");
     expect(parseRole("viewer")).toBe("viewer");
+    expect(parseRole("developer_ai")).toBe("developer_ai");
   });
 
   it("returns null for uppercase input (regression test for the casing bug)", () => {
@@ -72,5 +73,9 @@ describe("ROLE_HOME_PATH", () => {
     expect(ROLE_HOME_PATH.admin).toBe("/dashboard");
     expect(ROLE_HOME_PATH.reviewer).toBe("/dashboard");
     expect(ROLE_HOME_PATH.viewer).toBe("/reports");
+  });
+
+  it("sends developer AI to the suites, since it has no dashboard (SCRUM-184)", () => {
+    expect(ROLE_HOME_PATH.developer_ai).toBe("/suites");
   });
 });
