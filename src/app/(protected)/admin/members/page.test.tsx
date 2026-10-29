@@ -334,13 +334,13 @@ describe("AdminMembersPage, existing paths", () => {
     await userEvent.click(screen.getByRole("button", { name: "Tambah pengguna" }));
     await userEvent.type(screen.getByLabelText("Nama"), "Budi Author");
     await userEvent.type(screen.getByLabelText("Email"), "budi@veritask.ai");
-    await userEvent.selectOptions(screen.getByLabelText("Peran"), "author");
+    await userEvent.selectOptions(screen.getByLabelText("Peran"), "contributor");
     const dialogButtons = screen.getAllByRole("button", { name: "Tambah pengguna" });
     await userEvent.click(dialogButtons[dialogButtons.length - 1]);
 
     expect(apiFetchMock).toHaveBeenCalledWith("/admin/users", {
       method: "POST",
-      body: JSON.stringify({ name: "Budi Author", email: "budi@veritask.ai", role: "author" }),
+      body: JSON.stringify({ name: "Budi Author", email: "budi@veritask.ai", role: "contributor" }),
     });
     expect(await screen.findByText("Budi Author")).toBeInTheDocument();
   });
