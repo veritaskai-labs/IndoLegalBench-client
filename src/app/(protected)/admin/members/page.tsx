@@ -12,6 +12,7 @@ import { DeactivateConfirmModal } from "@/components/admin/DeactivateConfirmModa
 import { FilterPopover } from "@/components/admin/FilterPopover";
 import { adminErrorMessage } from "@/components/admin/errorMessage";
 import { memberToggleAction, replaceMember } from "@/lib/members/memberToggle";
+import { ROLE_OPTIONS } from "@/lib/members/roleOptions";
 import { activateUser } from "@/lib/userApi";
 
 const LOAD_ERROR = "Gagal memuat daftar anggota.";
@@ -316,10 +317,9 @@ export default function AdminMembersPage() {
                       onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
                       className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 shadow-2xs hover:border-slate-300 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 cursor-pointer"
                     >
-                      <option value="admin">Admin</option>
-                      <option value="author">Author</option>
-                      <option value="reviewer">Reviewer</option>
-                      <option value="viewer">Viewer</option>
+                      {ROLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
                   </td>
                   <td className="py-3 px-6 text-right">

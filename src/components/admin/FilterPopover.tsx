@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Role } from "@/types";
 import type { StatusFilter } from "@/types/user-management";
+import { ROLE_OPTIONS } from "@/lib/members/roleOptions";
 
 interface FilterPopoverProps {
   isOpen: boolean;
@@ -11,13 +12,6 @@ interface FilterPopoverProps {
   onClose: () => void;
   onApply: (roles: Role[], status: StatusFilter) => void;
 }
-
-const ROLES: { label: string; value: Role }[] = [
-  { label: "Admin", value: "admin" },
-  { label: "Author", value: "author" },
-  { label: "Reviewer", value: "reviewer" },
-  { label: "Viewer", value: "viewer" },
-];
 
 export function FilterPopover({
   isOpen,
@@ -48,7 +42,7 @@ export function FilterPopover({
         <div>
           <h4 className="font-semibold text-slate-900 mb-2">Peran</h4>
           <div className="space-y-2">
-            {ROLES.map((r) => (
+            {ROLE_OPTIONS.map((r) => (
               <label key={r.value} className="flex items-center gap-2 cursor-pointer text-slate-700">
                 <input
                   type="checkbox"
