@@ -14,6 +14,8 @@ export class ApiError extends Error {
     /** Lokasi field yang gagal, misalnya legal_refs[0].pasal. */
     readonly field: string | null = null,
     readonly missing: MissingSection[] = [],
+    /** Jumlah kasus yang menunggu penilaian pada 409 CONFIRMATION_REQUIRED (PBI-24 AC8). */
+    readonly affectedCount: number | null = null,
   ) {
     super(code);
     this.name = "ApiError";
@@ -46,6 +48,11 @@ function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+/** Skema server menjamin paling sedikit 1; nilai lain bukan jumlah yang layak ditampilkan. */
+function affectedCountOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : null;
+}
+
 function missingSections(value: unknown): MissingSection[] {
   if (!Array.isArray(value)) return [];
   return value.filter(
@@ -60,16 +67,18 @@ async function parseError(response: Response): Promise<ApiError> {
   let message: string | null = null;
   let field: string | null = null;
   let missing: MissingSection[] = [];
+  let affectedCount: number | null = null;
   try {
     const body = await response.json();
     if (typeof body?.code === "string") code = body.code;
     message = stringOrNull(body?.message);
     field = stringOrNull(body?.field);
     missing = missingSections(body?.missing);
+    affectedCount = affectedCountOrNull(body?.affected_count);
   } catch {
     // bukan JSON: halaman error HTML, balasan kosong, atau koneksi terputus.
   }
-  return new ApiError(response.status, code, message, field, missing);
+  return new ApiError(response.status, code, message, field, missing, affectedCount);
 }
 
 /** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */

@@ -1073,6 +1073,12 @@ export interface components {
          */
         AssignmentStatus: "active" | "replaced" | "void";
         /**
+         * AssignmentVoidReason
+         * @description end_reason assignment void (D11). Kode stabil; FE yang memetakan ke teks (SCRUM-198).
+         * @enum {string}
+         */
+        AssignmentVoidReason: "deactivated" | "role_changed";
+        /**
          * AuditEntityType
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
@@ -1405,6 +1411,29 @@ export interface components {
             message: string;
         };
         /**
+         * ConfirmationRequiredBody
+         * @description 409 CONFIRMATION_REQUIRED: kirim ulang dengan confirm=true untuk melanjutkan.
+         */
+        ConfirmationRequiredBody: {
+            /** Code */
+            code: string;
+            /**
+             * Message
+             * @example No platform account is mapped to this identity.
+             */
+            message: string;
+            /**
+             * Field
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].links[0].pasal
+             */
+            field?: string | null;
+            /**
+             * Affected Count
+             * @description Jumlah kasus yang terdampak aksi ini
+             */
+            affected_count: number;
+        };
+        /**
          * ConnectionTestErrorCategory
          * @description Kategori kegagalan uji koneksi yang mudah dipahami Admin.
          *
@@ -1448,6 +1477,8 @@ export interface components {
              * @description Kasus in_review yang round berjalannya belum punya verdict sah dari kedua slot reviewer, termasuk kasus dengan 0 atau 1 reviewer. Bisa lebih besar dari total antrean reviewer.
              */
             waiting_for_review: number;
+            /** @description Hanya Kontributor: kasus yang ia tulis per status versi yang berlaku, berisi nol bila belum ada (PBI-24 AC6). null untuk peran lain. case_counts dan total_cases di atas tetap menghitung semua kasus. */
+            own_cases: components["schemas"]["OwnCaseSummary"] | null;
             /**
              * Review Queue
              * @description Hanya Reviewer: kasus yang ditugaskan dan belum dinilai, terlama dulu (AC6). null untuk peran lain.
@@ -1763,6 +1794,15 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * OwnCaseSummary
+         * @description Kasus yang ditulis pengguna yang login, per status versi yang berlaku (PBI-24 AC6).
+         */
+        OwnCaseSummary: {
+            case_counts: components["schemas"]["CaseCounts"];
+            /** Total Cases */
+            total_cases: number;
+        };
         /** Page[AuditLogRead] */
         Page_AuditLogRead_: {
             /** Items */
@@ -1877,8 +1917,13 @@ export interface components {
             assigned_at: string;
             /** Ended At */
             ended_at?: string | null;
-            /** End Reason */
+            /**
+             * End Reason
+             * @description Teks bebas Admin untuk replaced; kode void_reason untuk void
+             */
             end_reason?: string | null;
+            /** @description Hanya untuk status void: kenapa reviewer dilepas (SCRUM-197) */
+            void_reason?: components["schemas"]["AssignmentVoidReason"] | null;
         };
         /**
          * RegulationTypeRead
@@ -2040,9 +2085,10 @@ export interface components {
         };
         /**
          * Role
+         * @description Satu akun satu peran (D10). Author dan Reviewer digabung jadi Kontributor (PBI-24).
          * @enum {string}
          */
-        Role: "author" | "reviewer" | "admin" | "viewer" | "developer_ai";
+        Role: "admin" | "viewer" | "developer_ai" | "contributor";
         /**
          * RoundDecision
          * @enum {string}
@@ -2637,7 +2683,10 @@ export interface operations {
     };
     update_user_role_admin_users__user_id__patch: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description true setelah Admin menyetujui dialog konfirmasi dari respons 409 */
+                confirm?: boolean;
+            };
             header?: never;
             path: {
                 user_id: string;
@@ -2659,6 +2708,15 @@ export interface operations {
                     "application/json": components["schemas"]["UserResponse"];
                 };
             };
+            /** @description Masih ada kasus menunggu penilaian anggota ini (`CONFIRMATION_REQUIRED`). Kirim ulang dengan confirm=true setelah Admin setuju. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmationRequiredBody"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -2672,7 +2730,10 @@ export interface operations {
     };
     deactivate_user_admin_users__user_id__deactivate_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description true setelah Admin menyetujui dialog konfirmasi dari respons 409 */
+                confirm?: boolean;
+            };
             header?: never;
             path: {
                 user_id: string;
@@ -2688,6 +2749,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Masih ada kasus menunggu penilaian anggota ini (`CONFIRMATION_REQUIRED`). Kirim ulang dengan confirm=true setelah Admin setuju. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmationRequiredBody"];
                 };
             };
             /** @description Validation Error */

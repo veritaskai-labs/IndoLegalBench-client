@@ -44,7 +44,7 @@ describe("ReviewerFeedbackGate", () => {
   // Positive
   it("shows the feedback to the author who created the case once the history says so", async () => {
     // Arrange / Act
-    renderGate(me("author"), "needs_revision");
+    renderGate(me("contributor"), "needs_revision");
 
     // Assert
     expect(await screen.findByRole("region", { name: "Catatan peninjau" })).toHaveTextContent("Pasal 151 salah");
@@ -67,7 +67,7 @@ describe("ReviewerFeedbackGate", () => {
     listMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
 
     // Act
-    renderGate(me("author"), "needs_revision");
+    renderGate(me("contributor"), "needs_revision");
     await waitFor(() => expect(listMock).toHaveBeenCalledWith(CASE_ID));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -88,7 +88,7 @@ describe("ReviewerFeedbackGate", () => {
   });
 
   // Negative
-  it.each(["reviewer", "viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
+  it.each(["viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
     // Arrange / Act
     renderGate(me(role), "needs_revision");
     await new Promise((resolve) => setTimeout(resolve, 0));

@@ -14,7 +14,7 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const AUTHENTICATED = {
   status: "authenticated",
-  user: { id: "u1", name: "Uji Author", email: "author@veritask.test", role: "author" },
+  user: { id: "u1", name: "Uji Author", email: "author@veritask.test", role: "contributor" },
 } as const;
 
 import { apiFetch } from "@/lib/apiClient";

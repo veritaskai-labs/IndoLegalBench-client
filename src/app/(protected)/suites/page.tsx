@@ -9,6 +9,7 @@ import { useSuites } from "@/hooks/useSuites";
 import type { Suite, SuiteStatus } from "@/types/suite";
 import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
 import { apiFetch } from "@/lib/apiClient";
+import { canCreateCase } from "@/lib/cases/permissions";
 
 const TABS: { value: SuiteStatus; label: string }[] = [
   { value: "active", label: "Aktif" },
@@ -21,9 +22,9 @@ export default function SuitesPage() {
   const [status, setStatus] = useState<SuiteStatus>("active");
   const suites = useSuites(status);
   const auth = useAuth();
-  const canCreateCase =
-    auth.status === "authenticated" &&
-    (auth.user.role === "author" || auth.user.role === "admin");
+  const canCreate = canCreateCase(
+    auth.status === "authenticated" ? auth.user.role : null,
+  );
   // Developer AI hanya membaca: tanpa buat, ubah, arsip, atau hapus suite (SCRUM-184).
   const canManage = auth.status === "authenticated" && !isDeveloperAiSession(auth);
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
@@ -98,7 +99,7 @@ export default function SuitesPage() {
       <SuiteList
         status={suites.status}
         suites={suites.suites}
-        canCreateCase={canCreateCase}
+        canCreateCase={canCreate}
         canManage={canManage}
         onRetry={suites.reload}
         onEdit={(suite) => setDialog({ mode: "edit", suite })}

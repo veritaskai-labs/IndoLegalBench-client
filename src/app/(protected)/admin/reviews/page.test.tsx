@@ -97,7 +97,7 @@ const ROBEN: User = {
   id: "u1",
   name: "Roben",
   email: "roben@example.com",
-  role: "reviewer",
+  role: "contributor",
   is_active: true,
 };
 
@@ -105,7 +105,7 @@ const AILEEN: User = {
   id: "u9",
   name: "Aileen",
   email: "aileen@example.com",
-  role: "reviewer",
+  role: "contributor",
   is_active: true,
 };
 
@@ -115,7 +115,7 @@ const ESI: User = {
   id: "u5",
   name: "Esi",
   email: "esi@example.com",
-  role: "reviewer",
+  role: "contributor",
   is_active: true,
 };
 
@@ -155,7 +155,11 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   // Positif
   it("lists the queued case", async () => {
     queueMock.mockResolvedValue([
-      row({ void_assignments: [assignment({ status: "void" })] }),
+      row({
+        void_assignments: [
+          assignment({ status: "void", void_reason: "deactivated" }),
+        ],
+      }),
     ]);
 
     render(<AdminReviewsPage />);
@@ -245,6 +249,11 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     expect(
       await screen.findByText("Tidak ada kasus yang sedang direview"),
     ).toBeInTheDocument();
+    // PBI-24 AC1: Kontributor replaces Author in every visible text.
+    expect(
+      screen.getByText(/setelah Kontributor mengajukannya untuk review/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Author/)).not.toBeInTheDocument();
   });
 
   // Negatif

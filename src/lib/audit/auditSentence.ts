@@ -13,6 +13,8 @@ import type { AuditEntityType, AuditEntry } from "@/types/audit";
 type Entry = Pick<AuditEntry, "action" | "actor_user_id" | "actor_role" | "after">;
 
 const ROLE_SUBJECT: Readonly<Record<string, string>> = {
+  contributor: "Kontributor",
+  // Entri sebelum migrasi PBI-24 menyimpan peran saat itu, jadi dua nama lama tetap terbaca.
   author: "Author",
   reviewer: "Reviewer",
   admin: "Admin",

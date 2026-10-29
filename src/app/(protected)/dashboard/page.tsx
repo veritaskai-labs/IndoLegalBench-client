@@ -8,20 +8,19 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboard } from "@/hooks/useDashboard";
+import { canViewDashboard } from "@/lib/auth";
 import { formatWibClock } from "@/lib/datetime/formatWib";
 
 /**
  * Dasbor sesuai peran (PBI-19 AC1, AC2, AC6).
- * Viewer dan Developer AI dijawab 403 oleh server, jadi untuk peran itu dasbornya tidak
- * dipanggil sama sekali.
+ * Peran selain Kontributor dan Admin dijawab 403 oleh server, jadi dasbornya tidak dipanggil sama sekali.
  */
 export default function DashboardPage() {
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
   const firstName = user === null ? "" : user.name.split(" ")[0];
 
-  const allowed =
-    user !== null && user.role !== "viewer" && user.role !== "developer_ai";
+  const allowed = canViewDashboard(user === null ? null : user.role);
   const dashboard = useDashboard(allowed);
 
   const refreshedAt =
@@ -61,6 +60,14 @@ export default function DashboardPage() {
 
       {dashboard.status === "ready" && (
         <>
+          {dashboard.summary.own_cases && (
+            <CaseCountCards
+              title="Kasus Anda"
+              counts={dashboard.summary.own_cases.case_counts}
+              total={dashboard.summary.own_cases.total_cases}
+              emptyNote="Anda belum menulis kasus."
+            />
+          )}
           <CaseCountCards
             counts={dashboard.summary.case_counts}
             total={dashboard.summary.total_cases}

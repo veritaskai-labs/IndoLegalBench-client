@@ -11,9 +11,8 @@ export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
  * Developer AI juga tanpa dasbor; yang boleh dibukanya hanya suite dan kasus dev (SCRUM-184).
  */
 export const ROLE_HOME_PATH = {
-  author: "/dashboard",
+  contributor: "/dashboard",
   admin: "/dashboard",
-  reviewer: "/dashboard",
   viewer: "/reports",
   developer_ai: "/suites",
 } as const;
@@ -21,13 +20,24 @@ export const ROLE_HOME_PATH = {
 export type Role = components["schemas"]["Role"];
 
 /**
- * Strict on purpose: role values are lowercase ("author", "admin",
- * "reviewer", "viewer", "developer_ai"), as sent by the backend /me endpoint. Any other
+ * Strict on purpose: role values are lowercase ("contributor", "admin",
+ * "viewer", "developer_ai"), as sent by the backend /me endpoint. The retired
+ * "author" and "reviewer" values are unknown on purpose (PBI-24 AC1). Any other
  * casing or unknown value returns null.
  */
 export function parseRole(value: unknown): Role | null {
   if (typeof value !== "string") return null;
   return Object.keys(ROLE_HOME_PATH).includes(value) ? (value as Role) : null;
+}
+
+/**
+ * Peran yang boleh membuka /dashboard (PBI-19, PBI-24 AC6): Kontributor dan Admin. Server menjawab
+ * 403 untuk peran lain, dan setiap 403 memindahkan pengguna ke /forbidden, jadi peran itu tidak
+ * boleh sampai memanggilnya. Daftar positif, supaya peran baru tidak ikut terbuka tanpa disengaja.
+ * null berarti belum ada sesi.
+ */
+export function canViewDashboard(role: Role | null): boolean {
+  return role === "contributor" || role === "admin";
 }
 
 /** Developer AI hanya membaca suite dan kasus dev (SCRUM-184). Sesi yang masih dimuat bukan Developer AI. */

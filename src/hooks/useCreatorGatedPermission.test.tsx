@@ -26,31 +26,31 @@ describe("useCreatorGatedPermission", () => {
 
     // Act
     const { result } = renderHook(() =>
-      useCreatorGatedPermission("case-1", { id: "u1", role: "author" }, "draft", "draft", rule),
+      useCreatorGatedPermission("case-1", { id: "u1", role: "contributor" }, "draft", "draft", rule),
     );
 
     // Assert
     await waitFor(() => expect(result.current).toBe(true));
     expect(listMock).toHaveBeenCalledWith("case-1");
-    expect(rule).toHaveBeenLastCalledWith("author", "draft", true);
+    expect(rule).toHaveBeenLastCalledWith("contributor", "draft", true);
   });
 
   // Edge: any other status is decided without reading the history.
   it("does not read the history when the status is not the required one", async () => {
     // Arrange / Act
     const { result } = renderHook(() =>
-      useCreatorGatedPermission("case-1", { id: "u1", role: "author" }, "approved", "draft", allowAll),
+      useCreatorGatedPermission("case-1", { id: "u1", role: "contributor" }, "approved", "draft", allowAll),
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Assert
     expect(listMock).not.toHaveBeenCalled();
-    expect(allowAll).toHaveBeenCalledWith("author", "approved", false);
+    expect(allowAll).toHaveBeenCalledWith("contributor", "approved", false);
     expect(result.current).toBe(true);
   });
 
   // Edge: only an author needs the history to prove they created the case.
-  it.each(["admin", "reviewer", "viewer"] as const)("does not read the history for the %s role", (role) => {
+  it.each(["admin", "viewer"] as const)("does not read the history for the %s role", (role) => {
     // Arrange / Act
     renderHook(() => useCreatorGatedPermission("case-1", { id: "u1", role }, "draft", "draft", allowAll));
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -32,7 +32,7 @@ const AUTHOR: User = {
   id: "22222222-2222-2222-2222-222222222222",
   name: "Budi Author",
   email: "budi@veritask.ai",
-  role: "author",
+  role: "contributor",
   is_active: true,
 };
 
@@ -49,12 +49,29 @@ beforeEach(() => {
 
 describe("AdminMembersPage", () => {
   it("redirects a non-admin away and never calls the admin API", async () => {
-    signedInAs("author");
+    signedInAs("contributor");
 
     render(<AdminMembersPage />);
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
     expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+
+  // PBI-24 AC1: Kontributor replaces Author and Reviewer in the list the admin picks from.
+  it("offers Admin, Kontributor, Viewer and Developer AI in the role select", async () => {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValue([ADMIN, AUTHOR]);
+
+    render(<AdminMembersPage />);
+    const select = await screen.findByLabelText("Ubah peran Budi Author");
+
+    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Admin",
+      "Kontributor",
+      "Viewer",
+      "Developer AI",
+    ]);
+    expect(select).toHaveValue("contributor");
   });
 
   it("lists members for an admin", async () => {
@@ -89,7 +106,7 @@ describe("AdminMembersPage", () => {
     await userEvent.selectOptions(select, "viewer");
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Gagal mengubah peran pengguna.");
-    expect(select).toHaveValue("author");
+    expect(select).toHaveValue("contributor");
   });
 
   it("shows a readable message, not the raw code, when loading fails", async () => {
@@ -189,7 +206,7 @@ describe("AdminMembersPage, existing paths", () => {
     id: "33333333-3333-3333-3333-333333333333",
     name: "Rina Reviewer",
     email: "rina@veritask.ai",
-    role: "reviewer",
+    role: "contributor",
     is_active: false,
   };
 
@@ -277,7 +294,7 @@ describe("AdminMembersPage, existing paths", () => {
     await renderList();
 
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    await userEvent.click(screen.getByLabelText("Author"));
+    await userEvent.click(screen.getByLabelText("Kontributor"));
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(screen.getByText("Budi Author")).toBeInTheDocument();
@@ -318,13 +335,13 @@ describe("AdminMembersPage, existing paths", () => {
     await userEvent.click(screen.getByRole("button", { name: "Tambah pengguna" }));
     await userEvent.type(screen.getByLabelText("Nama"), "Budi Author");
     await userEvent.type(screen.getByLabelText("Email"), "budi@veritask.ai");
-    await userEvent.selectOptions(screen.getByLabelText("Peran"), "author");
+    await userEvent.selectOptions(screen.getByLabelText("Peran"), "contributor");
     const dialogButtons = screen.getAllByRole("button", { name: "Tambah pengguna" });
     await userEvent.click(dialogButtons[dialogButtons.length - 1]);
 
     expect(apiFetchMock).toHaveBeenCalledWith("/admin/users", {
       method: "POST",
-      body: JSON.stringify({ name: "Budi Author", email: "budi@veritask.ai", role: "author" }),
+      body: JSON.stringify({ name: "Budi Author", email: "budi@veritask.ai", role: "contributor" }),
     });
     expect(await screen.findByText("Budi Author")).toBeInTheDocument();
   });
@@ -369,5 +386,123 @@ describe("AdminMembersPage, existing paths", () => {
     await pending.promise.catch(() => undefined);
     expect(apiFetchMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+// PBI-24 AC8 + D11: changing the role of, or deactivating, a member who still has cases waiting
+// for a verdict asks the admin first and shows how many cases will go to the reassignment queue.
+describe("AdminMembersPage, confirmation before role change or deactivation", () => {
+  const QUESTION = "3 kasus menunggu penilaian akan masuk daftar penugasan ulang. Lanjutkan?";
+  const WAITING = () => new ApiError(409, "CONFIRMATION_REQUIRED", null, null, [], 3);
+
+  async function renderMembers() {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValueOnce([ADMIN, AUTHOR]);
+    render(<AdminMembersPage />);
+    return screen.findByLabelText("Ubah peran Budi Author");
+  }
+
+  // Positif
+  it("asks with the number of waiting cases and saves nothing yet when the role change needs confirmation", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+
+    await userEvent.selectOptions(select, "viewer");
+
+    expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+    expect(select).toHaveValue("contributor");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: "viewer" }),
+    });
+  });
+
+  it("sends the role change again with confirm=true when the admin agrees", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.selectOptions(select, "viewer");
+    await screen.findByText(QUESTION);
+    apiFetchMock.mockResolvedValueOnce({ ...AUTHOR, role: "viewer" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}?confirm=true`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: "viewer" }),
+    });
+    await waitFor(() => expect(select).toHaveValue("viewer"));
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it("asks before deactivating, then deactivates with confirm=true", async () => {
+    await renderMembers();
+    await userEvent.click(screen.getByLabelText("Toggle aktif Budi Author"));
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.click(screen.getByRole("button", { name: "Nonaktifkan" }));
+    await screen.findByText(QUESTION);
+    apiFetchMock.mockResolvedValueOnce({ ...AUTHOR, is_active: false });
+
+    await userEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}/deactivate?confirm=true`, {
+      method: "POST",
+    });
+    await waitFor(() => expect(screen.getByLabelText("Ubah peran Budi Author")).toBeDisabled());
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  // Negatif
+  it("keeps the role and sends nothing more when the admin cancels the question", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.selectOptions(select, "viewer");
+    await screen.findByText(QUESTION);
+
+    await userEvent.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    expect(select).toHaveValue("contributor");
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the account active when the admin cancels the question", async () => {
+    await renderMembers();
+    await userEvent.click(screen.getByLabelText("Toggle aktif Budi Author"));
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.click(screen.getByRole("button", { name: "Nonaktifkan" }));
+    await screen.findByText(QUESTION);
+
+    await userEvent.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(screen.getByLabelText("Ubah peran Budi Author")).toBeEnabled();
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a readable message and no question when the confirmed request fails", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.selectOptions(select, "viewer");
+    await screen.findByText(QUESTION);
+    apiFetchMock.mockRejectedValueOnce(new ApiError(500, "UNKNOWN_ERROR"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Gagal mengubah peran pengguna.");
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    expect(select).toHaveValue("contributor");
+  });
+
+  // Corner: nobody is waiting, so the old flow stays as it was, with no second question.
+  it("deactivates straight away when no case is waiting", async () => {
+    await renderMembers();
+    await userEvent.click(screen.getByLabelText("Toggle aktif Budi Author"));
+    apiFetchMock.mockResolvedValueOnce({ ...AUTHOR, is_active: false });
+
+    await userEvent.click(screen.getByRole("button", { name: "Nonaktifkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}/deactivate`, { method: "POST" });
+    await waitFor(() => expect(screen.getByLabelText("Ubah peran Budi Author")).toBeDisabled());
+    expect(screen.queryByText(/menunggu penilaian akan masuk/)).toBeNull();
   });
 });

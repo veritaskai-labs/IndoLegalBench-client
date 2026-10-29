@@ -21,7 +21,7 @@ const MEMBER: User = {
   id: "22222222-2222-2222-2222-222222222222",
   name: "Budi Author",
   email: "budi@veritask.ai",
-  role: "author",
+  role: "contributor",
   is_active: true,
 };
 

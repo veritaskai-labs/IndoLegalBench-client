@@ -64,7 +64,7 @@ describe("canChangeTagAsAdmin", () => {
   });
 
   // Negative
-  it.each(["author", "reviewer", "viewer"] as const)("hides the action from %s", (role) => {
+  it.each(["contributor", "viewer"] as const)("hides the action from %s", (role) => {
     // Act + Assert
     expect(canChangeTagAsAdmin(role, { status: "approved", version: 1 })).toBe(false);
   });

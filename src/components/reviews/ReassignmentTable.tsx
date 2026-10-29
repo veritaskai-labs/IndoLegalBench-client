@@ -5,6 +5,7 @@ import {
   activeAssignments,
   reassignmentReason,
   reviewerName,
+  voidedReplaceText,
 } from "@/lib/reviews/reviewQueue";
 import type {
   ReassignmentAssignment,
@@ -62,8 +63,8 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
             })),
             ...queued.void_assignments.map((item) => ({
               item,
-              text: "Ganti reviewer nonaktif",
-              label: `Ganti reviewer nonaktif ${reviewerName(item)}`,
+              text: voidedReplaceText(item),
+              label: `${voidedReplaceText(item)} ${reviewerName(item)}`,
             })),
           ];
 

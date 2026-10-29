@@ -118,7 +118,7 @@ describe("CaseReadPage (SCRUM-184)", () => {
     expect(await screen.findByText("Kasus tidak ditemukan.")).toBeInTheDocument();
   });
 
-  it.each(["author", "admin", "reviewer", "viewer"] as const)(
+  it.each(["contributor", "admin", "viewer"] as const)(
     "sends %s to the editor without loading the case here",
     (role) => {
       session.role = role;

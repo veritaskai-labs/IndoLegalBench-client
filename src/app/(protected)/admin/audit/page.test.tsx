@@ -39,7 +39,7 @@ beforeEach(() => {
   list.mockReset();
   listActors.mockReset();
   listActors.mockResolvedValue([
-    { id: "u2", name: "Roben", email: "r@veritask.test", role: "reviewer", is_active: false },
+    { id: "u2", name: "Roben", email: "r@veritask.test", role: "contributor", is_active: false },
   ]);
 });
 

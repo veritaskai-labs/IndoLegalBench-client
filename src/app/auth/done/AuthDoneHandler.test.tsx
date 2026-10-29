@@ -28,7 +28,7 @@ afterEach(() => {
 
 describe("AuthDoneHandler", () => {
   it("shows a loading state on first render", () => {
-    mockFetchOnce({ ok: true, body: { role: "author" } });
+    mockFetchOnce({ ok: true, body: { role: "contributor" } });
     render(<AuthDoneHandler />);
     expect(screen.getByText("Memproses login Anda...")).toBeInTheDocument();
   });
@@ -42,7 +42,7 @@ describe("AuthDoneHandler", () => {
   });
 
   it("redirects to the role's home path on a successful profile fetch", async () => {
-    mockFetchOnce({ ok: true, body: { role: "author" } });
+    mockFetchOnce({ ok: true, body: { role: "contributor" } });
     render(<AuthDoneHandler />);
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
   });

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
@@ -62,5 +62,58 @@ describe("CaseCountCards", () => {
     expect(
       screen.getByText(/bisa lebih besar dari "Dalam tinjauan"/),
     ).toBeInTheDocument();
+  });
+});
+
+// PBI-24 AC6: the same cards also show the contributor's own cases, under their own title.
+describe("CaseCountCards, own cases", () => {
+  const ZERO = { draft: 0, in_review: 0, needs_revision: 0, approved: 0 };
+
+  // Positive
+  it("shows the given title instead of the team one", () => {
+    // Arrange / Act
+    render(<CaseCountCards title="Kasus Anda" counts={COUNTS} total={10} />);
+
+    // Assert
+    expect(screen.getByRole("heading", { name: "Kasus Anda" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Ringkasan kasus" })).not.toBeInTheDocument();
+  });
+
+  it("leaves out the waiting-for-review card when no waiting count is given", () => {
+    render(<CaseCountCards title="Kasus Anda" counts={COUNTS} total={10} />);
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.queryByText("Menunggu review")).not.toBeInTheDocument();
+  });
+
+  // Edge: two sections on one page must each be labelled by their own heading.
+  it("labels each section by its own heading when two are on the page", () => {
+    render(
+      <>
+        <CaseCountCards title="Kasus Anda" counts={COUNTS} total={10} />
+        <CaseCountCards counts={COUNTS} total={20} waiting={2} />
+      </>,
+    );
+
+    const own = screen.getByRole("region", { name: "Kasus Anda" });
+    const team = screen.getByRole("region", { name: "Ringkasan kasus" });
+
+    expect(within(own).getByText("Total 10 kasus")).toBeInTheDocument();
+    expect(within(team).getByText("Total 20 kasus")).toBeInTheDocument();
+  });
+
+  // Edge: nothing written yet is said in words, next to the zeros.
+  it("says so in words when there are no cases at all", () => {
+    render(<CaseCountCards title="Kasus Anda" counts={ZERO} total={0} emptyNote="Anda belum menulis kasus." />);
+
+    expect(screen.getByText("Anda belum menulis kasus.")).toBeInTheDocument();
+    expect(screen.getAllByText("0")).toHaveLength(4);
+  });
+
+  // Negative: the note is only for an empty list.
+  it("does not show the note when there are cases", () => {
+    render(<CaseCountCards title="Kasus Anda" counts={COUNTS} total={10} emptyNote="Anda belum menulis kasus." />);
+
+    expect(screen.queryByText("Anda belum menulis kasus.")).not.toBeInTheDocument();
   });
 });
