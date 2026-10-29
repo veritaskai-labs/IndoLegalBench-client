@@ -35,6 +35,133 @@ const readPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}`;
 const completenessColor = (pct: number) =>
   pct === 100 ? "bg-emerald-600" : pct >= 60 ? "bg-teal-600" : "bg-amber-500";
 
+const formatDate = (dateStr: string) => {
+  try {
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(dateStr));
+  } catch {
+    return dateStr;
+  }
+};
+
+/** Tombol Tulis Kasus di header; nonaktif di suite yang diarsipkan. Tidak dipakai untuk Developer AI. */
+function WriteCaseAction({
+  loaded,
+  canWrite,
+  onNewCase,
+}: Readonly<{ loaded: boolean; canWrite: boolean; onNewCase: () => void }>) {
+  return (
+    <div className="flex flex-col items-start sm:items-end gap-1">
+      <button
+        type="button"
+        onClick={onNewCase}
+        disabled={!canWrite}
+        className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+      >
+        Tulis Kasus
+      </button>
+      {loaded && !canWrite && (
+        <p className="text-[11px] text-slate-500">Suite diarsipkan, kasus baru tidak bisa ditulis.</p>
+      )}
+    </div>
+  );
+}
+
+function StatusFilter({
+  selected,
+  onToggle,
+}: Readonly<{ selected: CaseStatus[]; onToggle: (status: CaseStatus) => void }>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="font-semibold text-slate-700">Filter Status:</span>
+      <fieldset className="m-0 min-w-0 border-0 p-0 flex flex-wrap items-center gap-1.5" aria-label="Filter status kasus">
+        {ALL_STATUSES.map(({ value, label }) => {
+          const isSelected = selected.includes(value);
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onToggle(value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                isSelected
+                  ? "bg-indigo-50 border-indigo-300 text-indigo-700 font-semibold"
+                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </fieldset>
+    </div>
+  );
+}
+
+/** Tabel kosong. Developer AI hanya melihat kasus approved dan tidak menulis kasus. */
+function CaseListEmptyState({
+  filtered,
+  isDeveloperAi,
+  canWrite,
+  onReset,
+  onNewCase,
+}: Readonly<{
+  filtered: boolean;
+  isDeveloperAi: boolean;
+  canWrite: boolean;
+  onReset: () => void;
+  onNewCase: () => void;
+}>) {
+  if (filtered) {
+    return (
+      <EmptyState
+        inTable
+        colSpan={6}
+        title="Tidak ada kasus yang sesuai dengan filter"
+        description="Coba ubah atau reset filter status dan tag di atas."
+        action={{ label: "Reset Filter", onClick: onReset }}
+      />
+    );
+  }
+  let description = "Suite ini diarsipkan, jadi kasus baru tidak bisa ditulis.";
+  if (isDeveloperAi) description = "Belum ada kasus yang disetujui di suite ini.";
+  else if (canWrite) description = "Mulai buat kasus hukum pertama untuk suite ini.";
+  const canStart = canWrite && !isDeveloperAi;
+  return (
+    <EmptyState
+      inTable
+      colSpan={6}
+      title="Belum ada kasus di suite ini"
+      description={description}
+      action={canStart ? { label: "Tulis Kasus Sekarang", onClick: onNewCase } : undefined}
+    />
+  );
+}
+
+/** Kasus test untuk Developer AI: kode dan judul sudah diganti server, dan tidak bisa dibuka. */
+function MaskedCaseRow({ item }: Readonly<{ item: CaseSummary }>) {
+  return (
+    <tr className="bg-slate-50/60">
+      <td className="py-3.5 px-4 font-mono font-medium text-slate-400">{item.case_code}</td>
+      <td className="py-3.5 px-4 text-slate-500 italic max-w-xs md:max-w-md truncate">
+        {item.title}
+      </td>
+      <td className="py-3.5 px-4">
+        <SplitTagBadge tag={item.split_tag} />
+      </td>
+      <td className="py-3.5 px-4">
+        <CaseStatusBadge status={item.status} />
+      </td>
+      <td className="py-3.5 px-4 text-slate-400">—</td>
+      <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+        {formatDate(item.updated_at)}
+      </td>
+    </tr>
+  );
+}
+
 type PageError = { message: string; retryable: boolean; scope: "suite" | "cases" };
 
 function toPageError(err: unknown, scope: PageError["scope"]): PageError {
@@ -153,18 +280,6 @@ export default function SuiteDetailPage({ params }: PageProps) {
       });
   }, [suiteId, selectedStatuses, splitTagFilter]);
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Intl.DateTimeFormat("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(new Date(dateStr));
-    } catch {
-      return dateStr;
-    }
-  };
-
   const displayedCases = cases.filter((item) => {
     if (selectedStatuses.length <= 1) return true;
     return selectedStatuses.includes(item.status);
@@ -192,9 +307,6 @@ export default function SuiteDetailPage({ params }: PageProps) {
   }
 
   const canWrite = suite?.status === "active";
-  const writeDisabledReason = suite && !canWrite
-    ? "Suite diarsipkan, kasus baru tidak bisa ditulis."
-    : undefined;
 
   const listError = casesError && casesError.scope === "cases" ? casesError : null;
   const goNewCase = () => router.push(`/suites/${suiteId}/cases/new`);
@@ -230,19 +342,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
         </div>
 
         {!isDeveloperAi && (
-        <div className="flex flex-col items-start sm:items-end gap-1">
-          <button
-            type="button"
-            onClick={goNewCase}
-            disabled={!canWrite}
-            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
-          >
-            Tulis Kasus
-          </button>
-          {writeDisabledReason && (
-            <p className="text-[11px] text-slate-500">{writeDisabledReason}</p>
-          )}
-        </div>
+          <WriteCaseAction loaded={suite !== null} canWrite={canWrite} onNewCase={goNewCase} />
         )}
       </div>
 
@@ -250,28 +350,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
       <div className="bg-white p-3.5 border border-slate-200 rounded text-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
           {!isDeveloperAi && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-slate-700">Filter Status:</span>
-            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter status kasus">
-              {ALL_STATUSES.map(({ value, label }) => {
-                const isSelected = selectedStatuses.includes(value);
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => toggleStatus(value)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
-                      isSelected
-                        ? "bg-indigo-50 border-indigo-300 text-indigo-700 font-semibold"
-                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <StatusFilter selected={selectedStatuses} onToggle={toggleStatus} />
           )}
 
           {hasActiveFilters && (
@@ -330,58 +409,18 @@ export default function SuiteDetailPage({ params }: PageProps) {
                 {loading && <LoadingSkeleton variant="table" rows={5} columns={6} />}
 
                 {!loading && displayedCases.length === 0 && (
-                  <EmptyState
-                    inTable
-                    colSpan={6}
-                    title={
-                      hasActiveFilters
-                        ? "Tidak ada kasus yang sesuai dengan filter"
-                        : "Belum ada kasus di suite ini"
-                    }
-                    description={
-                      hasActiveFilters
-                        ? "Coba ubah atau reset filter status dan tag di atas."
-                        : isDeveloperAi
-                          ? "Belum ada kasus yang disetujui di suite ini."
-                          : canWrite
-                            ? "Mulai buat kasus hukum pertama untuk suite ini."
-                            : "Suite ini diarsipkan, jadi kasus baru tidak bisa ditulis."
-                    }
-                    action={
-                      hasActiveFilters
-                        ? { label: "Reset Filter", onClick: resetFilters }
-                        : canWrite && !isDeveloperAi
-                          ? { label: "Tulis Kasus Sekarang", onClick: goNewCase }
-                          : undefined
-                    }
+                  <CaseListEmptyState
+                    filtered={hasActiveFilters}
+                    isDeveloperAi={isDeveloperAi}
+                    canWrite={canWrite}
+                    onReset={resetFilters}
+                    onNewCase={goNewCase}
                   />
                 )}
 
                 {!loading &&
                   displayedCases.map((item) => {
-                    // Kasus test untuk Developer AI: kode dan judul sudah diganti server, dan tidak bisa dibuka.
-                    if (item.masked) {
-                      return (
-                        <tr key={item.id} className="bg-slate-50/60">
-                          <td className="py-3.5 px-4 font-mono font-medium text-slate-400">
-                            {item.case_code}
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-500 italic max-w-xs md:max-w-md truncate">
-                            {item.title}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <SplitTagBadge tag={item.split_tag} />
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <CaseStatusBadge status={item.status} />
-                          </td>
-                          <td className="py-3.5 px-4 text-slate-400">—</td>
-                          <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
-                            {formatDate(item.updated_at)}
-                          </td>
-                        </tr>
-                      );
-                    }
+                    if (item.masked) return <MaskedCaseRow key={item.id} item={item} />;
                     return (
                       <tr
                         key={item.id}
