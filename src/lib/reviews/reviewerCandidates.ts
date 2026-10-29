@@ -3,7 +3,7 @@ import type { ReassignmentRow, ReviewerOption } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
 
 /**
- * Siapa yang boleh menggantikan reviewer pada satu ronde (AC7): akun reviewer yang masih
+ * Siapa yang boleh menggantikan reviewer pada satu ronde (AC7): akun Kontributor yang masih
  * aktif, bukan penulis kasus, dan belum ditugaskan di ronde itu. Server tetap penjaga
  * terakhir — ini supaya admin tidak kena penolakan setelah mengisi alasan.
  *
@@ -20,7 +20,7 @@ export function candidatesExcept(
   return users
     .filter(
       (user) =>
-        user.role === "reviewer" &&
+        user.role === "contributor" &&
         user.is_active &&
         user.id !== authorId &&
         !taken.has(user.id),
