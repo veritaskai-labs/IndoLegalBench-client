@@ -155,7 +155,11 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   // Positif
   it("lists the queued case", async () => {
     queueMock.mockResolvedValue([
-      row({ void_assignments: [assignment({ status: "void" })] }),
+      row({
+        void_assignments: [
+          assignment({ status: "void", void_reason: "deactivated" }),
+        ],
+      }),
     ]);
 
     render(<AdminReviewsPage />);
@@ -245,6 +249,11 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     expect(
       await screen.findByText("Tidak ada kasus yang sedang direview"),
     ).toBeInTheDocument();
+    // PBI-24 AC1: Kontributor replaces Author in every visible text.
+    expect(
+      screen.getByText(/setelah Kontributor mengajukannya untuk review/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Author/)).not.toBeInTheDocument();
   });
 
   // Negatif

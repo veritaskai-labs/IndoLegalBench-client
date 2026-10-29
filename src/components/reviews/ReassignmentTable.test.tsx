@@ -43,7 +43,9 @@ describe("ReassignmentTable", () => {
   // Positif
   it("lists the case, the round and why it is queued", () => {
     const queued = row({
-      void_assignments: [assignment({ id: "a9", status: "void" })],
+      void_assignments: [
+        assignment({ id: "a9", status: "void", void_reason: "deactivated" }),
+      ],
     });
 
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
@@ -119,6 +121,7 @@ describe("ReassignmentTable", () => {
       id: "a9",
       status: "void",
       reviewer_name: "Rina",
+      void_reason: "deactivated",
     });
     const queued = row({ void_assignments: [gone] });
 
@@ -135,7 +138,12 @@ describe("ReassignmentTable", () => {
     const queued = row({
       assignments: [assignment({ id: "a1", reviewer_name: "Roben" })],
       void_assignments: [
-        assignment({ id: "a9", status: "void", reviewer_name: "Rina" }),
+        assignment({
+          id: "a9",
+          status: "void",
+          reviewer_name: "Rina",
+          void_reason: "deactivated",
+        }),
       ],
     });
 
@@ -146,6 +154,49 @@ describe("ReassignmentTable", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Ganti reviewer nonaktif Rina" }),
+    ).toBeInTheDocument();
+  });
+
+  // Positif (AC8: reviewer moved to Viewer is still an active account)
+  it("names a role change in the reason and on the button", async () => {
+    const user = userEvent.setup();
+    const onReplace = vi.fn();
+    const moved = assignment({
+      id: "a9",
+      status: "void",
+      reviewer_name: "Rina",
+      void_reason: "role_changed",
+    });
+    const queued = row({ void_assignments: [moved] });
+
+    render(<ReassignmentTable rows={[queued]} onReplace={onReplace} />);
+    await user.click(
+      screen.getByRole("button", { name: "Ganti reviewer (peran diubah) Rina" }),
+    );
+
+    expect(screen.getByText("Peran reviewer diubah")).toBeInTheDocument();
+    expect(screen.queryByText("Reviewer dinonaktifkan")).not.toBeInTheDocument();
+    expect(onReplace).toHaveBeenCalledWith(moved, queued);
+  });
+
+  // Negatif
+  it("stays readable when the void reason is null", () => {
+    const queued = row({
+      void_assignments: [
+        assignment({
+          id: "a9",
+          status: "void",
+          reviewer_name: "Rina",
+          void_reason: null,
+        }),
+      ],
+    });
+
+    render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
+
+    expect(screen.getByText("Reviewer tidak lagi bertugas")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ganti reviewer Rina" }),
     ).toBeInTheDocument();
   });
 });
