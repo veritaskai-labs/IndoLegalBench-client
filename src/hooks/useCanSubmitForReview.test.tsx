@@ -10,7 +10,7 @@ const listMock = vi.mocked(listCaseVersions);
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 const ME = {
   id: "11111111-1111-1111-1111-111111111111",
-  role: "author" as const,
+  role: "contributor" as const,
 };
 
 beforeEach(() => {
@@ -48,7 +48,7 @@ describe("useCanSubmitForReview", () => {
   // Negative: peran lain tidak perlu riwayat sama sekali.
   it("refuses the other roles without asking for the history", () => {
     const { result } = renderHook(() =>
-      useCanSubmitForReview(CASE_ID, { id: ME.id, role: "reviewer" }, "draft"),
+      useCanSubmitForReview(CASE_ID, { id: ME.id, role: "viewer" }, "draft"),
     );
 
     expect(result.current).toBe(false);

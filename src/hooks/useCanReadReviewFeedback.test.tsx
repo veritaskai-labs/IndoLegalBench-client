@@ -28,7 +28,7 @@ describe("useCanReadReviewFeedback", () => {
     listMock.mockResolvedValue(wroteVersionOne("u1"));
 
     // Act
-    const { result } = renderCanRead(me("author"), "needs_revision");
+    const { result } = renderCanRead(me("contributor"), "needs_revision");
 
     // Assert
     expect(result.current).toBe(false);
@@ -51,7 +51,7 @@ describe("useCanReadReviewFeedback", () => {
     listMock.mockResolvedValue(wroteVersionOne("u2"));
 
     // Act
-    const { result } = renderCanRead(me("author"), "needs_revision");
+    const { result } = renderCanRead(me("contributor"), "needs_revision");
 
     // Assert
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
@@ -64,7 +64,7 @@ describe("useCanReadReviewFeedback", () => {
     "does not ask for the history of a %s case",
     async (status) => {
       // Arrange / Act
-      const { result } = renderCanRead(me("author"), status);
+      const { result } = renderCanRead(me("contributor"), status);
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Assert
@@ -77,7 +77,7 @@ describe("useCanReadReviewFeedback", () => {
   it.each([
     ["no user yet", null, "needs_revision"],
     ["no status yet", me("admin"), null],
-    ["a reviewer", me("reviewer"), "needs_revision"],
+    ["a viewer", me("viewer"), "needs_revision"],
   ] as const)("is false for %s and asks for nothing", async (_label, user, status) => {
     // Arrange / Act
     const { result } = renderCanRead(user, status);

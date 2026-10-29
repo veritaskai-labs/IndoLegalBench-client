@@ -17,7 +17,7 @@ describe("reviewBlocker", () => {
   // Positive
   it("lets a reviewer who did not write the case review it", () => {
     // Arrange
-    const user = { id: REVIEWER_ID, role: "reviewer" } as const;
+    const user = { id: REVIEWER_ID, role: "contributor" } as const;
 
     // Act
     const blocker = reviewBlocker(user, AUTHOR_ID);
@@ -29,7 +29,7 @@ describe("reviewBlocker", () => {
   // Negative: the server answers 403 here, which sends the user to /forbidden.
   it("blocks a reviewer who wrote the case", () => {
     // Arrange
-    const user = { id: AUTHOR_ID, role: "reviewer" } as const;
+    const user = { id: AUTHOR_ID, role: "contributor" } as const;
 
     // Act
     const blocker = reviewBlocker(user, AUTHOR_ID);
@@ -38,8 +38,24 @@ describe("reviewBlocker", () => {
     expect(blocker).toBe("is_author");
   });
 
+  // Edge: PBI-24 AC2, one account both writes and reviews. The block follows the case, not the role.
+  it("lets the same contributor review another case but not the one they wrote", () => {
+    // Arrange
+    const me = { id: REVIEWER_ID, role: "contributor" } as const;
+    const caseWrittenByMe = REVIEWER_ID;
+    const caseWrittenBySomeoneElse = AUTHOR_ID;
+
+    // Act
+    const ownCase = reviewBlocker(me, caseWrittenByMe);
+    const otherCase = reviewBlocker(me, caseWrittenBySomeoneElse);
+
+    // Assert
+    expect(ownCase).toBe("is_author");
+    expect(otherCase).toBeNull();
+  });
+
   // Negative
-  it.each(["admin", "author", "viewer"] as const)("blocks the %s role from reviewing", (role) => {
+  it.each(["admin", "viewer", "developer_ai"] as const)("blocks the %s role from reviewing", (role) => {
     // Arrange
     const user = { id: REVIEWER_ID, role };
 
@@ -264,16 +280,16 @@ describe("submittedVerdict", () => {
 
 describe("isReviewerRole", () => {
   // Positive
-  it("is true for the reviewer role", () => {
+  it("is true for the contributor role", () => {
     // Arrange / Act
-    const result = isReviewerRole("reviewer");
+    const result = isReviewerRole("contributor");
 
     // Assert
     expect(result).toBe(true);
   });
 
   // Negative: the server answers 403 to every other role.
-  it.each(["admin", "author", "viewer"] as const)("is false for the %s role", (role) => {
+  it.each(["admin", "viewer", "developer_ai"] as const)("is false for the %s role", (role) => {
     // Arrange / Act
     const result = isReviewerRole(role);
 
