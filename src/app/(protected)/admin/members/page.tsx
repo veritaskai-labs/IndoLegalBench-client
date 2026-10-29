@@ -9,6 +9,8 @@ import type { User, UserCreateRequest, StatusFilter } from "@/types/user-managem
 import { CreateUserModal } from "@/components/admin/CreateUserModal";
 import { ActivateConfirmModal } from "@/components/admin/ActivateConfirmModal";
 import { DeactivateConfirmModal } from "@/components/admin/DeactivateConfirmModal";
+import { PendingReviewsModal } from "@/components/admin/PendingReviewsModal";
+import { useMemberChange } from "@/hooks/useMemberChange";
 import { FilterPopover } from "@/components/admin/FilterPopover";
 import { adminErrorMessage } from "@/components/admin/errorMessage";
 import { memberToggleAction, replaceMember } from "@/lib/members/memberToggle";
@@ -46,6 +48,7 @@ export default function AdminMembersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deactivatingUser, setDeactivatingUser] = useState<User | null>(null);
   const [activatingUser, setActivatingUser] = useState<User | null>(null);
+  const change = useMemberChange((updated) => setUsers((prev) => replaceMember(prev, updated)));
 
   // 2. Hook RBAC: Redirect jika bukan admin
   useEffect(() => {
@@ -129,33 +132,14 @@ export default function AdminMembersPage() {
     await refreshUsers();
   };
 
-  const handleRoleChange = async (userId: string, newRole: Role) => {
-    const previous = [...users];
+  // Tidak ada pembaruan optimistik: baris baru berubah setelah server menyimpan, jadi 409 dan
+  // Batal tidak perlu dikembalikan. Alur konfirmasinya ada di useMemberChange.
+  const handleRoleChange = async (user: User, newRole: Role) => {
     setApiError(null);
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-    );
-
-    try {
-      await apiFetch<User>(`/admin/users/${userId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: newRole }),
-      });
-    } catch (err: unknown) {
-      setUsers(previous);
-      setApiError(adminErrorMessage(err, "Gagal mengubah peran pengguna."));
-    }
+    await change.changeRole(user, newRole);
   };
 
-  const handleConfirmDeactivate = async (target: User) => {
-    await apiFetch<User>(`/admin/users/${target.id}/deactivate`, {
-      method: "POST",
-    });
-
-    setUsers((prev) =>
-      prev.map((u) => (u.id === target.id ? { ...u, is_active: false } : u))
-    );
-  };
+  const handleConfirmDeactivate = (target: User) => change.deactivate(target);
 
   const handleConfirmActivate = async (target: User) => {
     const updated = await activateUser(target.id);
@@ -170,6 +154,8 @@ export default function AdminMembersPage() {
   if (isAuthenticated && userRole !== "admin") {
     return null;
   }
+
+  const alertMessage = apiError ?? change.error;
 
   return (
     <div className="w-full">
@@ -239,14 +225,17 @@ export default function AdminMembersPage() {
       </div>
 
       {/* Error API State */}
-      {apiError && (
+      {alertMessage && (
         <div
           role="alert"
           className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 flex items-center justify-between"
         >
-          <p className="text-xs text-red-800">{apiError}</p>
+          <p className="text-xs text-red-800">{alertMessage}</p>
           <button
-            onClick={refreshUsers}
+            onClick={() => {
+              change.clearError();
+              void refreshUsers();
+            }}
             className="text-xs text-red-700 hover:text-red-900 font-medium px-2 py-1 rounded bg-red-100 cursor-pointer"
           >
             Coba lagi
@@ -314,7 +303,7 @@ export default function AdminMembersPage() {
                       value={user.role}
                       disabled={!user.is_active || isSelf}
                       title={isSelf ? SELF_LOCKED : undefined}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
+                      onChange={(e) => handleRoleChange(user, e.target.value as Role)}
                       className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 shadow-2xs hover:border-slate-300 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 cursor-pointer"
                     >
                       {ROLE_OPTIONS.map((option) => (
@@ -362,6 +351,12 @@ export default function AdminMembersPage() {
         isOpen={!!deactivatingUser}
         onClose={() => setDeactivatingUser(null)}
         onConfirm={handleConfirmDeactivate}
+      />
+
+      <PendingReviewsModal
+        pending={change.pending}
+        onConfirm={change.confirmPending}
+        onCancel={change.cancelPending}
       />
 
       <ActivateConfirmModal

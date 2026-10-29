@@ -1,7 +1,8 @@
 "use client";
 
-/* eslint-disable @typescript-eslint/no-unused-vars -- kerangka untuk commit red, dihapus di commit green */
-
+import { useRef, useState } from "react";
+import { adminErrorMessage } from "@/components/admin/errorMessage";
+import { changeUserRole, confirmationCount, deactivateUser } from "@/lib/userApi";
 import type { Role } from "@/types";
 import type { User } from "@/types/user-management";
 
@@ -16,15 +17,79 @@ export type PendingMemberChange =
   | { kind: "role"; user: User; role: Role; count: number }
   | { kind: "deactivate"; user: User; count: number };
 
-/** Kerangka: belum melakukan apa-apa, diisi di commit green. */
-export function useMemberChange(_onChanged: (user: User) => void, _api?: MemberChangeApi) {
+const DEFAULT_API: MemberChangeApi = { changeUserRole, deactivateUser };
+const ROLE_FAILED = "Gagal mengubah peran pengguna.";
+const DEACTIVATE_FAILED = "Gagal menonaktifkan akun.";
+
+/**
+ * Alur ubah peran dan nonaktifkan anggota dengan konfirmasi (PBI-24 AC8). Permintaan pertama
+ * dikirim tanpa confirm; bila server menjawab 409 CONFIRMATION_REQUIRED, perubahan ditahan di
+ * `pending` bersama jumlah kasusnya dan tidak ada yang tersimpan. Hanya setelah Admin setuju
+ * (confirmPending) permintaan yang sama dikirim lagi dengan confirm=true.
+ */
+export function useMemberChange(
+  onChanged: (user: User) => void,
+  api: MemberChangeApi = DEFAULT_API,
+) {
+  const [pending, setPending] = useState<PendingMemberChange | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Ref, bukan state: klik kedua bisa masuk sebelum render ulang menonaktifkan tombol.
+  const inFlight = useRef(false);
+
+  const changeRole = async (user: User, role: Role): Promise<void> => {
+    setError(null);
+    try {
+      onChanged(await api.changeUserRole(user.id, role));
+    } catch (failure) {
+      const count = confirmationCount(failure);
+      if (count === null) setError(adminErrorMessage(failure, ROLE_FAILED));
+      else setPending({ kind: "role", user, role, count });
+    }
+  };
+
+  /** Kegagalan selain konfirmasi dilempar lagi, supaya dialog nonaktifkan menampilkannya sendiri. */
+  const deactivate = async (user: User): Promise<void> => {
+    setError(null);
+    try {
+      onChanged(await api.deactivateUser(user.id));
+    } catch (failure) {
+      const count = confirmationCount(failure);
+      if (count === null) throw failure;
+      setPending({ kind: "deactivate", user, count });
+    }
+  };
+
+  const confirmPending = async (): Promise<void> => {
+    if (pending === null || inFlight.current) return;
+    inFlight.current = true;
+    try {
+      const updated =
+        pending.kind === "role"
+          ? await api.changeUserRole(pending.user.id, pending.role, true)
+          : await api.deactivateUser(pending.user.id, true);
+      setPending(null);
+      onChanged(updated);
+    } catch (failure) {
+      // Jumlahnya bisa berubah selama dialog terbuka: tampilkan lagi dengan angka terbaru.
+      const count = confirmationCount(failure);
+      if (count !== null) {
+        setPending({ ...pending, count });
+      } else {
+        setPending(null);
+        setError(adminErrorMessage(failure, pending.kind === "role" ? ROLE_FAILED : DEACTIVATE_FAILED));
+      }
+    } finally {
+      inFlight.current = false;
+    }
+  };
+
   return {
-    pending: null as PendingMemberChange | null,
-    error: null as string | null,
-    changeRole: async (_user: User, _role: Role): Promise<void> => {},
-    deactivate: async (_user: User): Promise<void> => {},
-    confirmPending: async (): Promise<void> => {},
-    cancelPending: (): void => {},
-    clearError: (): void => {},
+    pending,
+    error,
+    changeRole,
+    deactivate,
+    confirmPending,
+    cancelPending: () => setPending(null),
+    clearError: () => setError(null),
   };
 }
