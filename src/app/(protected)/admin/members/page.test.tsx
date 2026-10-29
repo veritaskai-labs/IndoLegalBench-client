@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -32,7 +32,7 @@ const AUTHOR: User = {
   id: "22222222-2222-2222-2222-222222222222",
   name: "Budi Author",
   email: "budi@veritask.ai",
-  role: "author",
+  role: "contributor",
   is_active: true,
 };
 
@@ -49,12 +49,28 @@ beforeEach(() => {
 
 describe("AdminMembersPage", () => {
   it("redirects a non-admin away and never calls the admin API", async () => {
-    signedInAs("author");
+    signedInAs("contributor");
 
     render(<AdminMembersPage />);
 
     await waitFor(() => expect(replaceMock).toHaveBeenCalledWith("/dashboard"));
     expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+
+  // PBI-24 AC1: Admin, Kontributor, Viewer, and nothing else to pick.
+  it("offers Admin, Kontributor and Viewer in the role select", async () => {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValue([ADMIN, AUTHOR]);
+
+    render(<AdminMembersPage />);
+    const select = await screen.findByLabelText("Ubah peran Budi Author");
+
+    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Admin",
+      "Kontributor",
+      "Viewer",
+    ]);
+    expect(select).toHaveValue("contributor");
   });
 
   it("lists members for an admin", async () => {
@@ -89,7 +105,7 @@ describe("AdminMembersPage", () => {
     await userEvent.selectOptions(select, "viewer");
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Gagal mengubah peran pengguna.");
-    expect(select).toHaveValue("author");
+    expect(select).toHaveValue("contributor");
   });
 
   it("shows a readable message, not the raw code, when loading fails", async () => {
@@ -189,7 +205,7 @@ describe("AdminMembersPage, existing paths", () => {
     id: "33333333-3333-3333-3333-333333333333",
     name: "Rina Reviewer",
     email: "rina@veritask.ai",
-    role: "reviewer",
+    role: "contributor",
     is_active: false,
   };
 
@@ -277,7 +293,7 @@ describe("AdminMembersPage, existing paths", () => {
     await renderList();
 
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    await userEvent.click(screen.getByLabelText("Author"));
+    await userEvent.click(screen.getByLabelText("Kontributor"));
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(screen.getByText("Budi Author")).toBeInTheDocument();

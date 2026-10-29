@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -10,18 +10,42 @@ const MEMBER: User = {
   id: "22222222-2222-2222-2222-222222222222",
   name: "Budi Author",
   email: "budi@veritask.ai",
-  role: "author",
+  role: "contributor",
   is_active: true,
 };
 
 async function fillCreateForm() {
   await userEvent.type(screen.getByLabelText("Nama"), "Budi Author");
   await userEvent.type(screen.getByLabelText("Email"), "budi@veritask.ai");
-  await userEvent.selectOptions(screen.getByLabelText("Peran"), "author");
+  await userEvent.selectOptions(screen.getByLabelText("Peran"), "contributor");
   await userEvent.click(screen.getByRole("button", { name: "Tambah pengguna" }));
 }
 
 describe("CreateUserModal", () => {
+  // PBI-24 AC1: Author and Reviewer are one role now.
+  it("offers Admin, Kontributor and Viewer as the role", () => {
+    render(<CreateUserModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+    const options = within(screen.getByLabelText("Peran"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+
+    expect(options).toEqual(["Pilih peran", "Admin", "Kontributor", "Viewer"]);
+  });
+
+  it("sends the contributor role to the server", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<CreateUserModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await fillCreateForm();
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      name: "Budi Author",
+      email: "budi@veritask.ai",
+      role: "contributor",
+    });
+  });
+
   it("shows the duplicate email message on 409", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new ApiError(409, "conflict"));
     render(<CreateUserModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />);
