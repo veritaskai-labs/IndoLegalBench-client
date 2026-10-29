@@ -387,3 +387,121 @@ describe("AdminMembersPage, existing paths", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
+
+// PBI-24 AC8 + D11: changing the role of, or deactivating, a member who still has cases waiting
+// for a verdict asks the admin first and shows how many cases will go to the reassignment queue.
+describe("AdminMembersPage, confirmation before role change or deactivation", () => {
+  const QUESTION = "3 kasus menunggu penilaian akan masuk daftar penugasan ulang. Lanjutkan?";
+  const WAITING = () => new ApiError(409, "CONFIRMATION_REQUIRED", null, null, [], 3);
+
+  async function renderMembers() {
+    signedInAs("admin");
+    apiFetchMock.mockResolvedValueOnce([ADMIN, AUTHOR]);
+    render(<AdminMembersPage />);
+    return screen.findByLabelText("Ubah peran Budi Author");
+  }
+
+  // Positif
+  it("asks with the number of waiting cases and saves nothing yet when the role change needs confirmation", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+
+    await userEvent.selectOptions(select, "viewer");
+
+    expect(await screen.findByText(QUESTION)).toBeInTheDocument();
+    expect(select).toHaveValue("contributor");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: "viewer" }),
+    });
+  });
+
+  it("sends the role change again with confirm=true when the admin agrees", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.selectOptions(select, "viewer");
+    await screen.findByText(QUESTION);
+    apiFetchMock.mockResolvedValueOnce({ ...AUTHOR, role: "viewer" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}?confirm=true`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: "viewer" }),
+    });
+    await waitFor(() => expect(select).toHaveValue("viewer"));
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it("asks before deactivating, then deactivates with confirm=true", async () => {
+    await renderMembers();
+    await userEvent.click(screen.getByLabelText("Toggle aktif Budi Author"));
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.click(screen.getByRole("button", { name: "Nonaktifkan" }));
+    await screen.findByText(QUESTION);
+    apiFetchMock.mockResolvedValueOnce({ ...AUTHOR, is_active: false });
+
+    await userEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}/deactivate?confirm=true`, {
+      method: "POST",
+    });
+    await waitFor(() => expect(screen.getByLabelText("Ubah peran Budi Author")).toBeDisabled());
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  // Negatif
+  it("keeps the role and sends nothing more when the admin cancels the question", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.selectOptions(select, "viewer");
+    await screen.findByText(QUESTION);
+
+    await userEvent.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    expect(select).toHaveValue("contributor");
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the account active when the admin cancels the question", async () => {
+    await renderMembers();
+    await userEvent.click(screen.getByLabelText("Toggle aktif Budi Author"));
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.click(screen.getByRole("button", { name: "Nonaktifkan" }));
+    await screen.findByText(QUESTION);
+
+    await userEvent.click(screen.getByRole("button", { name: "Batal" }));
+
+    expect(screen.getByLabelText("Ubah peran Budi Author")).toBeEnabled();
+    expect(apiFetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows a readable message and no question when the confirmed request fails", async () => {
+    const select = await renderMembers();
+    apiFetchMock.mockRejectedValueOnce(WAITING());
+    await userEvent.selectOptions(select, "viewer");
+    await screen.findByText(QUESTION);
+    apiFetchMock.mockRejectedValueOnce(new ApiError(500, "UNKNOWN_ERROR"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Gagal mengubah peran pengguna.");
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    expect(select).toHaveValue("contributor");
+  });
+
+  // Corner: nobody is waiting, so the old flow stays as it was, with no second question.
+  it("deactivates straight away when no case is waiting", async () => {
+    await renderMembers();
+    await userEvent.click(screen.getByLabelText("Toggle aktif Budi Author"));
+    apiFetchMock.mockResolvedValueOnce({ ...AUTHOR, is_active: false });
+
+    await userEvent.click(screen.getByRole("button", { name: "Nonaktifkan" }));
+
+    expect(apiFetchMock).toHaveBeenLastCalledWith(`/admin/users/${AUTHOR.id}/deactivate`, { method: "POST" });
+    await waitFor(() => expect(screen.getByLabelText("Ubah peran Budi Author")).toBeDisabled());
+    expect(screen.queryByText(/menunggu penilaian akan masuk/)).toBeNull();
+  });
+});
