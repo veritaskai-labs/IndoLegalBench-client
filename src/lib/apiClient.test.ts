@@ -158,6 +158,19 @@ describe("onForbidden", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it("does not notify when Developer AI opens a test case (SCRUM-184)", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "TEST_CASE_HIDDEN" }));
+
+    await expect(apiFetch("/cases/c1")).rejects.toMatchObject({
+      status: 403,
+      code: "TEST_CASE_HIDDEN",
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it("does not notify on 401", async () => {
     const listener = vi.fn();
     listenForbidden(listener);

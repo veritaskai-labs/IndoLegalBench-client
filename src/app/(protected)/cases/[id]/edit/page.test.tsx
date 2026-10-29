@@ -18,9 +18,10 @@ import { previewLegalRefs } from "@/lib/cases/legalRefPreviewApi";
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
 
-const { params, push } = vi.hoisted(() => ({
+const { params, push, replace } = vi.hoisted(() => ({
   params: { id: "" },
   push: vi.fn(),
+  replace: vi.fn(),
 }));
 const confirmMock = vi.fn();
 
@@ -28,7 +29,7 @@ const confirmMock = vi.fn();
 // there is no Next router in tests.
 vi.mock("next/navigation", () => ({
   useParams: () => params,
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }));
 
 // useSuiteName fetches the suite for the breadcrumb label.
@@ -180,6 +181,7 @@ beforeEach(() => {
   completenessMock.mockResolvedValue(completeness());
   submitMock.mockReset();
   push.mockReset();
+  replace.mockReset();
   vi.mocked(apiFetch).mockResolvedValue({ name: "Suite Ketenagakerjaan" });
   vi.mocked(useRegulationTypes).mockReturnValue({
     status: "ready",
@@ -1657,5 +1659,51 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
     // Assert
     expect(await feedback()).toHaveTextContent("Pasal 151 salah");
     expect(reviewMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("EditCasePage for Developer AI (SCRUM-184)", () => {
+  // Negative: the editor reads completeness, versions and drafts, which are 403 for this role.
+  it("sends developer AI to the read page without calling the editor routes", () => {
+    // Arrange
+    session.role = "developer_ai";
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(replace).toHaveBeenCalledWith(`/cases/${CASE_ID}`);
+    expect(getCaseMock).not.toHaveBeenCalled();
+    expect(completenessMock).not.toHaveBeenCalled();
+    expect(openDraftMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Simpan draf" })).not.toBeInTheDocument();
+  });
+
+  // Positive
+  it("keeps the author in the editor", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(await screen.findByRole("button", { name: "Simpan draf" })).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  // Edge: the role is not known yet, so nobody is sent away.
+  it("does not redirect while the session is still loading", async () => {
+    // Arrange
+    session.role = null;
+    getCaseMock.mockResolvedValue(savedCase());
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(await screen.findByRole("heading", { name: "ILB-PT-0142" })).toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

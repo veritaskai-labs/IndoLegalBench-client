@@ -22,6 +22,9 @@ export class ApiError extends Error {
   }
 }
 
+/** 403 dari GET /cases/{id} saat Developer AI membuka kasus test (SCRUM-183). */
+export const TEST_CASE_HIDDEN = "TEST_CASE_HIDDEN";
+
 type ForbiddenListener = () => void;
 
 const forbiddenListeners = new Set<ForbiddenListener>();
@@ -91,7 +94,9 @@ export async function apiFetch<T>(
 
   if (!response.ok) {
     const err = await parseError(response);
-    if (err.status === 403) notifyForbidden();
+    // Kasus test yang dibuka Developer AI bukan soal izin halaman: halaman kasus menampilkan
+    // pesannya sendiri, jadi tidak dialihkan ke /forbidden (SCRUM-184).
+    if (err.status === 403 && err.code !== TEST_CASE_HIDDEN) notifyForbidden();
     throw err;
   }
   if (response.status === 204) return undefined as T;

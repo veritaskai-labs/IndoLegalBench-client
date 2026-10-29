@@ -23,14 +23,14 @@ async function fillCreateForm() {
 
 describe("CreateUserModal", () => {
   // PBI-24 AC1: Author and Reviewer are one role now.
-  it("offers Admin, Kontributor and Viewer as the role", () => {
+  it("offers Admin, Kontributor, Viewer and Developer AI as the role", () => {
     render(<CreateUserModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />);
 
     const options = within(screen.getByLabelText("Peran"))
       .getAllByRole("option")
       .map((option) => option.textContent);
 
-    expect(options).toEqual(["Pilih peran", "Admin", "Kontributor", "Viewer"]);
+    expect(options).toEqual(["Pilih peran", "Admin", "Kontributor", "Viewer", "Developer AI"]);
   });
 
   it("sends the contributor role to the server", async () => {

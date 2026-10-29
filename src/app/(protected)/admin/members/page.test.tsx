@@ -57,8 +57,8 @@ describe("AdminMembersPage", () => {
     expect(apiFetchMock).not.toHaveBeenCalled();
   });
 
-  // PBI-24 AC1: Admin, Kontributor, Viewer, and nothing else to pick.
-  it("offers Admin, Kontributor and Viewer in the role select", async () => {
+  // PBI-24 AC1: Kontributor replaces Author and Reviewer in the list the admin picks from.
+  it("offers Admin, Kontributor, Viewer and Developer AI in the role select", async () => {
     signedInAs("admin");
     apiFetchMock.mockResolvedValue([ADMIN, AUTHOR]);
 
@@ -69,6 +69,7 @@ describe("AdminMembersPage", () => {
       "Admin",
       "Kontributor",
       "Viewer",
+      "Developer AI",
     ]);
     expect(select).toHaveValue("contributor");
   });

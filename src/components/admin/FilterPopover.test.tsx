@@ -18,12 +18,12 @@ function renderPopover(overrides: Partial<Parameters<typeof FilterPopover>[0]> =
 
 describe("FilterPopover", () => {
   // PBI-24 AC1: the role filter lists the same roles as the role picker.
-  it("lists Admin, Kontributor and Viewer as role filters", () => {
+  it("lists Admin, Kontributor, Viewer and Developer AI as role filters", () => {
     renderPopover();
 
     const labels = screen.getAllByRole("checkbox").map((box) => box.closest("label")?.textContent);
 
-    expect(labels).toEqual(["Admin", "Kontributor", "Viewer"]);
+    expect(labels).toEqual(["Admin", "Kontributor", "Viewer", "Developer AI"]);
   });
 
   it("applies the contributor role when Kontributor is ticked", async () => {

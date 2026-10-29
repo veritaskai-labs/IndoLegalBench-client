@@ -6,6 +6,7 @@ describe("parseRole", () => {
     expect(parseRole("contributor")).toBe("contributor");
     expect(parseRole("admin")).toBe("admin");
     expect(parseRole("viewer")).toBe("viewer");
+    expect(parseRole("developer_ai")).toBe("developer_ai");
   });
 
   // PBI-24 AC1: the server no longer sends or accepts these, so a stale session must not
@@ -82,6 +83,9 @@ describe("ROLE_HOME_PATH", () => {
   it("has no entry left for the retired author and reviewer roles", () => {
     expect(Object.keys(ROLE_HOME_PATH)).not.toContain("author");
     expect(Object.keys(ROLE_HOME_PATH)).not.toContain("reviewer");
+  });
+  it("sends developer AI to the suites, since it has no dashboard (SCRUM-184)", () => {
+    expect(ROLE_HOME_PATH.developer_ai).toBe("/suites");
   });
 });
 

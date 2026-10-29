@@ -29,6 +29,10 @@ describe("navForRole", () => {
     expect(labels("viewer")).toEqual(["Dasbor", "Laporan"]);
   });
 
+  it("gives developer AI only the suites page, without the dashboard (SCRUM-184)", () => {
+    expect(labels("developer_ai")).toEqual(["Suite dan kasus"]);
+  });
+
   it("gives admin the admin pages and reports but not the review queue", () => {
     expect(labels("admin")).toEqual([
       "Dasbor",
@@ -49,20 +53,20 @@ describe("navForRole", () => {
     ]);
   });
 
-  it("offers the suites page to contributor and admin only", () => {
+  it("offers the suites page to contributor, admin and developer AI only", () => {
     // Arrange
-    const roles = ["contributor", "admin", "viewer"] as const;
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
 
     // Act
     const withSuites = roles.filter((role) => hrefs(role).includes("/suites"));
 
     // Assert
-    expect(withSuites).toEqual(["contributor", "admin"]);
+    expect(withSuites).toEqual(["contributor", "admin", "developer_ai"]);
   });
 
   // PBI-24 AC10: Contributor and Admin get the Viewer right to read reports.
   it("offers the reports page to admin, contributor and viewer", () => {
-    const roles = ["contributor", "admin", "viewer"] as const;
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
 
     const withReports = roles.filter((role) => hrefs(role).includes("/reports"));
 
@@ -74,6 +78,7 @@ describe("navForRole", () => {
     expect(hrefs("contributor")).toContain("/reviews");
     expect(hrefs("admin")).not.toContain("/reviews");
     expect(hrefs("viewer")).not.toContain("/reviews");
+    expect(hrefs("developer_ai")).not.toContain("/reviews");
   });
 
   it("offers the review monitoring page to the admin only", () => {
