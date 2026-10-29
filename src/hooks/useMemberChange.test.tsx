@@ -141,6 +141,62 @@ describe("useMemberChange, role change", () => {
     expect(confirmed).toHaveLength(1);
   });
 
+  // Edge: two quick role picks must not become two PATCHes without confirm.
+  it("sends one request when the admin picks a role twice before the first answer", async () => {
+    let answer: (user: User) => void = () => {};
+    api.changeUserRole.mockReturnValue(new Promise<User>((resolve) => (answer = resolve)));
+    const { result } = setup();
+
+    let first: Promise<void> = Promise.resolve();
+    let second: Promise<void> = Promise.resolve();
+    act(() => {
+      first = result.current.changeRole(MEMBER, "viewer");
+      second = result.current.changeRole(MEMBER, "reviewer");
+    });
+    await act(async () => {
+      answer({ ...MEMBER, role: "viewer" });
+      await Promise.all([first, second]);
+    });
+
+    expect(api.changeUserRole).toHaveBeenCalledExactlyOnceWith("u2", "viewer");
+    expect(onChanged).toHaveBeenCalledExactlyOnceWith({ ...MEMBER, role: "viewer" });
+  });
+
+  // Edge: the guard must open again, also after a failure.
+  it("accepts a new role pick once the previous request has failed", async () => {
+    api.changeUserRole.mockRejectedValueOnce(new ApiError(404, "not_found"));
+    api.changeUserRole.mockResolvedValueOnce({ ...MEMBER, role: "viewer" });
+    const { result } = setup();
+    await act(() => result.current.changeRole(MEMBER, "viewer"));
+
+    await act(() => result.current.changeRole(MEMBER, "viewer"));
+
+    expect(api.changeUserRole).toHaveBeenCalledTimes(2);
+    expect(onChanged).toHaveBeenCalledWith({ ...MEMBER, role: "viewer" });
+  });
+
+  // Edge: a role pick while the confirmed request runs would race with it.
+  it("ignores a role pick while the confirmed request is running", async () => {
+    api.changeUserRole.mockRejectedValueOnce(WAITING(3));
+    let answer: (user: User) => void = () => {};
+    api.changeUserRole.mockReturnValueOnce(new Promise<User>((resolve) => (answer = resolve)));
+    const { result } = setup();
+    await act(() => result.current.changeRole(MEMBER, "viewer"));
+
+    let confirming: Promise<void> = Promise.resolve();
+    act(() => {
+      confirming = result.current.confirmPending();
+    });
+    await act(() => result.current.changeRole(MEMBER, "reviewer"));
+    await act(async () => {
+      answer({ ...MEMBER, role: "viewer" });
+      await confirming;
+    });
+
+    expect(api.changeUserRole).toHaveBeenCalledTimes(2);
+    expect(api.changeUserRole).not.toHaveBeenCalledWith("u2", "reviewer");
+  });
+
   it("does nothing when there is nothing to confirm", async () => {
     const { result } = setup();
 
@@ -215,5 +271,37 @@ describe("useMemberChange, deactivation", () => {
     await expect(act(() => result.current.deactivate(MEMBER))).rejects.toThrow("CANNOT_DEACTIVATE_SELF");
 
     expect(result.current.pending).toBeNull();
+  });
+
+  // Edge: double click on the deactivate toggle.
+  it("sends one request when the account is deactivated twice before the first answer", async () => {
+    let answer: (user: User) => void = () => {};
+    api.deactivateUser.mockReturnValue(new Promise<User>((resolve) => (answer = resolve)));
+    const { result } = setup();
+
+    let first: Promise<void> = Promise.resolve();
+    let second: Promise<void> = Promise.resolve();
+    act(() => {
+      first = result.current.deactivate(MEMBER);
+      second = result.current.deactivate(MEMBER);
+    });
+    await act(async () => {
+      answer({ ...MEMBER, is_active: false });
+      await Promise.all([first, second]);
+    });
+
+    expect(api.deactivateUser).toHaveBeenCalledExactlyOnceWith("u2");
+  });
+
+  // Negatif: a refused deactivation still frees the guard.
+  it("accepts another deactivation after a refused one", async () => {
+    api.deactivateUser.mockRejectedValueOnce(new ApiError(400, "CANNOT_DEACTIVATE_SELF"));
+    api.deactivateUser.mockResolvedValueOnce({ ...MEMBER, is_active: false });
+    const { result } = setup();
+    await expect(act(() => result.current.deactivate(MEMBER))).rejects.toThrow();
+
+    await act(() => result.current.deactivate(MEMBER));
+
+    expect(api.deactivateUser).toHaveBeenCalledTimes(2);
   });
 });
