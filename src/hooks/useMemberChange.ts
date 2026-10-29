@@ -34,9 +34,12 @@ export function useMemberChange(
   const [pending, setPending] = useState<PendingMemberChange | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Ref, bukan state: klik kedua bisa masuk sebelum render ulang menonaktifkan tombol.
+  // Satu penjaga untuk semua permintaan, jadi dua permintaan tidak pernah berlomba.
   const inFlight = useRef(false);
 
   const changeRole = async (user: User, role: Role): Promise<void> => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     try {
       onChanged(await api.changeUserRole(user.id, role));
@@ -44,11 +47,15 @@ export function useMemberChange(
       const count = confirmationCount(failure);
       if (count === null) setError(adminErrorMessage(failure, ROLE_FAILED));
       else setPending({ kind: "role", user, role, count });
+    } finally {
+      inFlight.current = false;
     }
   };
 
   /** Kegagalan selain konfirmasi dilempar lagi, supaya dialog nonaktifkan menampilkannya sendiri. */
   const deactivate = async (user: User): Promise<void> => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     try {
       onChanged(await api.deactivateUser(user.id));
@@ -56,6 +63,8 @@ export function useMemberChange(
       const count = confirmationCount(failure);
       if (count === null) throw failure;
       setPending({ kind: "deactivate", user, count });
+    } finally {
+      inFlight.current = false;
     }
   };
 

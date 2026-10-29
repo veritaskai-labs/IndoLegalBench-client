@@ -151,7 +151,7 @@ describe("useMemberChange, role change", () => {
     let second: Promise<void> = Promise.resolve();
     act(() => {
       first = result.current.changeRole(MEMBER, "viewer");
-      second = result.current.changeRole(MEMBER, "reviewer");
+      second = result.current.changeRole(MEMBER, "developer_ai");
     });
     await act(async () => {
       answer({ ...MEMBER, role: "viewer" });
@@ -187,14 +187,14 @@ describe("useMemberChange, role change", () => {
     act(() => {
       confirming = result.current.confirmPending();
     });
-    await act(() => result.current.changeRole(MEMBER, "reviewer"));
+    await act(() => result.current.changeRole(MEMBER, "developer_ai"));
     await act(async () => {
       answer({ ...MEMBER, role: "viewer" });
       await confirming;
     });
 
     expect(api.changeUserRole).toHaveBeenCalledTimes(2);
-    expect(api.changeUserRole).not.toHaveBeenCalledWith("u2", "reviewer");
+    expect(api.changeUserRole).not.toHaveBeenCalledWith("u2", "developer_ai");
   });
 
   it("does nothing when there is nothing to confirm", async () => {
