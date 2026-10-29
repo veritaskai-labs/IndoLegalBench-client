@@ -136,6 +136,17 @@ describe("DashboardPage", () => {
     expect(useDashboardMock).toHaveBeenCalledWith(false);
   });
 
+  // SCRUM-184: Developer AI is answered with a 403 too.
+  it("does not ask for a dashboard developer AI may not see", () => {
+    authenticatedAs("Dina", "developer_ai");
+    useDashboardMock.mockReturnValue({ status: "loading", reload: vi.fn() });
+
+    render(<DashboardPage />);
+
+    expect(useDashboardMock).toHaveBeenCalledWith(false);
+    expect(screen.getByText("Dasbor belum tersedia untuk peran Anda")).toBeInTheDocument();
+  });
+
   // Negative
   it("shows the problem instead of the numbers when the summary cannot be read", () => {
     authenticatedAs("Rina");
