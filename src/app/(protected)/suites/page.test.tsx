@@ -351,6 +351,21 @@ describe("SuitesPage", () => {
       ).not.toBeInTheDocument();
     });
 
+    // SCRUM-184: Developer AI only reads suites.
+    it("shows developer AI the suites without any create, edit, archive or delete action", () => {
+      signedInAs("developer_ai");
+      showOneSuite();
+
+      render(<SuitesPage />);
+
+      expect(screen.getByRole("link", { name: "Perburuhan" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Buat Suite" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("columnheader", { name: "Aksi" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Ubah Perburuhan" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Arsipkan Perburuhan" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Hapus Perburuhan" })).not.toBeInTheDocument();
+    });
+
     it("hides the link while the session is still loading", () => {
       useAuthMock.mockReturnValue({ status: "loading" });
       showOneSuite();
