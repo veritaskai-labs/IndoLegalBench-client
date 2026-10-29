@@ -9,22 +9,25 @@ export const LOGOUT_URL = `${BASE_URL}/auth/logout`;
  * — servernya menjawab 403 — jadi peran itu tetap mendarat di /reports.
  */
 export const ROLE_HOME_PATH = {
-  author: "/dashboard",
+  contributor: "/dashboard",
   admin: "/dashboard",
-  reviewer: "/dashboard",
   viewer: "/reports",
 } as const;
 
 export type Role = components["schemas"]["Role"];
 
+/** Peran yang punya halaman awal; peran lain belum bisa masuk lewat client ini. */
+type HomeRole = keyof typeof ROLE_HOME_PATH;
+
 /**
- * Strict on purpose: role values are lowercase ("author", "admin",
- * "reviewer", "viewer"), as sent by the backend /me endpoint. Any other
+ * Strict on purpose: role values are lowercase ("contributor", "admin",
+ * "viewer"), as sent by the backend /me endpoint. The retired "author" and
+ * "reviewer" values are unknown on purpose (PBI-24 AC1). Any other
  * casing or unknown value returns null.
  */
-export function parseRole(value: unknown): Role | null {
+export function parseRole(value: unknown): HomeRole | null {
   if (typeof value !== "string") return null;
-  return Object.keys(ROLE_HOME_PATH).includes(value) ? (value as Role) : null;
+  return Object.keys(ROLE_HOME_PATH).includes(value) ? (value as HomeRole) : null;
 }
 
 export const AUTH_ERROR_CODES = [

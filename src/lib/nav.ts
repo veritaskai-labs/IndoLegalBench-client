@@ -3,7 +3,7 @@ import type { Role } from "@/types";
 export type NavItem = { label: string; href: string; roles: Role[] };
 export type NavGroup = { heading: string; items: NavItem[] };
 
-const ALL: Role[] = ["author", "reviewer", "admin", "viewer"];
+const ALL: Role[] = ["contributor", "admin", "viewer"];
 
 /** Mockup, nunggu SCRUM-97 */
 export const NAV_GROUPS: NavGroup[] = [
@@ -11,11 +11,11 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Konteks",
     items: [
       { label: "Dasbor", href: "/dashboard", roles: ALL },
-      { label: "Suite dan kasus", href: "/suites", roles: ["author", "admin"] },
+      { label: "Suite dan kasus", href: "/suites", roles: ["contributor", "admin"] },
       {
         label: "Antrean tinjauan",
         href: "/reviews",
-        roles: ["reviewer", "admin"],
+        roles: ["contributor"],
       },
     ],
   },
@@ -24,7 +24,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Penyedia", href: "/admin/providers", roles: ["admin"] },
       { label: "Eksekusi", href: "/runs", roles: ["admin"] },
-      { label: "Laporan", href: "/reports", roles: ["admin", "viewer"] },
+      { label: "Laporan", href: "/reports", roles: ["admin", "contributor", "viewer"] },
     ],
   },
   {
