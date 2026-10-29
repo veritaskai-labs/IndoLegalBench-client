@@ -4,7 +4,7 @@ import type { Me, Role } from "@/types";
 export const MOCK_ENABLED = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
 
 
-const ROLES: readonly Role[] = ["author", "reviewer", "admin", "viewer"];
+const ROLES: readonly Role[] = ["author", "reviewer", "admin", "viewer", "developer_ai"];
 
 /** Type guard, cek runtime */
 function isRole(value: string | undefined): value is Role {

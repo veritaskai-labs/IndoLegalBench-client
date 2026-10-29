@@ -9,4 +9,5 @@ export const ROLE_LABEL: Record<Role, string> = {
   reviewer: "Peninjau",
   admin: "Admin",
   viewer: "Pembaca",
+  developer_ai: "Developer AI",
 };

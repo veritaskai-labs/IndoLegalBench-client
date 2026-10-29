@@ -3,6 +3,7 @@ import type { Role } from "@/types";
 export type NavItem = { label: string; href: string; roles: Role[] };
 export type NavGroup = { heading: string; items: NavItem[] };
 
+// Developer AI tidak punya dasbor (server menjawab 403), jadi tidak masuk ALL.
 const ALL: Role[] = ["author", "reviewer", "admin", "viewer"];
 
 /** Mockup, nunggu SCRUM-97 */
@@ -11,7 +12,11 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Konteks",
     items: [
       { label: "Dasbor", href: "/dashboard", roles: ALL },
-      { label: "Suite dan kasus", href: "/suites", roles: ["author", "admin"] },
+      {
+        label: "Suite dan kasus",
+        href: "/suites",
+        roles: ["author", "admin", "developer_ai"],
+      },
       {
         label: "Antrean tinjauan",
         href: "/reviews",

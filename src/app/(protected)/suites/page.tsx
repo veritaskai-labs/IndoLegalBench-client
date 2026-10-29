@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SuiteFormDialog } from "@/components/suites/SuiteFormDialog";
 import { SuiteList } from "@/components/suites/SuiteList";
 import { useAuth } from "@/hooks/useAuth";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { useSuites } from "@/hooks/useSuites";
 import type { Suite, SuiteStatus } from "@/types/suite";
 import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
@@ -23,6 +24,8 @@ export default function SuitesPage() {
   const canCreateCase =
     auth.status === "authenticated" &&
     (auth.user.role === "author" || auth.user.role === "admin");
+  // Developer AI hanya membaca: tanpa buat, ubah, arsip, atau hapus suite (SCRUM-184).
+  const canManage = auth.status === "authenticated" && !isDeveloperAiSession(auth);
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -46,13 +49,15 @@ export default function SuitesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Suite</h1>
-        <button
-          type="button"
-          onClick={() => setDialog({ mode: "create" })}
-          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          Buat Suite
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => setDialog({ mode: "create" })}
+            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Buat Suite
+          </button>
+        )}
       </div>
 
       <div
@@ -94,6 +99,7 @@ export default function SuitesPage() {
         status={suites.status}
         suites={suites.suites}
         canCreateCase={canCreateCase}
+        canManage={canManage}
         onRetry={suites.reload}
         onEdit={(suite) => setDialog({ mode: "edit", suite })}
         onDelete={(suite) => setDialog({ mode: "delete", suite })}

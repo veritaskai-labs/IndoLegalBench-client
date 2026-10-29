@@ -320,6 +320,7 @@ export default function AdminMembersPage() {
                       <option value="author">Author</option>
                       <option value="reviewer">Reviewer</option>
                       <option value="viewer">Viewer</option>
+                      <option value="developer_ai">Developer AI</option>
                     </select>
                   </td>
                   <td className="py-3 px-6 text-right">

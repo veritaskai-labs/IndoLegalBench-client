@@ -9,6 +9,8 @@ type Props = {
   suites: Suite[];
   /** Hanya author dan admin yang boleh membuat kasus. */
   canCreateCase?: boolean;
+  /** Developer AI hanya membaca suite, jadi kolom Aksi disembunyikan (SCRUM-184). */
+  canManage?: boolean;
   onRetry: () => void;
   onEdit: (suite: Suite) => void;
   onDelete: (suite: Suite) => void;
@@ -24,11 +26,12 @@ export function SuiteList({
   status,
   suites,
   canCreateCase = false,
+  canManage = true,
   onRetry,
   onEdit,
   onDelete,
   onArchive,
-}: Props) {
+}: Readonly<Props>) {
   
   if (status === "loading") {
     return (
@@ -67,7 +70,7 @@ export function SuiteList({
           <th scope="col" className="px-4 py-3 font-medium">Deskripsi</th>
           <th scope="col" className="px-4 py-3 font-medium">Jumlah kasus</th>
           <th scope="col" className="px-4 py-3 font-medium">Status</th>
-          <th scope="col" className="px-4 py-3 font-medium">Aksi</th>
+          {canManage && <th scope="col" className="px-4 py-3 font-medium">Aksi</th>}
         </tr>
       </thead>
       <tbody>
@@ -93,48 +96,50 @@ export function SuiteList({
             <td className="px-4 py-3 text-slate-600">
               {STATUS_LABEL[suite.status] ?? suite.status}
             </td>
-            <td className="px-4 py-3">
-              <div className="flex gap-3">
-                {canCreateCase && suite.status === "active" && (
-                  <Link
-                    href={`/suites/${encodeURIComponent(suite.id)}/cases/new`}
-                    aria-label={`Buat kasus di ${suite.name}`}
-                    className="text-sm font-medium text-slate-900 hover:underline"
-                  >
-                    Buat kasus
-                  </Link>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onEdit(suite)}
-                  aria-label={`Ubah ${suite.name}`}
-                  className="text-sm text-slate-700 hover:underline"
-                >
-                  Ubah
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onArchive(suite)}
-                  aria-label={
-                    suite.status === "archived"
-                      ? `Aktifkan ${suite.name}`
-                      : `Arsipkan ${suite.name}`
-                  }
-                  className="text-sm text-slate-700 hover:underline"
-                >
-                  {suite.status === "archived" ? "Aktifkan" : "Arsipkan"}
-                </button>
-                {suite.status !== "archived" && (
+            {canManage && (
+              <td className="px-4 py-3">
+                <div className="flex gap-3">
+                  {canCreateCase && suite.status === "active" && (
+                    <Link
+                      href={`/suites/${encodeURIComponent(suite.id)}/cases/new`}
+                      aria-label={`Buat kasus di ${suite.name}`}
+                      className="text-sm font-medium text-slate-900 hover:underline"
+                    >
+                      Buat kasus
+                    </Link>
+                  )}
                   <button
-                  type="button"
-                  onClick={() => onDelete(suite)}
-                  aria-label={`Hapus ${suite.name}`}
-                  className="text-sm text-red-700 hover:underline">
-                    Hapus
-                    </button>
-                )}
-              </div>
-            </td>
+                    type="button"
+                    onClick={() => onEdit(suite)}
+                    aria-label={`Ubah ${suite.name}`}
+                    className="text-sm text-slate-700 hover:underline"
+                  >
+                    Ubah
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onArchive(suite)}
+                    aria-label={
+                      suite.status === "archived"
+                        ? `Aktifkan ${suite.name}`
+                        : `Arsipkan ${suite.name}`
+                    }
+                    className="text-sm text-slate-700 hover:underline"
+                  >
+                    {suite.status === "archived" ? "Aktifkan" : "Arsipkan"}
+                  </button>
+                  {suite.status !== "archived" && (
+                    <button
+                    type="button"
+                    onClick={() => onDelete(suite)}
+                    aria-label={`Hapus ${suite.name}`}
+                    className="text-sm text-red-700 hover:underline">
+                      Hapus
+                      </button>
+                  )}
+                </div>
+              </td>
+            )}
           </tr>
         ))}
       </tbody>

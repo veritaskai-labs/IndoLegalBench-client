@@ -11,7 +11,7 @@ import { apiFetch, ApiError } from "@/lib/apiClient";
 import { MOCK_ENABLED, getMockMe } from "@/lib/mockAuth";
 import type { Me } from "@/types";
 
-type AuthState =
+export type AuthState =
   | { status: "loading" }
   | { status: "authenticated"; user: Me }
   | { status: "unauthenticated"; reason: "no_session" | "expired" };

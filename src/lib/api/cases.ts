@@ -11,6 +11,8 @@ export interface CaseSummary {
   status: CaseStatus;
   completeness_pct: number;
   updated_at: string;
+  /** Kasus test untuk Developer AI: kode dan judul diganti server, tidak bisa dibuka (SCRUM-183). */
+  masked?: boolean;
 }
 
 export interface ListCasesParams {
