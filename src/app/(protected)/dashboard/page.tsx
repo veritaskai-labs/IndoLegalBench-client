@@ -60,6 +60,14 @@ export default function DashboardPage() {
 
       {dashboard.status === "ready" && (
         <>
+          {dashboard.summary.own_cases && (
+            <CaseCountCards
+              title="Kasus Anda"
+              counts={dashboard.summary.own_cases.case_counts}
+              total={dashboard.summary.own_cases.total_cases}
+              emptyNote="Anda belum menulis kasus."
+            />
+          )}
           <CaseCountCards
             counts={dashboard.summary.case_counts}
             total={dashboard.summary.total_cases}
