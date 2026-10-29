@@ -16,6 +16,7 @@ import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import type { Suite } from "@/types/suite";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { caseEditPath, caseReadPath } from "@/lib/cases/casePaths";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -27,10 +28,6 @@ const ALL_STATUSES: { value: CaseStatus; label: string }[] = [
   { value: "needs_revision", label: CASE_STATUS_LABEL.needs_revision },
   { value: "approved", label: CASE_STATUS_LABEL.approved },
 ];
-
-/** Editor kasus dari SCRUM-108; Developer AI membuka halaman baca /cases/{id} (SCRUM-184). */
-const editPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}/edit`;
-const readPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}`;
 
 const completenessColor = (pct: number) =>
   pct === 100 ? "bg-emerald-600" : pct >= 60 ? "bg-teal-600" : "bg-amber-500";
@@ -184,7 +181,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
   // Developer AI hanya melihat kasus approved dan tidak menulis kasus (SCRUM-183).
   const isDeveloperAi =
     auth.status === "authenticated" && auth.user.role === "developer_ai";
-  const casePath = isDeveloperAi ? readPath : editPath;
+  const casePath = isDeveloperAi ? caseReadPath : caseEditPath;
 
   const [suite, setSuite] = useState<Suite | null>(null);
   const [suiteError, setSuiteError] = useState<PageError | null>(null);

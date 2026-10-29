@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { createCase } from "@/lib/cases/caseApi";
+import { caseEditPath } from "@/lib/cases/casePaths";
 import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import type { FieldSaveError } from "@/lib/cases/saveError";
 import { decodeRouteParam } from "@/lib/routeParams";
@@ -39,7 +40,7 @@ export default function NewCasePage() {
     try {
       const created = await createCase(suiteId, payload);
       showToast("Kasus tersimpan sebagai draf");
-      router.push(`/cases/${encodeURIComponent(created.id)}/edit`);
+      router.push(caseEditPath(created.id));
       return null;
     } catch (error) {
       return saveError.handle(error);

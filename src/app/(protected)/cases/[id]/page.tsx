@@ -13,9 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useSuiteName } from "@/hooks/useSuiteName";
 import { fromCaseRead } from "@/lib/cases/caseFormMapping";
+import { caseEditPath } from "@/lib/cases/casePaths";
 import { decodeRouteParam } from "@/lib/routeParams";
-
-const editPath = (caseId: string) => `/cases/${encodeURIComponent(caseId)}/edit`;
 
 /**
  * Halaman baca kasus untuk Developer AI (SCRUM-184). Server hanya memberi versi approved
@@ -31,7 +30,7 @@ export default function CaseReadPage() {
 
   useEffect(() => {
     if (auth.status === "authenticated" && !isDeveloperAi) {
-      router.replace(editPath(caseId));
+      router.replace(caseEditPath(caseId));
     }
   }, [auth.status, isDeveloperAi, caseId, router]);
 
