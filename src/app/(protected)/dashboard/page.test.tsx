@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DashboardSummary } from "@/types/dashboard";
@@ -265,5 +265,59 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("heading", { name: /antrean review/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /ILB-001/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /penugasan ulang/i })).not.toBeInTheDocument();
+  });
+});
+
+// PBI-24 AC6: the contributor sees the cases they wrote and the review queue on one page.
+describe("DashboardPage, own cases", () => {
+  const OWN = {
+    case_counts: { draft: 1, in_review: 1, needs_revision: 0, approved: 1 },
+    total_cases: 3,
+  };
+
+  // Positive
+  it("shows the contributor's own cases above the team summary and the review queue", () => {
+    authenticatedAs("Rina", "contributor");
+    ready({ own_cases: OWN, review_queue: [QUEUED] });
+
+    render(<DashboardPage />);
+
+    const titles = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(titles).toEqual(["Kasus Anda", "Ringkasan kasus", "Antrean review"]);
+  });
+
+  it("counts the contributor's own cases apart from the team's", () => {
+    authenticatedAs("Rina", "contributor");
+    ready({ own_cases: OWN });
+
+    render(<DashboardPage />);
+
+    expect(within(screen.getByRole("region", { name: "Kasus Anda" })).getByText("Total 3 kasus")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Ringkasan kasus" })).getByText("Total 10 kasus")).toBeInTheDocument();
+  });
+
+  // Negative: the admin has no cases of their own on this page.
+  it("leaves the own-cases section out when the server sends none", () => {
+    authenticatedAs("Admin", "admin");
+    ready({ own_cases: null, needs_reassignment: 1 });
+
+    render(<DashboardPage />);
+
+    expect(screen.queryByRole("region", { name: "Kasus Anda" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Ringkasan kasus" })).toBeInTheDocument();
+  });
+
+  // Empty: a contributor who has written nothing yet.
+  it("says the contributor has not written a case yet", () => {
+    authenticatedAs("Rina", "contributor");
+    ready({
+      own_cases: { case_counts: { draft: 0, in_review: 0, needs_revision: 0, approved: 0 }, total_cases: 0 },
+    });
+
+    render(<DashboardPage />);
+
+    expect(
+      within(screen.getByRole("region", { name: "Kasus Anda" })).getByText("Anda belum menulis kasus."),
+    ).toBeInTheDocument();
   });
 });
