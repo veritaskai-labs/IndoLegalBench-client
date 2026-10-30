@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { AiProduct } from "@/types/provider";
 
 import { ProviderFormDialog } from "./ProviderFormDialog";
 
@@ -135,5 +136,74 @@ describe("ProviderFormDialog manual validation (AC3)", () => {
     expect(
       screen.queryByRole("heading", { name: /^Simpan sebagai produk/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ProviderFormDialog editing (AC4)", () => {
+  const MANUAL_PRODUCT = {
+    id: "11111111-1111-1111-1111-111111111111",
+    name: "Hukumonline Pro",
+    measurement_type: "manual",
+    vendor_name: "Hukumonline",
+    site_url: "https://hukumonline.com",
+    access_note: "Login lewat akun tim legal",
+    manual_params: "mode pro",
+    is_active: true,
+    created_by: "22222222-2222-2222-2222-222222222222",
+    created_at: "2026-10-01T00:00:00Z",
+    updated_at: "2026-10-01T00:00:00Z",
+  } satisfies AiProduct;
+
+  const AUTOMATIC_PRODUCT = {
+    id: "33333333-3333-3333-3333-333333333333",
+    name: "DeepSeek",
+    measurement_type: "automatic",
+    provider_type: "openai_compatible",
+    base_url: "https://api.deepseek.com/chat/completions",
+    model_name: "deepseek-v4-flash",
+    credential_hint: "a1b2",
+    has_credential: true,
+    rate_limit_per_minute: 10,
+    monthly_budget_idr: "1500000.00",
+    model_params: { temperature: 0.3, effort: "high", thinking: true },
+    is_active: true,
+    created_by: "22222222-2222-2222-2222-222222222222",
+    created_at: "2026-10-01T00:00:00Z",
+    updated_at: "2026-10-01T00:00:00Z",
+  } satisfies AiProduct;
+
+  it("fills the form from the manual product being edited", () => {
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeChecked();
+    expect(screen.getByLabelText("Nama penyedia")).toHaveValue("Hukumonline");
+    expect(screen.getByLabelText("Alamat situs")).toHaveValue(
+      "https://hukumonline.com",
+    );
+    expect(screen.getByLabelText("Catatan akses")).toHaveValue(
+      "Login lewat akun tim legal",
+    );
+    expect(screen.getByLabelText("Parameter")).toHaveValue("mode pro");
+  });
+
+  it("fills the stored model parameters of an automatic product", () => {
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Temperature")).toHaveValue("0.3");
+    expect(screen.getByLabelText("Effort")).toHaveValue("high");
+    expect(screen.getByLabelText("Thinking")).toBeChecked();
+    expect(screen.getByLabelText("Web search")).not.toBeChecked();
   });
 });
