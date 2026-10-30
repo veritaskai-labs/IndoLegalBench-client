@@ -3,7 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { RequiredMark, SecretInput } from "@/components/ui/SecretInput";
 import { ApiError } from "@/lib/apiClient";
-import { createProduct, updateProduct } from "@/lib/providers/providerApi";
+import { createProduct, updateProduct, testConnection } from "@/lib/providers/providerApi";
 import {
   formatRupiahInput,
   parseRupiahInput,
@@ -103,6 +103,8 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<"ok" | "failed" | "error" | null>(null);
 
   function automaticErrors(): Errors {
     const found: Errors = {};
@@ -223,6 +225,21 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     }
   }
 
+  /** AC2: uji koneksi hanya mungkin setelah produk punya id di server. */
+  async function runConnectionTest() {
+    if (product === undefined) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await testConnection(product.id);
+      setTestResult(result.status === "ok" ? "ok" : "failed");
+    } catch {
+      setTestResult("error");
+    } finally {
+      setTesting(false);
+    }
+  }
+
   const title = editing ? "Ubah produk AI" : "Daftarkan produk AI";
 
   return (
@@ -312,6 +329,35 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                 </Labeled>
               </div>
 
+              <div>
+                <button
+                  type="button"
+                  onClick={() => void runConnectionTest()}
+                  disabled={!editing || testing}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {testing ? "Menguji…" : "Uji koneksi"}
+                </button>
+                {!editing && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Uji koneksi tersedia setelah produk tersimpan.
+                  </p>
+                )}
+                {testResult === "ok" && (
+                  <p className="mt-1 text-xs text-emerald-700">Koneksi berhasil.</p>
+                )}
+                {testResult === "failed" && (
+                  <p className="mt-1 text-xs text-red-700">
+                    Koneksi gagal. Periksa URL, model, dan kredensial.
+                  </p>
+                )}
+                {testResult === "error" && (
+                  <p className="mt-1 text-xs text-red-700">
+                    Uji koneksi tidak bisa dijalankan saat ini. Coba lagi sebentar.
+                  </p>
+                )}
+              </div>
+              
               <ModelParameterFields
                 values={modelParams}
                 onChange={(key, value) =>
