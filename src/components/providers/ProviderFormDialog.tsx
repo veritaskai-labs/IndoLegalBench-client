@@ -78,7 +78,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       : "",
   );
   // AC2: parameter model dikumpulkan dan divalidasi di sini; pengirimannya ke
-  // kolom model_params menyusul begitu kontrak memuat PBI-23-BE-1.
+  // kolom model_params menyusul begitu kontrak create menerimanya.
   const [modelParams, setModelParams] = useState<Record<string, string | boolean>>({});
   const [confirming, setConfirming] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -188,6 +188,13 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
           <Labeled id={ids.name} label="Nama" required error={errors.name}>
             <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} {...invalid(ids.name, errors.name)} className={INPUT} />
           </Labeled>
+
+          {measurementType === "manual" && (
+            <p className="-mt-2 text-xs text-slate-500">
+              &quot;HO Pro&quot; dan &quot;HO Premium&quot; adalah produk
+              terpisah.
+            </p>
+          )}
 
           {measurementType === "automatic" ? (
             <>
