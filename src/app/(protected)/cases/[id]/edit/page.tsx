@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CaseEditorForm } from "@/components/cases/CaseEditorForm";
 import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import { ChangeSplitTagDialog } from "@/components/cases/ChangeSplitTagDialog";
@@ -21,6 +21,7 @@ import { SubmitReviewButton } from "@/components/cases/SubmitReviewButton";
 import { VersionHistoryTab } from "@/components/cases/VersionHistoryTab";
 import { ReviewerFeedbackGate } from "@/components/reviews/ReviewerFeedbackGate";
 import { useAuth } from "@/hooks/useAuth";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { useCaseCompleteness } from "@/hooks/useCaseCompleteness";
 import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
 import { useCanSubmitForReview } from "@/hooks/useCanSubmitForReview";
@@ -38,6 +39,7 @@ import { isCaseEditable } from "@/lib/cases/permissions";
 import { canChangeTagAsAdmin, isTagLockedInEditor } from "@/lib/cases/splitTag";
 import type { CaseRead } from "@/types/case";
 import type { FieldSaveError } from "@/lib/cases/saveError";
+import { caseReadPath } from "@/lib/cases/casePaths";
 import { decodeRouteParam } from "@/lib/routeParams";
 import { Breadcrumb } from "@/components/ui";
 import { useSuiteName } from "@/hooks/useSuiteName";
@@ -45,6 +47,21 @@ import Link from "next/link";
 
 export default function EditCasePage() {
   const caseId = decodeRouteParam(useParams<{ id: string }>().id);
+  const auth = useAuth();
+  const router = useRouter();
+  // Developer AI hanya membaca: editor memanggil kelengkapan, versi, dan draf yang dijawab 403,
+  // jadi peran ini dipindah ke halaman baca sebelum editor memuat apa pun (SCRUM-184).
+  const isDeveloperAi = isDeveloperAiSession(auth);
+
+  useEffect(() => {
+    if (isDeveloperAi) router.replace(caseReadPath(caseId));
+  }, [isDeveloperAi, caseId, router]);
+
+  if (isDeveloperAi) return <LoadingState label="Memuat kasus…" />;
+  return <CaseEditor caseId={caseId} />;
+}
+
+function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
   const detail = useCaseDetail(caseId);
   const { showToast } = useToast();
   const saveError = useSaveErrorBanner();

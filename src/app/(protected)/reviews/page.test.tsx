@@ -14,7 +14,7 @@ const listMock = vi.mocked(listAssignedReviews);
 
 beforeEach(() => {
   listMock.mockReset();
-  session.role = "reviewer";
+  session.role = "contributor";
 });
 
 describe("ReviewsPage", () => {
@@ -82,7 +82,7 @@ describe("ReviewsPage", () => {
   });
 
   // Edge: the server answers 403 to anyone but a reviewer and a 403 sends the user to /forbidden.
-  it.each(["admin", "author", "viewer"] as const)(
+  it.each(["admin", "viewer", "developer_ai"] as const)(
     "does not ask the server for the queue when the role is %s",
     async (role) => {
       // Arrange

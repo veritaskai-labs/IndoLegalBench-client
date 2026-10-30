@@ -8,8 +8,8 @@ import { AuditFilterBar } from "./AuditFilterBar";
 const FILTER: AuditFilter = { from: "2026-07-09", to: "2026-10-07", page: 1 };
 
 const ACTORS: AuditActor[] = [
-  { id: "u1", name: "Herdayani", email: "h@veritask.test", role: "author", is_active: true },
-  { id: "u2", name: "Roben", email: "r@veritask.test", role: "reviewer", is_active: false },
+  { id: "u1", name: "Herdayani", email: "h@veritask.test", role: "contributor", is_active: true },
+  { id: "u2", name: "Roben", email: "r@veritask.test", role: "contributor", is_active: false },
 ];
 
 function setup(value: AuditFilter = FILTER, actors: AuditActor[] = ACTORS) {
@@ -64,8 +64,8 @@ describe("AuditFilterBar", () => {
   // Positive: the reason for this change, two people with one name.
   it("tells apart two users who share a name by their email", () => {
     setup(FILTER, [
-      { id: "u1", name: "Rina Sari", email: "rina.a@veritask.ai", role: "author", is_active: true },
-      { id: "u2", name: "Rina Sari", email: "rina.b@veritask.ai", role: "author", is_active: true },
+      { id: "u1", name: "Rina Sari", email: "rina.a@veritask.ai", role: "contributor", is_active: true },
+      { id: "u2", name: "Rina Sari", email: "rina.b@veritask.ai", role: "contributor", is_active: true },
     ]);
 
     expect(
@@ -79,8 +79,8 @@ describe("AuditFilterBar", () => {
   // Positive: the visible label changes, the value sent to the server does not.
   it("hands over the id of the user picked by email", async () => {
     const { onChange } = setup(FILTER, [
-      { id: "u1", name: "Rina Sari", email: "rina.a@veritask.ai", role: "author", is_active: true },
-      { id: "u2", name: "Rina Sari", email: "rina.b@veritask.ai", role: "author", is_active: true },
+      { id: "u1", name: "Rina Sari", email: "rina.a@veritask.ai", role: "contributor", is_active: true },
+      { id: "u2", name: "Rina Sari", email: "rina.b@veritask.ai", role: "contributor", is_active: true },
     ]);
 
     await userEvent.selectOptions(

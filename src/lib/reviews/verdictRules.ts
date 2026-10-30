@@ -10,9 +10,9 @@ import type {
 
 export type ReviewBlocker = "not_reviewer" | "is_author";
 
-/** Satu-satunya tempat yang menentukan siapa yang menilai kasus: hanya peran reviewer. null berarti belum ada sesi. */
+/** Satu-satunya tempat yang menentukan siapa yang menilai kasus: hanya Kontributor, dan bukan untuk kasus tulisannya sendiri (lihat reviewBlocker). null berarti belum ada sesi. */
 export function isReviewerRole(role: Role | null): boolean {
-  return role === "reviewer";
+  return role === "contributor";
 }
 
 /**

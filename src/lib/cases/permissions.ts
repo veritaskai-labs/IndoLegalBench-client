@@ -10,14 +10,19 @@ export function isCaseEditable(status: CaseStatus): boolean {
   return EDITABLE_STATUSES.includes(status);
 }
 
-/** Aturan server untuk aksi atas satu kasus: admin, atau author yang membuat kasusnya. null berarti belum ada sesi. */
+/** Peran yang boleh memulai kasus baru: Kontributor (hak penulis sebelumnya) dan admin. null berarti belum ada sesi. */
+export function canCreateCase(role: Role | null): boolean {
+  return role === "contributor" || role === "admin";
+}
+
+/** Aturan server untuk aksi atas satu kasus: admin, atau Kontributor yang membuat kasusnya. null berarti belum ada sesi. */
 export function isAdminOrCreator(role: Role | null, isCreator: boolean): boolean {
-  return role === "admin" || (role === "author" && isCreator);
+  return role === "admin" || (role === "contributor" && isCreator);
 }
 
 /**
  * Tombol "Edit (buat versi baru)" hanya untuk kasus yang disetujui, dan hanya untuk admin
- * atau author yang membuat kasusnya, sama dengan aturan server. Ini hanya menentukan
+ * atau Kontributor yang membuat kasusnya, sama dengan aturan server. Ini hanya menentukan
  * tampilan tombol; server tetap yang memutuskan boleh atau tidak.
  */
 export function canStartNewVersion(role: Role | null, status: CaseStatus, isCreator: boolean): boolean {
@@ -26,7 +31,7 @@ export function canStartNewVersion(role: Role | null, status: CaseStatus, isCrea
 }
 
 /**
- * Catatan peninjau hanya tampil pada kasus yang perlu revisi, dan hanya untuk admin atau author
+ * Catatan peninjau hanya tampil pada kasus yang perlu revisi, dan hanya untuk admin atau Kontributor
  * yang membuat kasusnya: server menjawab 403 untuk yang lain, dan setiap 403 memindahkan pengguna
  * ke /forbidden. Ini hanya menentukan tampilan; server tetap yang memutuskan boleh atau tidak.
  */
@@ -41,5 +46,5 @@ export function canSubmitForReview(
   isCreator: boolean,
 ): boolean {
   if (role === null || !SUBMITTABLE_STATUSES.includes(status)) return false;
-  return role === "author" && isCreator;
+  return role === "contributor" && isCreator;
 }

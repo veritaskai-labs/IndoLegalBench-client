@@ -67,8 +67,11 @@ describe("auditActionSentence", () => {
     expect(sentence).toBe("Admin mengganti Reviewer");
   });
 
-  // Positive: one sentence per role.
+  // Positive: one sentence per role. Author and reviewer stay readable because the audit trail
+  // keeps the role the actor had at that time, and entries from before the PBI-24 migration say so.
   it.each([
+    ["contributor", "case.submitted", "Kontributor mengajukan kasus untuk review"],
+    ["contributor", "review.verdict_submitted", "Kontributor mengirim penilaian"],
     ["author", "case.submitted", "Author mengajukan kasus untuk review"],
     ["reviewer", "review.verdict_submitted", "Reviewer mengirim penilaian"],
     ["admin", "user.deactivated", "Admin menonaktifkan pengguna"],

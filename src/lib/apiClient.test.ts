@@ -87,6 +87,39 @@ describe("apiFetch", () => {
   });
 });
 
+describe("apiFetch affected_count", () => {
+  // PBI-24 AC8: the server tells how many cases wait, and the dialog must show that number.
+  it("keeps affected_count from a 409 body on the error", async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse(409, { code: "CONFIRMATION_REQUIRED", message: "konfirmasi", affected_count: 3 }),
+    );
+
+    const error = await apiFetch("/admin/users/u1").catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).affectedCount).toBe(3);
+  });
+
+  it("leaves affectedCount null when the body has none", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(409, { code: "CONFIRMATION_REQUIRED" }));
+
+    const error = await apiFetch("/admin/users/u1").catch((err: unknown) => err);
+
+    expect((error as ApiError).affectedCount).toBeNull();
+  });
+
+  // Edge: the schema says at least 1, so anything else is not a count worth showing.
+  it.each([0, -2, 1.5, "3", null])("ignores %j as an affected count", async (value) => {
+    fetchMock.mockResolvedValue(
+      fakeResponse(409, { code: "CONFIRMATION_REQUIRED", affected_count: value }),
+    );
+
+    const error = await apiFetch("/admin/users/u1").catch((err: unknown) => err);
+
+    expect((error as ApiError).affectedCount).toBeNull();
+  });
+});
+
 describe("onForbidden", () => {
   it("notifies the listener on 403 and still throws", async () => {
     const listener = vi.fn();
@@ -121,6 +154,19 @@ describe("onForbidden", () => {
     fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
 
     await apiFetch("/admin/users").catch(() => undefined);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("does not notify when Developer AI opens a test case (SCRUM-184)", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "TEST_CASE_HIDDEN" }));
+
+    await expect(apiFetch("/cases/c1")).rejects.toMatchObject({
+      status: 403,
+      code: "TEST_CASE_HIDDEN",
+    });
 
     expect(listener).not.toHaveBeenCalled();
   });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Role } from "@/types";
+import { ROLE_OPTIONS } from "@/lib/members/roleOptions";
 import type { UserCreateRequest } from "@/types/user-management";
 import { ApiError } from "@/lib/apiClient";
 import { adminErrorMessage } from "./errorMessage";
@@ -110,10 +111,9 @@ export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalPr
               required
             >
               <option value="" disabled>Pilih peran</option>
-              <option value="admin">Admin</option>
-              <option value="author">Author</option>
-              <option value="reviewer">Reviewer</option>
-              <option value="viewer">Viewer</option>
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
 

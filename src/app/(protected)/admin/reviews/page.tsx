@@ -118,7 +118,7 @@ function InReviewPanel({
     return (
       <EmptyState
         title="Tidak ada kasus yang sedang direview"
-        description="Kasus akan muncul di sini setelah Author mengajukannya untuk review."
+        description="Kasus akan muncul di sini setelah Kontributor mengajukannya untuk review."
       />
     );
   }

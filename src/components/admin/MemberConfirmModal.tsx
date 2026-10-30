@@ -10,6 +10,8 @@ export interface MemberConfirmModalProps {
   onClose: () => void;
   /** Menerima anggota yang sedang dikonfirmasi, jadi pemanggil tidak perlu cek null. */
   onConfirm: (user: User) => Promise<void>;
+  /** false bila pemanggil sendiri yang menutup dialog setelah konfirmasi. Bawaannya true. */
+  closeAfterConfirm?: boolean;
 }
 
 interface MemberConfirmCopy {
@@ -29,6 +31,7 @@ export function MemberConfirmModal({
   isOpen,
   onClose,
   onConfirm,
+  closeAfterConfirm = true,
   title,
   questionBefore,
   questionAfter,
@@ -47,7 +50,7 @@ export function MemberConfirmModal({
       setIsProcessing(true);
       setErrorMessage(null);
       await onConfirm(user);
-      onClose();
+      if (closeAfterConfirm) onClose();
     } catch (err: unknown) {
       setErrorMessage(adminErrorMessage(err, failureMessage));
     } finally {

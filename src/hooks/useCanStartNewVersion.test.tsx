@@ -29,7 +29,7 @@ describe("useCanStartNewVersion", () => {
     listMock.mockResolvedValue(wroteVersionOne("u1"));
 
     // Act
-    const { result } = renderCanStart(me("author"), "approved");
+    const { result } = renderCanStart(me("contributor"), "approved");
 
     // Assert
     expect(result.current).toBe(false);
@@ -52,7 +52,7 @@ describe("useCanStartNewVersion", () => {
     listMock.mockResolvedValue(wroteVersionOne("u2"));
 
     // Act
-    const { result } = renderCanStart(me("author"), "approved");
+    const { result } = renderCanStart(me("contributor"), "approved");
 
     // Assert
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
@@ -65,7 +65,7 @@ describe("useCanStartNewVersion", () => {
     listMock.mockRejectedValue(new ApiError(500, "INTERNAL"));
 
     // Act
-    const { result } = renderCanStart(me("author"), "approved");
+    const { result } = renderCanStart(me("contributor"), "approved");
 
     // Assert
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
@@ -73,7 +73,7 @@ describe("useCanStartNewVersion", () => {
     expect(result.current).toBe(false);
   });
 
-  it.each(["reviewer", "viewer"] as const)("does not ask for the history for the %s", (role) => {
+  it.each(["viewer"] as const)("does not ask for the history for the %s", (role) => {
     // Arrange / Act
     const { result } = renderCanStart(me(role), "approved");
 
@@ -87,7 +87,7 @@ describe("useCanStartNewVersion", () => {
     "does not ask for the history of a case with status %s",
     (status) => {
       // Arrange / Act
-      const { result } = renderCanStart(me("author"), status);
+      const { result } = renderCanStart(me("contributor"), status);
 
       // Assert
       expect(result.current).toBe(false);

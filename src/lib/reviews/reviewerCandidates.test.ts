@@ -12,7 +12,7 @@ function user(overrides: Partial<User> = {}): User {
     id: "u1",
     name: "Roben",
     email: "roben@example.com",
-    role: "reviewer",
+    role: "contributor",
     is_active: true,
     ...overrides,
   };
@@ -51,11 +51,25 @@ function row(overrides: Partial<ReassignmentRow> = {}): ReassignmentRow {
 
 describe("reviewerCandidates", () => {
   // Positif
-  it("keeps the active reviewers", () => {
+  it("keeps the active contributors", () => {
     const pool = [
       user({ id: "u9", name: "Aileen" }),
-      user({ id: "u5", name: "Esi", role: "author" }),
+      user({ id: "u5", name: "Esi", role: "viewer" }),
       user({ id: "u7", name: "Rafa", is_active: false }),
+    ];
+
+    expect(reviewerCandidates(pool, row(), null)).toEqual([
+      { id: "u9", name: "Aileen" },
+    ]);
+  });
+
+  // Negatif: D10, only the contributor reviews. Admin monitors and never reviews.
+  it("drops the admin and the other roles that do not review", () => {
+    const pool = [
+      user({ id: "u1", name: "Roben", role: "admin" }),
+      user({ id: "u2", name: "Esi", role: "viewer" }),
+      user({ id: "u3", name: "Rafa", role: "developer_ai" }),
+      user({ id: "u9", name: "Aileen" }),
     ];
 
     expect(reviewerCandidates(pool, row(), null)).toEqual([
@@ -108,7 +122,7 @@ describe("reviewerCandidates", () => {
     expect(reviewerCandidates([], row(), null)).toEqual([]);
   });
     // Negatif
-  it("drops the case author even when they are a reviewer", () => {
+  it("drops the case author even when they are an active contributor", () => {
     const pool = [
       user({ id: "u5", name: "Esi" }),
       user({ id: "u9", name: "Aileen" }),
@@ -133,9 +147,9 @@ describe("candidatesExcept", () => {
   // AC7 dari tab "Dalam review": yang terpakai datang sebagai daftar id, bukan baris antrean.
   it("drops the taken reviewers and the author", () => {
     const users = [
-      { id: "u1", name: "Roben", email: "r@x.test", role: "reviewer", is_active: true },
-      { id: "u5", name: "Esi", email: "e@x.test", role: "reviewer", is_active: true },
-      { id: "u9", name: "Aileen", email: "a@x.test", role: "reviewer", is_active: true },
+      { id: "u1", name: "Roben", email: "r@x.test", role: "contributor", is_active: true },
+      { id: "u5", name: "Esi", email: "e@x.test", role: "contributor", is_active: true },
+      { id: "u9", name: "Aileen", email: "a@x.test", role: "contributor", is_active: true },
     ] as User[];
 
     const options = candidatesExcept(users, ["u1"], "u5");

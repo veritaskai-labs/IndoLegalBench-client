@@ -11,7 +11,7 @@ import { useAsyncResource } from "./useAsyncResource";
 const historyMessage = (error: unknown) => mapVersionError(error, "history");
 
 /**
- * Apakah tombol "Ajukan review" boleh tampil. Hanya author pada kasus yang masih bisa diajukan
+ * Apakah tombol "Ajukan review" boleh tampil. Hanya Kontributor pada kasus yang masih bisa diajukan
  * yang perlu riwayat untuk tahu apakah dia pembuatnya; peran lain diputuskan tanpa permintaan.
  * Selama riwayat dimuat atau gagal dimuat tombol disembunyikan, dan server tetap yang memutuskan.
  */
@@ -22,7 +22,7 @@ export function useCanSubmitForReview(
 ): boolean {
   const userId = user?.id ?? "";
   const submittable = status === "draft" || status === "needs_revision";
-  const needsCreatorCheck = user?.role === "author" && submittable;
+  const needsCreatorCheck = user?.role === "contributor" && submittable;
 
   const creator = useAsyncResource(
     `${caseId}|${userId}|submit|${needsCreatorCheck}`,

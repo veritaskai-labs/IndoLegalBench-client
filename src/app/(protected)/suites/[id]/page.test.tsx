@@ -264,7 +264,7 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
 
   // SCRUM-181: snapshots are made automatically when an execution runs, so the suite page
   // no longer offers them by hand.
-  it.each(["admin", "author", "viewer"] as const)(
+  it.each(["admin", "contributor", "viewer"] as const)(
     "does not offer the %s a button to create a snapshot",
     async (role) => {
       // Arrange
@@ -305,5 +305,72 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     // Assert
     expect(await screen.findByText("Belum ada kasus di suite ini")).toBeInTheDocument();
     expect(screen.queryAllByText(/snapshot/i)).toHaveLength(0);
+  });
+});
+
+describe("SuiteDetailPage untuk Developer AI (SCRUM-184)", () => {
+  const devCase = { ...mockCases[0], status: "approved" as const };
+  const maskedCase: casesApi.CaseSummary = {
+    ...mockCases[1],
+    case_code: "TERSEMBUNYI",
+    title: "Kasus test disembunyikan",
+    masked: true,
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    session.role = "developer_ai";
+    vi.mocked(apiFetch).mockResolvedValue(activeSuite);
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue([devCase, maskedCase]);
+  });
+
+  it("membuka kasus dev di halaman baca, bukan editor", async () => {
+    await renderPage();
+
+    const table = await screen.findByRole("table");
+    const link = await within(table).findByRole("link", { name: "PHK-001" });
+    const readPath = "/cases/9c1b3f94-91eb-4c8d-8a07-887e5b2e9871";
+    expect(link).toHaveAttribute("href", readPath);
+
+    fireEvent.click(within(table).getByText("Kompensasi PHK efisiensi perusahaan"));
+    expect(pushMock).toHaveBeenCalledWith(readPath);
+  });
+
+  it("menampilkan kasus test tersamar tanpa tautan dan tanpa kelengkapan", async () => {
+    await renderPage();
+
+    const table = await screen.findByRole("table");
+    expect(await within(table).findByText("TERSEMBUNYI")).toBeInTheDocument();
+    expect(within(table).queryByRole("link", { name: "TERSEMBUNYI" })).not.toBeInTheDocument();
+    expect(within(table).queryByText("100%")).not.toBeInTheDocument();
+
+    fireEvent.click(within(table).getByText("Kasus test disembunyikan"));
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("menyembunyikan Tulis Kasus dan filter status", async () => {
+    await renderPage();
+    await screen.findByText("PHK-001");
+
+    // Suite aktif tetap berlabel Aktif walau Developer AI tidak bisa menulis kasus.
+    expect(screen.getByText("Aktif")).toBeInTheDocument();
+    expect(screen.queryByText("Suite diarsipkan, kasus baru tidak bisa ditulis.")).not.toBeInTheDocument();
+
+    expect(screen.queryByRole("button", { name: "Tulis Kasus" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Filter status kasus" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Tag:")).toBeInTheDocument();
+  });
+
+  it("tidak menawarkan menulis kasus saat suite kosong", async () => {
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue([]);
+
+    await renderPage();
+
+    expect(
+      await screen.findByText("Belum ada kasus yang disetujui di suite ini."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Tulis Kasus Sekarang" }),
+    ).not.toBeInTheDocument();
   });
 });

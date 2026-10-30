@@ -44,7 +44,7 @@ const apiFetchMock = vi.mocked(apiFetch);
 
 beforeEach(() => {
   useAuthMock.mockReset();
-  signedInAs("author");
+  signedInAs("contributor");
   useSuitesMock.mockReset();
   useSuitesMock.mockReturnValue({
     status: "ready",
@@ -329,7 +329,7 @@ describe("SuitesPage", () => {
       });
     }
 
-    it.each(["author", "admin"] as const)("shows the link to %s", (role) => {
+    it.each(["contributor", "admin"] as const)("shows the link to %s", (role) => {
       signedInAs(role);
       showOneSuite();
 
@@ -340,7 +340,7 @@ describe("SuitesPage", () => {
       ).toBeInTheDocument();
     });
 
-    it.each(["reviewer", "viewer"] as const)("hides the link from %s", (role) => {
+    it.each(["viewer", "developer_ai"] as const)("hides the link from %s", (role) => {
       signedInAs(role);
       showOneSuite();
 
@@ -349,6 +349,21 @@ describe("SuitesPage", () => {
       expect(
         screen.queryByRole("link", { name: "Buat kasus di Perburuhan" }),
       ).not.toBeInTheDocument();
+    });
+
+    // SCRUM-184: Developer AI only reads suites.
+    it("shows developer AI the suites without any create, edit, archive or delete action", () => {
+      signedInAs("developer_ai");
+      showOneSuite();
+
+      render(<SuitesPage />);
+
+      expect(screen.getByRole("link", { name: "Perburuhan" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Buat Suite" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("columnheader", { name: "Aksi" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Ubah Perburuhan" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Arsipkan Perburuhan" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Hapus Perburuhan" })).not.toBeInTheDocument();
     });
 
     it("hides the link while the session is still loading", () => {

@@ -12,7 +12,7 @@ const ACTIVE: User = {
   id: "22222222-2222-2222-2222-222222222222",
   name: "Budi Author",
   email: "budi@veritask.ai",
-  role: "author",
+  role: "contributor",
   is_active: true,
 };
 const INACTIVE: User = { ...ACTIVE, id: "33333333-3333-3333-3333-333333333333", is_active: false };
