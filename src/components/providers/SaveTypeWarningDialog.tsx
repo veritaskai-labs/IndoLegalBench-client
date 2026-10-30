@@ -41,7 +41,7 @@ export function SaveTypeWarningDialog({
         Simpan sebagai produk {TYPE_LABEL[measurementType]}?
       </h2>
       <p className="mt-2 max-w-sm text-sm text-slate-600">
-        Jenis pengukuran tidak bisa diubah setelah produk tersimpan.
+        Jenis pengukuran tidak bisa diubah lagi setelah produk punya riwayat pengukuran. Uji koneksi tidak dihitung.
       </p>
       <div className="mt-5 flex justify-end gap-2">
         <button
