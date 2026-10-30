@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { ProductOptionsApi } from "@/hooks/useProductOptions";
 import type { Role } from "@/types";
 import type { AiProductOption, ProductPurpose } from "@/types/provider";
@@ -19,7 +19,7 @@ const LEGALHERO: AiProductOption = { id: "m2", name: "LegalHero", measurement_ty
 const DEEPSEEK: AiProductOption = { id: "a1", name: "DeepSeek", measurement_type: "automatic" };
 
 let api: { listProductOptions: ReturnType<typeof vi.fn> };
-let onChange: ReturnType<typeof vi.fn>;
+let onChange: Mock<(productId: string) => void>;
 
 function signIn(role: Role) {
   useAuthMock.mockReturnValue({
