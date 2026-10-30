@@ -39,6 +39,15 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
 
     expect(screen.getByText(/jangan isi kata sandi/i)).toBeInTheDocument();
   });
+  it("says that each package is a separate product when the product is manual", async () => {
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+
+    expect(
+      screen.getByText('"HO Pro" dan "HO Premium" adalah produk terpisah.'),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("ProviderFormDialog save warning (AC2, AC3)", () => {
