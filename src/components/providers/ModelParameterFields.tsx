@@ -82,8 +82,11 @@ export function ModelParameterFields({
       <legend className="px-1 text-sm font-medium text-slate-900">
         Parameter model
       </legend>
-      <p className="mb-3 text-xs text-slate-600">
+      <p className="mb-1 text-xs text-slate-600">
         Semua parameter opsional. Yang dibiarkan kosong memakai bawaan model.
+      </p>
+      <p className="mb-3 text-xs text-slate-600">
+        Variasi parameter didaftarkan sebagai produk terpisah, misalnya deepseek1 dan deepseek2.
       </p>
       <div className="space-y-3">
         {MODEL_PARAMETER_FIELDS.map((field) => (
