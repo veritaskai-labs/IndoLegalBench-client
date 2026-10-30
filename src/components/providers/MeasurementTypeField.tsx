@@ -1,5 +1,7 @@
-/** Jenis pengukuran produk AI (AC1). Nilainya ikut enum server: automatic | manual. */
-export type MeasurementType = "automatic" | "manual";
+import type { MeasurementType } from "@/types/provider";
+
+/** Jenis pengukuran produk AI (AC1). Tipenya dari kontrak, bukan ditulis tangan. */
+export type { MeasurementType };
 
 const OPTIONS: ReadonlyArray<{
   value: MeasurementType;

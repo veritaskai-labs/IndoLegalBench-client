@@ -1,3 +1,12 @@
+
+import type { ModelParams } from "@/types/provider";
+
+const EFFORT_VALUES = ["low", "medium", "high"] as const;
+type Effort = (typeof EFFORT_VALUES)[number];
+
+function isEffort(value: unknown): value is Effort {
+  return typeof value === "string" && EFFORT_VALUES.includes(value as Effort);
+}
 /**
  * Parameter model untuk produk Otomatis (AC2).
  * Semuanya dikirim sebagai satu objek ke kolom `model_params` (JSONB) di server;
@@ -17,8 +26,6 @@ export type ModelParameterField = Readonly<{
 export type ModelParameterValues = Readonly<
   Record<string, string | boolean | undefined>
 >;
-
-export type ModelParams = Record<string, string | number | boolean>;
 
 export const TEMPERATURE_ERROR = "Temperature harus angka antara 0 dan 2.";
 
@@ -71,15 +78,13 @@ export function modelParamsError(values: ModelParameterValues): string | null {
 export function toModelParams(values: ModelParameterValues): ModelParams | null {
   const params: ModelParams = {};
 
-  for (const field of MODEL_PARAMETER_FIELDS) {
-    const value = values[field.key];
-
-    if (field.kind === "toggle") {
-      if (value === true) params[field.key] = true;
-    } else if (typeof value === "string" && value.trim() !== "") {
-      params[field.key] = field.kind === "number" ? Number(value) : value;
-    }
+  const temperature = values.temperature;
+  if (typeof temperature === "string" && temperature.trim() !== "") {
+    params.temperature = Number(temperature);
   }
+  if (isEffort(values.effort)) params.effort = values.effort;
+  if (values.thinking === true) params.thinking = true;
+  if (values.web_search === true) params.web_search = true;
 
   return Object.keys(params).length > 0 ? params : null;
 }
