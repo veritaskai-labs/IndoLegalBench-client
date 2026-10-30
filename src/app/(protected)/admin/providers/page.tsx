@@ -313,6 +313,8 @@ function ProductRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  // Produk manual tidak punya API: kolomnya tidak berlaku, tanpa uji koneksi.
+  const manual = product.measurement_type === "manual";
   return (
     <tr className="align-top">
       <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
@@ -324,12 +326,14 @@ function ProductRow({
       <td className="px-4 py-3 text-slate-600">
         {product.vendor_label ?? (product.provider_type && PROVIDER_TYPE_LABEL[product.provider_type])}
       </td>
-      <td className="px-4 py-3 font-mono text-xs text-slate-600">{product.model_name}</td>
+      <td className="px-4 py-3 font-mono text-xs text-slate-600">{manual ? <NotApplicable /> : product.model_name}</td>
       <td className="px-4 py-3">
-        {product.credential_hint != null && <CredentialHint hint={product.credential_hint} />}
+        {manual ? <NotApplicable /> : product.credential_hint != null && <CredentialHint hint={product.credential_hint} />}
       </td>
-      <td className="px-4 py-3 text-slate-600">{product.rate_limit_per_minute}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{product.monthly_budget_idr != null && formatRupiah(product.monthly_budget_idr)}</td>
+      <td className="px-4 py-3 text-slate-600">{manual ? <NotApplicable /> : product.rate_limit_per_minute}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+        {manual ? <NotApplicable /> : product.monthly_budget_idr != null && formatRupiah(product.monthly_budget_idr)}
+      </td>
       <td className="px-4 py-3">
         <span
           className={`rounded px-2 py-0.5 text-xs font-medium ${
@@ -340,20 +344,22 @@ function ProductRow({
         </span>
       </td>
       <td className="max-w-xs px-4 py-3 text-xs" aria-live="polite">
-        <LastTest product={product} testing={testing} live={live} />
+        {manual ? <NotApplicable /> : <LastTest product={product} testing={testing} live={live} />}
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatDate(product.created_at)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-1.5 text-xs font-medium">
-          <button
-            type="button"
-            onClick={onTest}
-            disabled={testing}
-            aria-label={`Uji koneksi ${product.name}`}
-            className="text-slate-900 hover:underline disabled:opacity-50"
-          >
-            {testing ? "Menguji…" : "Uji koneksi"}
-          </button>
+          {!manual && (
+            <button
+              type="button"
+              onClick={onTest}
+              disabled={testing}
+              aria-label={`Uji koneksi ${product.name}`}
+              className="text-slate-900 hover:underline disabled:opacity-50"
+            >
+              {testing ? "Menguji…" : "Uji koneksi"}
+            </button>
+          )}
           <button type="button" onClick={onEdit} aria-label={`Ubah ${product.name}`} className="text-slate-900 hover:underline">
             Ubah
           </button>
@@ -371,6 +377,15 @@ function ProductRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+function NotApplicable() {
+  return (
+    <span className="text-slate-400">
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">Tidak berlaku</span>
+    </span>
   );
 }
 
