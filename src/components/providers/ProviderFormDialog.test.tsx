@@ -148,6 +148,7 @@ describe("ProviderFormDialog editing (AC4)", () => {
     site_url: "https://hukumonline.com",
     access_note: "Login lewat akun tim legal",
     manual_params: "mode pro",
+    has_credential: false,
     is_active: true,
     created_by: "22222222-2222-2222-2222-222222222222",
     created_at: "2026-10-01T00:00:00Z",
