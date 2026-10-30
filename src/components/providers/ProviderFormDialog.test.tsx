@@ -106,4 +106,26 @@ describe("ProviderFormDialog save warning (AC2, AC3)", () => {
       screen.queryByRole("heading", { name: /^Simpan sebagai produk/ }),
     ).not.toBeInTheDocument();
   });
+    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+    await userEvent.type(
+      screen.getByLabelText("Alamat situs"),
+      "https://hukumonline.com",
+    );
+});
+
+describe("ProviderFormDialog manual validation (AC3)", () => {
+  it("asks for the vendor name and the site before the warning appears", async () => {
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(screen.getByText("Nama penyedia wajib diisi.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Isi URL lengkap yang diawali http:// atau https://."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /^Simpan sebagai produk/ }),
+    ).not.toBeInTheDocument();
+  });
 });
