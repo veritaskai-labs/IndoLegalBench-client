@@ -29,7 +29,7 @@ export function ProductSelect({
   required = false,
   disabled = false,
   api,
-}: Props) {
+}: Readonly<Props>) {
   const id = useId();
   const router = useRouter();
   const auth = useAuth();
@@ -44,37 +44,46 @@ export function ProductSelect({
 
   if (forbidden) return null;
 
+  function control() {
+    if (options.status === "error") {
+      return <ErrorState message="Gagal memuat." onRetry={options.reload} className="mt-1" />;
+    }
+    if (options.status !== "ready") {
+      return (
+        <output className={`${BOX} flex items-center gap-2 text-slate-500`}>
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
+          <span>Memuat produk…</span>
+        </output>
+      );
+    }
+    if (options.options.length === 0) {
+      return <p className="mt-1 text-sm text-slate-500">Belum ada produk yang aktif.</p>;
+    }
+    return (
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+        disabled={disabled}
+        className={BOX}
+      >
+        <option value="">Pilih produk</option>
+        {options.options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   return (
     <div>
       <label htmlFor={id} className="text-sm font-medium text-slate-700">
         {label}
       </label>
-      {options.status === "error" ? (
-        <ErrorState message="Gagal memuat." onRetry={options.reload} className="mt-1" />
-      ) : options.status === "ready" && options.options.length === 0 ? (
-        <p className="mt-1 text-sm text-slate-500">Belum ada produk yang aktif.</p>
-      ) : options.status === "ready" ? (
-        <select
-          id={id}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          required={required}
-          disabled={disabled}
-          className={BOX}
-        >
-          <option value="">Pilih produk</option>
-          {options.options.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <div role="status" className={`${BOX} flex items-center gap-2 text-slate-500`}>
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
-          Memuat produk…
-        </div>
-      )}
+      {control()}
     </div>
   );
 }

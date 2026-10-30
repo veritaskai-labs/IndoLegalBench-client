@@ -187,7 +187,7 @@ export default function ProvidersPage() {
         </div>
         <div className="mb-2 flex items-center gap-2 text-sm text-slate-600">
           <span aria-hidden="true">Jenis:</span>
-          <div role="group" aria-label="Jenis pengukuran" className="inline-flex rounded-md border border-slate-300 p-0.5">
+          <fieldset aria-label="Jenis pengukuran" className="m-0 inline-flex min-w-0 rounded-md border border-slate-300 p-0.5">
             {TYPE_FILTERS.map((filter) => (
               <button
                 key={filter.value}
@@ -201,7 +201,7 @@ export default function ProvidersPage() {
                 {filter.label}
               </button>
             ))}
-          </div>
+          </fieldset>
         </div>
       </div>
 
