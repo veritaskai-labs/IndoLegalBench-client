@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fromModelParams,
   MODEL_PARAMETER_FIELDS,
   modelParamsError,
   toModelParams,

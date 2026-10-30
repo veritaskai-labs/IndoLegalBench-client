@@ -88,3 +88,20 @@ export function toModelParams(values: ModelParameterValues): ModelParams | null 
 
   return Object.keys(params).length > 0 ? params : null;
 }
+
+/** Nilai tersimpan dari server jadi isian formulir, kebalikan dari toModelParams. */
+export function fromModelParams(
+  params: ModelParams | null | undefined,
+): Record<string, string | boolean> {
+  const values: Record<string, string | boolean> = {};
+  if (!params) return values;
+
+  if (typeof params.temperature === "number") {
+    values.temperature = String(params.temperature);
+  }
+  if (isEffort(params.effort)) values.effort = params.effort;
+  if (params.thinking === true) values.thinking = true;
+  if (params.web_search === true) values.web_search = true;
+
+  return values;
+}
