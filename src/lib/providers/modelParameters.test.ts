@@ -82,3 +82,23 @@ describe("toModelParams", () => {
     expect(toModelParams({ temperature: "   ", effort: "" })).toBeNull();
   });
 });
+
+describe("fromModelParams", () => {
+  it("returns no values when the product has none", () => {
+    expect(fromModelParams(null)).toEqual({});
+  });
+
+  it("reads the temperature back as text for the input", () => {
+    expect(fromModelParams({ temperature: 0.3 })).toEqual({ temperature: "0.3" });
+  });
+
+  it("keeps the effort and the toggles that are on", () => {
+    expect(
+      fromModelParams({ effort: "high", thinking: true, web_search: false }),
+    ).toEqual({ effort: "high", thinking: true });
+  });
+
+  it("ignores a parameter the server left null", () => {
+    expect(fromModelParams({ temperature: null, effort: null })).toEqual({});
+  });
+});
