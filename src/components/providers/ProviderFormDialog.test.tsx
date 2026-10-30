@@ -8,6 +8,17 @@ function renderDialog() {
   render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
 }
 
+/** Isian minimum produk manual supaya lolos validasi AC3. */
+async function fillManual() {
+  await userEvent.type(screen.getByLabelText("Nama"), "Hukumonline Pro");
+  await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+  await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+  await userEvent.type(
+    screen.getByLabelText("Alamat situs"),
+    "https://hukumonline.com",
+  );
+}
+
 describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
   // AC1, AC2: produk otomatis tetap meminta kredensial dan batas pemakaian.
   it("asks for the credential and the limits of an automatic product", () => {
@@ -39,8 +50,10 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
 
     expect(screen.getByText(/jangan isi kata sandi/i)).toBeInTheDocument();
   });
+
+  // AC3: paket berbeda didaftarkan sebagai produk terpisah.
   it("says that each package is a separate product when the product is manual", async () => {
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderDialog();
 
     await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
 
@@ -50,11 +63,11 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
   });
 });
 
-describe("ProviderFormDialog save warning (AC2, AC3)", () => {
+describe("ProviderFormDialog save warning (AC2, AC4)", () => {
   it("asks for confirmation before a new product is saved", async () => {
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderDialog();
 
-    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await fillManual();
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
 
     expect(
@@ -63,9 +76,9 @@ describe("ProviderFormDialog save warning (AC2, AC3)", () => {
   });
 
   it("goes back to the form when the admin cancels the warning", async () => {
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderDialog();
 
-    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await fillManual();
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
 
     const warning = screen
@@ -82,9 +95,9 @@ describe("ProviderFormDialog save warning (AC2, AC3)", () => {
   });
 
   it("says a manual product still waits for the server once the admin confirms", async () => {
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderDialog();
 
-    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await fillManual();
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
     await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
@@ -94,7 +107,7 @@ describe("ProviderFormDialog save warning (AC2, AC3)", () => {
   });
 
   it("refuses a temperature outside the range before asking for confirmation", async () => {
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderDialog();
 
     await userEvent.type(screen.getByLabelText("Temperature"), "2.5");
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
@@ -106,16 +119,11 @@ describe("ProviderFormDialog save warning (AC2, AC3)", () => {
       screen.queryByRole("heading", { name: /^Simpan sebagai produk/ }),
     ).not.toBeInTheDocument();
   });
-    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
-    await userEvent.type(
-      screen.getByLabelText("Alamat situs"),
-      "https://hukumonline.com",
-    );
 });
 
 describe("ProviderFormDialog manual validation (AC3)", () => {
   it("asks for the vendor name and the site before the warning appears", async () => {
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+    renderDialog();
 
     await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));

@@ -26,11 +26,21 @@ type Props = {
   onSaved: (saved: AiProduct) => void;
 };
 
-type Field = "name" | "provider_type" | "base_url" | "model_name" | "credential" | "rate_limit" | "budget";
+type Field =
+  | "name"
+  | "provider_type"
+  | "base_url"
+  | "model_name"
+  | "credential"
+  | "rate_limit"
+  | "budget"
+  | "vendor_name"
+  | "site_url";
 type Errors = Partial<Record<Field, string>>;
 
 const MIN_CREDENTIAL = 4;
 const PROVIDER_TYPES = Object.keys(PROVIDER_TYPE_LABEL) as ProviderType[];
+const URL_ERROR = "Isi URL lengkap yang diawali http:// atau https://.";
 
 function isHttpUrl(text: string): boolean {
   try {
@@ -85,11 +95,10 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function validate(): Errors {
+  function automaticErrors(): Errors {
     const found: Errors = {};
-    if (name.trim() === "") found.name = "Nama wajib diisi.";
     if (providerType === "") found.provider_type = "Pilih jenis API.";
-    if (!isHttpUrl(baseUrl.trim())) found.base_url = "Isi URL lengkap yang diawali http:// atau https://.";
+    if (!isHttpUrl(baseUrl.trim())) found.base_url = URL_ERROR;
     if (modelName.trim() === "") found.model_name = "Nama model wajib diisi.";
     if (!editing && credential === "") found.credential = "Kredensial wajib diisi.";
     else if (credential !== "" && credential.length < MIN_CREDENTIAL) {
@@ -104,16 +113,31 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     return found;
   }
 
-  /** AC3: produk baru dikonfirmasi dulu, karena jenis pengukurannya tidak bisa diubah lagi. */
+  /** AC3: produk manual wajib punya penyedia dan alamat situs yang bisa dibuka. */
+  function manualErrors(): Errors {
+    const found: Errors = {};
+    if (vendorName.trim() === "") found.vendor_name = "Nama penyedia wajib diisi.";
+    if (!isHttpUrl(siteUrl.trim())) found.site_url = URL_ERROR;
+    return found;
+  }
+
+  function validate(): Errors {
+    const found: Errors = name.trim() === "" ? { name: "Nama wajib diisi." } : {};
+    return {
+      ...found,
+      ...(measurementType === "manual" ? manualErrors() : automaticErrors()),
+    };
+  }
+
+  /** AC4: produk baru dikonfirmasi dulu, karena jenis pengukurannya tidak bisa diubah lagi. */
   function requestSave() {
     setFormError(null);
-    if (measurementType === "automatic") {
-      const found = validate();
-      const paramsError = modelParamsError(modelParams);
-      setErrors(found);
-      if (paramsError !== null) setFormError(paramsError);
-      if (paramsError !== null || Object.keys(found).length > 0) return;
-    }
+    const found = validate();
+    setErrors(found);
+    const paramsError =
+      measurementType === "automatic" ? modelParamsError(modelParams) : null;
+    if (paramsError !== null) setFormError(paramsError);
+    if (paramsError !== null || Object.keys(found).length > 0) return;
     if (!editing) {
       setConfirming(true);
       return;
@@ -255,12 +279,12 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
             </>
           ) : (
             <>
-              <Labeled id={ids.vendorName} label="Nama penyedia" required>
-                <input id={ids.vendorName} value={vendorName} onChange={(e) => setVendorName(e.target.value)} className={INPUT} />
+              <Labeled id={ids.vendorName} label="Nama penyedia" required error={errors.vendor_name}>
+                <input id={ids.vendorName} value={vendorName} onChange={(e) => setVendorName(e.target.value)} {...invalid(ids.vendorName, errors.vendor_name)} className={INPUT} />
               </Labeled>
 
-              <Labeled id={ids.site} label="Alamat situs" required>
-                <input id={ids.site} type="url" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} placeholder="https://contoh.ai" className={INPUT} />
+              <Labeled id={ids.site} label="Alamat situs" required error={errors.site_url}>
+                <input id={ids.site} type="url" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} {...invalid(ids.site, errors.site_url)} placeholder="https://contoh.ai" className={INPUT} />
               </Labeled>
 
               <Labeled id={ids.note} label="Catatan akses">
