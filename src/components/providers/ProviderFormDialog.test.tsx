@@ -342,3 +342,28 @@ describe("ProviderFormDialog editing (AC4)", () => {
     });
   });
 });
+
+describe("ProviderFormDialog switching the measurement type (AC4)", () => {
+  it("clears the automatic fields when the admin switches to manual", async () => {
+    renderDialog();
+
+    await userEvent.type(screen.getByLabelText("Model"), "deepseek-v4-flash");
+    await userEvent.type(screen.getByLabelText("Temperature"), "0.3");
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+
+    expect(screen.getByLabelText("Model")).toHaveValue("");
+    expect(screen.getByLabelText("Temperature")).toHaveValue("");
+  });
+
+  it("clears the manual fields when the admin switches to automatic", async () => {
+    renderDialog();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+
+    expect(screen.getByLabelText("Nama penyedia")).toHaveValue("");
+  });
+});
