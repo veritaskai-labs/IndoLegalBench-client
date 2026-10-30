@@ -1,9 +1,14 @@
-import type { ProviderType } from "@/types/provider";
+import type { MeasurementType, ProviderType } from "@/types/provider";
 
 export const PROVIDER_TYPE_LABEL: Record<ProviderType, string> = {
   openai_compatible: "OpenAI-compatible",
   gemini_interactions: "Gemini Interactions",
   anthropic_messages: "Anthropic Messages",
+};
+
+export const MEASUREMENT_TYPE_LABEL: Record<MeasurementType, string> = {
+  automatic: "Otomatis",
+  manual: "Manual",
 };
 
 const RUPIAH = new Intl.NumberFormat("id-ID", {

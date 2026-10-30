@@ -7,3 +7,4 @@ export type ConnectionTest = components["schemas"]["ConnectionTestRead"];
 export type ConnectionErrorCategory =
   components["schemas"]["ConnectionTestErrorCategory"];
 export type ProviderType = components["schemas"]["ProviderType"];
+export type MeasurementType = components["schemas"]["MeasurementType"];
