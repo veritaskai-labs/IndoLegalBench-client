@@ -42,4 +42,13 @@ describe("MeasurementTypeField", () => {
     expect(screen.getByRole("radio", { name: /Otomatis/ })).toBeDisabled();
     expect(screen.getByRole("radio", { name: /Manual/ })).toBeDisabled();
   });
+  it("says why the type is locked while editing (AC4)", () => {
+    render(<MeasurementTypeField value="automatic" onChange={vi.fn()} readOnly />);
+
+    expect(
+      screen.getByText(
+        "Jenis terkunci karena produk sudah punya riwayat pengukuran. Untuk produk yang salah jenis, nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.",
+      ),
+    ).toBeInTheDocument();
+  });
 });
