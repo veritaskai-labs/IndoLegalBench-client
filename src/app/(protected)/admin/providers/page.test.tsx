@@ -258,6 +258,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     const dialog = await fillCreate(user);
     expect(dialog.getByLabelText("Budget per bulan (Rp)")).toHaveValue("2.500.000");
     await user.click(dialog.getByRole("button", { name: "Simpan" }));
+    await user.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
     expect(create).toHaveBeenCalledWith({
       name: "Claude",
@@ -314,6 +315,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
     const dialog = await fillCreate(user);
     await user.click(dialog.getByRole("button", { name: "Simpan" }));
+    await user.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
     expect(await dialog.findByText("Nama produk sudah dipakai. Pilih nama lain.")).toBeInTheDocument();
   });
