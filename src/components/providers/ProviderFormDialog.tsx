@@ -15,7 +15,7 @@ import {
   toModelParams,
 } from "@/lib/providers/modelParameters";
 
-import type { AiProduct, AiProductUpdate, ProviderType } from "@/types/provider";
+import type { AiProduct, AiProductUpdate, ProviderType, AiProductCreate } from "@/types/provider";
 
 import {
   MeasurementTypeField,
@@ -154,19 +154,32 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     void save();
   }
 
-  function createPayload() {
+  /** AC1: hanya kolom milik jenis yang dipilih yang dikirim. */
+  function createPayload(): AiProductCreate {
+    if (measurementType === "manual") {
+      return {
+        name: name.trim(),
+        measurement_type: "manual",
+        vendor_name: vendorName.trim(),
+        site_url: siteUrl.trim(),
+        access_note: accessNote.trim() === "" ? null : accessNote.trim(),
+        manual_params: manualParams.trim() === "" ? null : manualParams.trim(),
+      };
+    }
     return {
       name: name.trim(),
+      measurement_type: "automatic",
       provider_type: providerType as ProviderType,
       base_url: baseUrl.trim(),
       model_name: modelName.trim(),
+      credential,
       rate_limit_per_minute: Number(rateLimit),
       monthly_budget_idr: String(parseRupiahInput(budget)),
-      credential,
+      model_params: toModelParams(modelParams),
     };
   }
 
-  /** AC2, AC3: hanya kolom milik jenis yang dipakai; sisanya dibiarkan server. */
+  /** AC4: jenis terkunci saat mengedit, jadi tidak ikut dikirim lagi. */
   function updatePayload(): AiProductUpdate {
     if (measurementType === "manual") {
       return {
@@ -191,12 +204,6 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
 
   async function save() {
     setConfirming(false);
-    // Kontrak create belum menerima measurement_type; mengubah produk manual sudah bisa.
-    if (!editing && measurementType === "manual") {
-      setFormError("Mendaftarkan produk manual menunggu dukungan server (SCRUM-201).");
-      return;
-    }
-
     setSaving(true);
     try {
       const saved = editing

@@ -193,18 +193,6 @@ describe("ProviderFormDialog save warning (AC2, AC4)", () => {
     expect(screen.getByLabelText("Nama penyedia")).toBeInTheDocument();
   });
 
-  it("says that registering a manual product still waits for the server", async () => {
-    renderDialog();
-
-    await fillManual();
-    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
-
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Mendaftarkan produk manual menunggu dukungan server (SCRUM-201).",
-    );
-  });
-
   it("refuses a temperature outside the range before asking for confirmation", async () => {
     renderDialog();
 

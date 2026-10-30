@@ -263,12 +263,14 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
 
     expect(create).toHaveBeenCalledWith({
       name: "Claude",
+      measurement_type: "automatic",
       provider_type: "anthropic_messages",
       base_url: "https://api.anthropic.com/v1/messages",
       model_name: "claude-sonnet-5",
       credential: "sk-ant-rahasia-9z9z",
       rate_limit_per_minute: 10,
       monthly_budget_idr: "2500000",
+      model_params: null,
     });
     expect(await screen.findByText("Produk AI terdaftar")).toBeInTheDocument();
     expect(list).toHaveBeenCalledTimes(2);
