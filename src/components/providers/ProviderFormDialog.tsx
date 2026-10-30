@@ -12,8 +12,10 @@ import {
 import {
   fromModelParams,
   modelParamsError,
+  toModelParams,
 } from "@/lib/providers/modelParameters";
-import type { AiProduct, ProviderType } from "@/types/provider";
+
+import type { AiProduct, AiProductUpdate, ProviderType } from "@/types/provider";
 
 import {
   MeasurementTypeField,
@@ -152,28 +154,54 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     void save();
   }
 
-  async function save() {
-    setConfirming(false);
-    if (measurementType === "manual") {
-      setFormError("Menyimpan produk manual menunggu dukungan server (PBI-23-BE-1).");
-      return;
-    }
-
-    const payload = {
+  function createPayload() {
+    return {
       name: name.trim(),
       provider_type: providerType as ProviderType,
       base_url: baseUrl.trim(),
       model_name: modelName.trim(),
       rate_limit_per_minute: Number(rateLimit),
       monthly_budget_idr: String(parseRupiahInput(budget)),
+      credential,
+    };
+  }
+
+  /** AC2, AC3: hanya kolom milik jenis yang dipakai; sisanya dibiarkan server. */
+  function updatePayload(): AiProductUpdate {
+    if (measurementType === "manual") {
+      return {
+        name: name.trim(),
+        vendor_name: vendorName.trim(),
+        site_url: siteUrl.trim(),
+        access_note: accessNote.trim() === "" ? null : accessNote.trim(),
+        manual_params: manualParams.trim() === "" ? null : manualParams.trim(),
+      };
+    }
+    return {
+      name: name.trim(),
+      provider_type: providerType as ProviderType,
+      base_url: baseUrl.trim(),
+      model_name: modelName.trim(),
+      rate_limit_per_minute: Number(rateLimit),
+      monthly_budget_idr: String(parseRupiahInput(budget)),
+      model_params: toModelParams(modelParams),
       ...(credential !== "" && { credential }),
     };
+  }
+
+  async function save() {
+    setConfirming(false);
+    // Kontrak create belum menerima measurement_type; mengubah produk manual sudah bisa.
+    if (!editing && measurementType === "manual") {
+      setFormError("Mendaftarkan produk manual menunggu dukungan server (SCRUM-201).");
+      return;
+    }
 
     setSaving(true);
     try {
       const saved = editing
-        ? await updateProduct(product.id, payload)
-        : await createProduct({ ...payload, credential });
+        ? await updateProduct(product.id, updatePayload())
+        : await createProduct(createPayload());
       onSaved(saved);
     } catch (error) {
       if (error instanceof ApiError && error.code === "AI_PRODUCT_NAME_TAKEN") {
@@ -283,7 +311,13 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                   setModelParams((current) => ({ ...current, [key]: value }))
                 }
               />
-            </>
+              {!editing && (
+                <p className="text-xs text-slate-500">
+                  Parameter model tersimpan setelah produk terdaftar: simpan
+                  dulu, lalu ubah produknya.
+                </p>
+              )}
+             </>
           ) : (
             <>
               <Labeled id={ids.vendorName} label="Nama penyedia" required error={errors.vendor_name}>
