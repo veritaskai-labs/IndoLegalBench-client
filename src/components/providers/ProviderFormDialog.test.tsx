@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { updateProduct } from "@/lib/providers/providerApi";
+import { updateProduct, createProduct } from "@/lib/providers/providerApi";
 import type { AiProduct } from "@/types/provider";
 
 import { ProviderFormDialog } from "./ProviderFormDialog";
@@ -107,15 +107,58 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
     ).toBeInTheDocument();
   });
 
-  // AC2: kontrak create belum menerima parameter, jadi admin diberi tahu.
-  it("says when the model parameters will be stored for a new product", () => {
-    renderDialog();
+  it("registers a manual product with its own fields", async () => {
+    vi.mocked(createProduct).mockResolvedValue(MANUAL_PRODUCT);
+    const onSaved = vi.fn();
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={onSaved} />);
 
-    expect(
-      screen.getByText(
-        "Parameter model tersimpan setelah produk terdaftar: simpan dulu, lalu ubah produknya.",
-      ),
-    ).toBeInTheDocument();
+    await fillManual();
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith({
+      name: "Hukumonline Pro",
+      measurement_type: "manual",
+      vendor_name: "Hukumonline",
+      site_url: "https://hukumonline.com",
+      access_note: null,
+      manual_params: null,
+    });
+    expect(onSaved).toHaveBeenCalledWith(MANUAL_PRODUCT);
+  });
+
+  it("registers an automatic product with its credential and parameters", async () => {
+    vi.mocked(createProduct).mockResolvedValue(AUTOMATIC_PRODUCT);
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText("Nama"), "DeepSeek");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Jenis API"),
+      "openai_compatible",
+    );
+    await userEvent.type(
+      screen.getByLabelText("URL endpoint"),
+      "https://api.deepseek.com/chat/completions",
+    );
+    await userEvent.type(screen.getByLabelText("Model"), "deepseek-v4-flash");
+    await userEvent.type(screen.getByLabelText("Kredensial"), "sk-rahasia-9z9z");
+    await userEvent.type(screen.getByLabelText("Limit panggilan per menit"), "10");
+    await userEvent.type(screen.getByLabelText("Budget per bulan (Rp)"), "1500000");
+    await userEvent.type(screen.getByLabelText("Temperature"), "0.3");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith({
+      name: "DeepSeek",
+      measurement_type: "automatic",
+      provider_type: "openai_compatible",
+      base_url: "https://api.deepseek.com/chat/completions",
+      model_name: "deepseek-v4-flash",
+      credential: "sk-rahasia-9z9z",
+      rate_limit_per_minute: 10,
+      monthly_budget_idr: "1500000",
+      model_params: { temperature: 0.3 },
+    });
   });
 });
 
