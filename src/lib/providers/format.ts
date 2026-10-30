@@ -35,6 +35,11 @@ export function formatRupiahInput(text: string): string {
   return amount === null ? "" : new Intl.NumberFormat("id-ID").format(amount);
 }
 
+export function formatDate(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(date);
+}
+
 export function formatDateTime(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime())

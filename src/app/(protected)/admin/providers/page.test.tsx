@@ -186,8 +186,8 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
         id: "33333333-3333-3333-3333-333333333333",
         name: "Justisio",
         measurement_type: "manual",
-        vendor_name: "Justisio",
-        vendor_label: "Justisio",
+        vendor_name: "PT Justisio Contoh",
+        vendor_label: "PT Justisio Contoh",
         created_at: "2026-10-30T05:00:00Z",
       }),
     ]);
@@ -199,6 +199,7 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
     expect(deepseek.getByText("29 Okt 2026")).toBeInTheDocument();
     const justisio = within(await row("Justisio"));
     expect(justisio.getByText("Manual")).toBeInTheDocument();
+    expect(justisio.getByText("PT Justisio Contoh")).toBeInTheDocument();
     expect(justisio.getByText("30 Okt 2026")).toBeInTheDocument();
     expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(
       expect.arrayContaining(["Jenis", "Penyedia", "Didaftarkan"]),
