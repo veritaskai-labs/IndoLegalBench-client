@@ -2,14 +2,15 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { updateProduct, createProduct } from "@/lib/providers/providerApi";
-import type { AiProduct } from "@/types/provider";
+import { updateProduct, createProduct , testConnection} from "@/lib/providers/providerApi";
+import type { AiProduct, ConnectionTest } from "@/types/provider";
 
 import { ProviderFormDialog } from "./ProviderFormDialog";
 
 vi.mock("@/lib/providers/providerApi", () => ({
   createProduct: vi.fn(),
   updateProduct: vi.fn(),
+  testConnection: vi.fn(),
 }));
 
 const MANUAL_PRODUCT = {
@@ -159,6 +160,31 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
       monthly_budget_idr: "1500000",
       model_params: { temperature: 0.3 },
     });
+  });
+  // AC2: uji koneksi butuh produk yang sudah ada di server.
+  it("offers the connection test only after the product exists", () => {
+    renderDialog();
+
+    expect(screen.getByRole("button", { name: "Uji koneksi" })).toBeDisabled();
+    expect(
+      screen.getByText("Uji koneksi tersedia setelah produk tersimpan."),
+    ).toBeInTheDocument();
+  });
+
+  it("runs the connection test for the product being edited", async () => {
+    vi.mocked(testConnection).mockResolvedValue({ status: "ok" } as ConnectionTest);
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Uji koneksi" }));
+
+    expect(testConnection).toHaveBeenCalledWith(AUTOMATIC_PRODUCT.id);
+    expect(await screen.findByText("Koneksi berhasil.")).toBeInTheDocument();
   });
 });
 
