@@ -176,6 +176,79 @@ describe("ProvidersPage list", () => {
   });
 });
 
+describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
+  const typeFilter = () => within(screen.getByRole("group", { name: "Jenis pengukuran" }));
+
+  it("shows the type badge, provider and registration date of each product", async () => {
+    list.mockResolvedValue([
+      product({ vendor_label: "OpenAI-compatible", created_at: "2026-10-29T05:00:00Z" }),
+      product({
+        id: "33333333-3333-3333-3333-333333333333",
+        name: "Justisio",
+        measurement_type: "manual",
+        vendor_name: "Justisio",
+        vendor_label: "Justisio",
+        created_at: "2026-10-30T05:00:00Z",
+      }),
+    ]);
+    renderPage();
+
+    const deepseek = within(await row("DeepSeek"));
+    expect(deepseek.getByText("Otomatis")).toBeInTheDocument();
+    expect(deepseek.getByText("OpenAI-compatible")).toBeInTheDocument();
+    expect(deepseek.getByText("29 Okt 2026")).toBeInTheDocument();
+    const justisio = within(await row("Justisio"));
+    expect(justisio.getByText("Manual")).toBeInTheDocument();
+    expect(justisio.getByText("30 Okt 2026")).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(
+      expect.arrayContaining(["Jenis", "Penyedia", "Didaftarkan"]),
+    );
+  });
+
+  it("starts with every type selected", async () => {
+    list.mockResolvedValue([product()]);
+    renderPage();
+    await row("DeepSeek");
+
+    expect(typeFilter().getByRole("button", { name: "Semua" })).toHaveAttribute("aria-pressed", "true");
+    expect(list).toHaveBeenCalledWith(true);
+  });
+
+  it("asks the server for one type and keeps it when the status tab changes", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(typeFilter().getByRole("button", { name: "Manual" }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(true, "manual"));
+    expect(typeFilter().getByRole("button", { name: "Manual" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(false, "manual"));
+
+    await user.click(typeFilter().getByRole("button", { name: "Semua" }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(false));
+  });
+
+  it.each([
+    ["Otomatis", "Aktif", "Belum ada produk AI otomatis yang aktif"],
+    ["Manual", "Aktif", "Belum ada produk AI manual yang aktif"],
+    ["Otomatis", "Nonaktif", "Tidak ada produk AI otomatis yang nonaktif"],
+    ["Manual", "Nonaktif", "Tidak ada produk AI manual yang nonaktif"],
+  ])("names the type when %s on %s is empty", async (type, tab, message) => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(typeFilter().getByRole("button", { name: type }));
+    await user.click(screen.getByRole("tab", { name: tab }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+});
+
 describe("ProvidersPage connection test (AC3)", () => {
   it("shows a loading state for that product only, then ok with latency", async () => {
     const user = userEvent.setup();
