@@ -993,10 +993,7 @@ export interface components {
             rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
             monthly_budget_idr?: number | string | null;
-            /** Model Params */
-            model_params?: {
-                [key: string]: unknown;
-            } | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
             /** Price Input Usd Per Mtok */
             price_input_usd_per_mtok?: number | string | null;
             /** Price Output Usd Per Mtok */
@@ -1057,10 +1054,7 @@ export interface components {
             rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
             monthly_budget_idr?: string | null;
-            /** Model Params */
-            model_params?: {
-                [key: string]: unknown;
-            } | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
             /** Price Input Usd Per Mtok */
             price_input_usd_per_mtok?: string | null;
             /** Price Output Usd Per Mtok */
@@ -1118,10 +1112,7 @@ export interface components {
             rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
             monthly_budget_idr?: number | string | null;
-            /** Model Params */
-            model_params?: {
-                [key: string]: unknown;
-            } | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
             /** Price Input Usd Per Mtok */
             price_input_usd_per_mtok?: number | string | null;
             /** Price Output Usd Per Mtok */
@@ -1853,6 +1844,17 @@ export interface components {
          * @enum {string}
          */
         MeasurementType: "automatic" | "manual";
+        /** ModelParams */
+        ModelParams: {
+            /** Temperature */
+            temperature?: number | null;
+            /** Effort */
+            effort?: ("low" | "medium" | "high") | null;
+            /** Thinking */
+            thinking?: boolean | null;
+            /** Web Search */
+            web_search?: boolean | null;
+        };
         /**
          * NeedsReassignmentResponse
          * @description Satu kasus pada antrean penugasan ulang (GET /reviews/needs-reassignment).
