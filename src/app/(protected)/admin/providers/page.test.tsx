@@ -250,6 +250,48 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
   });
 });
 
+describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
+  function manual(): AiProduct {
+    return product({
+      id: "44444444-4444-4444-4444-444444444444",
+      name: "LegalHero",
+      measurement_type: "manual",
+      provider_type: null,
+      base_url: null,
+      model_name: null,
+      credential_hint: null,
+      has_credential: false,
+      rate_limit_per_minute: null,
+      monthly_budget_idr: null,
+      vendor_name: "PT LegalHero Contoh",
+      vendor_label: "PT LegalHero Contoh",
+      site_url: "https://legalhero.example",
+    });
+  }
+
+  it("marks model, key, limit, budget and last test as not applicable", async () => {
+    list.mockResolvedValue([manual()]);
+    renderPage();
+
+    const cells = within(await row("LegalHero"));
+    expect(cells.getAllByText("—")).toHaveLength(5);
+    expect(cells.queryByText("Belum pernah diuji")).not.toBeInTheDocument();
+  });
+
+  it("offers no connection test for a manual product, but keeps the other actions", async () => {
+    list.mockResolvedValue([product(), manual()]);
+    renderPage();
+
+    const legalhero = within(await row("LegalHero"));
+    expect(legalhero.queryByRole("button", { name: "Uji koneksi LegalHero" })).not.toBeInTheDocument();
+    for (const action of ["Ubah", "Nonaktifkan", "Hapus"]) {
+      expect(legalhero.getByRole("button", { name: `${action} LegalHero` })).toBeInTheDocument();
+    }
+    const deepseek = within(await row("DeepSeek"));
+    expect(deepseek.getByRole("button", { name: "Uji koneksi DeepSeek" })).toBeInTheDocument();
+  });
+});
+
 describe("ProvidersPage connection test (AC3)", () => {
   it("shows a loading state for that product only, then ok with latency", async () => {
     const user = userEvent.setup();
