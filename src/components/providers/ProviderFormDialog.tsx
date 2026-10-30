@@ -9,7 +9,10 @@ import {
   parseRupiahInput,
   PROVIDER_TYPE_LABEL,
 } from "@/lib/providers/format";
-import { modelParamsError } from "@/lib/providers/modelParameters";
+import {
+  fromModelParams,
+  modelParamsError,
+} from "@/lib/providers/modelParameters";
 import type { AiProduct, ProviderType } from "@/types/provider";
 
 import {
@@ -70,11 +73,13 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     params: useId(),
   };
   const [name, setName] = useState(product?.name ?? "");
-  const [measurementType, setMeasurementType] = useState<MeasurementType>("automatic");
-  const [vendorName, setVendorName] = useState("");
-  const [siteUrl, setSiteUrl] = useState("");
-  const [accessNote, setAccessNote] = useState("");
-  const [manualParams, setManualParams] = useState("");
+  const [measurementType, setMeasurementType] = useState<MeasurementType>(
+    product?.measurement_type ?? "automatic",
+  );
+  const [vendorName, setVendorName] = useState(product?.vendor_name ?? "");
+  const [siteUrl, setSiteUrl] = useState(product?.site_url ?? "");
+  const [accessNote, setAccessNote] = useState(product?.access_note ?? "");
+  const [manualParams, setManualParams] = useState(product?.manual_params ?? "");
   const [providerType, setProviderType] = useState<ProviderType | "">(product?.provider_type ?? "");
   const [baseUrl, setBaseUrl] = useState(product?.base_url ?? "");
   const [modelName, setModelName] = useState(product?.model_name ?? "");
@@ -87,9 +92,11 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       ? formatRupiahInput(product.monthly_budget_idr.split(".")[0])
       : "",
   );
-  // AC2: parameter model dikumpulkan dan divalidasi di sini; pengirimannya ke
-  // kolom model_params menyusul begitu kontrak create menerimanya.
-  const [modelParams, setModelParams] = useState<Record<string, string | boolean>>({});
+  // AC2: parameter model diisi dari produk yang diubah; pengirimannya ke kolom
+  // model_params menyusul begitu kontrak create menerimanya.
+  const [modelParams, setModelParams] = useState<Record<string, string | boolean>>(
+    () => fromModelParams(product?.model_params),
+  );
   const [confirming, setConfirming] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
