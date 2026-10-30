@@ -4,6 +4,7 @@ import { formatRupiah, formatRupiahInput, parseRupiahInput } from "./format";
 import {
   createProduct,
   deleteProduct,
+  listProductOptions,
   listProducts,
   setProductActive,
   testConnection,
@@ -19,6 +20,19 @@ describe("providerApi", () => {
   it("lists by active status", async () => {
     await listProducts(false);
     expect(fetchMock).toHaveBeenCalledWith("/admin/providers?is_active=false");
+  });
+
+  it("filters the list by measurement type when one is given", async () => {
+    await listProducts(true, "manual");
+    expect(fetchMock).toHaveBeenCalledWith("/admin/providers?is_active=true&measurement_type=manual");
+  });
+
+  it("lists the product options of one purpose and returns them as sent", async () => {
+    const options = [{ id: "p1", name: "Justisio", measurement_type: "manual" }];
+    fetchMock.mockResolvedValue(options);
+
+    await expect(listProductOptions("manual_entry")).resolves.toBe(options);
+    expect(fetchMock).toHaveBeenCalledWith("/ai-products?purpose=manual_entry");
   });
 
   it("creates with POST and edits with PATCH on the encoded id", async () => {
