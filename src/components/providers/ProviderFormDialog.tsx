@@ -240,6 +240,29 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     }
   }
 
+  /** AC4: isian jenis lama dihapus dari form begitu jenisnya diganti. */
+  function changeMeasurementType(next: MeasurementType) {
+    if (next === measurementType) return;
+    setErrors({});
+    setFormError(null);
+    setTestResult(null);
+    if (next === "manual") {
+      setProviderType("");
+      setBaseUrl("");
+      setModelName("");
+      setCredential("");
+      setRateLimit("");
+      setBudget("");
+      setModelParams({});
+    } else {
+      setVendorName("");
+      setSiteUrl("");
+      setAccessNote("");
+      setManualParams("");
+    }
+    setMeasurementType(next);
+  }
+
   const title = editing ? "Ubah produk AI" : "Daftarkan produk AI";
 
   return (
@@ -264,7 +287,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
         <div className="mt-4 space-y-4">
           <MeasurementTypeField
             value={measurementType}
-            onChange={setMeasurementType}
+            onChange={changeMeasurementType}
             readOnly={editing}
           />
 
@@ -357,7 +380,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                   </p>
                 )}
               </div>
-              
+
               <ModelParameterFields
                 values={modelParams}
                 onChange={(key, value) =>
