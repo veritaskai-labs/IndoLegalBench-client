@@ -60,4 +60,13 @@ describe("ModelParameterFields (AC2)", () => {
     expect(screen.getByLabelText("Thinking")).toBeChecked();
     expect(screen.getByLabelText("Web search")).not.toBeChecked();
   });
+  it("says that a different set of parameters is a separate product", () => {
+    render(<ModelParameterFields values={{}} onChange={vi.fn()} />);
+
+    expect(
+      screen.getByText(
+        "Variasi parameter didaftarkan sebagai produk terpisah, misalnya deepseek1 dan deepseek2.",
+      ),
+    ).toBeInTheDocument();
+  });
 });
