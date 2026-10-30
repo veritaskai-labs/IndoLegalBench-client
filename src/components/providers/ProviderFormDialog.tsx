@@ -47,7 +47,9 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [modelName, setModelName] = useState(product?.model_name ?? "");
   const [credential, setCredential] = useState("");
   const [rateLimit, setRateLimit] = useState(product ? String(product.rate_limit_per_minute) : "");
-  const [budget, setBudget] = useState(product ? formatRupiahInput(product.monthly_budget_idr.split(".")[0]) : "");
+  const [budget, setBudget] = useState(
+    product?.monthly_budget_idr != null ? formatRupiahInput(product.monthly_budget_idr.split(".")[0]) : "",
+  );
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,7 +93,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     try {
       const saved = editing
         ? await updateProduct(product.id, payload)
-        : await createProduct({ ...payload, credential });
+        : await createProduct({ ...payload, measurement_type: "automatic", credential });
       onSaved(saved);
     } catch (error) {
       if (error instanceof ApiError && error.code === "AI_PRODUCT_NAME_TAKEN") {

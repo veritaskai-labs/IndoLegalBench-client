@@ -35,6 +35,7 @@ function product(overrides: Partial<AiProduct> = {}): AiProduct {
   return {
     id: "11111111-1111-1111-1111-111111111111",
     name: "DeepSeek",
+    measurement_type: "automatic",
     provider_type: "openai_compatible",
     base_url: "https://api.deepseek.com/chat/completions",
     model_name: "deepseek-v4-flash",
@@ -261,6 +262,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
 
     expect(create).toHaveBeenCalledWith({
       name: "Claude",
+      measurement_type: "automatic",
       provider_type: "anthropic_messages",
       base_url: "https://api.anthropic.com/v1/messages",
       model_name: "claude-sonnet-5",

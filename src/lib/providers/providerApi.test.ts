@@ -24,6 +24,7 @@ describe("providerApi", () => {
   it("creates with POST and edits with PATCH on the encoded id", async () => {
     await createProduct({
       name: "X",
+      measurement_type: "automatic",
       provider_type: "openai_compatible",
       base_url: "https://x.test",
       model_name: "m",
