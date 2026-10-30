@@ -267,13 +267,21 @@ function ProductRow({
   return (
     <tr className="align-top">
       <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
-      <td className="px-4 py-3 text-slate-600">{PROVIDER_TYPE_LABEL[product.provider_type]}</td>
+      <td className="px-4 py-3 text-slate-600">
+        {product.provider_type ? PROVIDER_TYPE_LABEL[product.provider_type] : "—"}
+      </td>
       <td className="px-4 py-3 font-mono text-xs text-slate-600">{product.model_name}</td>
       <td className="px-4 py-3">
-        <CredentialHint hint={product.credential_hint} />
+        {product.credential_hint ? (
+          <CredentialHint hint={product.credential_hint} />
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
       </td>
-      <td className="px-4 py-3 text-slate-600">{product.rate_limit_per_minute}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatRupiah(product.monthly_budget_idr)}</td>
+      <td className="px-4 py-3 text-slate-600">{product.rate_limit_per_minute ?? "—"}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+        {product.monthly_budget_idr ? formatRupiah(product.monthly_budget_idr) : "—"}
+      </td>
       <td className="px-4 py-3">
         <span
           className={`rounded px-2 py-0.5 text-xs font-medium ${
@@ -322,9 +330,10 @@ function LastTest({ product, testing, live }: { product: AiProduct; testing: boo
   if (live?.status === "error") {
     return <span className="text-red-700">Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.</span>;
   }
-  if (product.last_test_status === null || product.last_test_at === null) {
+  if (!product.last_test_status || !product.last_test_at) {
     return <span className="text-slate-400">Belum pernah diuji</span>;
   }
+
   const when = formatDateTime(product.last_test_at);
   if (product.last_test_status === "ok") {
     return (

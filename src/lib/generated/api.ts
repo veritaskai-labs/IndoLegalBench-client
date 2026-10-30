@@ -976,30 +976,45 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-            provider_type: components["schemas"]["ProviderType"];
+            /** @default automatic */
+            measurement_type: components["schemas"]["MeasurementType"];
+            provider_type?: components["schemas"]["ProviderType"] | null;
             /** Base Url */
-            base_url: string;
+            base_url?: string | null;
             /** Model Name */
-            model_name: string;
+            model_name?: string | null;
             /** Credential Hint */
-            credential_hint: string;
+            credential_hint?: string | null;
             /**
              * Has Credential
-             * @default true
+             * @default false
              */
             has_credential: boolean;
             /** Rate Limit Per Minute */
-            rate_limit_per_minute: number;
+            rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
-            monthly_budget_idr: string;
+            monthly_budget_idr?: string | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: string | null;
+            /** Vendor Name */
+            vendor_name?: string | null;
+            /** Site Url */
+            site_url?: string | null;
+            /** Access Note */
+            access_note?: string | null;
+            /** Manual Params */
+            manual_params?: string | null;
             /** Is Active */
             is_active: boolean;
             /** Last Test At */
-            last_test_at: string | null;
-            last_test_status: components["schemas"]["LastTestStatus"] | null;
+            last_test_at?: string | null;
+            last_test_status?: components["schemas"]["LastTestStatus"] | null;
             /** Last Test Message */
-            last_test_message: string | null;
-            last_test_error_category: components["schemas"]["ConnectionTestErrorCategory"] | null;
+            last_test_message?: string | null;
+            last_test_error_category?: components["schemas"]["ConnectionTestErrorCategory"] | null;
             /**
              * Created By
              * Format: uuid
@@ -1020,6 +1035,7 @@ export interface components {
         AiProductUpdate: {
             /** Name */
             name?: string | null;
+            measurement_type?: components["schemas"]["MeasurementType"] | null;
             provider_type?: components["schemas"]["ProviderType"] | null;
             /** Base Url */
             base_url?: string | null;
@@ -1031,6 +1047,19 @@ export interface components {
             rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
             monthly_budget_idr?: number | string | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: number | string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: number | string | null;
+            /** Vendor Name */
+            vendor_name?: string | null;
+            /** Site Url */
+            site_url?: string | null;
+            /** Access Note */
+            access_note?: string | null;
+            /** Manual Params */
+            manual_params?: string | null;
         };
         /**
          * AnswerCriteria
@@ -1741,6 +1770,25 @@ export interface components {
             /** Email */
             email: string;
             role: components["schemas"]["Role"];
+        };
+        /**
+         * MeasurementType
+         * @description MeasurementType:
+         *     - automatic: dijalankan otomatis oleh sistem via API
+         *     - manual: dijalankan manual dan dicatat oleh tim legal via situs
+         * @enum {string}
+         */
+        MeasurementType: "automatic" | "manual";
+        /** ModelParams */
+        ModelParams: {
+            /** Temperature */
+            temperature?: number | null;
+            /** Effort */
+            effort?: ("low" | "medium" | "high") | null;
+            /** Thinking */
+            thinking?: boolean | null;
+            /** Web Search */
+            web_search?: boolean | null;
         };
         /**
          * NeedsReassignmentResponse

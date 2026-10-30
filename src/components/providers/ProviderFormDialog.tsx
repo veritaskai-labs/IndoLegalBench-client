@@ -69,8 +69,14 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [baseUrl, setBaseUrl] = useState(product?.base_url ?? "");
   const [modelName, setModelName] = useState(product?.model_name ?? "");
   const [credential, setCredential] = useState("");
-  const [rateLimit, setRateLimit] = useState(product ? String(product.rate_limit_per_minute) : "");
-  const [budget, setBudget] = useState(product ? formatRupiahInput(product.monthly_budget_idr.split(".")[0]) : "");
+  const [rateLimit, setRateLimit] = useState(
+    product?.rate_limit_per_minute != null ? String(product.rate_limit_per_minute) : "",
+  );
+  const [budget, setBudget] = useState(
+    product?.monthly_budget_idr != null
+      ? formatRupiahInput(product.monthly_budget_idr.split(".")[0])
+      : "",
+  );
   // AC2: parameter model dikumpulkan dan divalidasi di sini; pengirimannya ke
   // kolom model_params menyusul begitu kontrak memuat PBI-23-BE-1.
   const [modelParams, setModelParams] = useState<Record<string, string | boolean>>({});
