@@ -19,7 +19,7 @@ describe("SaveTypeWarningDialog (AC3)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Jenis pengukuran tidak bisa diubah setelah produk tersimpan.",
+        "Jenis pengukuran tidak bisa diubah lagi setelah produk punya riwayat pengukuran. Uji koneksi tidak dihitung.",
       ),
     ).toBeInTheDocument();
   });
