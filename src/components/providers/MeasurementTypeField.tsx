@@ -65,6 +65,13 @@ export function MeasurementTypeField({
           </label>
         ))}
       </div>
+      {readOnly && (
+        <p className="mt-3 text-xs text-slate-600">
+          Jenis terkunci karena produk sudah punya riwayat pengukuran. Untuk
+          produk yang salah jenis, nonaktifkan produk ini lalu daftarkan produk
+          baru dengan nama berbeda.
+        </p>
+      )}
     </fieldset>
   );
 }
