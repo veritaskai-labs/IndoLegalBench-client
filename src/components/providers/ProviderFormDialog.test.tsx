@@ -684,3 +684,35 @@ describe("ProviderFormDialog server field errors (AC3, AC4)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("ProviderFormDialog connection test and the unsaved type (AC2)", () => {
+  it("holds the connection test until the new type is saved", async () => {
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+
+    expect(screen.getByRole("button", { name: "Uji koneksi" })).toBeDisabled();
+    expect(
+      screen.getByText("Simpan dulu jenis barunya, lalu uji koneksi."),
+    ).toBeInTheDocument();
+    expect(testConnection).not.toHaveBeenCalled();
+  });
+
+  it("keeps the connection test available while the type stays the same", () => {
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Uji koneksi" })).toBeEnabled();
+  });
+});
