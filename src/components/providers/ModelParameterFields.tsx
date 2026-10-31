@@ -26,18 +26,6 @@ function ParameterControl({
 }>) {
   const id = fieldId(field.key);
 
-  if (field.kind === "toggle") {
-    return (
-      <input
-        id={id}
-        type="checkbox"
-        checked={value === true}
-        onChange={(event) => onChange(field.key, event.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-slate-300"
-      />
-    );
-  }
-
   if (field.kind === "choice") {
     return (
       <select

@@ -1,4 +1,3 @@
-
 import type { ModelParams } from "@/types/provider";
 
 const EFFORT_VALUES = ["low", "medium", "high"] as const;
@@ -7,12 +6,20 @@ type Effort = (typeof EFFORT_VALUES)[number];
 function isEffort(value: unknown): value is Effort {
   return typeof value === "string" && EFFORT_VALUES.includes(value as Effort);
 }
+
+/** "on" dan "off" dari formulir jadi boolean; kosong berarti pakai bawaan penyedia. */
+function toggleValue(value: unknown): boolean | null {
+  if (value === "on" || value === true) return true;
+  if (value === "off") return false;
+  return null;
+}
+
 /**
  * Parameter model untuk produk Otomatis (AC2).
  * Semuanya dikirim sebagai satu objek ke kolom `model_params` (JSONB) di server;
  * produk Manual selalu mengirim null karena CHECK di server melarang keduanya terisi.
  */
-export type ModelParameterKind = "number" | "choice" | "toggle";
+export type ModelParameterKind = "number" | "choice";
 
 export type ModelParameterField = Readonly<{
   key: string;
@@ -51,14 +58,22 @@ export const MODEL_PARAMETER_FIELDS: ReadonlyArray<ModelParameterField> = [
   {
     key: "thinking",
     label: "Thinking",
-    kind: "toggle",
+    kind: "choice",
     helper: "Model menuliskan proses berpikirnya sebelum menjawab.",
+    choices: [
+      { value: "on", label: "On" },
+      { value: "off", label: "Off" },
+    ],
   },
   {
     key: "web_search",
     label: "Web search",
-    kind: "toggle",
+    kind: "choice",
     helper: "Model boleh mencari di web saat menjawab.",
+    choices: [
+      { value: "on", label: "On" },
+      { value: "off", label: "Off" },
+    ],
   },
 ];
 
@@ -83,8 +98,11 @@ export function toModelParams(values: ModelParameterValues): ModelParams | null 
     params.temperature = Number(temperature);
   }
   if (isEffort(values.effort)) params.effort = values.effort;
-  if (values.thinking === true) params.thinking = true;
-  if (values.web_search === true) params.web_search = true;
+
+  const thinking = toggleValue(values.thinking);
+  if (thinking !== null) params.thinking = thinking;
+  const webSearch = toggleValue(values.web_search);
+  if (webSearch !== null) params.web_search = webSearch;
 
   return Object.keys(params).length > 0 ? params : null;
 }
@@ -100,8 +118,12 @@ export function fromModelParams(
     values.temperature = String(params.temperature);
   }
   if (isEffort(params.effort)) values.effort = params.effort;
-  if (params.thinking === true) values.thinking = true;
-  if (params.web_search === true) values.web_search = true;
+  if (typeof params.thinking === "boolean") {
+    values.thinking = params.thinking ? "on" : "off";
+  }
+  if (typeof params.web_search === "boolean") {
+    values.web_search = params.web_search ? "on" : "off";
+  }
 
   return values;
 }
