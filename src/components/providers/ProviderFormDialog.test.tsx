@@ -454,3 +454,81 @@ describe("ProviderFormDialog changing the type of an existing product (AC4)", ()
     expect(screen.getByRole("radio", { name: /Otomatis/ })).toBeChecked();
   });
 });
+
+describe("ProviderFormDialog switching to automatic needs a credential (AC4)", () => {
+  /** Isian wajib produk otomatis selain kredensial, supaya validasi lain lolos. */
+  async function fillAutomatic() {
+    await userEvent.selectOptions(
+      screen.getByLabelText("Jenis API"),
+      "openai_compatible",
+    );
+    await userEvent.type(
+      screen.getByLabelText("URL endpoint"),
+      "https://api.deepseek.com/chat/completions",
+    );
+    await userEvent.type(screen.getByLabelText("Model"), "deepseek-v4-flash");
+    await userEvent.type(screen.getByLabelText("Limit panggilan per menit"), "10");
+    await userEvent.type(screen.getByLabelText("Budget per bulan (Rp)"), "1500000");
+  }
+
+  it("asks for the credential before saving the new type", async () => {
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+    await fillAutomatic();
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(screen.getByText("Kredensial wajib diisi.")).toBeInTheDocument();
+    expect(updateProduct).not.toHaveBeenCalled();
+  });
+
+  it("promises encryption instead of a stored credential that is not there", async () => {
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+
+    expect(
+      screen.getByText("Disimpan terenkripsi dan tidak pernah ditampilkan lagi."),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the stored credential hint while the type stays automatic", () => {
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Kredensial tersimpan \(…a1b2\)/)).toBeInTheDocument();
+  });
+
+  it("says the credential is stored even when the server sends no hint", () => {
+    render(
+      <ProviderFormDialog
+        product={{ ...AUTOMATIC_PRODUCT, credential_hint: null }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Kredensial tersimpan, isi untuk mengganti. Kosongkan bila tidak diganti.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
