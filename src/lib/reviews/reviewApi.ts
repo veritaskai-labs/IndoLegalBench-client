@@ -1,10 +1,18 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { AssignedReview, CaseReview, VerdictResult, VerdictWrite } from "@/types/review";
+import type { AssignedReview, AwaitingRevisionReview, CaseReview, VerdictResult, VerdictWrite } from "@/types/review";
 import type { ReassignmentRow, ReplaceReviewerBody, ReplacedAssignment } from "@/types/reviewAdmin";
 
 /** GET /reviews/assigned. Penugasan aktif reviewer yang login di round yang masih terbuka. Hanya reviewer. */
 export function listAssignedReviews(): Promise<AssignedReview[]> {
   return apiFetch<AssignedReview[]>("/reviews/assigned");
+}
+
+/**
+ * GET /reviews/awaiting-revision. Kasus yang sudah dinilai reviewer yang login dan menunggu revisi Author.
+ * Hanya reviewer. Kasus keluar dari daftar saat disetujui atau diajukan ulang; server yang memutuskan.
+ */
+export function listAwaitingRevision(): Promise<AwaitingRevisionReview[]> {
+  return apiFetch<AwaitingRevisionReview[]>("/reviews/awaiting-revision");
 }
 
 /** POST /reviews/{assignment_id}/verdict. Komentar wajib bila decision = revise (422 COMMENT_REQUIRED). */
