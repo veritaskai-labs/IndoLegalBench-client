@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { findCaseReview } from "@/lib/reviews/reviewApi";
 import { CASE_ID, makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
@@ -50,6 +50,17 @@ describe("ReviewerFeedbackGate", () => {
 
     // Assert
     expect(await screen.findByRole("region", { name: "Catatan peninjau" })).toBeInTheDocument();
+  });
+
+  // Positive: after approval the comment is a button, not text on the page.
+  it("shows the comment as a button on an approved case", async () => {
+    // Arrange / Act
+    renderGate(me("contributor"), "approved");
+
+    // Assert
+    const region = await screen.findByRole("region", { name: "Catatan peninjau" });
+    expect(region).not.toHaveTextContent("Pasal 151 salah");
+    expect(within(region).getByRole("button", { name: "Lihat komentar" })).toBeInTheDocument();
   });
 
   // Edge: a Contributor who is neither the author nor assigned. The server has nothing for them.
