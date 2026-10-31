@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, BASE_URL } from "@/lib/apiClient";
-import { getCaseReview, listAssignedReviews, listAwaitingRevision, submitVerdict } from "./reviewApi";
+import { ApiError, BASE_URL, onForbidden } from "@/lib/apiClient";
+import {
+  findCaseReview,
+  getCaseReview,
+  listAssignedReviews,
+  listAwaitingRevision,
+  submitVerdict,
+} from "./reviewApi";
 
 const CASE_ID = "11111111-1111-1111-1111-111111111111";
 const ASSIGNMENT_ID = "22222222-2222-2222-2222-222222222222";
@@ -224,5 +230,65 @@ describe("listAwaitingRevision", () => {
     // Assert
     await expect(failure).rejects.toBeInstanceOf(ApiError);
     await expect(failure).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+  });
+});
+
+describe("findCaseReview", () => {
+  // Positive
+  it("returns the review of the case and encodes the id in the path", async () => {
+    // Arrange
+    const review = { case_id: CASE_ID, round_no: 1, reviewers: [] };
+    fetchMock.mockResolvedValue(jsonResponse(200, review));
+
+    // Act
+    const result = await findCaseReview("a/b");
+
+    // Assert
+    expect(result).toEqual(review);
+    const [url] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/cases/a%2Fb/review`);
+  });
+
+  // Edge: the user is not involved in this case. That is an answer, not a failure, and not a redirect.
+  it("returns null on 403 without sending the user to /forbidden", async () => {
+    // Arrange
+    const listener = vi.fn();
+    const unsubscribe = onForbidden(listener);
+    fetchMock.mockResolvedValue(jsonResponse(403, { code: "FORBIDDEN", message: "No" }));
+
+    // Act
+    const result = await findCaseReview(CASE_ID);
+    unsubscribe();
+
+    // Assert
+    expect(result).toBeNull();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  // Edge: a case that was never submitted has no review yet.
+  it("returns null when the case was never submitted for review", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(404, { code: "NO_REVIEW_ROUND", message: "None" }));
+
+    // Act
+    const result = await findCaseReview(CASE_ID);
+
+    // Assert
+    expect(result).toBeNull();
+  });
+
+  // Negative: only those two answers mean "nothing to show"; every other failure surfaces.
+  it.each([
+    [404, "NOT_FOUND"],
+    [500, "INTERNAL"],
+  ])("rejects with the error on HTTP %s %s", async (status, code) => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(status, { code, message: "Bad" }));
+
+    // Act
+    const failure = findCaseReview(CASE_ID);
+
+    // Assert
+    await expect(failure).rejects.toMatchObject({ status, code });
   });
 });
