@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 import type { MeasurementType } from "@/types/provider";
 
 /** Jenis pengukuran produk AI (AC1). Tipenya dari kontrak, bukan ditulis tangan. */
@@ -22,7 +24,7 @@ const OPTIONS: ReadonlyArray<{
 
 /**
  * AC1: pilihan paling atas di formulir produk; isian lain menyesuaikan jenis ini.
- * AC4: saat mengedit produk yang sudah tersimpan, jenis hanya bisa dibaca.
+ * AC4: jenis hanya bisa dibaca setelah server menolak pergantiannya.
  */
 export function MeasurementTypeField({
   value,
@@ -33,37 +35,49 @@ export function MeasurementTypeField({
   onChange: (next: MeasurementType) => void;
   readOnly?: boolean;
 }>) {
+  const groupId = useId();
+
   return (
     <fieldset className="rounded-lg border border-slate-200 p-4">
       <legend className="px-1 text-sm font-medium text-slate-900">
         Jenis pengukuran
       </legend>
-
       <div className="mt-2 grid gap-3 sm:grid-cols-2">
-        {OPTIONS.map((option) => (
-          <label
-            key={option.value}
-            className="flex gap-3 rounded-lg border border-slate-200 p-3"
-          >
-            <input
-              type="radio"
-              name="measurement-type"
-              value={option.value}
-              checked={value === option.value}
-              disabled={readOnly}
-              onChange={() => onChange(option.value)}
-              className="mt-1"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-900">
-                {option.label}
+        {OPTIONS.map((option) => {
+          const id = `${groupId}-${option.value}`;
+          return (
+            <div
+              key={option.value}
+              className="flex gap-3 rounded-lg border border-slate-200 p-3"
+            >
+              <input
+                id={id}
+                type="radio"
+                name="measurement-type"
+                value={option.value}
+                checked={value === option.value}
+                disabled={readOnly}
+                onChange={() => onChange(option.value)}
+                aria-describedby={`${id}-help`}
+                className="mt-1"
+              />
+              <span>
+                <label
+                  htmlFor={id}
+                  className="block text-sm font-medium text-slate-900"
+                >
+                  {option.label}
+                </label>
+                <span
+                  id={`${id}-help`}
+                  className="mt-0.5 block text-xs text-slate-600"
+                >
+                  {option.helper}
+                </span>
               </span>
-              <span className="mt-0.5 block text-xs text-slate-600">
-                {option.helper}
-              </span>
-            </span>
-          </label>
-        ))}
+            </div>
+          );
+        })}
       </div>
       {readOnly && (
         <p className="mt-3 text-xs text-slate-600">
