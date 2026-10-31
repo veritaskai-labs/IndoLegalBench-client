@@ -278,17 +278,22 @@ describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
     expect(cells.queryByText("Belum pernah diuji")).not.toBeInTheDocument();
   });
 
-  it("offers no connection test for a manual product, but keeps the other actions", async () => {
+  // Until SCRUM-202 brings the manual form, Ubah would open automatic fields.
+  it("offers neither a connection test nor Ubah for a manual product", async () => {
     list.mockResolvedValue([product(), manual()]);
     renderPage();
 
     const legalhero = within(await row("LegalHero"));
-    expect(legalhero.queryByRole("button", { name: "Uji koneksi LegalHero" })).not.toBeInTheDocument();
-    for (const action of ["Ubah", "Nonaktifkan", "Hapus"]) {
+    for (const action of ["Uji koneksi", "Ubah"]) {
+      expect(legalhero.queryByRole("button", { name: `${action} LegalHero` })).not.toBeInTheDocument();
+    }
+    for (const action of ["Nonaktifkan", "Hapus"]) {
       expect(legalhero.getByRole("button", { name: `${action} LegalHero` })).toBeInTheDocument();
     }
     const deepseek = within(await row("DeepSeek"));
-    expect(deepseek.getByRole("button", { name: "Uji koneksi DeepSeek" })).toBeInTheDocument();
+    for (const action of ["Uji koneksi", "Ubah"]) {
+      expect(deepseek.getByRole("button", { name: `${action} DeepSeek` })).toBeInTheDocument();
+    }
   });
 });
 
