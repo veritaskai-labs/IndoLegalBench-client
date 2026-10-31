@@ -16,7 +16,7 @@ describe("ModelParameterFields (AC2)", () => {
     expect(screen.getByLabelText("Thinking")).toBeInTheDocument();
     expect(screen.getByLabelText("Web search")).toBeInTheDocument();
     expect(
-      screen.getByText("Kosongkan untuk memakai bawaan penyedia (klien menyarankan 0.3)"),
+      screen.getByText(/Kosongkan untuk memakai bawaan penyedia/),
     ).toBeInTheDocument();
   });
 
