@@ -625,6 +625,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/awaiting-revision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kasus yang menunggu revisi penulis untuk reviewer yang login (SCRUM-242)
+         * @description Kasus yang sudah Anda nilai dan belum approved: round terakhirnya meminta revisi.
+         *
+         *     Reviewer yang setuju sementara rekannya meminta revisi juga muncul. Kasus
+         *     keluar saat Author mengajukan ulang. Gunakan thread_assignment_ids untuk
+         *     membuka thread komentar lewat GET /reviews/{id}/discussion.
+         */
+        get: operations["list_awaiting_revision_reviews_awaiting_revision_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews/needs-reassignment": {
         parameters: {
             query?: never;
@@ -1231,6 +1255,37 @@ export interface components {
             reason: string | null;
             /** Request Id */
             request_id: string | null;
+        };
+        /**
+         * AwaitingRevisionReview
+         * @description Satu baris antrean "Menunggu revisi penulis" untuk reviewer (SCRUM-242).
+         *
+         *     assignment_id adalah penugasan reviewer ini sendiri. thread_assignment_ids
+         *     berisi penugasan di round itu yang punya komentar, supaya reviewer yang
+         *     setuju bisa membuka thread rekannya lewat GET /reviews/{id}/discussion.
+         */
+        AwaitingRevisionReview: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** Round No */
+            round_no: number;
+            my_decision: components["schemas"]["VerdictDecision"];
+            /** Decided At */
+            decided_at: string | null;
+            /** Thread Assignment Ids */
+            thread_assignment_ids: string[];
         };
         /**
          * CaseCompleteness
@@ -4245,6 +4300,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AssignedReview"][];
+                };
+            };
+        };
+    };
+    list_awaiting_revision_reviews_awaiting_revision_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AwaitingRevisionReview"][];
+                };
+            };
+            /** @description Tidak ada sesi aktif. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya akun dengan wewenang review. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
