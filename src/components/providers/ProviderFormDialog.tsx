@@ -96,7 +96,6 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [baseUrl, setBaseUrl] = useState(product?.base_url ?? "");
   const [modelName, setModelName] = useState(product?.model_name ?? "");
   const [credential, setCredential] = useState("");
-<<<<<<< HEAD
   const [rateLimit, setRateLimit] = useState(
     product?.rate_limit_per_minute != null ? String(product.rate_limit_per_minute) : "",
   );
@@ -111,12 +110,6 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   const [confirming, setConfirming] = useState(false);
   /** AC4: dikunci setelah server menolak perubahan jenis karena ada riwayat. */
   const [typeLocked, setTypeLocked] = useState(false);
-=======
-  const [rateLimit, setRateLimit] = useState(product ? String(product.rate_limit_per_minute) : "");
-  const [budget, setBudget] = useState(
-    product?.monthly_budget_idr != null ? formatRupiahInput(product.monthly_budget_idr.split(".")[0]) : "",
-  );
->>>>>>> origin/staging
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
