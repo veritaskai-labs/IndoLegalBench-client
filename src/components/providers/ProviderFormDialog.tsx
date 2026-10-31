@@ -196,17 +196,40 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     };
   }
 
-  /** AC4: isian jenis lama dihapus dari form begitu jenisnya diganti. */
+
+  /** Isian form dari data produk tersimpan; dipakai saat kembali ke jenis asal dan saat server menolak. */
+  function fillFromProduct(saved: AiProduct) {
+    setVendorName(saved.vendor_name ?? "");
+    setSiteUrl(saved.site_url ?? "");
+    setAccessNote(saved.access_note ?? "");
+    setManualParams(saved.manual_params ?? "");
+    setProviderType(saved.provider_type ?? "");
+    setBaseUrl(saved.base_url ?? "");
+    setModelName(saved.model_name ?? "");
+    setRateLimit(
+      saved.rate_limit_per_minute != null ? String(saved.rate_limit_per_minute) : "",
+    );
+    setBudget(
+      saved.monthly_budget_idr != null
+        ? formatRupiahInput(saved.monthly_budget_idr.split(".")[0])
+        : "",
+    );
+    setModelParams(fromModelParams(saved.model_params));
+  }
+
+  /** AC4: isian jenis lama dihapus, tapi jenis asal produk diisi ulang dari data tersimpan. */
   function changeMeasurementType(next: MeasurementType) {
     if (next === measurementType) return;
     setErrors({});
     setFormError(null);
     setTestResult(null);
-    if (next === "manual") {
+    setCredential("");
+    if (product !== undefined && next === (product.measurement_type ?? "automatic")) {
+      fillFromProduct(product);
+    } else if (next === "manual") {
       setProviderType("");
       setBaseUrl("");
       setModelName("");
-      setCredential("");
       setRateLimit("");
       setBudget("");
       setModelParams({});
@@ -288,22 +311,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   function lockTypeAfterRefusal(saved: AiProduct) {
     setTypeLocked(true);
     setMeasurementType(saved.measurement_type ?? "automatic");
-    setVendorName(saved.vendor_name ?? "");
-    setSiteUrl(saved.site_url ?? "");
-    setAccessNote(saved.access_note ?? "");
-    setManualParams(saved.manual_params ?? "");
-    setProviderType(saved.provider_type ?? "");
-    setBaseUrl(saved.base_url ?? "");
-    setModelName(saved.model_name ?? "");
-    setRateLimit(
-      saved.rate_limit_per_minute != null ? String(saved.rate_limit_per_minute) : "",
-    );
-    setBudget(
-      saved.monthly_budget_idr != null
-        ? formatRupiahInput(saved.monthly_budget_idr.split(".")[0])
-        : "",
-    );
-    setModelParams(fromModelParams(saved.model_params));
+    fillFromProduct(saved);
     setErrors({});
     setFormError(IMMUTABLE_ERROR);
   }
