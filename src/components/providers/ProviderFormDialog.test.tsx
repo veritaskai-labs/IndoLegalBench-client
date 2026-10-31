@@ -716,3 +716,42 @@ describe("ProviderFormDialog connection test and the unsaved type (AC2)", () => 
     expect(screen.getByRole("button", { name: "Uji koneksi" })).toBeEnabled();
   });
 });
+
+describe("ProviderFormDialog returning to the stored type (AC4)", () => {
+  it("refills the stored values when the admin returns to the stored type", async () => {
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+
+    expect(screen.getByLabelText("Nama penyedia")).toHaveValue("Hukumonline");
+    expect(screen.getByLabelText("Alamat situs")).toHaveValue(
+      "https://hukumonline.com",
+    );
+    expect(screen.getByLabelText("Catatan akses")).toHaveValue(
+      "Login lewat akun tim legal",
+    );
+    expect(screen.getByLabelText("Parameter")).toHaveValue("mode pro");
+  });
+
+  it("still empties the fields of the type the product does not have", async () => {
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
+
+    expect(screen.getByLabelText("Model")).toHaveValue("");
+    expect(screen.getByLabelText("Budget per bulan (Rp)")).toHaveValue("");
+  });
+});
