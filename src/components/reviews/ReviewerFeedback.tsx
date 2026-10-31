@@ -1,14 +1,20 @@
 import { DiscussionLauncher } from "./DiscussionLauncher";
 import { revisionRequestsFirst } from "@/lib/reviews/verdictRules";
+import type { CaseStatus } from "@/types/case";
 import type { CaseReview } from "@/types/review";
+import { feedbackPresentation } from "@/lib/reviews/feedbackPresentation";
 import { VerdictSummary } from "./VerdictSummary";
 
 /**
  * Catatan peninjau dengan percakapan di panel tanpa meninggalkan editor.
  * Penilaian yang dikirim server ditampilkan apa adanya; yang null ditulis belum tersedia, bukan dikarang.
  */
-export function ReviewerFeedback({ review }: Readonly<{ review: CaseReview }>) {
+export function ReviewerFeedback({
+  review,
+  caseStatus = null,
+}: Readonly<{ review: CaseReview; caseStatus?: CaseStatus | null }>) {
   const reviewers = revisionRequestsFirst(review.reviewers);
+  const view = feedbackPresentation(caseStatus);
 
   return (
     <section aria-label="Catatan peninjau" className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-5">
@@ -27,12 +33,12 @@ export function ReviewerFeedback({ review }: Readonly<{ review: CaseReview }>) {
               {slot.verdict === null ? (
                 <p className="text-sm text-slate-500">Penilaian belum tersedia.</p>
               ) : (
-                <VerdictSummary verdict={slot.verdict} />
+                <VerdictSummary verdict={slot.verdict} commentInDrawer={view.commentInDrawer} />
               )}
               {slot.verdict?.comment && (
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                  <p className="max-w-md text-xs leading-relaxed text-slate-500">Ada yang perlu diperjelas? Diskusikan catatan ini dengan peninjau.</p>
-                  <DiscussionLauncher assignmentId={slot.assignment_id} />
+                  <p className="max-w-md text-xs leading-relaxed text-slate-500">{view.readOnlyNotice === null ? "Ada yang perlu diperjelas? Diskusikan catatan ini dengan peninjau." : "Komentar dan thread dibuka di panel samping."}</p>
+                  <DiscussionLauncher assignmentId={slot.assignment_id} label={view.launcherLabel} readOnlyNotice={view.readOnlyNotice} />
                 </div>
               )}
             </li>

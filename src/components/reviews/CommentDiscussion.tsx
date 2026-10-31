@@ -65,10 +65,10 @@ function Message({ reply, mine }: Readonly<{ reply: CommentReply; mine: boolean 
   );
 }
 
-type Props = { assignmentId: string; embedded?: boolean; draft?: string; onDraftChange?: (value: string) => void; onBusyChange?: (busy: boolean) => void };
+type Props = { assignmentId: string; embedded?: boolean; draft?: string; onDraftChange?: (value: string) => void; onBusyChange?: (busy: boolean) => void; readOnlyNotice?: string | null };
 
 /** Komponen percakapan yang sama dipakai panel dan tautan langsung dari notifikasi. */
-export function CommentDiscussion({ assignmentId, embedded = false, draft, onDraftChange, onBusyChange }: Readonly<Props>) {
+export function CommentDiscussion({ assignmentId, embedded = false, draft, onDraftChange, onBusyChange, readOnlyNotice = null }: Readonly<Props>) {
   const [localDraft, setLocalDraft] = useState("");
   const [sent, setSent] = useState(false);
   const body = draft ?? localDraft;
@@ -96,7 +96,7 @@ export function CommentDiscussion({ assignmentId, embedded = false, draft, onDra
         {sent && <output className="block text-center text-xs font-medium text-emerald-700">Balasan terkirim.</output>}
       </div>
       <footer className="shrink-0 border-t border-slate-200 bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
-        {data.can_reply ? <ReplyForm assignmentId={assignmentId} body={body} onChange={changeDraft} onBusyChange={onBusyChange} onSent={() => { setSent(true); discussion.reload(); }} /> : <p className="rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-600">{data.round_status !== "decided" ? "Diskusi dibuka setelah kedua penilaian selesai." : "Diskusi ini hanya dapat dibalas oleh penulis kasus dan peninjau terkait pada penugasan yang masih aktif."}</p>}
+        {data.can_reply && readOnlyNotice === null ? <ReplyForm assignmentId={assignmentId} body={body} onChange={changeDraft} onBusyChange={onBusyChange} onSent={() => { setSent(true); discussion.reload(); }} /> : <p className="rounded-lg bg-slate-50 p-3 text-sm leading-relaxed text-slate-600">{readOnlyNotice ?? (data.round_status !== "decided" ? "Diskusi dibuka setelah kedua penilaian selesai." : "Diskusi ini hanya dapat dibalas oleh penulis kasus dan peninjau terkait pada penugasan yang masih aktif.")}</p>}
       </footer>
     </section>
   );

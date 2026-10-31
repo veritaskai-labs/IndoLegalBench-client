@@ -19,5 +19,5 @@ type Props = {
  */
 export function ReviewerFeedbackGate({ caseId, user, status }: Readonly<Props>) {
   const canRead = canReadReviewFeedback(user?.role ?? null, status);
-  return canRead ? <ReviewerFeedbackSection caseId={caseId} /> : null;
+  return canRead ? <ReviewerFeedbackSection caseId={caseId} caseStatus={status} /> : null;
 }

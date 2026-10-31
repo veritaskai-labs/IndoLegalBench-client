@@ -3,6 +3,7 @@
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useFoundCaseReview } from "@/hooks/useFoundCaseReview";
+import type { CaseStatus } from "@/types/case";
 import { ReviewerFeedback } from "./ReviewerFeedback";
 
 /**
@@ -10,12 +11,15 @@ import { ReviewerFeedback } from "./ReviewerFeedback";
  * berhak (canReadReviewFeedback); server yang memutuskan. Bukan pihak di kasus ini atau kasus belum
  * pernah diajukan berarti bagian ini tidak tampil sama sekali.
  */
-export function ReviewerFeedbackSection({ caseId }: Readonly<{ caseId: string }>) {
+export function ReviewerFeedbackSection({
+  caseId,
+  caseStatus = null,
+}: Readonly<{ caseId: string; caseStatus?: CaseStatus | null }>) {
   const feedback = useFoundCaseReview(caseId);
 
   if (feedback.status === "loading") return <LoadingState label="Memuat catatan peninjau…" />;
   if (feedback.status === "error") return <ErrorState message={feedback.message} onRetry={feedback.reload} />;
   if (feedback.review === null) return null;
 
-  return <ReviewerFeedback review={feedback.review} />;
+  return <ReviewerFeedback review={feedback.review} caseStatus={caseStatus} />;
 }
