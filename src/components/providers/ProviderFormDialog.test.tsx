@@ -532,3 +532,155 @@ describe("ProviderFormDialog switching to automatic needs a credential (AC4)", (
     ).toBeInTheDocument();
   });
 });
+
+describe("ProviderFormDialog server field errors (AC3, AC4)", () => {
+  /** ApiError dibuat lewat prototype-nya supaya instanceof benar tanpa menebak konstruktor. */
+  function refusal(fields: Record<string, unknown>): ApiError {
+    return Object.assign(Object.create(ApiError.prototype), {
+      status: 422,
+      ...fields,
+    }) as ApiError;
+  }
+
+  it("puts a rejected access note on the access note field", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(
+      refusal({
+        code: "ACCESS_NOTE_SECRET",
+        field: "access_note",
+        serverMessage: "Catatan akses tidak boleh memuat kata sandi.",
+      }),
+    );
+    render(
+      <ProviderFormDialog
+        product={MANUAL_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(
+      await screen.findByText("Catatan akses tidak boleh memuat kata sandi."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("puts a rejected rate limit on the rate limit field", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(
+      refusal({
+        code: "FIELD_REQUIRED_FOR_TYPE",
+        field: "rate_limit_per_minute",
+        serverMessage: "Limit panggilan wajib untuk produk otomatis.",
+      }),
+    );
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(
+      await screen.findByText("Limit panggilan wajib untuk produk otomatis."),
+    ).toBeInTheDocument();
+  });
+
+  it("uses the banner when the named field is not on the form", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(
+      refusal({
+        code: "FIELD_NOT_ALLOWED_FOR_TYPE",
+        field: "manual_params",
+        serverMessage: "Parameter manual tidak berlaku untuk produk otomatis.",
+      }),
+    );
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Parameter manual tidak berlaku untuk produk otomatis.",
+    );
+  });
+
+  it("keeps the generic banner when the server names no field", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(refusal({ code: "VALIDATION_ERROR" }));
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Isian ditolak server. Periksa kembali URL, kredensial, limit, dan budget.",
+    );
+  });
+
+  it("puts a taken name on the name field", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(
+      refusal({ code: "AI_PRODUCT_NAME_TAKEN" }),
+    );
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(
+      await screen.findByText("Nama produk sudah dipakai. Pilih nama lain."),
+    ).toBeInTheDocument();
+  });
+
+  it("asks the admin to retry when the request fails outside the api", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(new Error("offline"));
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Gagal menyimpan produk AI. Coba lagi.",
+    );
+  });
+
+  it("says the connection test cannot run when it throws", async () => {
+    vi.mocked(testConnection).mockRejectedValue(new Error("offline"));
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Uji koneksi" }));
+
+    expect(
+      await screen.findByText(
+        "Uji koneksi tidak bisa dijalankan saat ini. Coba lagi sebentar.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
