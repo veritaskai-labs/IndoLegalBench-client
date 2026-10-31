@@ -458,7 +458,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                 <button
                   type="button"
                   onClick={() => void runConnectionTest()}
-                  disabled={!editing || testing}
+                  disabled={!editing || switchingType || testing}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
                   {testing ? "Menguji…" : "Uji koneksi"}
@@ -466,6 +466,11 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                 {!editing && (
                   <p className="mt-1 text-xs text-slate-500">
                     Uji koneksi tersedia setelah produk tersimpan.
+                  </p>
+                )}
+                {editing && switchingType && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Simpan dulu jenis barunya, lalu uji koneksi.
                   </p>
                 )}
                 {testResult === "ok" && (
