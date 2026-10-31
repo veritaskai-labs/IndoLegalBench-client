@@ -69,4 +69,18 @@ describe("SaveTypeWarningDialog (AC3)", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();
   });
+  it("warns that the values of the old type will be lost when the type is switched", () => {
+    render(
+      <SaveTypeWarningDialog
+        measurementType="manual"
+        switching
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText("Isian jenis sebelumnya akan hilang setelah disimpan."),
+    ).toBeInTheDocument();
+  });
 });
