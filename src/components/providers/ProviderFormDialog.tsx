@@ -48,7 +48,9 @@ type Field =
   | "rate_limit"
   | "budget"
   | "vendor_name"
-  | "site_url";
+  | "site_url"
+  | "access_note"
+  | "manual_params";
 type Errors = Partial<Record<Field, string>>;
 
 const MIN_CREDENTIAL = 4;
@@ -58,6 +60,39 @@ const IMMUTABLE_ERROR =
   "Jenis pengukuran tidak bisa diubah karena produk sudah punya riwayat pengukuran. Nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.";
 const NEW_CREDENTIAL_HINT =
   "Disimpan terenkripsi dan tidak pernah ditampilkan lagi.";
+const SAVE_REJECTED =
+  "Isian ditolak server. Periksa kembali URL, kredensial, limit, dan budget.";
+const FIELD_REJECTED = "Isian ini ditolak server.";
+const RETRY_ERROR = "Gagal menyimpan produk AI. Coba lagi.";
+
+/** Nama field dari server (openapi) ke kunci error di form. */
+const FIELD_OF: Partial<Record<string, Field>> = {
+  name: "name",
+  provider_type: "provider_type",
+  base_url: "base_url",
+  model_name: "model_name",
+  credential: "credential",
+  rate_limit_per_minute: "rate_limit",
+  monthly_budget_idr: "budget",
+  vendor_name: "vendor_name",
+  site_url: "site_url",
+  access_note: "access_note",
+  manual_params: "manual_params",
+};
+const MANUAL_FIELDS: readonly Field[] = [
+  "vendor_name",
+  "site_url",
+  "access_note",
+  "manual_params",
+];
+const AUTOMATIC_FIELDS: readonly Field[] = [
+  "provider_type",
+  "base_url",
+  "model_name",
+  "credential",
+  "rate_limit",
+  "budget",
+];
 
 function isHttpUrl(text: string): boolean {
   try {
@@ -273,6 +308,29 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     setFormError(IMMUTABLE_ERROR);
   }
 
+  /** Field server hanya dipetakan bila isiannya memang tampil untuk jenis ini. */
+  function formFieldOf(serverField: string | null): Field | null {
+    if (serverField === null) return null;
+    const key = FIELD_OF[serverField];
+    if (key === undefined) return null;
+    if (key === "name") return key;
+    const shown = measurementType === "manual" ? MANUAL_FIELDS : AUTOMATIC_FIELDS;
+    return shown.includes(key) ? key : null;
+  }
+
+  /** Penolakan yang menyebut field ditaruh di field itu, bukan di spanduk atas. */
+  function showServerRefusal(error: ApiError) {
+    const key = formFieldOf(error.field);
+    if (key !== null) {
+      const found: Errors = {};
+      found[key] = error.serverMessage ?? FIELD_REJECTED;
+      setFormError(null);
+      setErrors(found);
+      return;
+    }
+    setFormError(error.status === 422 ? error.serverMessage ?? SAVE_REJECTED : RETRY_ERROR);
+  }
+
   async function save() {
     setConfirming(false);
     setSaving(true);
@@ -282,14 +340,14 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
         : await createProduct(createPayload());
       onSaved(saved);
     } catch (error) {
-      if (error instanceof ApiError && error.code === "MEASUREMENT_TYPE_IMMUTABLE" && product !== undefined) {
+      if (!(error instanceof ApiError)) {
+        setFormError(RETRY_ERROR);
+      } else if (error.code === "MEASUREMENT_TYPE_IMMUTABLE" && product !== undefined) {
         lockTypeAfterRefusal(product);
-      } else if (error instanceof ApiError && error.code === "AI_PRODUCT_NAME_TAKEN") {
+      } else if (error.code === "AI_PRODUCT_NAME_TAKEN") {
         setErrors({ name: "Nama produk sudah dipakai. Pilih nama lain." });
-      } else if (error instanceof ApiError && error.status === 422) {
-        setFormError("Isian ditolak server. Periksa kembali URL, kredensial, limit, dan budget.");
       } else {
-        setFormError("Gagal menyimpan produk AI. Coba lagi.");
+        showServerRefusal(error);
       }
     } finally {
       setSaving(false);
@@ -442,15 +500,15 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                 <input id={ids.site} type="url" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} {...invalid(ids.site, errors.site_url)} placeholder="https://contoh.ai" className={INPUT} />
               </Labeled>
 
-              <Labeled id={ids.note} label="Catatan akses">
-                <textarea id={ids.note} rows={3} value={accessNote} onChange={(e) => setAccessNote(e.target.value)} className={INPUT} />
+              <Labeled id={ids.note} label="Catatan akses" error={errors.access_note}>
+                <textarea id={ids.note} rows={3} value={accessNote} onChange={(e) => setAccessNote(e.target.value)} {...invalid(ids.note, errors.access_note, false)} className={INPUT} />
                 <p className="mt-1 text-xs text-slate-500">
                   Cara tim legal mengakses platform ini. Jangan isi kata sandi di sini.
                 </p>
               </Labeled>
 
-              <Labeled id={ids.params} label="Parameter">
-                <textarea id={ids.params} rows={2} value={manualParams} onChange={(e) => setManualParams(e.target.value)} className={INPUT} />
+              <Labeled id={ids.params} label="Parameter" error={errors.manual_params}>
+                <textarea id={ids.params} rows={2} value={manualParams} onChange={(e) => setManualParams(e.target.value)} {...invalid(ids.params, errors.manual_params, false)} className={INPUT} />
                 <p className="mt-1 text-xs text-slate-500">
                   Teks bebas. Versi atau paket berbeda didaftarkan sebagai produk terpisah, misalnya &quot;HO Pro&quot; dan &quot;HO Premium&quot;.
                 </p>
@@ -484,10 +542,10 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
 const INPUT =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 aria-[invalid=true]:border-red-600";
 
-/** Atribut aksesibilitas untuk field wajib; aria-invalid dan deskripsi error bila ada error. */
-function invalid(id: string, error: string | undefined) {
+/** aria-invalid dan deskripsi error; aria-required hanya untuk isian wajib. */
+function invalid(id: string, error: string | undefined, required = true) {
   return {
-    "aria-required": true,
+    ...(required ? { "aria-required": true } : {}),
     ...(error ? { "aria-invalid": true, "aria-describedby": `${id}-error` } : {}),
   };
 }
