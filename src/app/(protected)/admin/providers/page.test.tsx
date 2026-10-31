@@ -380,6 +380,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     const dialog = await fillCreate(user);
     expect(dialog.getByLabelText("Budget per bulan (Rp)")).toHaveValue("2.500.000");
     await user.click(dialog.getByRole("button", { name: "Simpan" }));
+    await user.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
     expect(create).toHaveBeenCalledWith({
       name: "Claude",
@@ -390,6 +391,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
       credential: "sk-ant-rahasia-9z9z",
       rate_limit_per_minute: 10,
       monthly_budget_idr: "2500000",
+      model_params: null,
     });
     expect(await screen.findByText("Produk AI terdaftar")).toBeInTheDocument();
     expect(list).toHaveBeenCalledTimes(2);
@@ -437,6 +439,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
     const dialog = await fillCreate(user);
     await user.click(dialog.getByRole("button", { name: "Simpan" }));
+    await user.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
     expect(await dialog.findByText("Nama produk sudah dipakai. Pilih nama lain.")).toBeInTheDocument();
   });
