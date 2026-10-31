@@ -26,6 +26,13 @@ describe('discussion API', () => {
   ])('maps HTTP %s without trusting server HTML', (status, expected) => {
     expect(discussionError(new ApiError(status, 'ANY', '<script>'))).toContain(expected);
   });
+  it('says the thread is read-only after the case is approved', () => {
+    const message = discussionError(new ApiError(409, 'THREAD_READ_ONLY'));
+    expect(message).toBe('Kasus sudah disetujui, diskusi ini hanya dapat dibaca.');
+  });
+  it('keeps the changed-assignment text for other 409 codes', () => {
+    expect(discussionError(new ApiError(409, 'ASSIGNMENT_NOT_ACTIVE'))).toContain('Penugasan telah berubah');
+  });
   it('handles network and unknown errors', () => {
     expect(discussionError(new Error('offline'))).toContain('Coba lagi');
   });

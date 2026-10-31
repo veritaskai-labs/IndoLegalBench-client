@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, BASE_URL } from "@/lib/apiClient";
-import { getCaseReview, listAssignedReviews, submitVerdict } from "./reviewApi";
+import { getCaseReview, listAssignedReviews, listAwaitingRevision, submitVerdict } from "./reviewApi";
 
 const CASE_ID = "11111111-1111-1111-1111-111111111111";
 const ASSIGNMENT_ID = "22222222-2222-2222-2222-222222222222";
@@ -180,5 +180,49 @@ describe("getCaseReview", () => {
 
     // Assert
     await expect(failure).rejects.toMatchObject({ status: 404, code: "NO_REVIEW_ROUND" });
+  });
+});
+
+describe("listAwaitingRevision", () => {
+  // Positive
+  it("gets the awaiting-revision queue from /reviews/awaiting-revision", async () => {
+    // Arrange
+    const rows = [{ assignment_id: ASSIGNMENT_ID, round_no: 1, my_decision: "revise", thread_assignment_ids: [] }];
+    fetchMock.mockResolvedValue(jsonResponse(200, rows));
+
+    // Act
+    const result = await listAwaitingRevision();
+
+    // Assert
+    expect(result).toEqual(rows);
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe(`${BASE_URL}/reviews/awaiting-revision`);
+    expect(init?.method).toBeUndefined();
+    expect(init?.credentials).toBe("include");
+  });
+
+  // Edge: nothing waiting for the author is a valid answer.
+  it("returns an empty list when no case waits for revision", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(200, []));
+
+    // Act
+    const result = await listAwaitingRevision();
+
+    // Assert
+    expect(result).toEqual([]);
+  });
+
+  // Negative
+  it("rejects with the status when the caller is not a reviewer", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(jsonResponse(403, { code: "FORBIDDEN", message: "No" }));
+
+    // Act
+    const failure = listAwaitingRevision();
+
+    // Assert
+    await expect(failure).rejects.toBeInstanceOf(ApiError);
+    await expect(failure).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
   });
 });
