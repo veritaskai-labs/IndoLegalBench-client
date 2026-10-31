@@ -1,18 +1,14 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listCaseVersions } from "@/lib/cases/versionApi";
-import { getCaseReview } from "@/lib/reviews/reviewApi";
+import { findCaseReview } from "@/lib/reviews/reviewApi";
 import { CASE_ID, makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
-import { makeSummary } from "@/test/versionFixtures";
 import type { Role } from "@/types";
 import type { CaseStatus } from "@/types/case";
 import { ReviewerFeedbackGate } from "./ReviewerFeedbackGate";
 
-vi.mock("@/lib/cases/versionApi", () => ({ listCaseVersions: vi.fn() }));
-vi.mock("@/lib/reviews/reviewApi", () => ({ getCaseReview: vi.fn() }));
+vi.mock("@/lib/reviews/reviewApi", () => ({ findCaseReview: vi.fn() }));
 
-const listMock = vi.mocked(listCaseVersions);
-const reviewMock = vi.mocked(getCaseReview);
+const reviewMock = vi.mocked(findCaseReview);
 
 const me = (role: Role) => ({ id: "u1", role });
 const feedback = () => screen.queryByRole("region", { name: "Catatan peninjau" });
@@ -22,10 +18,7 @@ function renderGate(user: { id: string; role: Role } | null, status: CaseStatus 
 }
 
 beforeEach(() => {
-  listMock.mockReset();
   reviewMock.mockReset();
-  // Version 1 was written by u1, so an author with id u1 is the creator.
-  listMock.mockResolvedValue([makeSummary(1)]);
   reviewMock.mockResolvedValue(
     makeCaseReview({
       status: "decided",
@@ -41,54 +34,51 @@ beforeEach(() => {
 });
 
 describe("ReviewerFeedbackGate", () => {
-  // Positive
-  it("shows the feedback to the author who created the case once the history says so", async () => {
+  // Positive: AC3/AC5, the author, the admin and both reviewers read the comments on every status.
+  it.each(["admin", "contributor"] as const)("shows the feedback to the %s role", async (role) => {
     // Arrange / Act
-    renderGate(me("contributor"), "needs_revision");
+    renderGate(me(role), "needs_revision");
 
     // Assert
     expect(await screen.findByRole("region", { name: "Catatan peninjau" })).toHaveTextContent("Pasal 151 salah");
     expect(reviewMock).toHaveBeenCalledWith(CASE_ID);
   });
 
-  // Positive: an admin may read any review, so no history is read.
-  it("shows the feedback to an admin without asking who created the case", async () => {
+  it.each(["draft", "in_review", "approved"] as const)("also shows the feedback on a %s case", async (status) => {
     // Arrange / Act
-    renderGate(me("admin"), "needs_revision");
+    renderGate(me("contributor"), status);
 
     // Assert
     expect(await screen.findByRole("region", { name: "Catatan peninjau" })).toBeInTheDocument();
-    expect(listMock).not.toHaveBeenCalled();
   });
 
-  // Negative: the server answers 403 here and a 403 sends the user to /forbidden.
-  it("shows nothing and asks the server for no review for an author who did not create the case", async () => {
+  // Positive: after approval the comment is a button, not text on the page.
+  it("shows the comment as a button on an approved case", async () => {
+    // Arrange / Act
+    renderGate(me("contributor"), "approved");
+
+    // Assert
+    const region = await screen.findByRole("region", { name: "Catatan peninjau" });
+    expect(region).not.toHaveTextContent("Pasal 151 salah");
+    expect(within(region).getByRole("button", { name: "Lihat komentar" })).toBeInTheDocument();
+  });
+
+  // Edge: a Contributor who is neither the author nor assigned. The server has nothing for them.
+  it("shows nothing when the server has no review for this user", async () => {
     // Arrange
-    listMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    reviewMock.mockResolvedValue(null);
 
     // Act
-    renderGate(me("contributor"), "needs_revision");
-    await waitFor(() => expect(listMock).toHaveBeenCalledWith(CASE_ID));
+    renderGate(me("contributor"), "approved");
+    await vi.waitFor(() => expect(reviewMock).toHaveBeenCalledWith(CASE_ID));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Assert
     expect(feedback()).not.toBeInTheDocument();
-    expect(reviewMock).not.toHaveBeenCalled();
   });
 
-  // Edge: there is feedback to act on only after a revision was asked for.
-  it.each(["draft", "in_review", "approved"] as const)("shows nothing and asks for nothing on a %s case", async (status) => {
-    // Arrange / Act
-    renderGate(me("admin"), status);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // Assert
-    expect(feedback()).not.toBeInTheDocument();
-    expect(reviewMock).not.toHaveBeenCalled();
-  });
-
-  // Negative
-  it.each(["viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
+  // Negative: the server answers 403 to these roles, so they are not asked.
+  it.each(["viewer", "developer_ai"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {
     // Arrange / Act
     renderGate(me(role), "needs_revision");
     await new Promise((resolve) => setTimeout(resolve, 0));

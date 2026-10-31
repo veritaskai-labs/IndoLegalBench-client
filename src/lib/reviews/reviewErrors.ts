@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 
-export type ReviewAction = "list" | "submit" | "caseReview";
+export type ReviewAction = "list" | "awaitingRevision" | "submit" | "caseReview";
 
 /** Kode dari server yang artinya sudah jelas, apa pun aksinya. */
 const CODE_MESSAGE: Record<string, string> = {
@@ -15,6 +15,7 @@ const CODE_MESSAGE: Record<string, string> = {
 
 const FORBIDDEN_MESSAGE: Record<ReviewAction, string> = {
   list: "Anda tidak memiliki izin untuk melihat antrean tinjauan.",
+  awaitingRevision: "Anda tidak memiliki izin untuk melihat kasus yang menunggu revisi.",
   submit: "Anda tidak memiliki izin untuk menilai kasus ini.",
   caseReview: "Anda tidak memiliki izin untuk melihat penilaian kasus ini.",
 };
@@ -27,6 +28,7 @@ const NOT_FOUND_MESSAGE: Partial<Record<ReviewAction, string>> = {
 
 const DEFAULT_MESSAGE: Record<ReviewAction, string> = {
   list: "Gagal memuat antrean tinjauan. Coba lagi.",
+  awaitingRevision: "Gagal memuat kasus yang menunggu revisi. Coba lagi.",
   submit: "Gagal mengirim penilaian. Coba lagi.",
   caseReview: "Gagal memuat penilaian kasus. Coba lagi.",
 };

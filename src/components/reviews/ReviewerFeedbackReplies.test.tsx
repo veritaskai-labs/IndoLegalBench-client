@@ -14,7 +14,7 @@ describe('K-03 visible comment actions', () => {
     const user = userEvent.setup();
     render(<ReviewerFeedback review={makeCaseReview({ round_no:3, reviewers: [makeSlot({
       assignment_id: 'comment-owner', verdict: makeVerdictView({ comment: 'Mohon perjelas rujukan.' }),
-    })] })} />);
+    })] })} caseStatus="needs_revision" />);
     await user.click(screen.getByRole('button', { name: 'Balas komentar' }));
     expect(await screen.findByRole('dialog', { name: 'Diskusi komentar peninjau' })).toBeInTheDocument();
     expect(within(screen.getByRole('dialog', { name: 'Diskusi komentar peninjau' })).getByText('Putaran 3')).toBeInTheDocument();

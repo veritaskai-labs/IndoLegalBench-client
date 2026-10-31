@@ -45,3 +45,31 @@ describe("VerdictSummary", () => {
     expect(screen.queryByText(/WIB/)).not.toBeInTheDocument();
   });
 });
+
+describe("VerdictSummary with the comment in the drawer", () => {
+  // Positive
+  it("keeps the decision and time but not the comment text", () => {
+    // Arrange
+    const verdict = makeVerdictView({ decision: "revise", comment: "Pasal 151 salah", submitted_at: "2026-10-14T03:00:00Z" });
+
+    // Act
+    render(<VerdictSummary verdict={verdict} commentInDrawer />);
+
+    // Assert
+    expect(screen.getByText("14 Okt 2026, 10.00 WIB")).toBeInTheDocument();
+    expect(screen.queryByText("Pasal 151 salah")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tanpa komentar")).not.toBeInTheDocument();
+  });
+
+  // Edge: without a comment there is nothing to move, so the plain note stays.
+  it("still says there is no comment when there is none", () => {
+    // Arrange
+    const verdict = makeVerdictView({ decision: "approve", comment: null });
+
+    // Act
+    render(<VerdictSummary verdict={verdict} commentInDrawer />);
+
+    // Assert
+    expect(screen.getByText("Tanpa komentar")).toBeInTheDocument();
+  });
+});

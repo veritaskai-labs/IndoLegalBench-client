@@ -70,6 +70,14 @@ describe('CommentDiscussion', () => {
     expect(await screen.findByText(/literal text/)).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+  it('shows the read-only notice and no form, even if the server would allow a reply', async () => {
+    get.mockResolvedValue(thread({ can_reply: true, replies: [reply] }));
+    render(<CommentDiscussion assignmentId="a1" readOnlyNotice="Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca." />);
+    expect(await screen.findByText(/literal text/)).toBeInTheDocument();
+    expect(screen.getByText('Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kirim balasan' })).not.toBeInTheDocument();
+  });
   it('blocks whitespace and oversized programmatic form submission', async () => {
     render(<CommentDiscussion assignmentId="a1" />);
     const input = await screen.findByLabelText('Balasan Anda');

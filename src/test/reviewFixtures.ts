@@ -1,5 +1,6 @@
 import type {
   AssignedReview,
+  AwaitingRevisionReview,
   CaseReview,
   ReviewCopy,
   ReviewerSlot,
@@ -91,6 +92,20 @@ export function makeVerdictResult(overrides: Partial<VerdictResult> = {}): Verdi
     assignment_id: ASSIGNMENT_ID,
     round_status: "open",
     round_decision: null,
+    ...overrides,
+  };
+}
+
+export function makeAwaiting(overrides: Partial<AwaitingRevisionReview> = {}): AwaitingRevisionReview {
+  return {
+    assignment_id: ASSIGNMENT_ID,
+    case_id: CASE_ID,
+    case_code: "ILB-PT-0142",
+    title: "Kewajiban pemberitahuan tertulis sebelum PHK",
+    round_no: 1,
+    my_decision: "revise",
+    decided_at: "2026-10-14T03:00:00Z",
+    thread_assignment_ids: [ASSIGNMENT_ID],
     ...overrides,
   };
 }
