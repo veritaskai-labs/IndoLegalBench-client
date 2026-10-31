@@ -313,7 +313,7 @@ function ProductRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
-  // Produk manual tidak punya API: kolomnya tidak berlaku, tanpa uji koneksi.
+  // Produk manual: kolom API tidak berlaku; Ubah menunggu form SCRUM-202.
   const manual = product.measurement_type === "manual";
   return (
     <tr className="align-top">
@@ -360,9 +360,11 @@ function ProductRow({
               {testing ? "Menguji…" : "Uji koneksi"}
             </button>
           )}
-          <button type="button" onClick={onEdit} aria-label={`Ubah ${product.name}`} className="text-slate-900 hover:underline">
-            Ubah
-          </button>
+          {!manual && (
+            <button type="button" onClick={onEdit} aria-label={`Ubah ${product.name}`} className="text-slate-900 hover:underline">
+              Ubah
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggle}
