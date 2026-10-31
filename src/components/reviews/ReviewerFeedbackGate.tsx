@@ -1,6 +1,6 @@
 "use client";
 
-import { useCanReadReviewFeedback } from "@/hooks/useCanReadReviewFeedback";
+import { canReadReviewFeedback } from "@/lib/cases/permissions";
 import type { Role } from "@/types";
 import type { CaseStatus } from "@/types/case";
 import { ReviewerFeedbackSection } from "./ReviewerFeedbackSection";
@@ -13,11 +13,11 @@ type Props = {
 };
 
 /**
- * Memutuskan apakah catatan peninjau satu kasus tampil sama sekali. Server menjawab 403 untuk yang
- * tidak berhak dan setiap 403 memindahkan pengguna ke /forbidden, jadi bagian ini tidak dipasang dan
- * tidak meminta apa pun kecuali untuk admin atau pembuat kasus yang kasusnya perlu revisi.
+ * Memutuskan apakah catatan peninjau satu kasus ditawarkan sama sekali: hanya admin dan Kontributor,
+ * di semua status kasus. Peran lain tidak meminta apa pun karena server menjawab 403. Kontributor
+ * yang bukan pihak di kasus ini mendapat jawaban kosong dari bagian ini, tanpa dialihkan.
  */
 export function ReviewerFeedbackGate({ caseId, user, status }: Readonly<Props>) {
-  const canRead = useCanReadReviewFeedback(caseId, user, status);
+  const canRead = canReadReviewFeedback(user?.role ?? null, status);
   return canRead ? <ReviewerFeedbackSection caseId={caseId} /> : null;
 }
