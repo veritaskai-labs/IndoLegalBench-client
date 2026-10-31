@@ -34,7 +34,7 @@ export const MODEL_PARAMETER_FIELDS: ReadonlyArray<ModelParameterField> = [
     key: "temperature",
     label: "Temperature",
     kind: "number",
-    helper: "Klien memakai 0.3 sebagai nilai awal.",
+    helper: "Kosongkan untuk memakai bawaan penyedia (klien menyarankan 0.3).",
     placeholder: "0.3",
   },
   {

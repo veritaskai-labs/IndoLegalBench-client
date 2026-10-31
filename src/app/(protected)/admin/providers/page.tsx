@@ -399,7 +399,6 @@ function LastTest({ product, testing, live }: { product: AiProduct; testing: boo
   if (product.last_test_status == null || product.last_test_at == null) {
     return <span className="text-slate-400">Belum pernah diuji</span>;
   }
-
   const when = formatDateTime(product.last_test_at);
   if (product.last_test_status === "ok") {
     return (
