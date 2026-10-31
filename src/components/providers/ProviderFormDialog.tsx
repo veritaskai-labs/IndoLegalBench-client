@@ -258,55 +258,44 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     void save();
   }
 
-  /** AC1: hanya kolom milik jenis yang dipilih yang dikirim. */
+
+  /** AC1: isian produk manual, sama untuk daftar baru maupun ubah. */
+  function manualPayload() {
+    return {
+      name: name.trim(),
+      measurement_type: "manual" as const,
+      vendor_name: vendorName.trim(),
+      site_url: siteUrl.trim(),
+      access_note: accessNote.trim() === "" ? null : accessNote.trim(),
+      manual_params: manualParams.trim() === "" ? null : manualParams.trim(),
+    };
+  }
+
+  /** AC1: isian produk otomatis tanpa kredensial, yang aturannya berbeda per aksi. */
+  function automaticPayload() {
+    return {
+      name: name.trim(),
+      measurement_type: "automatic" as const,
+      provider_type: providerType as ProviderType,
+      base_url: baseUrl.trim(),
+      model_name: modelName.trim(),
+      rate_limit_per_minute: Number(rateLimit),
+      monthly_budget_idr: String(parseRupiahInput(budget)),
+      model_params: toModelParams(modelParams),
+    };
+  }
+
   function createPayload(): AiProductCreate {
-    if (measurementType === "manual") {
-      return {
-        name: name.trim(),
-        measurement_type: "manual",
-        vendor_name: vendorName.trim(),
-        site_url: siteUrl.trim(),
-        access_note: accessNote.trim() === "" ? null : accessNote.trim(),
-        manual_params: manualParams.trim() === "" ? null : manualParams.trim(),
-      };
-    }
-    return {
-      name: name.trim(),
-      measurement_type: "automatic",
-      provider_type: providerType as ProviderType,
-      base_url: baseUrl.trim(),
-      model_name: modelName.trim(),
-      credential,
-      rate_limit_per_minute: Number(rateLimit),
-      monthly_budget_idr: String(parseRupiahInput(budget)),
-      model_params: toModelParams(modelParams),
-    };
+    if (measurementType === "manual") return manualPayload();
+    return { ...automaticPayload(), credential };
   }
 
+  /** Kredensial write-only: hanya ikut terkirim kalau diisi ulang. */
   function updatePayload(): AiProductUpdate {
-    if (measurementType === "manual") {
-      return {
-        name: name.trim(),
-        measurement_type: "manual",
-        vendor_name: vendorName.trim(),
-        site_url: siteUrl.trim(),
-        access_note: accessNote.trim() === "" ? null : accessNote.trim(),
-        manual_params: manualParams.trim() === "" ? null : manualParams.trim(),
-      };
-    }
-    return {
-      name: name.trim(),
-      measurement_type: "automatic",
-      provider_type: providerType as ProviderType,
-      base_url: baseUrl.trim(),
-      model_name: modelName.trim(),
-      rate_limit_per_minute: Number(rateLimit),
-      monthly_budget_idr: String(parseRupiahInput(budget)),
-      model_params: toModelParams(modelParams),
-      ...(credential !== "" && { credential }),
-    };
+    if (measurementType === "manual") return manualPayload();
+    return { ...automaticPayload(), ...(credential !== "" && { credential }) };
   }
-
+  
   /** AC4: server menolak pergantian jenis kalau produk sudah punya riwayat. */
   function lockTypeAfterRefusal(saved: AiProduct) {
     setTypeLocked(true);
