@@ -1608,7 +1608,7 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
   });
 
   // Positive: AC3, the comments stay readable on every status, for example after approval.
-  it.each(["draft", "in_review", "approved"] as const)("shows the comments on a %s case too", async (status) => {
+  it.each(["draft", "in_review"] as const)("shows the comments on a %s case too", async (status) => {
     // Arrange
     getCaseMock.mockResolvedValue(savedCase({ status }));
 
@@ -1617,6 +1617,20 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
 
     // Assert
     expect(await feedback()).toHaveTextContent("Pasal 151 salah");
+  });
+
+  // Positive: after approval the comment is a button that opens the read-only drawer.
+  it("turns the comment into a button on an approved case", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    const section = await feedback();
+
+    // Assert
+    expect(section).not.toHaveTextContent("Pasal 151 salah");
+    expect(within(section).getByRole("button", { name: "Lihat komentar" })).toBeInTheDocument();
   });
 
   // Negative

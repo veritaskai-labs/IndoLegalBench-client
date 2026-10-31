@@ -113,7 +113,7 @@ describe("ReviewerFeedback", () => {
     const review = makeCaseReview({ status: "decided", reviewers: [reviseSlot("Anisa P.", "Perbaiki")] });
 
     // Act
-    render(<ReviewerFeedback review={review} />);
+    render(<ReviewerFeedback review={review} caseStatus="needs_revision" />);
 
     // Assert
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
