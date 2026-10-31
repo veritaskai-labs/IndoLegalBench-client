@@ -45,7 +45,7 @@ describe("providerApi", () => {
       credential: "abcd",
       rate_limit_per_minute: 1,
       monthly_budget_idr: "1",
-      measurement_type: "automatic",
+
     });
     await updateProduct("a/b", { name: "Y" });
 
