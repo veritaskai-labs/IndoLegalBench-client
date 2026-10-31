@@ -56,6 +56,8 @@ const PROVIDER_TYPES = Object.keys(PROVIDER_TYPE_LABEL) as ProviderType[];
 const URL_ERROR = "Isi URL lengkap yang diawali http:// atau https://.";
 const IMMUTABLE_ERROR =
   "Jenis pengukuran tidak bisa diubah karena produk sudah punya riwayat pengukuran. Nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.";
+const NEW_CREDENTIAL_HINT =
+  "Disimpan terenkripsi dan tidak pernah ditampilkan lagi.";
 
 function isHttpUrl(text: string): boolean {
   try {
@@ -118,13 +120,19 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
 
   const switchingType =
     editing && measurementType !== (product?.measurement_type ?? "automatic");
+  /** AC4: jenis baru berarti isian baru, jadi kredensial produk otomatis wajib. */
+  const credentialRequired = !editing || switchingType;
+  const storedCredentialHint =
+    product?.credential_hint != null
+      ? `Kredensial tersimpan (…${product.credential_hint}), isi untuk mengganti. Kosongkan bila tidak diganti.`
+      : "Kredensial tersimpan, isi untuk mengganti. Kosongkan bila tidak diganti.";
 
   function automaticErrors(): Errors {
     const found: Errors = {};
     if (providerType === "") found.provider_type = "Pilih jenis API.";
     if (!isHttpUrl(baseUrl.trim())) found.base_url = URL_ERROR;
     if (modelName.trim() === "") found.model_name = "Nama model wajib diisi.";
-    if (!editing && credential === "") found.credential = "Kredensial wajib diisi.";
+    if (credentialRequired && credential === "") found.credential = "Kredensial wajib diisi.";
     else if (credential !== "" && credential.length < MIN_CREDENTIAL) {
       found.credential = `Kredensial minimal ${MIN_CREDENTIAL} karakter.`;
     }
@@ -371,15 +379,11 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
 
               <SecretInput
                 label="Kredensial"
-                required={!editing}
+                required={credentialRequired}
                 value={credential}
                 onChange={setCredential}
                 error={errors.credential}
-                hint={
-                  editing && product !== undefined
-                    ? `Kredensial tersimpan (…${product.credential_hint}), isi untuk mengganti. Kosongkan bila tidak diganti.`
-                    : "Disimpan terenkripsi dan tidak pernah ditampilkan lagi."
-                }
+                hint={credentialRequired ? NEW_CREDENTIAL_HINT : storedCredentialHint}
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
