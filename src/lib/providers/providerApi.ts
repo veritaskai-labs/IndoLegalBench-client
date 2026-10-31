@@ -1,5 +1,13 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { AiProduct, AiProductCreate, AiProductUpdate, ConnectionTest } from "@/types/provider";
+import type {
+  AiProduct,
+  AiProductCreate,
+  AiProductOption,
+  AiProductUpdate,
+  ConnectionTest,
+  MeasurementType,
+  ProductPurpose,
+} from "@/types/provider";
 
 const BASE = "/admin/providers";
 
@@ -8,8 +16,14 @@ function productPath(productId: string): string {
 }
 
 /** GET /admin/providers?is_active=. Kredensial tidak pernah ada di balasan, hanya hint. */
-export function listProducts(isActive: boolean): Promise<AiProduct[]> {
-  return apiFetch<AiProduct[]>(`${BASE}?is_active=${isActive}`);
+export function listProducts(isActive: boolean, measurementType?: MeasurementType): Promise<AiProduct[]> {
+  const type = measurementType ? `&measurement_type=${measurementType}` : "";
+  return apiFetch<AiProduct[]>(`${BASE}?is_active=${isActive}${type}`);
+}
+
+/** GET /ai-products?purpose=: hanya produk aktif yang jenisnya cocok. */
+export function listProductOptions(purpose: ProductPurpose): Promise<AiProductOption[]> {
+  return apiFetch<AiProductOption[]>(`/ai-products?purpose=${purpose}`);
 }
 
 export function createProduct(payload: AiProductCreate): Promise<AiProduct> {

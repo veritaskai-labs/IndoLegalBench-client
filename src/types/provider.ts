@@ -9,3 +9,5 @@ export type ConnectionErrorCategory =
 export type ProviderType = components["schemas"]["ProviderType"];
 export type MeasurementType = components["schemas"]["MeasurementType"];
 export type ModelParams = components["schemas"]["ModelParams"];
+export type ProductPurpose = components["schemas"]["ProductPurpose"];
+export type AiProductOption = components["schemas"]["AiProductOption"];

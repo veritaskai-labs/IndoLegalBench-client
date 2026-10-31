@@ -9,8 +9,8 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
-import { formatDateTime, formatRupiah, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
-import type { AiProduct } from "@/types/provider";
+import { formatDate, formatDateTime, formatRupiah, MEASUREMENT_TYPE_LABEL, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
+import type { AiProduct, MeasurementType } from "@/types/provider";
 
 type Dialog =
   | { mode: "closed" }
@@ -29,7 +29,27 @@ type LiveResult =
   /** Permintaan uji koneksi sendiri gagal (jaringan, server); hasil tersimpan tidak berubah. */
   | { status: "error" };
 
-const COLUMNS = 9;
+const COLUMNS = 11;
+
+/** Filter jenis pengukuran (PBI-23 AC6); "all" berarti tanpa filter. */
+type TypeFilter = MeasurementType | "all";
+
+const TYPE_FILTERS: readonly { value: TypeFilter; label: string }[] = [
+  { value: "all", label: "Semua" },
+  { value: "automatic", label: MEASUREMENT_TYPE_LABEL.automatic },
+  { value: "manual", label: MEASUREMENT_TYPE_LABEL.manual },
+];
+
+const TYPE_BADGE: Record<MeasurementType, string> = {
+  automatic: "bg-indigo-50 text-indigo-800",
+  manual: "bg-amber-50 text-amber-800",
+};
+
+function emptyTitle(active: boolean, type: TypeFilter): string {
+  if (type === "all") return active ? "Belum ada produk AI aktif" : "Tidak ada produk AI nonaktif";
+  const kind = MEASUREMENT_TYPE_LABEL[type].toLowerCase();
+  return active ? `Belum ada produk AI ${kind} yang aktif` : `Tidak ada produk AI ${kind} yang nonaktif`;
+}
 
 /**
  * Registri produk AI (SCRUM-117). Rutenya /admin/providers, sama dengan API
@@ -38,6 +58,7 @@ const COLUMNS = 9;
 export default function ProvidersPage() {
   const { showToast } = useToast();
   const [active, setActive] = useState(true);
+  const [type, setType] = useState<TypeFilter>("all");
   const [list, setList] = useState<ListState>({ status: "loading" });
   const [nonce, setNonce] = useState(0);
   const [dialog, setDialog] = useState<Dialog>({ mode: "closed" });
@@ -51,7 +72,7 @@ export default function ProvidersPage() {
 
   useEffect(() => {
     let cancelled = false;
-    listProducts(active)
+    (type === "all" ? listProducts(active) : listProducts(active, type))
       .then((products) => {
         if (!cancelled) setList({ status: "ready", products });
       })
@@ -61,12 +82,18 @@ export default function ProvidersPage() {
     return () => {
       cancelled = true;
     };
-  }, [active, nonce]);
+  }, [active, type, nonce]);
 
   function switchTab(next: boolean) {
     if (next === active) return;
     setList({ status: "loading" });
     setActive(next);
+  }
+
+  function switchType(next: TypeFilter) {
+    if (next === type) return;
+    setList({ status: "loading" });
+    setType(next);
   }
 
   function replaceRow(saved: AiProduct) {
@@ -138,24 +165,44 @@ export default function ProvidersPage() {
         </button>
       </header>
 
-      <div role="tablist" aria-label="Status produk" className="flex gap-2 border-b border-slate-200">
-        {[
-          { value: true, label: "Aktif" },
-          { value: false, label: "Nonaktif" },
-        ].map((tab) => (
-          <button
-            key={tab.label}
-            type="button"
-            role="tab"
-            aria-selected={active === tab.value}
-            onClick={() => switchTab(tab.value)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
-              active === tab.value ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200">
+        <div role="tablist" aria-label="Status produk" className="flex gap-2">
+          {[
+            { value: true, label: "Aktif" },
+            { value: false, label: "Nonaktif" },
+          ].map((tab) => (
+            <button
+              key={tab.label}
+              type="button"
+              role="tab"
+              aria-selected={active === tab.value}
+              onClick={() => switchTab(tab.value)}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${
+                active === tab.value ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="mb-2 flex items-center gap-2 text-sm text-slate-600">
+          <span aria-hidden="true">Jenis:</span>
+          <fieldset aria-label="Jenis pengukuran" className="m-0 inline-flex min-w-0 rounded-md border border-slate-300 p-0.5">
+            {TYPE_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                aria-pressed={type === filter.value}
+                onClick={() => switchType(filter.value)}
+                className={`rounded px-3 py-1 text-sm font-medium ${
+                  type === filter.value ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </fieldset>
+        </div>
       </div>
 
       {list.status === "error" ? (
@@ -167,12 +214,14 @@ export default function ProvidersPage() {
               <tr>
                 <th scope="col" className="px-4 py-3">Nama</th>
                 <th scope="col" className="px-4 py-3">Jenis</th>
+                <th scope="col" className="px-4 py-3">Penyedia</th>
                 <th scope="col" className="px-4 py-3">Model</th>
                 <th scope="col" className="px-4 py-3">Kredensial</th>
                 <th scope="col" className="px-4 py-3">Limit/menit</th>
                 <th scope="col" className="px-4 py-3">Budget/bulan</th>
                 <th scope="col" className="px-4 py-3">Status</th>
                 <th scope="col" className="px-4 py-3">Uji terakhir</th>
+                <th scope="col" className="px-4 py-3">Didaftarkan</th>
                 <th scope="col" className="px-4 py-3">
                   <span className="sr-only">Aksi</span>
                 </th>
@@ -184,7 +233,7 @@ export default function ProvidersPage() {
                 <EmptyState
                   inTable
                   colSpan={COLUMNS}
-                  title={active ? "Belum ada produk AI aktif" : "Tidak ada produk AI nonaktif"}
+                  title={emptyTitle(active, type)}
                   description={active ? "Daftarkan produk pertama yang akan diukur." : "Produk yang dinonaktifkan muncul di sini."}
                   action={active ? { label: "Daftarkan produk", onClick: () => setDialog({ mode: "create" }) } : undefined}
                 />
@@ -264,23 +313,26 @@ function ProductRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  // Produk manual: kolom API tidak berlaku; Ubah menunggu form SCRUM-202.
+  const manual = product.measurement_type === "manual";
   return (
     <tr className="align-top">
       <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
-      <td className="px-4 py-3 text-slate-600">
-        {product.provider_type ? PROVIDER_TYPE_LABEL[product.provider_type] : "—"}
-      </td>
-      <td className="px-4 py-3 font-mono text-xs text-slate-600">{product.model_name}</td>
       <td className="px-4 py-3">
-        {product.credential_hint ? (
-          <CredentialHint hint={product.credential_hint} />
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
+        <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[product.measurement_type]}`}>
+          {MEASUREMENT_TYPE_LABEL[product.measurement_type]}
+        </span>
       </td>
-      <td className="px-4 py-3 text-slate-600">{product.rate_limit_per_minute ?? "—"}</td>
+      <td className="px-4 py-3 text-slate-600">
+        {product.vendor_label ?? (product.provider_type && PROVIDER_TYPE_LABEL[product.provider_type])}
+      </td>
+      <td className="px-4 py-3 font-mono text-xs text-slate-600">{manual ? <NotApplicable /> : product.model_name}</td>
+      <td className="px-4 py-3">
+        {manual ? <NotApplicable /> : product.credential_hint != null && <CredentialHint hint={product.credential_hint} />}
+      </td>
+      <td className="px-4 py-3 text-slate-600">{manual ? <NotApplicable /> : product.rate_limit_per_minute}</td>
       <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-        {product.monthly_budget_idr ? formatRupiah(product.monthly_budget_idr) : "—"}
+        {manual ? <NotApplicable /> : product.monthly_budget_idr != null && formatRupiah(product.monthly_budget_idr)}
       </td>
       <td className="px-4 py-3">
         <span
@@ -292,22 +344,27 @@ function ProductRow({
         </span>
       </td>
       <td className="max-w-xs px-4 py-3 text-xs" aria-live="polite">
-        <LastTest product={product} testing={testing} live={live} />
+        {manual ? <NotApplicable /> : <LastTest product={product} testing={testing} live={live} />}
       </td>
+      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatDate(product.created_at)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-1.5 text-xs font-medium">
-          <button
-            type="button"
-            onClick={onTest}
-            disabled={testing}
-            aria-label={`Uji koneksi ${product.name}`}
-            className="text-slate-900 hover:underline disabled:opacity-50"
-          >
-            {testing ? "Menguji…" : "Uji koneksi"}
-          </button>
-          <button type="button" onClick={onEdit} aria-label={`Ubah ${product.name}`} className="text-slate-900 hover:underline">
-            Ubah
-          </button>
+          {!manual && (
+            <button
+              type="button"
+              onClick={onTest}
+              disabled={testing}
+              aria-label={`Uji koneksi ${product.name}`}
+              className="text-slate-900 hover:underline disabled:opacity-50"
+            >
+              {testing ? "Menguji…" : "Uji koneksi"}
+            </button>
+          )}
+          {!manual && (
+            <button type="button" onClick={onEdit} aria-label={`Ubah ${product.name}`} className="text-slate-900 hover:underline">
+              Ubah
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggle}
@@ -325,12 +382,21 @@ function ProductRow({
   );
 }
 
+function NotApplicable() {
+  return (
+    <span className="text-slate-400">
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">Tidak berlaku</span>
+    </span>
+  );
+}
+
 function LastTest({ product, testing, live }: { product: AiProduct; testing: boolean; live: LiveResult | undefined }) {
   if (testing) return <span className="text-slate-500">Menguji koneksi, bisa sampai 15 detik…</span>;
   if (live?.status === "error") {
     return <span className="text-red-700">Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.</span>;
   }
-  if (!product.last_test_status || !product.last_test_at) {
+  if (product.last_test_status == null || product.last_test_at == null) {
     return <span className="text-slate-400">Belum pernah diuji</span>;
   }
 
