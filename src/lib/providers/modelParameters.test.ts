@@ -36,6 +36,16 @@ describe("MODEL_PARAMETER_FIELDS (AC2)", () => {
       "high",
     ]);
   });
+  it("offers on and off for the booleans, so the default can be overridden", () => {
+    const thinking = MODEL_PARAMETER_FIELDS.find(
+      (field) => field.key === "thinking",
+    );
+
+    expect(thinking?.choices?.map((choice) => choice.value)).toEqual([
+      "on",
+      "off",
+    ]);
+  });
 });
 
 describe("modelParamsError", () => {
@@ -73,12 +83,17 @@ describe("toModelParams", () => {
     expect(toModelParams({ effort: "medium" })).toEqual({ effort: "medium" });
   });
 
-  it("sends a toggle only when it is on", () => {
-    expect(toModelParams({ thinking: true, web_search: false })).toEqual({
-      thinking: true,
-    });
+  it("sends a toggle that was turned on", () => {
+    expect(toModelParams({ thinking: "on" })).toEqual({ thinking: true });
   });
 
+  it("sends a toggle that was turned off, so the provider default is overridden", () => {
+    expect(toModelParams({ thinking: "off" })).toEqual({ thinking: false });
+  });
+
+  it("drops a toggle left on the provider default", () => {
+    expect(toModelParams({ thinking: "", web_search: "" })).toBeNull();
+  });
   it("drops a field the admin left blank", () => {
     expect(toModelParams({ temperature: "   ", effort: "" })).toBeNull();
   });
@@ -93,12 +108,11 @@ describe("fromModelParams", () => {
     expect(fromModelParams({ temperature: 0.3 })).toEqual({ temperature: "0.3" });
   });
 
-  it("keeps the effort and the toggles that are on", () => {
+  it("reads the toggles back as on and off", () => {
     expect(
       fromModelParams({ effort: "high", thinking: true, web_search: false }),
-    ).toEqual({ effort: "high", thinking: true });
+    ).toEqual({ effort: "high", thinking: "on", web_search: "off" });
   });
-
   it("ignores a parameter the server left null", () => {
     expect(fromModelParams({ temperature: null, effort: null })).toEqual({});
   });

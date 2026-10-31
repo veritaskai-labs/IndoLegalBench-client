@@ -289,8 +289,8 @@ describe("ProviderFormDialog editing (AC4)", () => {
 
     expect(screen.getByLabelText("Temperature")).toHaveValue("0.3");
     expect(screen.getByLabelText("Effort")).toHaveValue("high");
-    expect(screen.getByLabelText("Thinking")).toBeChecked();
-    expect(screen.getByLabelText("Web search")).not.toBeChecked();
+    expect(screen.getByLabelText("Thinking")).toHaveValue("on");
+    expect(screen.getByLabelText("Web search")).toHaveValue("");
   });
 
   it("sends the manual fields of the product being edited", async () => {
@@ -330,7 +330,7 @@ describe("ProviderFormDialog editing (AC4)", () => {
       />,
     );
 
-    await userEvent.click(screen.getByLabelText("Web search"));
+    await userEvent.selectOptions(screen.getByLabelText("Web search"), "on");
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
 
     expect(updateProduct).toHaveBeenCalledWith(AUTOMATIC_PRODUCT.id, {

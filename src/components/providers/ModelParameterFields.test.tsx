@@ -38,27 +38,26 @@ describe("ModelParameterFields (AC2)", () => {
     expect(onChange).toHaveBeenCalledWith("effort", "high");
   });
 
-  it("reports a toggle as a boolean", async () => {
+  it("reports a toggle as on or off", async () => {
     const onChange = vi.fn();
     render(<ModelParameterFields values={{}} onChange={onChange} />);
 
-    await userEvent.click(screen.getByLabelText("Thinking"));
+    await userEvent.selectOptions(screen.getByLabelText("Thinking"), "off");
 
-    expect(onChange).toHaveBeenCalledWith("thinking", true);
+    expect(onChange).toHaveBeenCalledWith("thinking", "off");
   });
-
   it("fills the fields from the values of the product being edited", () => {
     render(
       <ModelParameterFields
-        values={{ temperature: "0.3", effort: "low", thinking: true }}
+        values={{ temperature: "0.3", effort: "low", thinking: "on" }}
         onChange={vi.fn()}
       />,
     );
 
     expect(screen.getByLabelText("Temperature")).toHaveValue("0.3");
     expect(screen.getByLabelText("Effort")).toHaveValue("low");
-    expect(screen.getByLabelText("Thinking")).toBeChecked();
-    expect(screen.getByLabelText("Web search")).not.toBeChecked();
+    expect(screen.getByLabelText("Thinking")).toHaveValue("on");
+    expect(screen.getByLabelText("Web search")).toHaveValue("");
   });
   it("says that a different set of parameters is a separate product", () => {
     render(<ModelParameterFields values={{}} onChange={vi.fn()} />);
