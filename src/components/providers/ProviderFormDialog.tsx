@@ -3,7 +3,11 @@
 import { useId, useState, type ReactNode } from "react";
 import { RequiredMark, SecretInput } from "@/components/ui/SecretInput";
 import { ApiError } from "@/lib/apiClient";
-import { createProduct, updateProduct, testConnection } from "@/lib/providers/providerApi";
+import {
+  createProduct,
+  testConnection,
+  updateProduct,
+} from "@/lib/providers/providerApi";
 import {
   formatRupiahInput,
   parseRupiahInput,
@@ -14,8 +18,12 @@ import {
   modelParamsError,
   toModelParams,
 } from "@/lib/providers/modelParameters";
-
-import type { AiProduct, AiProductUpdate, ProviderType, AiProductCreate } from "@/types/provider";
+import type {
+  AiProduct,
+  AiProductCreate,
+  AiProductUpdate,
+  ProviderType,
+} from "@/types/provider";
 
 import {
   MeasurementTypeField,
@@ -46,6 +54,8 @@ type Errors = Partial<Record<Field, string>>;
 const MIN_CREDENTIAL = 4;
 const PROVIDER_TYPES = Object.keys(PROVIDER_TYPE_LABEL) as ProviderType[];
 const URL_ERROR = "Isi URL lengkap yang diawali http:// atau https://.";
+const IMMUTABLE_ERROR =
+  "Jenis pengukuran tidak bisa diubah karena produk sudah punya riwayat pengukuran. Nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.";
 
 function isHttpUrl(text: string): boolean {
   try {
@@ -94,17 +104,20 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       ? formatRupiahInput(product.monthly_budget_idr.split(".")[0])
       : "",
   );
-  // AC2: parameter model diisi dari produk yang diubah; pengirimannya ke kolom
-  // model_params menyusul begitu kontrak create menerimanya.
   const [modelParams, setModelParams] = useState<Record<string, string | boolean>>(
     () => fromModelParams(product?.model_params),
   );
   const [confirming, setConfirming] = useState(false);
+  /** AC4: dikunci setelah server menolak perubahan jenis karena ada riwayat. */
+  const [typeLocked, setTypeLocked] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "failed" | "error" | null>(null);
+
+  const switchingType =
+    editing && measurementType !== (product?.measurement_type ?? "automatic");
 
   function automaticErrors(): Errors {
     const found: Errors = {};
@@ -140,7 +153,30 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     };
   }
 
-  /** AC4: produk baru dikonfirmasi dulu, karena jenis pengukurannya tidak bisa diubah lagi. */
+  /** AC4: isian jenis lama dihapus dari form begitu jenisnya diganti. */
+  function changeMeasurementType(next: MeasurementType) {
+    if (next === measurementType) return;
+    setErrors({});
+    setFormError(null);
+    setTestResult(null);
+    if (next === "manual") {
+      setProviderType("");
+      setBaseUrl("");
+      setModelName("");
+      setCredential("");
+      setRateLimit("");
+      setBudget("");
+      setModelParams({});
+    } else {
+      setVendorName("");
+      setSiteUrl("");
+      setAccessNote("");
+      setManualParams("");
+    }
+    setMeasurementType(next);
+  }
+
+  /** AC4: produk baru dan pergantian jenis dikonfirmasi dulu. */
   function requestSave() {
     setFormError(null);
     const found = validate();
@@ -149,7 +185,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       measurementType === "automatic" ? modelParamsError(modelParams) : null;
     if (paramsError !== null) setFormError(paramsError);
     if (paramsError !== null || Object.keys(found).length > 0) return;
-    if (!editing) {
+    if (!editing || switchingType) {
       setConfirming(true);
       return;
     }
@@ -181,11 +217,11 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     };
   }
 
-  /** AC4: jenis terkunci saat mengedit, jadi tidak ikut dikirim lagi. */
   function updatePayload(): AiProductUpdate {
     if (measurementType === "manual") {
       return {
         name: name.trim(),
+        measurement_type: "manual",
         vendor_name: vendorName.trim(),
         site_url: siteUrl.trim(),
         access_note: accessNote.trim() === "" ? null : accessNote.trim(),
@@ -194,6 +230,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     }
     return {
       name: name.trim(),
+      measurement_type: "automatic",
       provider_type: providerType as ProviderType,
       base_url: baseUrl.trim(),
       model_name: modelName.trim(),
@@ -202,6 +239,30 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       model_params: toModelParams(modelParams),
       ...(credential !== "" && { credential }),
     };
+  }
+
+  /** AC4: server menolak pergantian jenis kalau produk sudah punya riwayat. */
+  function lockTypeAfterRefusal(saved: AiProduct) {
+    setTypeLocked(true);
+    setMeasurementType(saved.measurement_type ?? "automatic");
+    setVendorName(saved.vendor_name ?? "");
+    setSiteUrl(saved.site_url ?? "");
+    setAccessNote(saved.access_note ?? "");
+    setManualParams(saved.manual_params ?? "");
+    setProviderType(saved.provider_type ?? "");
+    setBaseUrl(saved.base_url ?? "");
+    setModelName(saved.model_name ?? "");
+    setRateLimit(
+      saved.rate_limit_per_minute != null ? String(saved.rate_limit_per_minute) : "",
+    );
+    setBudget(
+      saved.monthly_budget_idr != null
+        ? formatRupiahInput(saved.monthly_budget_idr.split(".")[0])
+        : "",
+    );
+    setModelParams(fromModelParams(saved.model_params));
+    setErrors({});
+    setFormError(IMMUTABLE_ERROR);
   }
 
   async function save() {
@@ -213,7 +274,9 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
         : await createProduct(createPayload());
       onSaved(saved);
     } catch (error) {
-      if (error instanceof ApiError && error.code === "AI_PRODUCT_NAME_TAKEN") {
+      if (error instanceof ApiError && error.code === "MEASUREMENT_TYPE_IMMUTABLE" && product !== undefined) {
+        lockTypeAfterRefusal(product);
+      } else if (error instanceof ApiError && error.code === "AI_PRODUCT_NAME_TAKEN") {
         setErrors({ name: "Nama produk sudah dipakai. Pilih nama lain." });
       } else if (error instanceof ApiError && error.status === 422) {
         setFormError("Isian ditolak server. Periksa kembali URL, kredensial, limit, dan budget.");
@@ -238,29 +301,6 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     } finally {
       setTesting(false);
     }
-  }
-
-  /** AC4: isian jenis lama dihapus dari form begitu jenisnya diganti. */
-  function changeMeasurementType(next: MeasurementType) {
-    if (next === measurementType) return;
-    setErrors({});
-    setFormError(null);
-    setTestResult(null);
-    if (next === "manual") {
-      setProviderType("");
-      setBaseUrl("");
-      setModelName("");
-      setCredential("");
-      setRateLimit("");
-      setBudget("");
-      setModelParams({});
-    } else {
-      setVendorName("");
-      setSiteUrl("");
-      setAccessNote("");
-      setManualParams("");
-    }
-    setMeasurementType(next);
   }
 
   const title = editing ? "Ubah produk AI" : "Daftarkan produk AI";
@@ -288,7 +328,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
           <MeasurementTypeField
             value={measurementType}
             onChange={changeMeasurementType}
-            readOnly={editing}
+            readOnly={typeLocked}
           />
 
           <Labeled id={ids.name} label="Nama" required error={errors.name}>
@@ -387,13 +427,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                   setModelParams((current) => ({ ...current, [key]: value }))
                 }
               />
-              {!editing && (
-                <p className="text-xs text-slate-500">
-                  Parameter model tersimpan setelah produk terdaftar: simpan
-                  dulu, lalu ubah produknya.
-                </p>
-              )}
-             </>
+            </>
           ) : (
             <>
               <Labeled id={ids.vendorName} label="Nama penyedia" required error={errors.vendor_name}>
@@ -434,6 +468,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       {confirming && (
         <SaveTypeWarningDialog
           measurementType={measurementType}
+          switching={switchingType}
           onConfirm={() => void save()}
           onCancel={() => setConfirming(false)}
         />
