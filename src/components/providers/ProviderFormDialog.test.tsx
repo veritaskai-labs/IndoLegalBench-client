@@ -2,7 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { updateProduct, createProduct , testConnection} from "@/lib/providers/providerApi";
+import { ApiError } from "@/lib/apiClient";
+import {
+  createProduct,
+  testConnection,
+  updateProduct,
+} from "@/lib/providers/providerApi";
 import type { AiProduct, ConnectionTest } from "@/types/provider";
 
 import { ProviderFormDialog } from "./ProviderFormDialog";
@@ -108,59 +113,6 @@ describe("ProviderFormDialog measurement type (SCRUM-202)", () => {
     ).toBeInTheDocument();
   });
 
-  it("registers a manual product with its own fields", async () => {
-    vi.mocked(createProduct).mockResolvedValue(MANUAL_PRODUCT);
-    const onSaved = vi.fn();
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={onSaved} />);
-
-    await fillManual();
-    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
-
-    expect(createProduct).toHaveBeenCalledWith({
-      name: "Hukumonline Pro",
-      measurement_type: "manual",
-      vendor_name: "Hukumonline",
-      site_url: "https://hukumonline.com",
-      access_note: null,
-      manual_params: null,
-    });
-    expect(onSaved).toHaveBeenCalledWith(MANUAL_PRODUCT);
-  });
-
-  it("registers an automatic product with its credential and parameters", async () => {
-    vi.mocked(createProduct).mockResolvedValue(AUTOMATIC_PRODUCT);
-    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
-
-    await userEvent.type(screen.getByLabelText("Nama"), "DeepSeek");
-    await userEvent.selectOptions(
-      screen.getByLabelText("Jenis API"),
-      "openai_compatible",
-    );
-    await userEvent.type(
-      screen.getByLabelText("URL endpoint"),
-      "https://api.deepseek.com/chat/completions",
-    );
-    await userEvent.type(screen.getByLabelText("Model"), "deepseek-v4-flash");
-    await userEvent.type(screen.getByLabelText("Kredensial"), "sk-rahasia-9z9z");
-    await userEvent.type(screen.getByLabelText("Limit panggilan per menit"), "10");
-    await userEvent.type(screen.getByLabelText("Budget per bulan (Rp)"), "1500000");
-    await userEvent.type(screen.getByLabelText("Temperature"), "0.3");
-    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
-
-    expect(createProduct).toHaveBeenCalledWith({
-      name: "DeepSeek",
-      measurement_type: "automatic",
-      provider_type: "openai_compatible",
-      base_url: "https://api.deepseek.com/chat/completions",
-      model_name: "deepseek-v4-flash",
-      credential: "sk-rahasia-9z9z",
-      rate_limit_per_minute: 10,
-      monthly_budget_idr: "1500000",
-      model_params: { temperature: 0.3 },
-    });
-  });
   // AC2: uji koneksi butuh produk yang sudah ada di server.
   it("offers the connection test only after the product exists", () => {
     renderDialog();
@@ -217,6 +169,60 @@ describe("ProviderFormDialog save warning (AC2, AC4)", () => {
       screen.queryByRole("heading", { name: "Simpan sebagai produk Manual?" }),
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Nama penyedia")).toBeInTheDocument();
+  });
+
+  it("registers a manual product with its own fields", async () => {
+    vi.mocked(createProduct).mockResolvedValue(MANUAL_PRODUCT);
+    const onSaved = vi.fn();
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={onSaved} />);
+
+    await fillManual();
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith({
+      name: "Hukumonline Pro",
+      measurement_type: "manual",
+      vendor_name: "Hukumonline",
+      site_url: "https://hukumonline.com",
+      access_note: null,
+      manual_params: null,
+    });
+    expect(onSaved).toHaveBeenCalledWith(MANUAL_PRODUCT);
+  });
+
+  it("registers an automatic product with its credential and parameters", async () => {
+    vi.mocked(createProduct).mockResolvedValue(AUTOMATIC_PRODUCT);
+    render(<ProviderFormDialog onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText("Nama"), "DeepSeek");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Jenis API"),
+      "openai_compatible",
+    );
+    await userEvent.type(
+      screen.getByLabelText("URL endpoint"),
+      "https://api.deepseek.com/chat/completions",
+    );
+    await userEvent.type(screen.getByLabelText("Model"), "deepseek-v4-flash");
+    await userEvent.type(screen.getByLabelText("Kredensial"), "sk-rahasia-9z9z");
+    await userEvent.type(screen.getByLabelText("Limit panggilan per menit"), "10");
+    await userEvent.type(screen.getByLabelText("Budget per bulan (Rp)"), "1500000");
+    await userEvent.type(screen.getByLabelText("Temperature"), "0.3");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith({
+      name: "DeepSeek",
+      measurement_type: "automatic",
+      provider_type: "openai_compatible",
+      base_url: "https://api.deepseek.com/chat/completions",
+      model_name: "deepseek-v4-flash",
+      credential: "sk-rahasia-9z9z",
+      rate_limit_per_minute: 10,
+      monthly_budget_idr: "1500000",
+      model_params: { temperature: 0.3 },
+    });
   });
 
   it("refuses a temperature outside the range before asking for confirmation", async () => {
@@ -305,6 +311,7 @@ describe("ProviderFormDialog editing (AC4)", () => {
 
     expect(updateProduct).toHaveBeenCalledWith(MANUAL_PRODUCT.id, {
       name: "Hukumonline Pro",
+      measurement_type: "manual",
       vendor_name: "Hukumonline",
       site_url: "https://hukumonline.com",
       access_note: "Catatan baru",
@@ -328,6 +335,7 @@ describe("ProviderFormDialog editing (AC4)", () => {
 
     expect(updateProduct).toHaveBeenCalledWith(AUTOMATIC_PRODUCT.id, {
       name: "DeepSeek",
+      measurement_type: "automatic",
       provider_type: "openai_compatible",
       base_url: "https://api.deepseek.com/chat/completions",
       model_name: "deepseek-v4-flash",
@@ -365,5 +373,84 @@ describe("ProviderFormDialog switching the measurement type (AC4)", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
 
     expect(screen.getByLabelText("Nama penyedia")).toHaveValue("");
+  });
+});
+
+describe("ProviderFormDialog changing the type of an existing product (AC4)", () => {
+  it("lets the admin pick the type again while editing", () => {
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeEnabled();
+  });
+
+  it("confirms the switch and sends the new type", async () => {
+    vi.mocked(updateProduct).mockResolvedValue(MANUAL_PRODUCT);
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+    await userEvent.type(
+      screen.getByLabelText("Alamat situs"),
+      "https://hukumonline.com",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(
+      screen.getByText("Isian jenis sebelumnya akan hilang setelah disimpan."),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(updateProduct).toHaveBeenCalledWith(AUTOMATIC_PRODUCT.id, {
+      name: "DeepSeek",
+      measurement_type: "manual",
+      vendor_name: "Hukumonline",
+      site_url: "https://hukumonline.com",
+      access_note: null,
+      manual_params: null,
+    });
+  });
+
+  it("explains and locks the type when the server refuses the switch", async () => {
+    // ApiError dibuat lewat prototype-nya supaya instanceof benar tanpa menebak konstruktor.
+    const refusal = Object.assign(Object.create(ApiError.prototype), {
+      status: 422,
+      code: "MEASUREMENT_TYPE_IMMUTABLE",
+    }) as ApiError;
+    vi.mocked(updateProduct).mockRejectedValue(refusal);
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+    await userEvent.type(
+      screen.getByLabelText("Alamat situs"),
+      "https://hukumonline.com",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Jenis pengukuran tidak bisa diubah karena produk sudah punya riwayat pengukuran. Nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.",
+    );
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Otomatis/ })).toBeChecked();
   });
 });
