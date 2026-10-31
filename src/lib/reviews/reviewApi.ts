@@ -1,4 +1,4 @@
-import { apiFetch } from "@/lib/apiClient";
+import { ApiError, apiFetch } from "@/lib/apiClient";
 import type { AssignedReview, AwaitingRevisionReview, CaseReview, VerdictResult, VerdictWrite } from "@/types/review";
 import type { ReassignmentRow, ReplaceReviewerBody, ReplacedAssignment } from "@/types/reviewAdmin";
 
@@ -46,4 +46,19 @@ export function replaceReviewer(
  */
 export function getCaseReview(caseId: string): Promise<CaseReview> {
   return apiFetch<CaseReview>(`/cases/${encodeURIComponent(caseId)}/review`);
+}
+
+/**
+ * Seperti getCaseReview, tetapi untuk halaman yang menawarkan catatan peninjau ke semua Kontributor.
+ * Hanya penulis dan reviewer yang ditugaskan yang boleh membacanya, dan klien tidak tahu siapa yang
+ * ditugaskan. 403 (bukan pihak di kasus ini, tanpa dialihkan ke /forbidden) dan 404 NO_REVIEW_ROUND
+ * (belum pernah diajukan) berarti tidak ada yang ditampilkan; kegagalan lain tetap dilempar.
+ */
+export async function findCaseReview(caseId: string): Promise<CaseReview | null> {
+  try {
+    return await apiFetch<CaseReview>(`/cases/${encodeURIComponent(caseId)}/review`, { silentForbidden: true });
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 403 || error.code === "NO_REVIEW_ROUND")) return null;
+    throw error;
+  }
 }
