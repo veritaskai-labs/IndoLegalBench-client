@@ -585,6 +585,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar pilihan produk AI per tujuan
+         * @description Hanya produk aktif yang jenisnya sesuai tujuan: automatic_run untuk pengukuran otomatis (Admin, Developer AI), manual_entry untuk pencatatan manual (Admin, Kontributor). Produk berjenis lain tidak dikirim sama sekali (PBI-23 AC7, AC8).
+         */
+        get: operations["list_product_options_ai_products_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews/assigned": {
         parameters: {
             query?: never;
@@ -948,21 +968,61 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** AiProductCreate */
+        /**
+         * AiProductCreate
+         * @description Pendaftaran produk AI (PBI-10, PBI-23 AC1-AC3).
+         *
+         *     Isian per jenis sengaja opsional di sini: wajib atau terlarangnya diputuskan
+         *     rules.type_field_problem sesuai measurement_type, supaya kesalahan dilaporkan
+         *     sebagai FIELD_REQUIRED / FIELD_NOT_ALLOWED dengan nama field-nya. Tanpa
+         *     measurement_type produk dianggap Otomatis, sama seperti body PBI-10.
+         */
         AiProductCreate: {
             /** Name */
             name: string;
-            provider_type: components["schemas"]["ProviderType"];
+            /** @default automatic */
+            measurement_type: components["schemas"]["MeasurementType"];
+            provider_type?: components["schemas"]["ProviderType"] | null;
             /** Base Url */
-            base_url: string;
+            base_url?: string | null;
             /** Model Name */
-            model_name: string;
+            model_name?: string | null;
             /** Credential */
-            credential: string;
+            credential?: string | null;
             /** Rate Limit Per Minute */
-            rate_limit_per_minute: number;
+            rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
-            monthly_budget_idr: number | string;
+            monthly_budget_idr?: number | string | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: number | string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: number | string | null;
+            /** Vendor Name */
+            vendor_name?: string | null;
+            /** Site Url */
+            site_url?: string | null;
+            /** Access Note */
+            access_note?: string | null;
+            /** Manual Params */
+            manual_params?: string | null;
+        };
+        /**
+         * AiProductOption
+         * @description Satu pilihan produk di form pengukuran atau pencatatan manual (PBI-23 AC7, AC8).
+         *
+         *     Sengaja hanya id, nama, dan jenis: Kontributor hanya boleh melihat nama produk
+         *     manual aktif. Isian lengkap tetap di /admin/providers untuk Admin.
+         */
+        AiProductOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            measurement_type: components["schemas"]["MeasurementType"];
         };
         /**
          * AiProductRead
@@ -976,30 +1036,50 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-            provider_type: components["schemas"]["ProviderType"];
+            /** @default automatic */
+            measurement_type: components["schemas"]["MeasurementType"];
+            provider_type?: components["schemas"]["ProviderType"] | null;
             /** Base Url */
-            base_url: string;
+            base_url?: string | null;
             /** Model Name */
-            model_name: string;
+            model_name?: string | null;
             /** Credential Hint */
-            credential_hint: string;
+            credential_hint?: string | null;
             /**
              * Has Credential
-             * @default true
+             * @default false
              */
             has_credential: boolean;
             /** Rate Limit Per Minute */
-            rate_limit_per_minute: number;
+            rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
-            monthly_budget_idr: string;
+            monthly_budget_idr?: string | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: string | null;
+            /** Vendor Name */
+            vendor_name?: string | null;
+            /**
+             * Vendor Label
+             * @description Nama penyedia untuk daftar (PBI-23 AC6): vendor_name untuk produk Manual, label provider_type untuk produk Otomatis.
+             */
+            vendor_label?: string | null;
+            /** Site Url */
+            site_url?: string | null;
+            /** Access Note */
+            access_note?: string | null;
+            /** Manual Params */
+            manual_params?: string | null;
             /** Is Active */
             is_active: boolean;
             /** Last Test At */
-            last_test_at: string | null;
-            last_test_status: components["schemas"]["LastTestStatus"] | null;
+            last_test_at?: string | null;
+            last_test_status?: components["schemas"]["LastTestStatus"] | null;
             /** Last Test Message */
-            last_test_message: string | null;
-            last_test_error_category: components["schemas"]["ConnectionTestErrorCategory"] | null;
+            last_test_message?: string | null;
+            last_test_error_category?: components["schemas"]["ConnectionTestErrorCategory"] | null;
             /**
              * Created By
              * Format: uuid
@@ -1020,6 +1100,7 @@ export interface components {
         AiProductUpdate: {
             /** Name */
             name?: string | null;
+            measurement_type?: components["schemas"]["MeasurementType"] | null;
             provider_type?: components["schemas"]["ProviderType"] | null;
             /** Base Url */
             base_url?: string | null;
@@ -1031,6 +1112,19 @@ export interface components {
             rate_limit_per_minute?: number | null;
             /** Monthly Budget Idr */
             monthly_budget_idr?: number | string | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: number | string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: number | string | null;
+            /** Vendor Name */
+            vendor_name?: string | null;
+            /** Site Url */
+            site_url?: string | null;
+            /** Access Note */
+            access_note?: string | null;
+            /** Manual Params */
+            manual_params?: string | null;
         };
         /**
          * AnswerCriteria
@@ -1743,6 +1837,25 @@ export interface components {
             role: components["schemas"]["Role"];
         };
         /**
+         * MeasurementType
+         * @description MeasurementType:
+         *     - automatic: dijalankan otomatis oleh sistem via API
+         *     - manual: dijalankan manual dan dicatat oleh tim legal via situs
+         * @enum {string}
+         */
+        MeasurementType: "automatic" | "manual";
+        /** ModelParams */
+        ModelParams: {
+            /** Temperature */
+            temperature?: number | null;
+            /** Effort */
+            effort?: ("low" | "medium" | "high") | null;
+            /** Thinking */
+            thinking?: boolean | null;
+            /** Web Search */
+            web_search?: boolean | null;
+        };
+        /**
          * NeedsReassignmentResponse
          * @description Satu kasus pada antrean penugasan ulang (GET /reviews/needs-reassignment).
          */
@@ -1882,6 +1995,12 @@ export interface components {
              */
             assigned_at: string;
         };
+        /**
+         * ProductPurpose
+         * @description Untuk apa daftar pilihan produk dipakai.
+         * @enum {string}
+         */
+        ProductPurpose: "automatic_run" | "manual_entry";
         /**
          * ProviderType
          * @description ProviderType:
@@ -3747,6 +3866,8 @@ export interface operations {
         parameters: {
             query?: {
                 is_active?: boolean | null;
+                /** @description Saring per jenis pengukuran (PBI-23 AC6). */
+                measurement_type?: components["schemas"]["MeasurementType"] | null;
             };
             header?: never;
             path?: never;
@@ -4049,6 +4170,47 @@ export interface operations {
             };
             /** @description Produk AI tidak ditemukan. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_product_options_ai_products_get: {
+        parameters: {
+            query: {
+                /** @description Untuk apa daftar pilihan ini dipakai. */
+                purpose: components["schemas"]["ProductPurpose"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiProductOption"][];
+                };
+            };
+            /** @description Peran tidak berwenang untuk tujuan ini. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

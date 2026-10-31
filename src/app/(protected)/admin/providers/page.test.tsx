@@ -35,6 +35,7 @@ function product(overrides: Partial<AiProduct> = {}): AiProduct {
   return {
     id: "11111111-1111-1111-1111-111111111111",
     name: "DeepSeek",
+    measurement_type: "automatic",
     provider_type: "openai_compatible",
     base_url: "https://api.deepseek.com/chat/completions",
     model_name: "deepseek-v4-flash",
@@ -175,6 +176,127 @@ describe("ProvidersPage list", () => {
   });
 });
 
+describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
+  const typeFilter = () => within(screen.getByRole("group", { name: "Jenis pengukuran" }));
+
+  it("shows the type badge, provider and registration date of each product", async () => {
+    list.mockResolvedValue([
+      product({ vendor_label: "OpenAI-compatible", created_at: "2026-10-29T05:00:00Z" }),
+      product({
+        id: "33333333-3333-3333-3333-333333333333",
+        name: "Justisio",
+        measurement_type: "manual",
+        vendor_name: "PT Justisio Contoh",
+        vendor_label: "PT Justisio Contoh",
+        created_at: "2026-10-30T05:00:00Z",
+      }),
+    ]);
+    renderPage();
+
+    const deepseek = within(await row("DeepSeek"));
+    expect(deepseek.getByText("Otomatis")).toBeInTheDocument();
+    expect(deepseek.getByText("OpenAI-compatible")).toBeInTheDocument();
+    expect(deepseek.getByText("29 Okt 2026")).toBeInTheDocument();
+    const justisio = within(await row("Justisio"));
+    expect(justisio.getByText("Manual")).toBeInTheDocument();
+    expect(justisio.getByText("PT Justisio Contoh")).toBeInTheDocument();
+    expect(justisio.getByText("30 Okt 2026")).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(
+      expect.arrayContaining(["Jenis", "Penyedia", "Didaftarkan"]),
+    );
+  });
+
+  it("starts with every type selected", async () => {
+    list.mockResolvedValue([product()]);
+    renderPage();
+    await row("DeepSeek");
+
+    expect(typeFilter().getByRole("button", { name: "Semua" })).toHaveAttribute("aria-pressed", "true");
+    expect(list).toHaveBeenCalledWith(true);
+  });
+
+  it("asks the server for one type and keeps it when the status tab changes", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(typeFilter().getByRole("button", { name: "Manual" }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(true, "manual"));
+    expect(typeFilter().getByRole("button", { name: "Manual" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(false, "manual"));
+
+    await user.click(typeFilter().getByRole("button", { name: "Semua" }));
+    await waitFor(() => expect(list).toHaveBeenLastCalledWith(false));
+  });
+
+  it.each([
+    ["Otomatis", "Aktif", "Belum ada produk AI otomatis yang aktif"],
+    ["Manual", "Aktif", "Belum ada produk AI manual yang aktif"],
+    ["Otomatis", "Nonaktif", "Tidak ada produk AI otomatis yang nonaktif"],
+    ["Manual", "Nonaktif", "Tidak ada produk AI manual yang nonaktif"],
+  ])("names the type when %s on %s is empty", async (type, tab, message) => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(typeFilter().getByRole("button", { name: type }));
+    await user.click(screen.getByRole("tab", { name: tab }));
+
+    expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+});
+
+describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
+  function manual(): AiProduct {
+    return product({
+      id: "44444444-4444-4444-4444-444444444444",
+      name: "LegalHero",
+      measurement_type: "manual",
+      provider_type: null,
+      base_url: null,
+      model_name: null,
+      credential_hint: null,
+      has_credential: false,
+      rate_limit_per_minute: null,
+      monthly_budget_idr: null,
+      vendor_name: "PT LegalHero Contoh",
+      vendor_label: "PT LegalHero Contoh",
+      site_url: "https://legalhero.example",
+    });
+  }
+
+  it("marks model, key, limit, budget and last test as not applicable", async () => {
+    list.mockResolvedValue([manual()]);
+    renderPage();
+
+    const cells = within(await row("LegalHero"));
+    expect(cells.getAllByText("—")).toHaveLength(5);
+    expect(cells.queryByText("Belum pernah diuji")).not.toBeInTheDocument();
+  });
+
+  // Until SCRUM-202 brings the manual form, Ubah would open automatic fields.
+  it("offers neither a connection test nor Ubah for a manual product", async () => {
+    list.mockResolvedValue([product(), manual()]);
+    renderPage();
+
+    const legalhero = within(await row("LegalHero"));
+    for (const action of ["Uji koneksi", "Ubah"]) {
+      expect(legalhero.queryByRole("button", { name: `${action} LegalHero` })).not.toBeInTheDocument();
+    }
+    for (const action of ["Nonaktifkan", "Hapus"]) {
+      expect(legalhero.getByRole("button", { name: `${action} LegalHero` })).toBeInTheDocument();
+    }
+    const deepseek = within(await row("DeepSeek"));
+    for (const action of ["Uji koneksi", "Ubah"]) {
+      expect(deepseek.getByRole("button", { name: `${action} DeepSeek` })).toBeInTheDocument();
+    }
+  });
+});
+
 describe("ProvidersPage connection test (AC3)", () => {
   it("shows a loading state for that product only, then ok with latency", async () => {
     const user = userEvent.setup();
@@ -261,6 +383,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
 
     expect(create).toHaveBeenCalledWith({
       name: "Claude",
+      measurement_type: "automatic",
       provider_type: "anthropic_messages",
       base_url: "https://api.anthropic.com/v1/messages",
       model_name: "claude-sonnet-5",
