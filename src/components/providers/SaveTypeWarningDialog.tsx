@@ -12,10 +12,13 @@ const TYPE_LABEL: Record<MeasurementType, string> = {
 /** AC3: peringatan sebelum produk baru pertama kali tersimpan. */
 export function SaveTypeWarningDialog({
   measurementType,
+  switching = false,
   onConfirm,
   onCancel,
 }: Readonly<{
   measurementType: MeasurementType;
+  /** AC4: jenisnya diganti dari jenis yang tersimpan, bukan produk baru. */
+  switching?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }>) {
@@ -41,8 +44,14 @@ export function SaveTypeWarningDialog({
         Simpan sebagai produk {TYPE_LABEL[measurementType]}?
       </h2>
       <p className="mt-2 max-w-sm text-sm text-slate-600">
-        Jenis pengukuran tidak bisa diubah lagi setelah produk punya riwayat pengukuran. Uji koneksi tidak dihitung.
+        Jenis pengukuran tidak bisa diubah lagi setelah produk punya riwayat
+        pengukuran. Uji koneksi tidak dihitung.
       </p>
+      {switching && (
+        <p className="mt-2 max-w-sm text-sm text-slate-600">
+          Isian jenis sebelumnya akan hilang setelah disimpan.
+        </p>
+      )}
       <div className="mt-5 flex justify-end gap-2">
         <button
           type="button"
