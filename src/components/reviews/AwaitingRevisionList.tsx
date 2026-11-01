@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { formatWib } from "@/lib/datetime/formatWib";
 import type { AwaitingRevisionReview, VerdictDecision } from "@/types/review";
 import { DiscussionLauncher } from "./DiscussionLauncher";
@@ -43,7 +44,12 @@ export function AwaitingRevisionList({ reviews }: Readonly<{ reviews: AwaitingRe
                 {review.decided_at !== null && <span>{formatWib(review.decided_at)}</span>}
               </span>
             </span>
-            <span className="block text-sm font-medium text-slate-900">{review.title}</span>
+            <Link
+              href={`/cases/${encodeURIComponent(review.case_id)}`}
+              className="block text-sm font-medium text-slate-900 hover:underline"
+            >
+              {review.title}
+            </Link>
             <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${badge.className}`}>
               {badge.label}
             </span>
