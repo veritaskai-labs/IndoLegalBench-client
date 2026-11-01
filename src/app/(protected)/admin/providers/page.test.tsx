@@ -279,21 +279,32 @@ describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
   });
 
   // Until SCRUM-202 brings the manual form, Ubah would open automatic fields.
-  it("offers neither a connection test nor Ubah for a manual product", async () => {
+  it("offers Ubah but no connection test for a manual product", async () => {
     list.mockResolvedValue([product(), manual()]);
     renderPage();
 
     const legalhero = within(await row("LegalHero"));
-    for (const action of ["Uji koneksi", "Ubah"]) {
-      expect(legalhero.queryByRole("button", { name: `${action} LegalHero` })).not.toBeInTheDocument();
-    }
-    for (const action of ["Nonaktifkan", "Hapus"]) {
+    expect(
+      legalhero.queryByRole("button", { name: "Uji koneksi LegalHero" }),
+    ).not.toBeInTheDocument();
+    for (const action of ["Ubah", "Nonaktifkan", "Hapus"]) {
       expect(legalhero.getByRole("button", { name: `${action} LegalHero` })).toBeInTheDocument();
     }
     const deepseek = within(await row("DeepSeek"));
     for (const action of ["Uji koneksi", "Ubah"]) {
       expect(deepseek.getByRole("button", { name: `${action} DeepSeek` })).toBeInTheDocument();
     }
+  });
+
+  it("opens the form on a manual product with its type already chosen", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([manual()]);
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Ubah LegalHero" }));
+
+    expect(await screen.findByRole("dialog", { name: "Ubah produk AI" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeChecked();
   });
 });
 
