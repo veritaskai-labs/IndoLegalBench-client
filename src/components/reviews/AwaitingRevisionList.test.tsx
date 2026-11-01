@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ASSIGNMENT_ID, makeAwaiting, OTHER_ASSIGNMENT_ID } from "@/test/reviewFixtures";
+import { ASSIGNMENT_ID, CASE_ID, makeAwaiting, OTHER_ASSIGNMENT_ID } from "@/test/reviewFixtures";
 import { AwaitingRevisionList } from "./AwaitingRevisionList";
 
 // The drawer is covered by its own tests; here only what the list hands to it matters.
@@ -29,6 +29,30 @@ describe("AwaitingRevisionList", () => {
     expect(item).toHaveTextContent("PHK sepihak");
     expect(screen.getByText("Putaran 2")).toBeInTheDocument();
     expect(screen.getByText("14 Okt 2026, 10.00 WIB")).toBeInTheDocument();
+  });
+
+  // Positive: the reviewer can reread the case before replying.
+  it("links the title to the case page", () => {
+    // Arrange
+    const reviews = [makeAwaiting({ case_id: CASE_ID, title: "PHK sepihak" })];
+
+    // Act
+    render(<AwaitingRevisionList reviews={reviews} />);
+
+    // Assert
+    expect(screen.getByRole("link", { name: "PHK sepihak" })).toHaveAttribute("href", `/cases/${CASE_ID}`);
+  });
+
+  // Edge: an id with reserved characters must not break out of the path.
+  it("encodes the case id in the link", () => {
+    // Arrange
+    const reviews = [makeAwaiting({ case_id: "a/b?c", title: "Kasus" })];
+
+    // Act
+    render(<AwaitingRevisionList reviews={reviews} />);
+
+    // Assert
+    expect(screen.getByRole("link", { name: "Kasus" })).toHaveAttribute("href", "/cases/a%2Fb%3Fc");
   });
 
   // Positive: a reviewer who approved still waits for the author while the peer asked for revision.
