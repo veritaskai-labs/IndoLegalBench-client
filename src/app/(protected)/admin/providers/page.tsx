@@ -147,6 +147,10 @@ export default function ProvidersPage() {
     }
   }
 
+  const rows = list.status === "ready" ? list.products : [];
+  const isEmpty = list.status === "ready" && rows.length === 0;
+  const hasRows = rows.length > 0;
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -205,10 +209,26 @@ export default function ProvidersPage() {
         </div>
       </div>
 
-      {list.status === "error" ? (
+      {list.status === "error" && (
         <ErrorState variant="card" message="Gagal memuat produk AI." onRetry={reload} />
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      )}
+
+      {/* Outside the table: inside a cell the message is centred across the table's full
+          width, off a phone screen (SCRUM-204 E2E F5). */}
+      {isEmpty && (
+        <div className="rounded-lg border border-slate-200 bg-white">
+          <EmptyState
+            title={emptyTitle(active, type)}
+            description={active ? "Daftarkan produk pertama yang akan diukur." : "Produk yang dinonaktifkan muncul di sini."}
+            action={active ? { label: "Daftarkan produk", onClick: () => setDialog({ mode: "create" }) } : undefined}
+          />
+        </div>
+      )}
+
+      {(list.status === "loading" || hasRows) && (
+        // relative: the sr-only cell labels are position: absolute; without a positioned
+        // scroll box they escape it and widen the whole page (SCRUM-204 E2E F2).
+        <div className="relative overflow-x-auto rounded-lg border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
               <tr>
@@ -229,17 +249,7 @@ export default function ProvidersPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {list.status === "loading" && <LoadingSkeleton variant="table" rows={3} columns={COLUMNS} />}
-              {list.status === "ready" && list.products.length === 0 && (
-                <EmptyState
-                  inTable
-                  colSpan={COLUMNS}
-                  title={emptyTitle(active, type)}
-                  description={active ? "Daftarkan produk pertama yang akan diukur." : "Produk yang dinonaktifkan muncul di sini."}
-                  action={active ? { label: "Daftarkan produk", onClick: () => setDialog({ mode: "create" }) } : undefined}
-                />
-              )}
-              {list.status === "ready" &&
-                list.products.map((product) => (
+              {rows.map((product) => (
                   <ProductRow
                     key={product.id}
                     product={product}
