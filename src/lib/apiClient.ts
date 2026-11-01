@@ -81,10 +81,17 @@ async function parseError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, code, message, field, missing, affectedCount);
 }
 
+/**
+ * silentForbidden: pemanggil yang hanya memeriksa apakah pengguna boleh melihat sesuatu (misalnya catatan
+ * peninjau di halaman kasus) tidak memindahkan pengguna ke /forbidden saat server menjawab 403. Errornya
+ * tetap dilempar, dan pemanggil yang memutuskan.
+ */
+export type ApiFetchInit = RequestInit & { silentForbidden?: boolean };
+
 /** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
 export async function apiFetch<T>(
   path: string,
-  init: RequestInit = {},
+  { silentForbidden = false, ...init }: ApiFetchInit = {},
 ): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -96,7 +103,7 @@ export async function apiFetch<T>(
     const err = await parseError(response);
     // Kasus test yang dibuka Developer AI bukan soal izin halaman: halaman kasus menampilkan
     // pesannya sendiri, jadi tidak dialihkan ke /forbidden (SCRUM-184).
-    if (err.status === 403 && err.code !== TEST_CASE_HIDDEN) notifyForbidden();
+    if (err.status === 403 && err.code !== TEST_CASE_HIDDEN && !silentForbidden) notifyForbidden();
     throw err;
   }
   if (response.status === 204) return undefined as T;

@@ -6,7 +6,7 @@ import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase, getCaseCompleteness, updateCase } from "@/lib/cases/caseApi";
 import { getOpenCaseVersion, listCaseVersions, startCaseVersion } from "@/lib/cases/versionApi";
-import { getCaseReview } from "@/lib/reviews/reviewApi";
+import { findCaseReview } from "@/lib/reviews/reviewApi";
 import { session } from "@/test/authMock";
 import { makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
 import { makeSummary } from "@/test/versionFixtures";
@@ -64,9 +64,9 @@ vi.mock("@/lib/cases/versionApi", () => ({
 }));
 
 // The feedback section reads the review of the case; the review calls have their own tests.
-vi.mock("@/lib/reviews/reviewApi", () => ({ getCaseReview: vi.fn() }));
+vi.mock("@/lib/reviews/reviewApi", () => ({ findCaseReview: vi.fn() }));
 
-const reviewMock = vi.mocked(getCaseReview);
+const reviewMock = vi.mocked(findCaseReview);
 
 // The PATCH itself is tested in splitTagApi.test.ts; here only the page's reaction matters.
 vi.mock("@/lib/cases/splitTagApi", () => ({ changeSplitTag: vi.fn() }));
@@ -175,6 +175,7 @@ beforeEach(() => {
   openDraftMock.mockReset();
   openDraftMock.mockRejectedValue(new ApiError(404, "NO_OPEN_VERSION"));
   reviewMock.mockReset();
+  reviewMock.mockResolvedValue(null);
   getCaseMock.mockReset();
   updateCaseMock.mockReset();
   completenessMock.mockReset();
@@ -1563,11 +1564,10 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
     expect(reviewMock).toHaveBeenCalledWith(CASE_ID);
   });
 
-  // Positive: an admin may read any review, so no history lookup is needed.
-  it("shows the comments to an admin without asking who created the case", async () => {
+  // Positive: an admin reads any review, creator or not.
+  it("shows the comments to an admin", async () => {
     // Arrange
     session.role = "admin";
-    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
     getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
 
     // Act
@@ -1576,7 +1576,6 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
 
     // Assert
     expect(within(section).getByText("Pasal 151 salah")).toBeInTheDocument();
-    expect(listVersionsMock).not.toHaveBeenCalled();
   });
 
   // Positive: the case still needs revision, so the editor stays open next to the comments.
@@ -1593,39 +1592,46 @@ describe("EditCasePage reviewer feedback (SCRUM-149)", () => {
     expect(save()).toBeEnabled();
   });
 
-  // Negative: the server answers 403 here and a 403 sends the user to /forbidden.
-  it("shows nothing and asks for nothing for an author who did not create the case", async () => {
+  // Edge: a Contributor who is neither the author nor assigned. The server has no review for them.
+  it("shows nothing for a Contributor the server has no review for", async () => {
     // Arrange
-    listVersionsMock.mockResolvedValue([makeSummary(1, { author: { id: "u2", name: "Penulis lain" } })]);
+    reviewMock.mockResolvedValue(null);
     getCaseMock.mockResolvedValue(savedCase({ status: "needs_revision" }));
 
     // Act
     renderPage();
     await screen.findByRole("heading", { name: "ILB-PT-0142" });
-    await waitFor(() => expect(listVersionsMock).toHaveBeenCalledWith(CASE_ID));
+    await waitFor(() => expect(reviewMock).toHaveBeenCalledWith(CASE_ID));
 
     // Assert
     expect(noFeedback()).not.toBeInTheDocument();
-    expect(reviewMock).not.toHaveBeenCalled();
   });
 
-  // Edge: there is feedback to act on only after a revision was asked for.
-  it.each(["draft", "in_review", "approved"] as const)(
-    "shows nothing and asks for nothing on a %s case, even to an admin",
-    async (status) => {
-      // Arrange
-      session.role = "admin";
-      getCaseMock.mockResolvedValue(savedCase({ status }));
+  // Positive: AC3, the comments stay readable on every status, for example after approval.
+  it.each(["draft", "in_review"] as const)("shows the comments on a %s case too", async (status) => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status }));
 
-      // Act
-      renderPage();
-      await screen.findByRole("heading", { name: "ILB-PT-0142" });
+    // Act
+    renderPage();
 
-      // Assert
-      expect(noFeedback()).not.toBeInTheDocument();
-      expect(reviewMock).not.toHaveBeenCalled();
-    },
-  );
+    // Assert
+    expect(await feedback()).toHaveTextContent("Pasal 151 salah");
+  });
+
+  // Positive: after approval the comment is a button that opens the read-only drawer.
+  it("turns the comment into a button on an approved case", async () => {
+    // Arrange
+    getCaseMock.mockResolvedValue(savedCase({ status: "approved" }));
+
+    // Act
+    renderPage();
+    const section = await feedback();
+
+    // Assert
+    expect(section).not.toHaveTextContent("Pasal 151 salah");
+    expect(within(section).getByRole("button", { name: "Lihat komentar" })).toBeInTheDocument();
+  });
 
   // Negative
   it.each(["viewer"] as const)("shows nothing and asks for nothing to the %s role", async (role) => {

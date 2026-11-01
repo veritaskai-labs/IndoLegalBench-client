@@ -1,10 +1,18 @@
-import { apiFetch } from "@/lib/apiClient";
-import type { AssignedReview, CaseReview, VerdictResult, VerdictWrite } from "@/types/review";
+import { ApiError, apiFetch } from "@/lib/apiClient";
+import type { AssignedReview, AwaitingRevisionReview, CaseReview, VerdictResult, VerdictWrite } from "@/types/review";
 import type { ReassignmentRow, ReplaceReviewerBody, ReplacedAssignment } from "@/types/reviewAdmin";
 
 /** GET /reviews/assigned. Penugasan aktif reviewer yang login di round yang masih terbuka. Hanya reviewer. */
 export function listAssignedReviews(): Promise<AssignedReview[]> {
   return apiFetch<AssignedReview[]>("/reviews/assigned");
+}
+
+/**
+ * GET /reviews/awaiting-revision. Kasus yang sudah dinilai reviewer yang login dan menunggu revisi Author.
+ * Hanya reviewer. Kasus keluar dari daftar saat disetujui atau diajukan ulang; server yang memutuskan.
+ */
+export function listAwaitingRevision(): Promise<AwaitingRevisionReview[]> {
+  return apiFetch<AwaitingRevisionReview[]>("/reviews/awaiting-revision");
 }
 
 /** POST /reviews/{assignment_id}/verdict. Komentar wajib bila decision = revise (422 COMMENT_REQUIRED). */
@@ -38,4 +46,19 @@ export function replaceReviewer(
  */
 export function getCaseReview(caseId: string): Promise<CaseReview> {
   return apiFetch<CaseReview>(`/cases/${encodeURIComponent(caseId)}/review`);
+}
+
+/**
+ * Seperti getCaseReview, tetapi untuk halaman yang menawarkan catatan peninjau ke semua Kontributor.
+ * Hanya penulis dan reviewer yang ditugaskan yang boleh membacanya, dan klien tidak tahu siapa yang
+ * ditugaskan. 403 (bukan pihak di kasus ini, tanpa dialihkan ke /forbidden) dan 404 NO_REVIEW_ROUND
+ * (belum pernah diajukan) berarti tidak ada yang ditampilkan; kegagalan lain tetap dilempar.
+ */
+export async function findCaseReview(caseId: string): Promise<CaseReview | null> {
+  try {
+    return await apiFetch<CaseReview>(`/cases/${encodeURIComponent(caseId)}/review`, { silentForbidden: true });
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 403 || error.code === "NO_REVIEW_ROUND")) return null;
+    throw error;
+  }
 }

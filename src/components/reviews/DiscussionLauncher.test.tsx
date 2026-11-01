@@ -64,3 +64,11 @@ it('cleans up safely when the previously focused control was an SVG element', as
  expect(document.body.style.overflow).toBe('');
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
+it('opens a read-only drawer with the notice and no reply form when asked to', async () => {
+  const user=userEvent.setup();
+  render(<DiscussionLauncher assignmentId="a1" label="Lihat komentar" readOnlyNotice="Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca." />);
+  await user.click(screen.getByRole('button', {name:'Lihat komentar'}));
+  expect(await screen.findByText('Perjelas rujukan')).toBeInTheDocument();
+  expect(screen.getByText('Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca.')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Balasan Anda')).not.toBeInTheDocument();
+});

@@ -113,10 +113,62 @@ describe("ReviewerFeedback", () => {
     const review = makeCaseReview({ status: "decided", reviewers: [reviseSlot("Anisa P.", "Perbaiki")] });
 
     // Act
-    render(<ReviewerFeedback review={review} />);
+    render(<ReviewerFeedback review={review} caseStatus="needs_revision" />);
 
     // Assert
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByRole("button", {name:"Balas komentar"})).toBeInTheDocument();
+  });
+});
+
+describe("ReviewerFeedback after approval", () => {
+  const approved = () =>
+    makeCaseReview({
+      status: "decided",
+      decision: "approved",
+      reviewers: [reviseSlot("Anisa P.", "Catatan kecil saja"), approveSlot("Bagus S.")],
+    });
+
+  // Positive: the comment becomes a button that opens the read-only drawer.
+  it("shows a button instead of the comment text once the case is approved", () => {
+    // Act
+    render(<ReviewerFeedback review={approved()} caseStatus="approved" />);
+
+    // Assert
+    const anisa = block("Anisa P.");
+    expect(within(anisa).queryByText("Catatan kecil saja")).not.toBeInTheDocument();
+    expect(within(anisa).getByRole("button", { name: "Lihat komentar" })).toBeInTheDocument();
+    expect(within(anisa).queryByRole("button", { name: "Balas komentar" })).not.toBeInTheDocument();
+  });
+
+  // Edge: a reviewer without a comment has no thread to open.
+  it("offers no button to a reviewer who wrote no comment", () => {
+    // Act
+    render(<ReviewerFeedback review={approved()} caseStatus="approved" />);
+
+    // Assert
+    expect(within(block("Bagus S.")).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  // Positive: while the case needs revision nothing changes for the author.
+  it("keeps the comment inline with a reply button while the case needs revision", () => {
+    // Act
+    render(<ReviewerFeedback review={approved()} caseStatus="needs_revision" />);
+
+    // Assert
+    const anisa = block("Anisa P.");
+    expect(within(anisa).getByText("Catatan kecil saja")).toBeInTheDocument();
+    expect(within(anisa).getByRole("button", { name: "Balas komentar" })).toBeInTheDocument();
+  });
+
+  // Edge: other statuses read the comment inline and open the discussion without promising a reply.
+  it("opens the discussion without a reply promise on an in-review case", () => {
+    // Act
+    render(<ReviewerFeedback review={approved()} caseStatus="in_review" />);
+
+    // Assert
+    const anisa = block("Anisa P.");
+    expect(within(anisa).getByText("Catatan kecil saja")).toBeInTheDocument();
+    expect(within(anisa).getByRole("button", { name: "Buka diskusi komentar" })).toBeInTheDocument();
   });
 });
