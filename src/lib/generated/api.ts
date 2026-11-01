@@ -625,6 +625,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reviews/awaiting-revision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kasus yang menunggu revisi penulis untuk reviewer yang login (SCRUM-242)
+         * @description Kasus yang sudah Anda nilai dan belum approved: round terakhirnya meminta revisi.
+         *
+         *     Reviewer yang setuju sementara rekannya meminta revisi juga muncul. Kasus
+         *     keluar saat Author mengajukan ulang. Gunakan thread_assignment_ids untuk
+         *     membuka thread komentar lewat GET /reviews/{id}/discussion.
+         */
+        get: operations["list_awaiting_revision_reviews_awaiting_revision_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reviews/needs-reassignment": {
         parameters: {
             query?: never;
@@ -834,6 +858,23 @@ export interface paths {
         put?: never;
         /** Tandai satu notifikasi sebagai dibaca */
         post: operations["read_one_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/measurements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ringkasan dan perkiraan biaya sebelum pengukuran dimulai */
+        post: operations["summarize_measurements_summary_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1233,6 +1274,37 @@ export interface components {
             request_id: string | null;
         };
         /**
+         * AwaitingRevisionReview
+         * @description Satu baris antrean "Menunggu revisi penulis" untuk reviewer (SCRUM-242).
+         *
+         *     assignment_id adalah penugasan reviewer ini sendiri. thread_assignment_ids
+         *     berisi penugasan di round itu yang punya komentar, supaya reviewer yang
+         *     setuju bisa membuka thread rekannya lewat GET /reviews/{id}/discussion.
+         */
+        AwaitingRevisionReview: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** Round No */
+            round_no: number;
+            my_decision: components["schemas"]["VerdictDecision"];
+            /** Decided At */
+            decided_at: string | null;
+            /** Thread Assignment Ids */
+            thread_assignment_ids: string[];
+        };
+        /**
          * CaseCompleteness
          * @description Indikator kelengkapan satu kasus (SCRUM-107).
          */
@@ -1264,6 +1336,12 @@ export interface components {
             /** Approved */
             approved: number;
         };
+        /**
+         * CaseFilter
+         * @description Pilihan kasus yang ikut diukur (PBI-11 AC2). both berarti dev dan test.
+         * @enum {string}
+         */
+        CaseFilter: "dev" | "test" | "both";
         /**
          * CaseIdentity
          * @description Title, question, and optional category for one case.
@@ -2367,6 +2445,63 @@ export interface components {
              * @description Null mengosongkan deskripsi. Kalau field ini tidak dikirim, deskripsi tidak berubah.
              */
             description?: string | null;
+        };
+        /**
+         * SummaryRequest
+         * @description Body POST /measurements/summary (PBI-11 AC2, AC3, AC5).
+         */
+        SummaryRequest: {
+            /**
+             * Suite Ids
+             * @description Suite yang dipilih, minimal satu. Id ganda digabung.
+             */
+            suite_ids: string[];
+            /**
+             * @description Kasus yang ikut: dev, test, atau both
+             * @default both
+             */
+            case_filter: components["schemas"]["CaseFilter"];
+            /**
+             * Repeat Count
+             * @description Pengulangan per kasus, 1 sampai 5, sama untuk seluruh pengukuran
+             * @default 3
+             */
+            repeat_count: number;
+            /**
+             * Product Id
+             * Format: uuid
+             * @description Satu produk AI otomatis yang diukur
+             */
+            product_id: string;
+        };
+        /**
+         * SummaryResponse
+         * @description Ringkasan sebelum menekan Mulai (PBI-11 AC5). Uang dikirim sebagai string.
+         */
+        SummaryResponse: {
+            /**
+             * Case Count
+             * @description Kasus approved yang ikut, sesuai filter
+             */
+            case_count: number;
+            /**
+             * Total Calls
+             * @description Kasus kali pengulangan
+             */
+            total_calls: number;
+            case_filter: components["schemas"]["CaseFilter"];
+            /** Repeat Count */
+            repeat_count: number;
+            /**
+             * Estimated Cost Idr
+             * @description Perkiraan biaya dalam rupiah, sudah termasuk margin pengaman
+             */
+            estimated_cost_idr: string;
+            /**
+             * Remaining Budget Idr
+             * @description Sisa anggaran bulan ini untuk produk
+             */
+            remaining_budget_idr: string;
         };
         /**
          * TagConfirmationBody
@@ -4249,6 +4384,44 @@ export interface operations {
             };
         };
     };
+    list_awaiting_revision_reviews_awaiting_revision_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AwaitingRevisionReview"][];
+                };
+            };
+            /** @description Tidak ada sesi aktif. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya akun dengan wewenang review. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_needs_reassignment_reviews_needs_reassignment_get: {
         parameters: {
             query?: never;
@@ -4755,6 +4928,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summarize_measurements_summary_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryResponse"];
+                };
+            };
+            /** @description Suite atau produk AI tidak ditemukan (`AI_PRODUCT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Salah satu suite diarsipkan dan tidak bisa dipilih (`SUITE_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Isian tidak valid, produk manual atau nonaktif (`PRODUCT_NOT_AUTOMATIC`, `PRODUCT_INACTIVE`), tidak ada kasus layak (`NO_ELIGIBLE_CASES`), atau perkiraan biaya melebihi sisa anggaran (`BUDGET_EXCEEDED`, berisi `product_name` dan `remaining_budget_idr`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Konfigurasi server belum lengkap (`PRICE_NOT_CONFIGURED`, `EXCHANGE_RATE_NOT_CONFIGURED`, `AVG_ANSWER_TOKENS_NOT_CONFIGURED`). */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

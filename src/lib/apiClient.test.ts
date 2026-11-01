@@ -171,6 +171,42 @@ describe("onForbidden", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  // Positive: a caller that only probes whether the user may see something (SCRUM-243).
+  it("does not notify on 403 when the caller asks for a silent forbidden, and still throws", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(apiFetch("/cases/c1/review", { silentForbidden: true })).rejects.toMatchObject({
+      status: 403,
+      code: "FORBIDDEN",
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  // Edge: the option is ours, so it must not reach fetch.
+  it("does not hand the silentForbidden option to fetch", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, {}));
+
+    await apiFetch("/cases/c1/review", { silentForbidden: true, headers: { "X-Test": "1" } });
+
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(init).not.toHaveProperty("silentForbidden");
+    expect(init.headers).toMatchObject({ "X-Test": "1" });
+  });
+
+  // Negative: silence applies to 403 only, so other failures still surface as before.
+  it("still notifies on 403 when the option is false", async () => {
+    const listener = vi.fn();
+    listenForbidden(listener);
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await apiFetch("/admin/users", { silentForbidden: false }).catch(() => undefined);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it("does not notify on 401", async () => {
     const listener = vi.fn();
     listenForbidden(listener);

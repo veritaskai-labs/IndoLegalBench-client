@@ -1,6 +1,7 @@
 import type { components } from "@/lib/generated/api";
 
 export type AssignedReview = components["schemas"]["AssignedReview"];
+export type AwaitingRevisionReview = components["schemas"]["AwaitingRevisionReview"];
 export type ReviewCopy = components["schemas"]["ReviewCopy"];
 export type CaseReview = components["schemas"]["CaseReview"];
 export type ReviewerSlot = components["schemas"]["ReviewerSlot"];

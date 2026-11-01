@@ -19,6 +19,7 @@ export function discussionError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 403) return 'Anda tidak memiliki izin untuk membuka atau membalas diskusi ini.';
     if (error.status === 404) return 'Komentar peninjau tidak ditemukan atau belum tersedia.';
+    if (error.code === 'THREAD_READ_ONLY') return 'Kasus sudah disetujui, diskusi ini hanya dapat dibaca.';
     if (error.status === 409) return 'Penugasan telah berubah. Muat ulang diskusi sebelum membalas.';
     if (error.status === 422) return 'Balasan wajib diisi, maksimal 5.000 karakter.';
   }

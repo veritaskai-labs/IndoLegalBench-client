@@ -70,6 +70,14 @@ describe('CommentDiscussion', () => {
     expect(await screen.findByText(/literal text/)).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+  it('shows the read-only notice and no form, even if the server would allow a reply', async () => {
+    get.mockResolvedValue(thread({ can_reply: true, replies: [reply] }));
+    render(<CommentDiscussion assignmentId="a1" readOnlyNotice="Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca." />);
+    expect(await screen.findByText(/literal text/)).toBeInTheDocument();
+    expect(screen.getByText('Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kirim balasan' })).not.toBeInTheDocument();
+  });
   it('blocks whitespace and oversized programmatic form submission', async () => {
     render(<CommentDiscussion assignmentId="a1" />);
     const input = await screen.findByLabelText('Balasan Anda');
@@ -104,6 +112,12 @@ describe('CommentDiscussion', () => {
     expect(screen.getByText(/Author QA/).parentElement).toHaveTextContent('Penulis');
     await user.click(screen.getByRole('button', {name:'Perbarui diskusi'}));
     expect(await screen.findByLabelText('Balasan Anda')).toHaveValue('Draf belum dikirim');
+  });
+  it('tells a viewer who cannot reply that only the author and the comment owner can', async () => {
+    get.mockResolvedValue(thread({ can_reply: false, round_status: 'decided' }));
+    render(<CommentDiscussion assignmentId="a1" embedded />);
+    expect(await screen.findByText('Hanya penulis kasus dan pemilik komentar yang dapat membalas.')).toBeInTheDocument();
+    expect(screen.queryByText(/peninjau terkait pada penugasan/)).not.toBeInTheDocument();
   });
   it('explains the blind-review wait before the round is decided', async () => {
     get.mockResolvedValue(thread({can_reply:false, round_status:'open'}));

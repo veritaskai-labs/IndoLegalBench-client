@@ -2,8 +2,12 @@ import { formatWib } from "@/lib/datetime/formatWib";
 import { VERDICT_LABEL } from "@/lib/reviews/reviewLabels";
 import type { VerdictView } from "@/types/review";
 
-/** Satu penilaian yang sudah dikirim: keputusan, waktu (WIB), dan komentar. Dipakai untuk penilaian sendiri dan peninjau lain. */
-export function VerdictSummary({ verdict }: Readonly<{ verdict: VerdictView }>) {
+/** Satu penilaian yang sudah dikirim: keputusan, waktu (WIB), dan komentar. Dipakai untuk penilaian sendiri dan peninjau lain.
+ * commentInDrawer: teks komentar dibuka lewat tombol diskusi, tidak ditulis di sini. */
+export function VerdictSummary({
+  verdict,
+  commentInDrawer = false,
+}: Readonly<{ verdict: VerdictView; commentInDrawer?: boolean }>) {
   return (
     <div className="space-y-2">
       <div className="space-y-1">
@@ -13,9 +17,8 @@ export function VerdictSummary({ verdict }: Readonly<{ verdict: VerdictView }>) 
         )}
       </div>
 
-      {verdict.comment === null ? (
-        <p className="text-sm text-slate-500">Tanpa komentar</p>
-      ) : (
+      {verdict.comment === null && <p className="text-sm text-slate-500">Tanpa komentar</p>}
+      {verdict.comment !== null && !commentInDrawer && (
         <p className="whitespace-pre-wrap text-sm text-slate-800">{verdict.comment}</p>
       )}
     </div>

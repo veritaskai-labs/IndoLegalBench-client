@@ -31,13 +31,13 @@ export function canStartNewVersion(role: Role | null, status: CaseStatus, isCrea
 }
 
 /**
- * Catatan peninjau hanya tampil pada kasus yang perlu revisi, dan hanya untuk admin atau Kontributor
- * yang membuat kasusnya: server menjawab 403 untuk yang lain, dan setiap 403 memindahkan pengguna
- * ke /forbidden. Ini hanya menentukan tampilan; server tetap yang memutuskan boleh atau tidak.
+ * Catatan peninjau dan thread-nya ditawarkan di semua status kasus kepada admin dan Kontributor: penulis
+ * dan kedua reviewer semuanya Kontributor, dan klien tidak tahu siapa yang ditugaskan di kasus ini. Server
+ * yang memutuskan; bila bukan pihak di kasus ini, bagiannya tidak tampil (lihat findCaseReview).
+ * status null berarti kasus belum dimuat, role null berarti belum ada sesi.
  */
-export function canReadReviewFeedback(role: Role | null, status: CaseStatus, isCreator: boolean): boolean {
-  if (status !== "needs_revision") return false;
-  return isAdminOrCreator(role, isCreator);
+export function canReadReviewFeedback(role: Role | null, status: CaseStatus | null): boolean {
+  return status !== null && (role === "admin" || role === "contributor");
 }
 
 export function canSubmitForReview(

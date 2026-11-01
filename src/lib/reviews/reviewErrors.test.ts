@@ -118,3 +118,38 @@ describe("mapReviewError", () => {
     expect(message).toBe("Gagal mengirim penilaian. Coba lagi.");
   });
 });
+
+describe("mapReviewError for the awaiting-revision queue", () => {
+  // Positive
+  it("explains a plain 403 for the awaiting-revision queue", () => {
+    // Arrange
+    const error = new ApiError(403, "FORBIDDEN");
+
+    // Act
+    const message = mapReviewError(error, "awaitingRevision");
+
+    // Assert
+    expect(message).toBe("Anda tidak memiliki izin untuk melihat kasus yang menunggu revisi.");
+  });
+
+  // Edge: the queue always exists, so a 404 and a server error share the generic text.
+  it.each([404, 500])("uses the generic text for HTTP %s", (status) => {
+    // Arrange
+    const error = new ApiError(status, "ANY");
+
+    // Act
+    const message = mapReviewError(error, "awaitingRevision");
+
+    // Assert
+    expect(message).toBe("Gagal memuat kasus yang menunggu revisi. Coba lagi.");
+  });
+
+  // Negative
+  it("uses the generic text for a non-API error", () => {
+    // Act
+    const message = mapReviewError(new Error("offline"), "awaitingRevision");
+
+    // Assert
+    expect(message).toBe("Gagal memuat kasus yang menunggu revisi. Coba lagi.");
+  });
+});
