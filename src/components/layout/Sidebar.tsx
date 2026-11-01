@@ -2,18 +2,57 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MOBILE_NAV_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/hooks/useAuth";
-import { navForRole } from "@/lib/nav";
+import { navForRole, type NavGroup } from "@/lib/nav";
+
+const COLUMN = "flex-col justify-between border-r border-slate-200 bg-white p-4";
 
 export function Sidebar() {
   const auth = useAuth();
   const pathname = usePathname();
+  const menu = useMobileNav();
 
   if (auth.status !== "authenticated") return null;
   const groups = navForRole(auth.user.role);
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-4">
+    <>
+      {/* Laptop and tablet: a fixed column. Phones open the same links from the top bar. */}
+      <aside className={`hidden w-64 shrink-0 md:flex ${COLUMN}`}>
+        <NavLinks groups={groups} pathname={pathname} />
+      </aside>
+
+      {menu.open && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            aria-label="Tutup menu navigasi"
+            onClick={menu.close}
+            className="absolute inset-0 h-full w-full bg-slate-900/40"
+          />
+          <div
+            id={MOBILE_NAV_ID}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu navigasi"
+            className={`absolute inset-y-0 left-0 flex w-64 max-w-[80vw] overflow-y-auto ${COLUMN}`}
+          >
+            <NavLinks groups={groups} pathname={pathname} onNavigate={menu.close} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function NavLinks({
+  groups,
+  pathname,
+  onNavigate,
+}: Readonly<{ groups: NavGroup[]; pathname: string; onNavigate?: () => void }>) {
+  return (
+    <>
       <nav className="space-y-6">
         {groups.map((group) => (
           <div key={group.heading}>
@@ -27,6 +66,7 @@ export function Sidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       className={`block rounded-md px-3 py-2 text-sm ${
                         active
@@ -49,6 +89,6 @@ export function Sidebar() {
         <br />
         L1 · L3 · L9 ditegakkan
       </p>
-    </aside>
+    </>
   );
 }
