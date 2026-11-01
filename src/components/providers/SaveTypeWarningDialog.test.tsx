@@ -83,4 +83,22 @@ describe("SaveTypeWarningDialog (AC3)", () => {
       screen.getByText("Isian jenis sebelumnya akan hilang setelah disimpan."),
     ).toBeInTheDocument();
   });
+  it("uses the native modal when the browser supports it", () => {
+    const original = HTMLDialogElement.prototype.showModal;
+    const showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    });
+    HTMLDialogElement.prototype.showModal = showModal;
+
+    render(
+      <SaveTypeWarningDialog
+        measurementType="manual"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(showModal).toHaveBeenCalled();
+    HTMLDialogElement.prototype.showModal = original;
+  });
 });

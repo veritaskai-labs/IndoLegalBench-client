@@ -196,7 +196,6 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     };
   }
 
-
   /** Isian form dari data produk tersimpan; dipakai saat kembali ke jenis asal dan saat server menolak. */
   function fillFromProduct(saved: AiProduct) {
     setVendorName(saved.vendor_name ?? "");
@@ -258,7 +257,6 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     void save();
   }
 
-
   /** AC1: isian produk manual, sama untuk daftar baru maupun ubah. */
   function manualPayload() {
     return {
@@ -295,7 +293,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     if (measurementType === "manual") return manualPayload();
     return { ...automaticPayload(), ...(credential !== "" && { credential }) };
   }
-  
+
   /** AC4: server menolak pergantian jenis kalau produk sudah punya riwayat. */
   function lockTypeAfterRefusal(saved: AiProduct) {
     setTypeLocked(true);
