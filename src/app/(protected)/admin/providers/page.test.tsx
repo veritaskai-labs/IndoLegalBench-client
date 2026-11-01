@@ -279,21 +279,32 @@ describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
   });
 
   // Until SCRUM-202 brings the manual form, Ubah would open automatic fields.
-  it("offers neither a connection test nor Ubah for a manual product", async () => {
+  it("offers Ubah but no connection test for a manual product", async () => {
     list.mockResolvedValue([product(), manual()]);
     renderPage();
 
     const legalhero = within(await row("LegalHero"));
-    for (const action of ["Uji koneksi", "Ubah"]) {
-      expect(legalhero.queryByRole("button", { name: `${action} LegalHero` })).not.toBeInTheDocument();
-    }
-    for (const action of ["Nonaktifkan", "Hapus"]) {
+    expect(
+      legalhero.queryByRole("button", { name: "Uji koneksi LegalHero" }),
+    ).not.toBeInTheDocument();
+    for (const action of ["Ubah", "Nonaktifkan", "Hapus"]) {
       expect(legalhero.getByRole("button", { name: `${action} LegalHero` })).toBeInTheDocument();
     }
     const deepseek = within(await row("DeepSeek"));
     for (const action of ["Uji koneksi", "Ubah"]) {
       expect(deepseek.getByRole("button", { name: `${action} DeepSeek` })).toBeInTheDocument();
     }
+  });
+
+  it("opens the form on a manual product with its type already chosen", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([manual()]);
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Ubah LegalHero" }));
+
+    expect(await screen.findByRole("dialog", { name: "Ubah produk AI" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeChecked();
   });
 });
 
@@ -380,6 +391,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     const dialog = await fillCreate(user);
     expect(dialog.getByLabelText("Budget per bulan (Rp)")).toHaveValue("2.500.000");
     await user.click(dialog.getByRole("button", { name: "Simpan" }));
+    await user.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
     expect(create).toHaveBeenCalledWith({
       name: "Claude",
@@ -390,6 +402,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
       credential: "sk-ant-rahasia-9z9z",
       rate_limit_per_minute: 10,
       monthly_budget_idr: "2500000",
+      model_params: null,
     });
     expect(await screen.findByText("Produk AI terdaftar")).toBeInTheDocument();
     expect(list).toHaveBeenCalledTimes(2);
@@ -437,6 +450,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
     await user.click(screen.getAllByRole("button", { name: "Daftarkan produk" })[0]);
     const dialog = await fillCreate(user);
     await user.click(dialog.getByRole("button", { name: "Simpan" }));
+    await user.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
     expect(await dialog.findByText("Nama produk sudah dipakai. Pilih nama lain.")).toBeInTheDocument();
   });
