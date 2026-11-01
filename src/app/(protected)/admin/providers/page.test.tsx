@@ -174,6 +174,29 @@ describe("ProvidersPage list", () => {
 
     expect(await row("DeepSeek")).toBeInTheDocument();
   });
+
+  // Edge (SCRUM-204 E2E, phone): the table is wider than a phone screen.
+  it("keeps the table's screen-reader labels inside its scroll box, so the page does not widen", async () => {
+    // The "Tidak berlaku" labels are sr-only, which is position: absolute. Without a
+    // positioned scroll box they escape it and stretch the whole page to the table's width (F2).
+    list.mockResolvedValue([product()]);
+    renderPage();
+
+    const table = (await row("DeepSeek")).closest("table") as HTMLElement;
+
+    expect(table.parentElement).toHaveClass("overflow-x-auto", "relative");
+  });
+
+  it("shows the empty state outside the table, so a phone does not have to scroll to read it", async () => {
+    // Inside a table cell the message is centred across the table's full width (F5).
+    list.mockResolvedValue([]);
+    renderPage();
+
+    const empty = await screen.findByText("Belum ada produk AI aktif");
+
+    expect(empty.closest("table")).toBeNull();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
 });
 
 describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
