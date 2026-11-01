@@ -610,3 +610,138 @@ describe("ProvidersPage delete (SCRUM-134 #2)", () => {
     expect(screen.getByRole("cell", { name: "DeepSeek" })).toBeInTheDocument();
   });
 });
+
+// Branches that had no test before SCRUM-204 touched this page (the file has to stay at 100%).
+describe("ProvidersPage remaining branches (SCRUM-204)", () => {
+  it("opens the register form from the empty state", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([]);
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    const buttons = screen.getAllByRole("button", { name: "Daftarkan produk" });
+    await user.click(buttons[buttons.length - 1]);
+
+    expect(screen.getByRole("dialog", { name: "Daftarkan produk AI" })).toBeInTheDocument();
+  });
+
+  it("does not reload when the type that is already chosen is clicked again", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(within(screen.getByRole("group", { name: "Jenis pengukuran" })).getByRole("button", { name: "Semua" }));
+
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a list that arrives after the admin already switched tabs", async () => {
+    const user = userEvent.setup();
+    let late: (products: AiProduct[]) => void = () => undefined;
+    list
+      .mockReturnValueOnce(new Promise((resolve) => (late = resolve)))
+      .mockResolvedValueOnce([product({ name: "Produk Nonaktif", is_active: false })]);
+    renderPage();
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await row("Produk Nonaktif");
+    late([product({ name: "Produk Lama" })]);
+
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "Produk Lama" })).not.toBeInTheDocument());
+    expect(await row("Produk Nonaktif")).toBeInTheDocument();
+  });
+
+  it("ignores a failed list that arrives after the admin already switched tabs", async () => {
+    const user = userEvent.setup();
+    let late: (reason: Error) => void = () => undefined;
+    list
+      .mockReturnValueOnce(new Promise((_, reject) => (late = reject)))
+      .mockResolvedValueOnce([product({ name: "Produk Nonaktif", is_active: false })]);
+    renderPage();
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await row("Produk Nonaktif");
+    late(new TypeError("Failed to fetch"));
+
+    await waitFor(() => expect(screen.queryByText("Gagal memuat produk AI.")).not.toBeInTheDocument());
+  });
+
+  it("keeps the loading list when a connection test finishes while the tab is reloading", async () => {
+    const user = userEvent.setup();
+    let finish: (value: { status: "ok"; latency_ms: number }) => void = () => undefined;
+    list.mockResolvedValueOnce([product()]).mockReturnValueOnce(new Promise(() => undefined));
+    test.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    finish({ status: "ok", latency_ms: 420 });
+
+    await waitFor(() => expect(test).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("cell", { name: "DeepSeek" })).not.toBeInTheDocument();
+  });
+
+  it("shows 0 ms when the provider answers without a latency", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    test.mockResolvedValue({ status: "ok" } as never);
+    renderPage();
+    const deepseek = await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+
+    expect(await within(deepseek).findByText(/Berhasil · 0 ms/)).toBeInTheDocument();
+  });
+
+  it("shows the generic reason when a failed test has no message or category", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    test.mockResolvedValue({ status: "failed" } as never);
+    renderPage();
+    const deepseek = await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+
+    expect(await within(deepseek).findByText(/^Gagal:/)).toBeInTheDocument();
+    expect(within(deepseek).queryByText("Lihat detail")).not.toBeInTheDocument();
+  });
+
+  it("shows a stored successful test without a latency", async () => {
+    list.mockResolvedValue([product({ last_test_status: "ok", last_test_at: "2026-10-01T07:00:00Z" })]);
+    renderPage();
+
+    const deepseek = await row("DeepSeek");
+
+    expect(within(deepseek).getByText("Berhasil")).toBeInTheDocument();
+    expect(within(deepseek).queryByText(/ms/)).not.toBeInTheDocument();
+  });
+
+  it("says the product was activated after Aktifkan is confirmed", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValueOnce([]).mockResolvedValueOnce([product({ is_active: false })]);
+    toggle.mockResolvedValue(product({ is_active: true }));
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await user.click(await screen.findByRole("button", { name: "Aktifkan DeepSeek" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Aktifkan produk AI" })).getByRole("button", { name: "Aktifkan" }));
+
+    expect(await screen.findByText("Produk AI diaktifkan")).toBeInTheDocument();
+  });
+
+  it("closes the activate dialog without changing anything when the admin cancels", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([product()]);
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Nonaktifkan DeepSeek" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Nonaktifkan produk AI" })).getByRole("button", { name: "Batal" }));
+
+    expect(screen.queryByRole("dialog", { name: "Nonaktifkan produk AI" })).not.toBeInTheDocument();
+    expect(toggle).not.toHaveBeenCalled();
+  });
+});

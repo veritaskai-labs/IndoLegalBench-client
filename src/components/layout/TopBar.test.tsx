@@ -93,6 +93,15 @@ describe("TopBar", () => {
     expect(screen.queryByRole("button", { name: "Buka menu" })).not.toBeInTheDocument();
   });
 
+  // Edge: a double space in the name must not add an empty initial.
+  it("builds initials from the words that are there", () => {
+    useAuthMock.mockReturnValue({ ...signedIn, user: { ...signedIn.user, name: "Rina  Hapsari" } });
+
+    render(<TopBar />);
+
+    expect(screen.getByText("R")).toBeInTheDocument();
+  });
+
   // SCRUM-204 E2E F3: at 375 px the name and role pushed the top bar 18 px past the screen.
   it("keeps the name and role for wider screens and the initials on phones", () => {
     useAuthMock.mockReturnValue(signedIn);

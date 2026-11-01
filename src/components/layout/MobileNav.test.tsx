@@ -79,4 +79,12 @@ describe("useMobileNav (SCRUM-204 E2E F3: phone menu)", () => {
 
     expect(result.current.open).toBe(false);
   });
+
+  it("ignores close outside the app shell", () => {
+    const { result } = renderHook(() => useMobileNav());
+
+    act(() => result.current.close());
+
+    expect(result.current.open).toBe(false);
+  });
 });
