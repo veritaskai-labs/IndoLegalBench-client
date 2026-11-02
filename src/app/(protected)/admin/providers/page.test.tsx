@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -662,9 +662,11 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
     await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
     await row("Produk Nonaktif");
-    late(new TypeError("Failed to fetch"));
+    // act flushes the rejected promise and its state update before the assertions run.
+    await act(async () => late(new TypeError("Failed to fetch")));
 
-    await waitFor(() => expect(screen.queryByText("Gagal memuat produk AI.")).not.toBeInTheDocument());
+    expect(screen.queryByText("Gagal memuat produk AI.")).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Produk Nonaktif" })).toBeInTheDocument();
   });
 
   it("keeps the loading list when a connection test finishes while the tab is reloading", async () => {
@@ -677,10 +679,11 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
     await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
     await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
-    finish({ status: "ok", latency_ms: 420 });
+    // act flushes the test result and the row update it triggers before the assertions run.
+    await act(async () => finish({ status: "ok", latency_ms: 420 }));
 
-    await waitFor(() => expect(test).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole("cell", { name: "DeepSeek" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Gagal memuat produk AI.")).not.toBeInTheDocument();
   });
 
   it("shows 0 ms when the provider answers without a latency", async () => {
@@ -732,7 +735,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
     expect(await screen.findByText("Produk AI diaktifkan")).toBeInTheDocument();
   });
 
-  it("closes the activate dialog without changing anything when the admin cancels", async () => {
+  it("closes the deactivate dialog without changing anything when the admin cancels", async () => {
     const user = userEvent.setup();
     list.mockResolvedValue([product()]);
     renderPage();
