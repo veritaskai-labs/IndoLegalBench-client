@@ -14,9 +14,9 @@ import {
   PROVIDER_TYPE_LABEL,
 } from "@/lib/providers/format";
 import {
-  fromModelParams,
-  modelParamsError,
-  toModelParams,
+  formatModelParams,
+  MODEL_PARAMS_EXAMPLE,
+  parseModelParams,
 } from "@/lib/providers/modelParameters";
 import type {
   AiProduct,
@@ -29,7 +29,6 @@ import {
   MeasurementTypeField,
   type MeasurementType,
 } from "@/components/providers/MeasurementTypeField";
-import { ModelParameterFields } from "@/components/providers/ModelParameterFields";
 import { SaveTypeWarningDialog } from "@/components/providers/SaveTypeWarningDialog";
 
 type Props = {
@@ -47,6 +46,7 @@ type Field =
   | "credential"
   | "rate_limit"
   | "budget"
+  | "model_params"
   | "vendor_name"
   | "site_url"
   | "access_note"
@@ -74,6 +74,7 @@ const FIELD_OF: Partial<Record<string, Field>> = {
   credential: "credential",
   rate_limit_per_minute: "rate_limit",
   monthly_budget_idr: "budget",
+  model_params: "model_params",
   vendor_name: "vendor_name",
   site_url: "site_url",
   access_note: "access_note",
@@ -92,6 +93,7 @@ const AUTOMATIC_FIELDS: readonly Field[] = [
   "credential",
   "rate_limit",
   "budget",
+  "model_params",
 ];
 
 function isHttpUrl(text: string): boolean {
@@ -120,6 +122,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     site: useId(),
     note: useId(),
     params: useId(),
+    modelParams: useId(),
   };
   const [name, setName] = useState(product?.name ?? "");
   const [measurementType, setMeasurementType] = useState<MeasurementType>(
@@ -141,9 +144,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       ? formatRupiahInput(product.monthly_budget_idr.split(".")[0])
       : "",
   );
-  const [modelParams, setModelParams] = useState<Record<string, string | boolean>>(
-    () => fromModelParams(product?.model_params),
-  );
+  const [modelParams, setModelParams] = useState(() => formatModelParams(product?.model_params));
   const [confirming, setConfirming] = useState(false);
   /** AC4: dikunci setelah server menolak perubahan jenis karena ada riwayat. */
   const [typeLocked, setTypeLocked] = useState(false);
@@ -177,6 +178,8 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     }
     const amount = parseRupiahInput(budget);
     if (amount === null || amount <= 0) found.budget = "Budget wajib diisi dan lebih dari Rp 0.";
+    const paramsError = parseModelParams(modelParams).error;
+    if (paramsError !== null) found.model_params = paramsError;
     return found;
   }
 
@@ -213,7 +216,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
         ? formatRupiahInput(saved.monthly_budget_idr.split(".")[0])
         : "",
     );
-    setModelParams(fromModelParams(saved.model_params));
+    setModelParams(formatModelParams(saved.model_params));
   }
 
   /** AC4: isian jenis lama dihapus, tapi jenis asal produk diisi ulang dari data tersimpan. */
@@ -231,7 +234,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       setModelName("");
       setRateLimit("");
       setBudget("");
-      setModelParams({});
+      setModelParams("");
     } else {
       setVendorName("");
       setSiteUrl("");
@@ -246,10 +249,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
     setFormError(null);
     const found = validate();
     setErrors(found);
-    const paramsError =
-      measurementType === "automatic" ? modelParamsError(modelParams) : null;
-    if (paramsError !== null) setFormError(paramsError);
-    if (paramsError !== null || Object.keys(found).length > 0) return;
+    if (Object.keys(found).length > 0) return;
     if (!editing || switchingType) {
       setConfirming(true);
       return;
@@ -279,7 +279,7 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
       model_name: modelName.trim(),
       rate_limit_per_minute: Number(rateLimit),
       monthly_budget_idr: String(parseRupiahInput(budget)),
-      model_params: toModelParams(modelParams),
+      model_params: parseModelParams(modelParams).params,
     };
   }
 
@@ -483,12 +483,13 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
                 )}
               </div>
 
-              <ModelParameterFields
-                values={modelParams}
-                onChange={(key, value) =>
-                  setModelParams((current) => ({ ...current, [key]: value }))
-                }
-              />
+              <Labeled id={ids.modelParams} label="Parameter model" error={errors.model_params}>
+                <textarea id={ids.modelParams} rows={5} value={modelParams} onChange={(e) => setModelParams(e.target.value)} {...invalid(ids.modelParams, errors.model_params, false)} placeholder={MODEL_PARAMS_EXAMPLE} spellCheck={false} className={`${INPUT} font-mono`} />
+                <p className="mt-1 text-xs text-slate-500">
+                  JSON yang dikirim apa adanya ke API model. Tulis nama parameter sesuai dokumentasi model, misalnya temperature 0.3 yang disarankan klien. Kosongkan untuk memakai bawaan penyedia. Variasi parameter didaftarkan sebagai produk terpisah, misalnya deepseek1 dan deepseek2.
+                </p>
+                <p className="mt-1 text-xs text-slate-500">Jangan isi API key, token, atau kata sandi di sini.</p>
+              </Labeled>
             </>
           ) : (
             <>

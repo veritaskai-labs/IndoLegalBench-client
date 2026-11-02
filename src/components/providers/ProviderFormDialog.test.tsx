@@ -208,7 +208,9 @@ describe("ProviderFormDialog save warning (AC2, AC4)", () => {
     await userEvent.type(screen.getByLabelText("Kredensial"), "sk-rahasia-9z9z");
     await userEvent.type(screen.getByLabelText("Limit panggilan per menit"), "10");
     await userEvent.type(screen.getByLabelText("Budget per bulan (Rp)"), "1500000");
-    await userEvent.type(screen.getByLabelText("Temperature"), "0.3");
+    // SCRUM-248: paste, karena userEvent.type membaca { sebagai tombol khusus.
+    await userEvent.click(screen.getByLabelText("Parameter model"));
+    await userEvent.paste('{"temperature": 0.3, "reasoning_effort": "high"}');
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
     await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
 
@@ -221,26 +223,89 @@ describe("ProviderFormDialog save warning (AC2, AC4)", () => {
       credential: "sk-rahasia-9z9z",
       rate_limit_per_minute: 10,
       monthly_budget_idr: "1500000",
-      model_params: { temperature: 0.3 },
+      model_params: { temperature: 0.3, reasoning_effort: "high" },
     });
   });
 
-  it("refuses a temperature outside the range before asking for confirmation", async () => {
+  it("refuses parameters that are not valid JSON under the field, before the warning", async () => {
     renderDialog();
 
-    await userEvent.type(screen.getByLabelText("Temperature"), "2.5");
+    await userEvent.click(screen.getByLabelText("Parameter model"));
+    await userEvent.paste('{"effort": "high",}');
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Temperature harus angka antara 0 dan 2.",
+    expect(screen.getByLabelText("Parameter model")).toHaveAccessibleDescription(
+      /JSON yang valid/,
     );
     expect(
       screen.queryByRole("heading", { name: /^Simpan sebagai produk/ }),
     ).not.toBeInTheDocument();
   });
+
+  it("refuses a credential shorter than four characters", async () => {
+    renderDialog();
+
+    await userEvent.type(screen.getByLabelText("Kredensial"), "abc");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(screen.getByText("Kredensial minimal 4 karakter.")).toBeInTheDocument();
+  });
+
+  it("refuses a JSON array, because parameters are named", async () => {
+    renderDialog();
+
+    await userEvent.click(screen.getByLabelText("Parameter model"));
+    await userEvent.paste('["high"]');
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(screen.getByLabelText("Parameter model")).toHaveAccessibleDescription(
+      /berupa object/,
+    );
+  });
+
+  it("shows the example and the secret warning, and sends null when left empty", async () => {
+    vi.mocked(createProduct).mockResolvedValue(AUTOMATIC_PRODUCT);
+    renderDialog();
+
+    const field = screen.getByLabelText("Parameter model");
+    expect(field).toHaveValue("");
+    expect(field.getAttribute("placeholder")).toContain('"effort": "high"');
+    expect(screen.getByText(/Jangan isi API key/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText("Nama"), "DeepSeek");
+    await userEvent.selectOptions(screen.getByLabelText("Jenis API"), "openai_compatible");
+    await userEvent.type(screen.getByLabelText("URL endpoint"), "https://api.example.test/v1");
+    await userEvent.type(screen.getByLabelText("Model"), "model-uji");
+    await userEvent.type(screen.getByLabelText("Kredensial"), "sk-rahasia-9z9z");
+    await userEvent.type(screen.getByLabelText("Limit panggilan per menit"), "10");
+    await userEvent.type(screen.getByLabelText("Budget per bulan (Rp)"), "1500000");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith(
+      expect.objectContaining({ model_params: null }),
+    );
+  });
 });
 
 describe("ProviderFormDialog manual validation (AC3)", () => {
+  it("sends the free-text parameter typed for a manual product", async () => {
+    vi.mocked(createProduct).mockResolvedValue(MANUAL_PRODUCT);
+    renderDialog();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.type(screen.getByLabelText("Nama"), "Hukumonline");
+    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+    await userEvent.type(screen.getByLabelText("Alamat situs"), "https://hukumonline.com");
+    await userEvent.type(screen.getByLabelText("Parameter"), "mode pro");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith(
+      expect.objectContaining({ measurement_type: "manual", manual_params: "mode pro" }),
+    );
+  });
+
   it("asks for the vendor name and the site before the warning appears", async () => {
     renderDialog();
 
@@ -287,10 +352,9 @@ describe("ProviderFormDialog editing (AC4)", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Temperature")).toHaveValue("0.3");
-    expect(screen.getByLabelText("Effort")).toHaveValue("high");
-    expect(screen.getByLabelText("Thinking")).toHaveValue("on");
-    expect(screen.getByLabelText("Web search")).toHaveValue("");
+    expect(screen.getByLabelText("Parameter model")).toHaveValue(
+      '{\n  "temperature": 0.3,\n  "effort": "high",\n  "thinking": true\n}',
+    );
   });
 
   it("sends the manual fields of the product being edited", async () => {
@@ -330,7 +394,10 @@ describe("ProviderFormDialog editing (AC4)", () => {
       />,
     );
 
-    await userEvent.selectOptions(screen.getByLabelText("Web search"), "on");
+    const field = screen.getByLabelText("Parameter model");
+    await userEvent.clear(field);
+    await userEvent.click(field);
+    await userEvent.paste('{"reasoning_effort": "low", "top_p": 0.9}');
     await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
 
     expect(updateProduct).toHaveBeenCalledWith(AUTOMATIC_PRODUCT.id, {
@@ -341,12 +408,7 @@ describe("ProviderFormDialog editing (AC4)", () => {
       model_name: "deepseek-v4-flash",
       rate_limit_per_minute: 10,
       monthly_budget_idr: "1500000",
-      model_params: {
-        temperature: 0.3,
-        effort: "high",
-        thinking: true,
-        web_search: true,
-      },
+      model_params: { reasoning_effort: "low", top_p: 0.9 },
     });
   });
 });
@@ -356,12 +418,13 @@ describe("ProviderFormDialog switching the measurement type (AC4)", () => {
     renderDialog();
 
     await userEvent.type(screen.getByLabelText("Model"), "deepseek-v4-flash");
-    await userEvent.type(screen.getByLabelText("Temperature"), "0.3");
+    await userEvent.click(screen.getByLabelText("Parameter model"));
+    await userEvent.paste('{"temperature": 0.3}');
     await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
     await userEvent.click(screen.getByRole("radio", { name: /Otomatis/ }));
 
     expect(screen.getByLabelText("Model")).toHaveValue("");
-    expect(screen.getByLabelText("Temperature")).toHaveValue("");
+    expect(screen.getByLabelText("Parameter model")).toHaveValue("");
   });
 
   it("clears the manual fields when the admin switches to automatic", async () => {
@@ -587,6 +650,30 @@ describe("ProviderFormDialog server field errors (AC3, AC4)", () => {
     expect(
       await screen.findByText("Limit panggilan wajib untuk produk otomatis."),
     ).toBeInTheDocument();
+  });
+
+  it("puts a rejected model parameter on the parameter field", async () => {
+    vi.mocked(updateProduct).mockRejectedValue(
+      refusal({
+        code: "MODEL_PARAMS_SECRET",
+        field: "model_params",
+        serverMessage: "Parameter model tidak boleh berisi API key, token, atau kata sandi.",
+      }),
+    );
+    render(
+      <ProviderFormDialog
+        product={AUTOMATIC_PRODUCT}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(await screen.findByLabelText("Parameter model")).toHaveAccessibleDescription(
+      "Parameter model tidak boleh berisi API key, token, atau kata sandi.",
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("uses the banner when the named field is not on the form", async () => {
