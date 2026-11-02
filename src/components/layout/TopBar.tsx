@@ -29,7 +29,7 @@ export function TopBar() {
             aria-expanded={menu.open}
             aria-controls={MOBILE_NAV_ID}
             aria-label={menu.open ? "Tutup menu" : "Buka menu"}
-            className="-ml-1 rounded-md p-1.5 text-slate-300 hover:bg-slate-800 hover:text-white md:hidden"
+            className="-ml-2 grid h-11 w-11 place-items-center rounded-md text-slate-300 hover:bg-slate-800 hover:text-white md:hidden"
           >
             <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
               <path

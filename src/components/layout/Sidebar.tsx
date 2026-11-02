@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { MOBILE_NAV_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/hooks/useAuth";
 import { navForRole, type NavGroup } from "@/lib/nav";
+import { ROLE_LABEL } from "@/types";
 
 const COLUMN = "flex-col justify-between border-r border-slate-200 bg-white p-4";
 
@@ -26,6 +27,11 @@ export function Sidebar() {
 
       {menu.open && (
         <MobilePanel onClose={menu.close}>
+          {/* Below sm the top bar only shows initials, so the panel says who is signed in. */}
+          <p className="mb-4 border-b border-slate-200 px-3 pb-4 text-sm leading-tight">
+            <span className="block font-medium text-slate-900">{auth.user.name}</span>
+            <span className="block text-xs text-slate-500">{ROLE_LABEL[auth.user.role]}</span>
+          </p>
           <NavLinks groups={groups} pathname={pathname} onNavigate={menu.close} />
         </MobilePanel>
       )}
@@ -67,7 +73,9 @@ function MobilePanel({ onClose, children }: Readonly<{ onClose: () => void; chil
         onClick={onClose}
         className="absolute inset-0 h-full w-full bg-slate-900/40"
       />
-      <div className={`absolute inset-y-0 left-0 flex w-64 max-w-[80vw] overflow-y-auto ${COLUMN}`}>{children}</div>
+      <div className="absolute inset-y-0 left-0 flex w-64 max-w-[80vw] flex-col overflow-y-auto border-r border-slate-200 bg-white p-4">
+        {children}
+      </div>
     </dialog>
   );
 }
