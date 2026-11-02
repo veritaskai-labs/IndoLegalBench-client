@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { MOBILE_NAV_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,25 +25,50 @@ export function Sidebar() {
       </aside>
 
       {menu.open && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <button
-            type="button"
-            aria-label="Tutup menu navigasi"
-            onClick={menu.close}
-            className="absolute inset-0 h-full w-full bg-slate-900/40"
-          />
-          <div
-            id={MOBILE_NAV_ID}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu navigasi"
-            className={`absolute inset-y-0 left-0 flex w-64 max-w-[80vw] overflow-y-auto ${COLUMN}`}
-          >
-            <NavLinks groups={groups} pathname={pathname} onNavigate={menu.close} />
-          </div>
-        </div>
+        <MobilePanel onClose={menu.close}>
+          <NavLinks groups={groups} pathname={pathname} onNavigate={menu.close} />
+        </MobilePanel>
       )}
     </>
+  );
+}
+
+/**
+ * Phone menu as a native modal <dialog> (Sonar S6819): the browser traps focus and Escape
+ * fires cancel. The dialog covers the screen; the backdrop is a real button, so no click
+ * handler sits on a non-interactive element.
+ */
+function MobilePanel({ onClose, children }: Readonly<{ onClose: () => void; children: React.ReactNode }>) {
+  // Returning a cleanup means React never calls this ref with null (same as DiscussionDrawer).
+  const attach = useCallback((node: HTMLDialogElement) => {
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (typeof node.showModal === "function") node.showModal();
+    else node.open = true;
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, []);
+
+  return (
+    <dialog
+      ref={attach}
+      id={MOBILE_NAV_ID}
+      aria-label="Menu navigasi"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-transparent"
+    >
+      <button
+        type="button"
+        aria-label="Tutup menu navigasi"
+        onClick={onClose}
+        className="absolute inset-0 h-full w-full bg-slate-900/40"
+      />
+      <div className={`absolute inset-y-0 left-0 flex w-64 max-w-[80vw] overflow-y-auto ${COLUMN}`}>{children}</div>
+    </dialog>
   );
 }
 
@@ -84,7 +110,7 @@ function NavLinks({
         ))}
       </nav>
 
-      <p className="border-t border-slate-200 pt-4 font-mono text-[11px] text-slate-400">
+      <p className="mt-auto border-t border-slate-200 pt-4 font-mono text-[11px] text-slate-400">
         hanya data sintetis
         <br />
         L1 · L3 · L9 ditegakkan
