@@ -1218,7 +1218,7 @@ export interface components {
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
          */
-        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user";
+        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log";
         /**
          * AuditLogRead
          * @description Satu catatan audit, lengkap untuk dibuka kembali sebagai bukti (AC4).
@@ -1720,6 +1720,7 @@ export interface components {
             version_no: number;
             review: components["schemas"]["CaseReview"];
         };
+        JsonValue: unknown;
         /**
          * LastTestStatus
          * @enum {string}
@@ -1922,16 +1923,15 @@ export interface components {
          * @enum {string}
          */
         MeasurementType: "automatic" | "manual";
-        /** ModelParams */
+        /**
+         * ModelParams
+         * @description Parameter model sebagai JSON object bebas (SCRUM-247, revisi UAT PBI-23 AC2).
+         *
+         *     Dikirim apa adanya ke API penyedia. Kunci milik sistem, kunci rahasia, dan
+         *     ukurannya diperiksa rules.model_params_problem supaya galatnya punya code.
+         */
         ModelParams: {
-            /** Temperature */
-            temperature?: number | null;
-            /** Effort */
-            effort?: ("low" | "medium" | "high") | null;
-            /** Thinking */
-            thinking?: boolean | null;
-            /** Web Search */
-            web_search?: boolean | null;
+            [key: string]: components["schemas"]["JsonValue"];
         };
         /**
          * NeedsReassignmentResponse
