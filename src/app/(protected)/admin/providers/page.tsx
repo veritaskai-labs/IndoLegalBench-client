@@ -250,17 +250,17 @@ export default function ProvidersPage() {
             <tbody className="divide-y divide-slate-100">
               {list.status === "loading" && <LoadingSkeleton variant="table" rows={3} columns={COLUMNS} />}
               {rows.map((product) => (
-                  <ProductRow
-                    key={product.id}
-                    product={product}
-                    testing={testing.has(product.id)}
-                    live={results[product.id]}
-                    onTest={() => runTest(product)}
-                    onEdit={() => setDialog({ mode: "edit", product })}
-                    onToggle={() => setDialog({ mode: "toggle", product })}
-                    onDelete={() => setDialog({ mode: "delete", product })}
-                  />
-                ))}
+                <ProductRow
+                  key={product.id}
+                  product={product}
+                  testing={testing.has(product.id)}
+                  live={results[product.id]}
+                  onTest={() => runTest(product)}
+                  onEdit={() => setDialog({ mode: "edit", product })}
+                  onToggle={() => setDialog({ mode: "toggle", product })}
+                  onDelete={() => setDialog({ mode: "delete", product })}
+                />
+              ))}
             </tbody>
           </table>
         </div>
