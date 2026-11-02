@@ -74,6 +74,8 @@ describe("TopBar", () => {
 
     const menu = screen.getByRole("button", { name: "Buka menu" });
     expect(menu).toHaveClass("md:hidden");
+    // Review #63: a 44 px tap target instead of 32 px.
+    expect(menu).toHaveClass("h-11", "w-11");
     expect(menu).toHaveAttribute("aria-expanded", "false");
     expect(menu).toHaveAttribute("aria-controls", "mobile-nav");
 

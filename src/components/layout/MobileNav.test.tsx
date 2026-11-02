@@ -87,4 +87,35 @@ describe("useMobileNav (SCRUM-204 E2E F3: phone menu)", () => {
 
     expect(result.current.open).toBe(false);
   });
+
+  // Review #63: rotating a tablet past md shows the desktop column, so the panel must go.
+  it("closes once the screen is wide enough for the sidebar column", () => {
+    let onChange: (event: { matches: boolean }) => void = () => undefined;
+    const removeEventListener = vi.fn();
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        media: query,
+        matches: false,
+        addEventListener: (_: string, listener: typeof onChange) => (onChange = listener),
+        removeEventListener,
+      })),
+    );
+    try {
+      const { result, unmount } = renderHook(() => useMobileNav(), { wrapper });
+      act(() => result.current.toggle());
+      expect(window.matchMedia).toHaveBeenCalledWith("(min-width: 768px)");
+
+      act(() => onChange({ matches: false }));
+      expect(result.current.open).toBe(true);
+
+      act(() => onChange({ matches: true }));
+      expect(result.current.open).toBe(false);
+
+      unmount();
+      expect(removeEventListener).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

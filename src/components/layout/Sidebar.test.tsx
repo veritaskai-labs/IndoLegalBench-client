@@ -82,6 +82,18 @@ describe("Sidebar", () => {
     expect(within(panel).queryByRole("link", { name: "Penyedia" })).not.toBeInTheDocument();
   });
 
+  // Review #63: below sm the top bar shows only the initials, and a tooltip does not show on touch.
+  it("shows who is signed in at the top of the phone panel", async () => {
+    signedInAs("contributor");
+    renderWithMenu();
+
+    await userEvent.click(screen.getByRole("button", { name: "menu" }));
+
+    const panel = screen.getByRole("dialog", { name: "Menu navigasi" });
+    expect(within(panel).getByText("Rina Hapsari")).toBeInTheDocument();
+    expect(within(panel).getByText("Kontributor")).toBeInTheDocument();
+  });
+
   it("closes the panel when the backdrop is tapped", async () => {
     signedInAs("admin");
     renderWithMenu();
