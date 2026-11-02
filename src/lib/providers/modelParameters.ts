@@ -1,129 +1,44 @@
 import type { ModelParams } from "@/types/provider";
 
-const EFFORT_VALUES = ["low", "medium", "high"] as const;
-type Effort = (typeof EFFORT_VALUES)[number];
-
-function isEffort(value: unknown): value is Effort {
-  return typeof value === "string" && EFFORT_VALUES.includes(value as Effort);
-}
-
-/** "on" dan "off" dari formulir jadi boolean; kosong berarti pakai bawaan penyedia. */
-function toggleValue(value: unknown): boolean | null {
-  if (value === "on" || value === true) return true;
-  if (value === "off") return false;
-  return null;
-}
-
 /**
- * Parameter model untuk produk Otomatis (AC2).
- * Semuanya dikirim sebagai satu objek ke kolom `model_params` (JSONB) di server;
- * produk Manual selalu mengirim null karena CHECK di server melarang keduanya terisi.
+ * Parameter model produk Otomatis sebagai teks JSON (SCRUM-248, revisi UAT klien
+ * PBI-23 AC2). Server mengirimnya apa adanya ke API penyedia, jadi nama dan nilai
+ * parameter mengikuti dokumentasi model masing-masing. Di sini hanya dicek bahwa
+ * teksnya JSON object; aturan lain (kunci sistem, rahasia, ukuran) milik server
+ * dan ditampilkan lewat field model_params pada galat 422.
  */
-export type ModelParameterKind = "number" | "choice";
+export const MODEL_PARAMS_EXAMPLE = '{\n  "effort": "high",\n  "thinking": true\n}';
 
-export type ModelParameterField = Readonly<{
-  key: string;
-  label: string;
-  kind: ModelParameterKind;
-  helper: string;
-  placeholder?: string;
-  choices?: ReadonlyArray<Readonly<{ value: string; label: string }>>;
+export const MODEL_PARAMS_INVALID_JSON =
+  'Parameter model harus JSON yang valid, misalnya {"effort": "high"}.';
+export const MODEL_PARAMS_NOT_OBJECT =
+  'Parameter model harus berupa object dengan nama parameter, misalnya {"effort": "high"}.';
+
+export type ParsedModelParams = Readonly<{
+  params: ModelParams | null;
+  error: string | null;
 }>;
 
-export type ModelParameterValues = Readonly<
-  Record<string, string | boolean | undefined>
->;
-
-export const TEMPERATURE_ERROR = "Temperature harus angka antara 0 dan 2.";
-
-export const MODEL_PARAMETER_FIELDS: ReadonlyArray<ModelParameterField> = [
-  {
-    key: "temperature",
-    label: "Temperature",
-    kind: "number",
-    helper: "Kosongkan untuk memakai bawaan penyedia (klien menyarankan 0.3).",
-    placeholder: "0.3",
-  },
-  {
-    key: "effort",
-    label: "Effort",
-    kind: "choice",
-    helper: "Seberapa dalam model berpikir sebelum menjawab.",
-    choices: [
-      { value: "low", label: "Low" },
-      { value: "medium", label: "Medium" },
-      { value: "high", label: "High" },
-    ],
-  },
-  {
-    key: "thinking",
-    label: "Thinking",
-    kind: "choice",
-    helper: "Model menuliskan proses berpikirnya sebelum menjawab.",
-    choices: [
-      { value: "on", label: "On" },
-      { value: "off", label: "Off" },
-    ],
-  },
-  {
-    key: "web_search",
-    label: "Web search",
-    kind: "choice",
-    helper: "Model boleh mencari di web saat menjawab.",
-    choices: [
-      { value: "on", label: "On" },
-      { value: "off", label: "Off" },
-    ],
-  },
-];
-
-/** Hanya temperature yang bisa salah ketik; sisanya dipilih dari daftar. */
-export function modelParamsError(values: ModelParameterValues): string | null {
-  const raw = values.temperature;
-  if (typeof raw !== "string" || raw.trim() === "") return null;
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) {
-    return TEMPERATURE_ERROR;
-  }
-  return null;
+function isObject(value: unknown): value is ModelParams {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Isian kosong tidak dikirim; kalau semua kosong, server menyimpan NULL. */
-export function toModelParams(values: ModelParameterValues): ModelParams | null {
-  const params: ModelParams = {};
+/** Teks kosong dan {} berarti default penyedia, jadi dikirim sebagai null. */
+export function parseModelParams(text: string): ParsedModelParams {
+  if (text.trim() === "") return { params: null, error: null };
 
-  const temperature = values.temperature;
-  if (typeof temperature === "string" && temperature.trim() !== "") {
-    params.temperature = Number(temperature);
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return { params: null, error: MODEL_PARAMS_INVALID_JSON };
   }
-  if (isEffort(values.effort)) params.effort = values.effort;
-
-  const thinking = toggleValue(values.thinking);
-  if (thinking !== null) params.thinking = thinking;
-  const webSearch = toggleValue(values.web_search);
-  if (webSearch !== null) params.web_search = webSearch;
-
-  return Object.keys(params).length > 0 ? params : null;
+  if (!isObject(value)) return { params: null, error: MODEL_PARAMS_NOT_OBJECT };
+  return { params: Object.keys(value).length > 0 ? value : null, error: null };
 }
 
-/** Nilai tersimpan dari server jadi isian formulir, kebalikan dari toModelParams. */
-export function fromModelParams(
-  params: ModelParams | null | undefined,
-): Record<string, string | boolean> {
-  const values: Record<string, string | boolean> = {};
-  if (!params) return values;
-
-  if (typeof params.temperature === "number") {
-    values.temperature = String(params.temperature);
-  }
-  if (isEffort(params.effort)) values.effort = params.effort;
-  if (typeof params.thinking === "boolean") {
-    values.thinking = params.thinking ? "on" : "off";
-  }
-  if (typeof params.web_search === "boolean") {
-    values.web_search = params.web_search ? "on" : "off";
-  }
-
-  return values;
+/** Parameter tersimpan sebagai JSON berindentasi untuk textarea; kosong bila tidak ada. */
+export function formatModelParams(params: ModelParams | null | undefined): string {
+  if (!params || Object.keys(params).length === 0) return "";
+  return JSON.stringify(params, null, 2);
 }

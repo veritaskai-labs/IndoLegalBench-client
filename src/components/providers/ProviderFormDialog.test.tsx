@@ -242,6 +242,15 @@ describe("ProviderFormDialog save warning (AC2, AC4)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("refuses a credential shorter than four characters", async () => {
+    renderDialog();
+
+    await userEvent.type(screen.getByLabelText("Kredensial"), "abc");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    expect(screen.getByText("Kredensial minimal 4 karakter.")).toBeInTheDocument();
+  });
+
   it("refuses a JSON array, because parameters are named", async () => {
     renderDialog();
 
@@ -280,6 +289,23 @@ describe("ProviderFormDialog save warning (AC2, AC4)", () => {
 });
 
 describe("ProviderFormDialog manual validation (AC3)", () => {
+  it("sends the free-text parameter typed for a manual product", async () => {
+    vi.mocked(createProduct).mockResolvedValue(MANUAL_PRODUCT);
+    renderDialog();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Manual/ }));
+    await userEvent.type(screen.getByLabelText("Nama"), "Hukumonline");
+    await userEvent.type(screen.getByLabelText("Nama penyedia"), "Hukumonline");
+    await userEvent.type(screen.getByLabelText("Alamat situs"), "https://hukumonline.com");
+    await userEvent.type(screen.getByLabelText("Parameter"), "mode pro");
+    await userEvent.click(screen.getByRole("button", { name: "Simpan" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ya, simpan" }));
+
+    expect(createProduct).toHaveBeenCalledWith(
+      expect.objectContaining({ measurement_type: "manual", manual_params: "mode pro" }),
+    );
+  });
+
   it("asks for the vendor name and the site before the warning appears", async () => {
     renderDialog();
 
