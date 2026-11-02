@@ -101,4 +101,19 @@ describe("SaveTypeWarningDialog (AC3)", () => {
     expect(showModal).toHaveBeenCalled();
     HTMLDialogElement.prototype.showModal = original;
   });
+
+  it("sits in the middle of the screen, not in the top-left corner", () => {
+    // SCRUM-204 E2E F1. Tailwind's preflight sets every margin to 0, which removes the
+    // browser's margin: auto that centres a modal <dialog>. jsdom has no layout, so the
+    // class that restores it is the observable part.
+    render(
+      <SaveTypeWarningDialog
+        measurementType="manual"
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("dialog")).toHaveClass("m-auto");
+  });
 });

@@ -33,12 +33,14 @@ export function SaveTypeWarningDialog({
     if (!dialog.open) dialog.setAttribute("open", "");
   }, []);
 
+  // m-auto: Tailwind's preflight sets margin 0, which drops the browser's centring of a
+  // modal <dialog> and leaves it in the top-left corner.
   return (
     <dialog
       ref={ref}
       onCancel={onCancel}
       aria-labelledby="save-type-warning-title"
-      className="rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
+      className="m-auto rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
     >
       <h2 id="save-type-warning-title" className="text-base font-medium">
         Simpan sebagai produk {TYPE_LABEL[measurementType]}?
