@@ -94,6 +94,9 @@ describe("archiveErrorMessage", () => {
     [new ApiError(409, "SESSION_ALREADY_ARCHIVED"), "Sesi ini sudah diarsipkan."],
     [new ApiError(403, "NOT_YOUR_SESSION"), "Developer AI hanya bisa mengarsipkan sesi yang ia buat."],
     [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang daftar."],
+    // archiveSession is silentForbidden, so a plain 403 (role changed while the page was open)
+    // lands here; "Coba lagi" would send the user into a retry that keeps failing (Nizar, #67).
+    [new ApiError(403, "FORBIDDEN"), "Peran Anda tidak lagi boleh mengarsipkan sesi. Muat ulang halaman."],
   ])("explains %s", (error, message) => {
     expect(archiveErrorMessage(error)).toBe(message);
   });

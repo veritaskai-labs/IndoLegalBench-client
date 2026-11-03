@@ -205,7 +205,8 @@ describe("RunsPage archive flow (AC10: hidden from the list, data kept)", () => 
     await waitFor(() => expect(screen.queryByRole("cell", { name: "Tengah" })).not.toBeInTheDocument());
     expect(screen.getByRole("cell", { name: "Pertama" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "Terakhir" })).toBeInTheDocument();
-    expect(screen.getByText("Sesi Tengah diarsipkan")).toBeInTheDocument();
+    // Same quotes as the dialog text, which sits right above it (Nizar, #67).
+    expect(screen.getByText("Sesi “Tengah” diarsipkan")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(list).toHaveBeenCalledTimes(1);
   });
