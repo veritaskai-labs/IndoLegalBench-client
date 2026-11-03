@@ -29,8 +29,8 @@ describe("navForRole", () => {
     expect(labels("viewer")).toEqual(["Dasbor", "Laporan"]);
   });
 
-  it("gives developer AI only the suites page, without the dashboard (SCRUM-184)", () => {
-    expect(labels("developer_ai")).toEqual(["Suite dan kasus"]);
+  it("gives developer AI the suites and execution pages, without the dashboard (SCRUM-184, PBI-11 AC10)", () => {
+    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi"]);
   });
 
   it("gives admin the admin pages and reports but not the review queue", () => {
