@@ -15,7 +15,7 @@ export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   failed: "Gagal",
 };
 
-/** Sama dengan server (session_rules._ARCHIVABLE): hanya sesi yang sudah berakhir. */
+/** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
 const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
 
 /** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
