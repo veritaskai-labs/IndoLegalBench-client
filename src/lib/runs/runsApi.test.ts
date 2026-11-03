@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
-import { archiveSession, listSessions } from "./runsApi";
+import { archiveSession, getSession, listSessions } from "./runsApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
 // and whether a 403 fires the /forbidden redirect listener, not just which helper was called.
@@ -49,6 +49,36 @@ describe("listSessions (GET /measurements)", () => {
     fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
 
     await expect(listSessions()).rejects.toBeInstanceOf(ApiError);
+    expect(forbidden).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getSession (GET /measurements/{id}, PBI-11 AC7, AC8)", () => {
+  it("asks for one session with its id encoded and returns it as sent", async () => {
+    const detail = { id: "a/b", label: "Uji Coba", cases: [] };
+    fetchMock.mockResolvedValue(fakeResponse(200, detail));
+
+    await expect(getSession("a/b")).resolves.toEqual(detail);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/a%2Fb$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  // An unknown or mistyped id: the page shows "Sesi tidak ditemukan", so the code must reach it.
+  it("hands a 404 MEASUREMENT_NOT_FOUND to the caller without a redirect", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(404, { code: "MEASUREMENT_NOT_FOUND" }));
+
+    await expect(getSession("s-404")).rejects.toMatchObject({ status: 404, code: "MEASUREMENT_NOT_FOUND" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  // Kontributor or Viewer opening a detail link: same as the list, /forbidden is right.
+  it("lets a 403 send the user to /forbidden", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(getSession("s-1")).rejects.toBeInstanceOf(ApiError);
     expect(forbidden).toHaveBeenCalledTimes(1);
   });
 });
