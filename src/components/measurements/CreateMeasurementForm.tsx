@@ -276,8 +276,11 @@ export function CreateMeasurementForm() {
                 data-testid="suites-loading"
                 className="rounded-md border border-slate-200 p-4 text-center text-sm text-slate-500"
               >
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 mr-2 align-middle" />
-                Memuat daftar suite…
+                <span
+                  aria-hidden="true"
+                  className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 align-middle"
+                />
+                <span>Memuat daftar suite…</span>
               </div>
             )}
 
@@ -532,12 +535,15 @@ export function CreateMeasurementForm() {
       {/* Confirmation Modal */}
       {isConfirmOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
-          data-testid="start-confirm-dialog"
+          data-testid="modal-backdrop"
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
         >
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl space-y-4">
+          <dialog
+            open
+            aria-modal="true"
+            data-testid="start-confirm-dialog"
+            className="relative m-0 w-full max-w-md space-y-4 rounded-lg border-0 bg-white p-6 shadow-xl text-slate-900"
+          >
             <h3 className="text-lg font-semibold text-slate-900">
               Konfirmasi Mulai Pengukuran
             </h3>
@@ -578,7 +584,7 @@ export function CreateMeasurementForm() {
                 {isStarting ? "Memulai…" : "Ya, Mulai Pengukuran"}
               </button>
             </div>
-          </div>
+          </dialog>
         </div>
       )}
     </div>

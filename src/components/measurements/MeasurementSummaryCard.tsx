@@ -22,8 +22,11 @@ export function MeasurementSummaryCard({
         data-testid="summary-loading"
         className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-500"
       >
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 align-middle mr-2" />
-        Menghitung perkiraan biaya dan memeriksa kelayakan kasus…
+        <span
+          aria-hidden="true"
+          className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 align-middle"
+        />
+        <span>Menghitung perkiraan biaya dan memeriksa kelayakan kasus…</span>
       </div>
     );
   }
@@ -60,7 +63,7 @@ export function MeasurementSummaryCard({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
           {budgetExceeded.remainingBudgetIdr && (
             <div>
-              <span className="text-red-700">Sisa Anggaran Produk: </span>
+              <span className="text-red-700">Sisa Anggaran Produk:</span>{" "}
               <strong className="font-semibold text-red-950">
                 {formatRupiah(budgetExceeded.remainingBudgetIdr)}
               </strong>
@@ -68,7 +71,7 @@ export function MeasurementSummaryCard({
           )}
           {budgetExceeded.estimatedCostIdr && (
             <div>
-              <span className="text-red-700">Perkiraan Biaya Pengukuran: </span>
+              <span className="text-red-700">Perkiraan Biaya Pengukuran:</span>{" "}
               <strong className="font-semibold text-red-950">
                 {formatRupiah(budgetExceeded.estimatedCostIdr)}
               </strong>
@@ -118,7 +121,8 @@ export function MeasurementSummaryCard({
         <div className="rounded border border-slate-200 bg-white p-2.5">
           <p className="text-xs text-slate-500">Kasus Layak</p>
           <p className="text-base font-semibold text-slate-900">
-            {summary.case_count} <span className="text-xs font-normal text-slate-600">kasus</span>
+            {summary.case_count}{" "}
+            <span className="text-xs font-normal text-slate-600">kasus</span>
           </p>
         </div>
 
@@ -132,7 +136,8 @@ export function MeasurementSummaryCard({
         <div className="rounded border border-slate-200 bg-white p-2.5">
           <p className="text-xs text-slate-500">Total Panggilan AI</p>
           <p className="text-base font-semibold text-indigo-700">
-            {summary.total_calls} <span className="text-xs font-normal text-slate-600">panggilan</span>
+            {summary.total_calls}{" "}
+            <span className="text-xs font-normal text-slate-600">panggilan</span>
           </p>
         </div>
 
