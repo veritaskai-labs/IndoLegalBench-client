@@ -1,119 +1,68 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  fromModelParams,
-  MODEL_PARAMETER_FIELDS,
-  modelParamsError,
-  toModelParams,
+  formatModelParams,
+  MODEL_PARAMS_EXAMPLE,
+  MODEL_PARAMS_INVALID_JSON,
+  MODEL_PARAMS_NOT_OBJECT,
+  parseModelParams,
 } from "./modelParameters";
 
-describe("MODEL_PARAMETER_FIELDS (AC2)", () => {
-  it("lists the four parameters the client asked for", () => {
-    expect(MODEL_PARAMETER_FIELDS.map((field) => field.key)).toEqual([
-      "temperature",
-      "effort",
-      "thinking",
-      "web_search",
-    ]);
+// SCRUM-248: parameter model diisi sebagai teks JSON (revisi UAT klien PBI-23 AC2).
+describe("parseModelParams", () => {
+  it("returns any JSON object unchanged, nested and unknown keys included", () => {
+    const text = '{"reasoning_effort": "high", "thinking": {"type": "enabled"}, "top_p": 0.9}';
+
+    expect(parseModelParams(text)).toEqual({
+      params: { reasoning_effort: "high", thinking: { type: "enabled" }, top_p: 0.9 },
+      error: null,
+    });
   });
 
-  it("offers 0.3 as the starting temperature", () => {
-    const temperature = MODEL_PARAMETER_FIELDS.find(
-      (field) => field.key === "temperature",
-    );
-
-    expect(temperature?.placeholder).toBe("0.3");
+  it.each(["", "   ", "\n\t"])("treats empty text %j as provider defaults", (text) => {
+    expect(parseModelParams(text)).toEqual({ params: null, error: null });
   });
 
-  it("offers three levels of effort", () => {
-    const effort = MODEL_PARAMETER_FIELDS.find(
-      (field) => field.key === "effort",
-    );
-
-    expect(effort?.choices?.map((choice) => choice.value)).toEqual([
-      "low",
-      "medium",
-      "high",
-    ]);
-  });
-  it("offers on and off for the booleans, so the default can be overridden", () => {
-    const thinking = MODEL_PARAMETER_FIELDS.find(
-      (field) => field.key === "thinking",
-    );
-
-    expect(thinking?.choices?.map((choice) => choice.value)).toEqual([
-      "on",
-      "off",
-    ]);
-  });
-});
-
-describe("modelParamsError", () => {
-  it("accepts an empty temperature, because every parameter is optional", () => {
-    expect(modelParamsError({})).toBeNull();
+  it("treats an empty object as provider defaults", () => {
+    expect(parseModelParams("{ }")).toEqual({ params: null, error: null });
   });
 
-  it("accepts a temperature inside the range", () => {
-    expect(modelParamsError({ temperature: "0.3" })).toBeNull();
+  it.each(['{"effort": "high",}', "{effort: 'high'}", '{"a": 1'])(
+    "rejects text that is not valid JSON: %s",
+    (text) => {
+      expect(parseModelParams(text)).toEqual({ params: null, error: MODEL_PARAMS_INVALID_JSON });
+    },
+  );
+
+  it.each(['["effort", "high"]', "0.3", '"high"', "true", "null"])(
+    "rejects JSON that is not an object: %s",
+    (text) => {
+      expect(parseModelParams(text)).toEqual({ params: null, error: MODEL_PARAMS_NOT_OBJECT });
+    },
+  );
+
+  it("keeps a null value inside the object, because it belongs to the parameter", () => {
+    expect(parseModelParams('{"stop": null}').params).toEqual({ stop: null });
   });
 
-  it("rejects a temperature that is not a number", () => {
-    expect(modelParamsError({ temperature: "panas" })).toBe(
-      "Temperature harus angka antara 0 dan 2.",
-    );
-  });
-
-  it("rejects a temperature above the range", () => {
-    expect(modelParamsError({ temperature: "2.5" })).toBe(
-      "Temperature harus angka antara 0 dan 2.",
-    );
+  it("parses the example it shows", () => {
+    expect(parseModelParams(MODEL_PARAMS_EXAMPLE).error).toBeNull();
   });
 });
 
-describe("toModelParams", () => {
-  it("returns null when nothing is filled in, so the server stores NULL", () => {
-    expect(toModelParams({})).toBeNull();
+describe("formatModelParams", () => {
+  it("writes stored parameters as indented JSON", () => {
+    expect(formatModelParams({ effort: "high", thinking: true })).toBe(
+      '{\n  "effort": "high",\n  "thinking": true\n}',
+    );
   });
 
-  it("sends the temperature as a number", () => {
-    expect(toModelParams({ temperature: "0.3" })).toEqual({ temperature: 0.3 });
+  it.each([null, undefined, {}])("leaves the field empty for %j", (params) => {
+    expect(formatModelParams(params)).toBe("");
   });
 
-  it("sends the effort as the value the server knows", () => {
-    expect(toModelParams({ effort: "medium" })).toEqual({ effort: "medium" });
-  });
-
-  it("sends a toggle that was turned on", () => {
-    expect(toModelParams({ thinking: "on" })).toEqual({ thinking: true });
-  });
-
-  it("sends a toggle that was turned off, so the provider default is overridden", () => {
-    expect(toModelParams({ thinking: "off" })).toEqual({ thinking: false });
-  });
-
-  it("drops a toggle left on the provider default", () => {
-    expect(toModelParams({ thinking: "", web_search: "" })).toBeNull();
-  });
-  it("drops a field the admin left blank", () => {
-    expect(toModelParams({ temperature: "   ", effort: "" })).toBeNull();
-  });
-});
-
-describe("fromModelParams", () => {
-  it("returns no values when the product has none", () => {
-    expect(fromModelParams(null)).toEqual({});
-  });
-
-  it("reads the temperature back as text for the input", () => {
-    expect(fromModelParams({ temperature: 0.3 })).toEqual({ temperature: "0.3" });
-  });
-
-  it("reads the toggles back as on and off", () => {
-    expect(
-      fromModelParams({ effort: "high", thinking: true, web_search: false }),
-    ).toEqual({ effort: "high", thinking: "on", web_search: "off" });
-  });
-  it("ignores a parameter the server left null", () => {
-    expect(fromModelParams({ temperature: null, effort: null })).toEqual({});
+  it("round-trips through parseModelParams", () => {
+    const params = { generation_config: { temperature: 0.3 } };
+    expect(parseModelParams(formatModelParams(params)).params).toEqual(params);
   });
 });

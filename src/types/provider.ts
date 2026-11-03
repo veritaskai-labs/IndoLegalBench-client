@@ -1,6 +1,8 @@
 import type { components } from "@/lib/generated/api";
 
 export type AiProduct = components["schemas"]["AiProductRead"];
+/** Baris GET /admin/providers: AiProductRead ditambah jumlah sesi dan sisa anggaran (SCRUM-210). */
+export type AiProductListItem = components["schemas"]["AiProductListItem"];
 export type AiProductCreate = components["schemas"]["AiProductCreate"];
 export type AiProductUpdate = components["schemas"]["AiProductUpdate"];
 export type ConnectionTest = components["schemas"]["ConnectionTestRead"];

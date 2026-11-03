@@ -838,7 +838,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Daftar sesi pengukuran yang belum diarsipkan, terbaru di atas */
+        get: operations["list_sessions_measurements_get"];
         put?: never;
         /** Mulai pengukuran: validasi ulang lalu sesi masuk antrean */
         post: operations["start_measurements_post"];
@@ -846,6 +847,43 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/measurements/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detail sesi dengan jawaban mentah per kasus dan percobaan
+         * @description Developer AI mendapat kasus test yang disamarkan (masked = true).
+         */
+        get: operations["get_session_measurements__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/measurements/{session_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Arsipkan sesi yang sudah berakhir supaya tidak tampil di daftar */
+        patch: operations["archive_measurements__session_id__archive_patch"];
         trace?: never;
     };
     "/audit-logs": {
@@ -1016,6 +1054,89 @@ export interface components {
             manual_params?: string | null;
         };
         /**
+         * AiProductListItem
+         * @description Satu baris daftar produk Admin, ditambah kolom turunan (PBI-11 SCRUM-210, PBI-23 AC6).
+         */
+        AiProductListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** @default automatic */
+            measurement_type: components["schemas"]["MeasurementType"];
+            provider_type?: components["schemas"]["ProviderType"] | null;
+            /** Base Url */
+            base_url?: string | null;
+            /** Model Name */
+            model_name?: string | null;
+            /** Credential Hint */
+            credential_hint?: string | null;
+            /**
+             * Has Credential
+             * @default false
+             */
+            has_credential: boolean;
+            /** Rate Limit Per Minute */
+            rate_limit_per_minute?: number | null;
+            /** Monthly Budget Idr */
+            monthly_budget_idr?: string | null;
+            model_params?: components["schemas"]["ModelParams"] | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: string | null;
+            /** Vendor Name */
+            vendor_name?: string | null;
+            /**
+             * Vendor Label
+             * @description Nama penyedia untuk daftar (PBI-23 AC6): vendor_name untuk produk Manual, label provider_type untuk produk Otomatis.
+             */
+            vendor_label?: string | null;
+            /** Site Url */
+            site_url?: string | null;
+            /** Access Note */
+            access_note?: string | null;
+            /** Manual Params */
+            manual_params?: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Last Test At */
+            last_test_at?: string | null;
+            last_test_status?: components["schemas"]["LastTestStatus"] | null;
+            /** Last Test Message */
+            last_test_message?: string | null;
+            last_test_error_category?: components["schemas"]["ConnectionTestErrorCategory"] | null;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Remaining Budget Idr
+             * @description Sisa anggaran bulan ini: batas bulanan dikurangi biaya sejak tanggal 1 pukul 00.00 WIB, tidak pernah negatif. null untuk produk Manual.
+             */
+            remaining_budget_idr?: string | null;
+            /**
+             * Session Count
+             * @description Jumlah sesi pengukuran produk ini, termasuk sesi yang diarsipkan.
+             * @default 0
+             */
+            session_count: number;
+        };
+        /**
          * AiProductOption
          * @description Satu pilihan produk di form pengukuran atau pencatatan manual (PBI-23 AC7, AC8).
          *
@@ -1181,11 +1302,32 @@ export interface components {
          */
         AssignmentVoidReason: "deactivated" | "role_changed";
         /**
+         * AttemptResult
+         * @description Satu percobaan: jawaban mentah apa adanya dari produk (PBI-11 AC8).
+         */
+        AttemptResult: {
+            /** Repetition No */
+            repetition_no: number;
+            status: components["schemas"]["AttemptStatus"];
+            /**
+             * Answer Text
+             * @description Jawaban mentah. null bila belum ada, gagal teknis, disamarkan, atau sesi belum berakhir untuk Developer AI
+             */
+            answer_text: string | null;
+            /** Model Version */
+            model_version: string | null;
+        };
+        /**
+         * AttemptStatus
+         * @enum {string}
+         */
+        AttemptStatus: "pending" | "running" | "succeeded" | "technical_failure";
+        /**
          * AuditEntityType
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
          */
-        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log";
+        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log" | "measurement_session";
         /**
          * AuditLogRead
          * @description Satu catatan audit, lengkap untuk dibuka kembali sebagai bukti (AC4).
@@ -1628,7 +1770,7 @@ export interface components {
              * @description Hanya Admin: kasus yang perlu penugasan ulang reviewer. null untuk peran lain.
              */
             needs_reassignment: number | null;
-            /** @description Sesi pengukuran terakhir. null sampai PBI-11 ada. */
+            /** @description Hanya Admin: sesi terbaru yang belum diarsipkan. null untuk peran lain atau bila belum ada pengukuran. */
             latest_run?: components["schemas"]["LatestRunSummary"] | null;
         };
         /** ErrorBody */
@@ -1695,9 +1837,51 @@ export interface components {
         LastTestStatus: "ok" | "failed";
         /**
          * LatestRunSummary
-         * @description Sesi pengukuran terakhir. Selalu null sampai PBI-11 mengisinya (AC1).
+         * @description Sesi pengukuran terakhir, kolomnya sama dengan satu baris GET /measurements (AC1).
          */
-        LatestRunSummary: Record<string, never>;
+        LatestRunSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created By Name
+             * @description Nama pembuat sesi, null bila akunnya tidak ada
+             */
+            created_by_name: string | null;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Product Name
+             * @description Nama produk AI, tetap terisi walau produknya sudah dihapus
+             */
+            product_name: string | null;
+            /**
+             * Case Count
+             * @description Kasus di snapshot sesi. null selama sesi antre, snapshot dibuat saat mulai
+             */
+            case_count: number | null;
+            /** Repetitions */
+            repetitions: number;
+            status: components["schemas"]["SessionStatus"];
+            progress: components["schemas"]["SessionProgressRead"];
+        };
         /**
          * LegalRefLinkRead
          * @description One regulation in a citation, as stored.
@@ -2259,6 +2443,199 @@ export interface components {
          * @enum {string}
          */
         RoundStatus: "awaiting_assignment" | "open" | "decided";
+        /**
+         * SessionArchiveResponse
+         * @description Hasil arsip sesi. Sesinya tidak lagi tampil di GET /measurements (PBI-11 AC10).
+         */
+        SessionArchiveResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Archived At
+             * Format: date-time
+             */
+            archived_at: string;
+            /**
+             * Archived By
+             * Format: uuid
+             * @description Pengguna yang mengarsipkan sesi
+             */
+            archived_by: string;
+        };
+        /**
+         * SessionCaseResult
+         * @description Satu kasus di snapshot sesi beserta percobaannya, urut nomor pengulangan.
+         */
+        SessionCaseResult: {
+            /**
+             * Snapshot Item Id
+             * Format: uuid
+             */
+            snapshot_item_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /**
+             * Question
+             * @description Pertanyaan kasus. null bila disamarkan
+             */
+            question: string | null;
+            split_tag: components["schemas"]["SplitTag"] | null;
+            /**
+             * Masked
+             * @description true untuk kasus test yang dibuka Developer AI: isi dan jawaban disamarkan
+             */
+            masked: boolean;
+            /**
+             * Version No
+             * @description Versi kasus yang dibekukan. null bila disamarkan
+             */
+            version_no: number | null;
+            /** @description Delapan bagian kasus dari snapshot (AC7). null bila disamarkan */
+            sections: components["schemas"]["VersionSections"] | null;
+            /** Attempts */
+            attempts: components["schemas"]["AttemptResult"][];
+        };
+        /**
+         * SessionDetail
+         * @description Detail sesi: kolom daftar ditambah hasil per kasus (PBI-11 AC8).
+         */
+        SessionDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created By Name
+             * @description Nama pembuat sesi, null bila akunnya tidak ada
+             */
+            created_by_name: string | null;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Product Name
+             * @description Nama produk AI, tetap terisi walau produknya sudah dihapus
+             */
+            product_name: string | null;
+            /**
+             * Case Count
+             * @description Kasus di snapshot sesi. null selama sesi antre, snapshot dibuat saat mulai
+             */
+            case_count: number | null;
+            /** Repetitions */
+            repetitions: number;
+            status: components["schemas"]["SessionStatus"];
+            progress: components["schemas"]["SessionProgressRead"];
+            purpose: components["schemas"]["MeasurementPurpose"];
+            split_filter: components["schemas"]["CaseFilter"];
+            /**
+             * Snapshot Created At
+             * @description Waktu snapshot kasus dibuat (AC6). null selama sesi antre
+             */
+            snapshot_created_at: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Archived At
+             * @description Terisi bila sesi sudah diarsipkan
+             */
+            archived_at: string | null;
+            /**
+             * Cases
+             * @description Kosong selama sesi antre, karena snapshot dibuat saat sesi mulai
+             */
+            cases: components["schemas"]["SessionCaseResult"][];
+        };
+        /**
+         * SessionListItem
+         * @description Satu baris daftar sesi pengukuran yang belum diarsipkan (PBI-11 AC10).
+         */
+        SessionListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created By Name
+             * @description Nama pembuat sesi, null bila akunnya tidak ada
+             */
+            created_by_name: string | null;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Product Name
+             * @description Nama produk AI, tetap terisi walau produknya sudah dihapus
+             */
+            product_name: string | null;
+            /**
+             * Case Count
+             * @description Kasus di snapshot sesi. null selama sesi antre, snapshot dibuat saat mulai
+             */
+            case_count: number | null;
+            /** Repetitions */
+            repetitions: number;
+            status: components["schemas"]["SessionStatus"];
+            progress: components["schemas"]["SessionProgressRead"];
+        };
+        /**
+         * SessionProgressRead
+         * @description Progres "X dari N" di daftar sesi (PBI-11 AC10).
+         */
+        SessionProgressRead: {
+            /**
+             * Completed
+             * @description Percobaan yang sudah punya hasil akhir: berhasil atau gagal teknis
+             */
+            completed: number;
+            /**
+             * Total
+             * @description Semua percobaan sesi, kasus kali pengulangan. 0 selama antre
+             */
+            total: number;
+        };
         /**
          * SessionStatus
          * @description Status dasar. Dihentikan dan Dibatalkan menyusul di PBI-12.
@@ -3860,7 +4237,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AiProductRead"][];
+                    "application/json": components["schemas"]["AiProductListItem"][];
                 };
             };
             /** @description Validation Error */
@@ -4836,6 +5213,26 @@ export interface operations {
             };
         };
     };
+    list_sessions_measurements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionListItem"][];
+                };
+            };
+        };
+    };
     start_measurements_post: {
         parameters: {
             query?: never;
@@ -4892,6 +5289,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_session_measurements__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDetail"];
+                };
+            };
+            /** @description Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_measurements__session_id__archive_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionArchiveResponse"];
+                };
+            };
+            /** @description Peran tidak berwenang (`FORBIDDEN`), atau Developer AI mengarsipkan sesi buatan orang lain (`NOT_YOUR_SESSION`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi masih antre atau berjalan (`SESSION_NOT_ARCHIVABLE`), atau sudah diarsipkan (`SESSION_ALREADY_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
