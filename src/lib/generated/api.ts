@@ -2489,8 +2489,7 @@ export interface components {
              * @description Pertanyaan kasus. null bila disamarkan
              */
             question: string | null;
-            /** Split Tag */
-            split_tag: string | null;
+            split_tag: components["schemas"]["SplitTag"] | null;
             /**
              * Masked
              * @description true untuk kasus test yang dibuka Developer AI: isi dan jawaban disamarkan
@@ -2552,16 +2551,8 @@ export interface components {
             repetitions: number;
             status: components["schemas"]["SessionStatus"];
             progress: components["schemas"]["SessionProgressRead"];
-            /**
-             * Purpose
-             * @description official atau trial
-             */
-            purpose: string;
-            /**
-             * Split Filter
-             * @description dev, test, atau both
-             */
-            split_filter: string;
+            purpose: components["schemas"]["MeasurementPurpose"];
+            split_filter: components["schemas"]["CaseFilter"];
             /**
              * Snapshot Created At
              * @description Waktu snapshot kasus dibuat (AC6). null selama sesi antre
