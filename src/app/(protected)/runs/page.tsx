@@ -89,7 +89,7 @@ export default function RunsPage() {
           session={target}
           onArchived={() => {
             setArchived((ids) => new Set(ids).add(target.id));
-            showToast(`Sesi ${target.label} diarsipkan`);
+            showToast(`Sesi “${target.label}” diarsipkan`);
             setTarget(null);
           }}
           onClose={(afterError) => {

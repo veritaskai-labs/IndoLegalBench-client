@@ -43,6 +43,8 @@ const ARCHIVE_ERRORS: Record<string, string> = {
   SESSION_ALREADY_ARCHIVED: "Sesi ini sudah diarsipkan.",
   NOT_YOUR_SESSION: "Developer AI hanya bisa mengarsipkan sesi yang ia buat.",
   MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang daftar.",
+  // archiveSession memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
+  FORBIDDEN: "Peran Anda tidak lagi boleh mengarsipkan sesi. Muat ulang halaman.",
 };
 
 export function archiveErrorMessage(error: unknown): string {
