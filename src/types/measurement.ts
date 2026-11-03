@@ -33,3 +33,7 @@ export const JUDGE_PROVIDER_OPTIONS: { value: JudgeProvider; label: string }[] =
   { value: "gemini-2.5-pro", label: "Google Gemini 2.5 Pro" },
 ];
 
+/** Satu baris GET /measurements (PBI-11 AC10, server SCRUM-210). */
+export type SessionListItem = components["schemas"]["SessionListItem"];
+export type SessionStatus = components["schemas"]["SessionStatus"];
+export type SessionArchiveResponse = components["schemas"]["SessionArchiveResponse"];
