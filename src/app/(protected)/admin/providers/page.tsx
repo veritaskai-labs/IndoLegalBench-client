@@ -10,16 +10,17 @@ import { useToast } from "@/components/ui/Toast";
 import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
 import { formatDate, formatDateTime, formatRupiah, MEASUREMENT_TYPE_LABEL, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
-import type { AiProduct, MeasurementType } from "@/types/provider";
+import { mergeSavedProduct } from "@/lib/providers/productUsage";
+import type { AiProduct, AiProductListItem, MeasurementType } from "@/types/provider";
 
 type Dialog =
   | { mode: "closed" }
   | { mode: "create" }
-  | { mode: "edit"; product: AiProduct }
-  | { mode: "toggle"; product: AiProduct }
-  | { mode: "delete"; product: AiProduct };
+  | { mode: "edit"; product: AiProductListItem }
+  | { mode: "toggle"; product: AiProductListItem }
+  | { mode: "delete"; product: AiProductListItem };
 
-type ListState = { status: "loading" } | { status: "ready"; products: AiProduct[] } | { status: "error" };
+type ListState = { status: "loading" } | { status: "ready"; products: AiProductListItem[] } | { status: "error" };
 
 /** Hasil uji koneksi terakhir di sesi ini; latency hanya ada di balasan, tidak disimpan server. */
 type LiveResult =
@@ -29,7 +30,7 @@ type LiveResult =
   /** Permintaan uji koneksi sendiri gagal (jaringan, server); hasil tersimpan tidak berubah. */
   | { status: "error" };
 
-const COLUMNS = 11;
+const COLUMNS = 13;
 
 /** Filter jenis pengukuran (PBI-23 AC6); "all" berarti tanpa filter. */
 type TypeFilter = MeasurementType | "all";
@@ -96,7 +97,7 @@ export default function ProvidersPage() {
     setType(next);
   }
 
-  function replaceRow(saved: AiProduct) {
+  function replaceRow(saved: AiProductListItem) {
     setList((current) =>
       current.status !== "ready"
         ? current
@@ -116,7 +117,14 @@ export default function ProvidersPage() {
     );
   }
 
-  async function runTest(product: AiProduct) {
+  /** Balasan simpan tidak membawa kolom turunan; kalau nilainya tidak lagi pasti, muat ulang. */
+  function applySaved(before: AiProductListItem, saved: AiProduct) {
+    const merged = mergeSavedProduct(before, saved);
+    if (merged) replaceRow(merged);
+    else reload();
+  }
+
+  async function runTest(product: AiProductListItem) {
     setTesting((ids) => new Set(ids).add(product.id));
     try {
       const result = await testConnection(product.id);
@@ -239,6 +247,8 @@ export default function ProvidersPage() {
                 <th scope="col" className="px-4 py-3">Kredensial</th>
                 <th scope="col" className="px-4 py-3">Limit/menit</th>
                 <th scope="col" className="px-4 py-3">Budget/bulan</th>
+                <th scope="col" className="px-4 py-3">Sisa anggaran bulan ini</th>
+                <th scope="col" className="px-4 py-3">Jumlah sesi</th>
                 <th scope="col" className="px-4 py-3">Status</th>
                 <th scope="col" className="px-4 py-3">Uji terakhir</th>
                 <th scope="col" className="px-4 py-3">Didaftarkan</th>
@@ -273,7 +283,7 @@ export default function ProvidersPage() {
           onSaved={(saved) => {
             setDialog({ mode: "closed" });
             showToast(dialog.mode === "edit" ? "Produk AI tersimpan" : "Produk AI terdaftar");
-            if (dialog.mode === "edit") replaceRow(saved);
+            if (dialog.mode === "edit") applySaved(dialog.product, saved);
             else reload();
           }}
         />
@@ -286,7 +296,7 @@ export default function ProvidersPage() {
           onDone={(saved) => {
             setDialog({ mode: "closed" });
             showToast(saved.is_active ? "Produk AI diaktifkan" : "Produk AI dinonaktifkan");
-            replaceRow(saved);
+            applySaved(dialog.product, saved);
           }}
         />
       )}
@@ -315,7 +325,7 @@ function ProductRow({
   onToggle,
   onDelete,
 }: {
-  product: AiProduct;
+  product: AiProductListItem;
   testing: boolean;
   live: LiveResult | undefined;
   onTest: () => void;
@@ -344,6 +354,11 @@ function ProductRow({
       <td className="px-4 py-3 whitespace-nowrap text-slate-600">
         {manual ? <NotApplicable /> : product.monthly_budget_idr != null && formatRupiah(product.monthly_budget_idr)}
       </td>
+      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+        {manual || product.remaining_budget_idr == null ? <NotApplicable /> : formatRupiah(product.remaining_budget_idr)}
+      </td>
+      {/* Produk manual juga punya sesi (PBI-22). Termasuk sesi yang diarsipkan. */}
+      <td className="px-4 py-3 text-slate-600">{product.session_count}</td>
       <td className="px-4 py-3">
         <span
           className={`rounded px-2 py-0.5 text-xs font-medium ${

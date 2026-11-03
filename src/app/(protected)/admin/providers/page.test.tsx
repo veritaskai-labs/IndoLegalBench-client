@@ -79,7 +79,7 @@ beforeEach(() => {
 describe("ProvidersPage list", () => {
   // Positive: every column from the ticket.
   it("lists active products with type, model, masked key, limit, Rupiah budget and status", async () => {
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     renderPage();
 
     const cells = within(await row("DeepSeek"));
@@ -95,7 +95,7 @@ describe("ProvidersPage list", () => {
 
   it("switches to the Nonaktif tab and asks for inactive products", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValueOnce([product()]).mockResolvedValueOnce([product({ name: "GPT", is_active: false })]);
+    list.mockResolvedValueOnce([listItem()]).mockResolvedValueOnce([listItem({ name: "GPT", is_active: false })]);
     renderPage();
     await row("DeepSeek");
 
@@ -108,7 +108,7 @@ describe("ProvidersPage list", () => {
 
   it("shows the last failed test as a plain reason with a suggested fix, keeping the raw text under Lihat detail", async () => {
     list.mockResolvedValue([
-      product({
+      listItem({
         last_test_status: "failed",
         last_test_error_category: "access_denied",
         last_test_message: "provider returned HTTP 401",
@@ -127,7 +127,7 @@ describe("ProvidersPage list", () => {
   // A product tested before SCRUM-133 has no category stored.
   it("falls back to a generic reason when the product has no category", async () => {
     list.mockResolvedValue([
-      product({ last_test_status: "failed", last_test_message: "could not connect", last_test_at: "2026-09-29T02:00:00Z" }),
+      listItem({ last_test_status: "failed", last_test_message: "could not connect", last_test_at: "2026-09-29T02:00:00Z" }),
     ]);
     renderPage();
     const cells = within(await row("DeepSeek"));
@@ -138,7 +138,7 @@ describe("ProvidersPage list", () => {
 
   it("hides Lihat detail when there is no raw message", async () => {
     list.mockResolvedValue([
-      product({ last_test_status: "failed", last_test_error_category: "timeout", last_test_message: null, last_test_at: "2026-09-29T02:00:00Z" }),
+      listItem({ last_test_status: "failed", last_test_error_category: "timeout", last_test_message: null, last_test_at: "2026-09-29T02:00:00Z" }),
     ]);
     renderPage();
     const cells = within(await row("DeepSeek"));
@@ -152,7 +152,7 @@ describe("ProvidersPage list", () => {
   it("shows markup in the raw provider message as plain text, never as HTML", async () => {
     const payload = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
     list.mockResolvedValue([
-      product({ last_test_status: "failed", last_test_error_category: "unknown", last_test_message: payload, last_test_at: "2026-09-29T02:00:00Z" }),
+      listItem({ last_test_status: "failed", last_test_error_category: "unknown", last_test_message: payload, last_test_at: "2026-09-29T02:00:00Z" }),
     ]);
     renderPage();
     const deepseekRow = await row("DeepSeek");
@@ -171,7 +171,7 @@ describe("ProvidersPage list", () => {
 
   it("shows an error with a retry that loads again", async () => {
     const user = userEvent.setup();
-    list.mockRejectedValueOnce(new TypeError("Failed to fetch")).mockResolvedValueOnce([product()]);
+    list.mockRejectedValueOnce(new TypeError("Failed to fetch")).mockResolvedValueOnce([listItem()]);
     renderPage();
 
     expect(await screen.findByText("Gagal memuat produk AI.")).toBeInTheDocument();
@@ -184,7 +184,7 @@ describe("ProvidersPage list", () => {
   it("keeps the table's screen-reader labels inside its scroll box, so the page does not widen", async () => {
     // The "Tidak berlaku" labels are sr-only, which is position: absolute. Without a
     // positioned scroll box they escape it and stretch the whole page to the table's width (F2).
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     renderPage();
 
     const table = (await row("DeepSeek")).closest("table") as HTMLElement;
@@ -209,8 +209,8 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
 
   it("shows the type badge, provider and registration date of each product", async () => {
     list.mockResolvedValue([
-      product({ vendor_label: "OpenAI-compatible", created_at: "2026-10-29T05:00:00Z" }),
-      product({
+      listItem({ vendor_label: "OpenAI-compatible", created_at: "2026-10-29T05:00:00Z" }),
+      listItem({
         id: "33333333-3333-3333-3333-333333333333",
         name: "Justisio",
         measurement_type: "manual",
@@ -235,7 +235,7 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
   });
 
   it("starts with every type selected", async () => {
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     renderPage();
     await row("DeepSeek");
 
@@ -279,8 +279,8 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
 });
 
 describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
-  function manual(): AiProduct {
-    return product({
+  function manual(): AiProductListItem {
+    return listItem({
       id: "44444444-4444-4444-4444-444444444444",
       name: "LegalHero",
       measurement_type: "manual",
@@ -297,18 +297,18 @@ describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
     });
   }
 
-  it("marks model, key, limit, budget and last test as not applicable", async () => {
+  it("marks model, key, limit, budget, remaining budget and last test as not applicable", async () => {
     list.mockResolvedValue([manual()]);
     renderPage();
 
     const cells = within(await row("LegalHero"));
-    expect(cells.getAllByText("—")).toHaveLength(5);
+    expect(cells.getAllByText("—")).toHaveLength(6);
     expect(cells.queryByText("Belum pernah diuji")).not.toBeInTheDocument();
   });
 
   // Until SCRUM-202 brings the manual form, Ubah would open automatic fields.
   it("offers Ubah but no connection test for a manual product", async () => {
-    list.mockResolvedValue([product(), manual()]);
+    list.mockResolvedValue([listItem(), manual()]);
     renderPage();
 
     const legalhero = within(await row("LegalHero"));
@@ -339,7 +339,7 @@ describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
 describe("ProvidersPage connection test (AC3)", () => {
   it("shows a loading state for that product only, then ok with latency", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product(), product({ id: "33333333-3333-3333-3333-333333333333", name: "Gemini" })]);
+    list.mockResolvedValue([listItem(), listItem({ id: "33333333-3333-3333-3333-333333333333", name: "Gemini" })]);
     let finish: (value: { status: "ok"; latency_ms: number }) => void = () => undefined;
     test.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     renderPage();
@@ -358,7 +358,7 @@ describe("ProvidersPage connection test (AC3)", () => {
 
   it("shows the reason and fix inline when the provider rejects the call", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     test.mockResolvedValue({ status: "failed", error_category: "access_denied", message: "provider returned HTTP 401 invalid key" });
     renderPage();
     const deepseek = await row("DeepSeek");
@@ -371,7 +371,7 @@ describe("ProvidersPage connection test (AC3)", () => {
 
   it("opens the raw provider message from Lihat detail", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     test.mockResolvedValue({ status: "failed", error_category: "access_denied", message: "provider returned HTTP 401 invalid key" });
     renderPage();
     const deepseek = await row("DeepSeek");
@@ -384,7 +384,7 @@ describe("ProvidersPage connection test (AC3)", () => {
 
   it("says the test could not run when the request itself fails", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     test.mockRejectedValue(new ApiError(500, "internal_error"));
     renderPage();
     const deepseek = await row("DeepSeek");
@@ -486,7 +486,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
   // AC2: the stored key is never loaded into the form.
   it("edits without ever holding the old key, and only sends a key when a new one is typed", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     update.mockResolvedValue(product({ rate_limit_per_minute: 30 }));
     renderPage();
     await row("DeepSeek");
@@ -512,12 +512,12 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
   // Only the unmount on close drops a typed key; nothing else does.
   it("drops a typed key on close, so it cannot reach another product", async () => {
     const user = userEvent.setup();
-    const gemini = product({
+    const gemini = listItem({
       id: "33333333-3333-3333-3333-333333333333",
       name: "Gemini",
       credential_hint: "9z9z",
     });
-    list.mockResolvedValue([product(), gemini]);
+    list.mockResolvedValue([listItem(), gemini]);
     renderPage();
     await row("DeepSeek");
 
@@ -537,7 +537,7 @@ describe("ProvidersPage register and edit (AC1, AC2)", () => {
 describe("ProvidersPage activate and deactivate (AC4)", () => {
   it("asks for confirmation, then moves the product out of the Aktif tab", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     toggle.mockResolvedValue(product({ is_active: false }));
     renderPage();
     await row("DeepSeek");
@@ -556,7 +556,7 @@ describe("ProvidersPage activate and deactivate (AC4)", () => {
 
   it("keeps an inactive product openable for editing", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValueOnce([]).mockResolvedValueOnce([product({ is_active: false })]);
+    list.mockResolvedValueOnce([]).mockResolvedValueOnce([listItem({ is_active: false })]);
     renderPage();
     await screen.findByText("Belum ada produk AI aktif");
 
@@ -571,7 +571,7 @@ describe("ProvidersPage activate and deactivate (AC4)", () => {
 describe("ProvidersPage delete (SCRUM-134 #2)", () => {
   it("confirms first, then removes only that product from the list with a toast", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product(), product({ id: "33333333-3333-3333-3333-333333333333", name: "Gemini" })]);
+    list.mockResolvedValue([listItem(), listItem({ id: "33333333-3333-3333-3333-333333333333", name: "Gemini" })]);
     remove.mockResolvedValue(undefined);
     renderPage();
     await row("DeepSeek");
@@ -591,7 +591,7 @@ describe("ProvidersPage delete (SCRUM-134 #2)", () => {
 
   it("offers Hapus on the Nonaktif tab too", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValueOnce([]).mockResolvedValueOnce([product({ is_active: false })]);
+    list.mockResolvedValueOnce([]).mockResolvedValueOnce([listItem({ is_active: false })]);
     renderPage();
     await screen.findByText("Belum ada produk AI aktif");
 
@@ -603,7 +603,7 @@ describe("ProvidersPage delete (SCRUM-134 #2)", () => {
   // Negative
   it("keeps the product when the admin cancels", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     renderPage();
     await row("DeepSeek");
 
@@ -632,7 +632,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
   it("does not reload when the type that is already chosen is clicked again", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     renderPage();
     await row("DeepSeek");
 
@@ -643,15 +643,15 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
   it("ignores a list that arrives after the admin already switched tabs", async () => {
     const user = userEvent.setup();
-    let late: (products: AiProduct[]) => void = () => undefined;
+    let late: (products: AiProductListItem[]) => void = () => undefined;
     list
       .mockReturnValueOnce(new Promise((resolve) => (late = resolve)))
-      .mockResolvedValueOnce([product({ name: "Produk Nonaktif", is_active: false })]);
+      .mockResolvedValueOnce([listItem({ name: "Produk Nonaktif", is_active: false })]);
     renderPage();
 
     await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
     await row("Produk Nonaktif");
-    late([product({ name: "Produk Lama" })]);
+    late([listItem({ name: "Produk Lama" })]);
 
     await waitFor(() => expect(screen.queryByRole("cell", { name: "Produk Lama" })).not.toBeInTheDocument());
     expect(await row("Produk Nonaktif")).toBeInTheDocument();
@@ -662,7 +662,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
     let late: (reason: Error) => void = () => undefined;
     list
       .mockReturnValueOnce(new Promise((_, reject) => (late = reject)))
-      .mockResolvedValueOnce([product({ name: "Produk Nonaktif", is_active: false })]);
+      .mockResolvedValueOnce([listItem({ name: "Produk Nonaktif", is_active: false })]);
     renderPage();
 
     await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
@@ -677,7 +677,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
   it("keeps the loading list when a connection test finishes while the tab is reloading", async () => {
     const user = userEvent.setup();
     let finish: (value: { status: "ok"; latency_ms: number }) => void = () => undefined;
-    list.mockResolvedValueOnce([product()]).mockReturnValueOnce(new Promise(() => undefined));
+    list.mockResolvedValueOnce([listItem()]).mockReturnValueOnce(new Promise(() => undefined));
     test.mockReturnValue(new Promise((resolve) => (finish = resolve)));
     renderPage();
     await row("DeepSeek");
@@ -693,7 +693,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
   it("shows 0 ms when the provider answers without a latency", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     test.mockResolvedValue({ status: "ok" } as never);
     renderPage();
     const deepseek = await row("DeepSeek");
@@ -705,7 +705,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
   it("shows the generic reason when a failed test has no message or category", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     test.mockResolvedValue({ status: "failed" } as never);
     renderPage();
     const deepseek = await row("DeepSeek");
@@ -717,7 +717,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
   });
 
   it("shows a stored successful test without a latency", async () => {
-    list.mockResolvedValue([product({ last_test_status: "ok", last_test_at: "2026-10-01T07:00:00Z" })]);
+    list.mockResolvedValue([listItem({ last_test_status: "ok", last_test_at: "2026-10-01T07:00:00Z" })]);
     renderPage();
 
     const deepseek = await row("DeepSeek");
@@ -728,7 +728,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
   it("says the product was activated after Aktifkan is confirmed", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValueOnce([]).mockResolvedValueOnce([product({ is_active: false })]);
+    list.mockResolvedValueOnce([]).mockResolvedValueOnce([listItem({ is_active: false })]);
     toggle.mockResolvedValue(product({ is_active: true }));
     renderPage();
     await screen.findByText("Belum ada produk AI aktif");
@@ -742,7 +742,7 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
   it("closes the deactivate dialog without changing anything when the admin cancels", async () => {
     const user = userEvent.setup();
-    list.mockResolvedValue([product()]);
+    list.mockResolvedValue([listItem()]);
     renderPage();
     await row("DeepSeek");
 
