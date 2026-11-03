@@ -59,7 +59,7 @@ export function ArchiveSessionDialog({
         close();
       }}
       aria-labelledby="archive-session-title"
-      className="m-auto w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
+      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
     >
       <h2 id="archive-session-title" className="text-base font-medium">
         Arsipkan sesi?
