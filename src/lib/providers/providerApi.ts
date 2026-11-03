@@ -2,6 +2,7 @@ import { apiFetch } from "@/lib/apiClient";
 import type {
   AiProduct,
   AiProductCreate,
+  AiProductListItem,
   AiProductOption,
   AiProductUpdate,
   ConnectionTest,
@@ -16,9 +17,9 @@ function productPath(productId: string): string {
 }
 
 /** GET /admin/providers?is_active=. Kredensial tidak pernah ada di balasan, hanya hint. */
-export function listProducts(isActive: boolean, measurementType?: MeasurementType): Promise<AiProduct[]> {
+export function listProducts(isActive: boolean, measurementType?: MeasurementType): Promise<AiProductListItem[]> {
   const type = measurementType ? `&measurement_type=${measurementType}` : "";
-  return apiFetch<AiProduct[]>(`${BASE}?is_active=${isActive}${type}`);
+  return apiFetch<AiProductListItem[]>(`${BASE}?is_active=${isActive}${type}`);
 }
 
 /** GET /ai-products?purpose=: hanya produk aktif yang jenisnya cocok. */

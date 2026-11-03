@@ -23,6 +23,24 @@ export function formatRupiah(value: string | number): string {
   return Number.isFinite(amount) ? RUPIAH.format(amount) : String(value);
 }
 
+const DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
+
+/**
+ * Sisa anggaran, dibulatkan ke bawah ke rupiah (keputusan PO, 3 Nov): angka yang tampil
+ * tidak pernah lebih besar dari sisa sebenarnya. Dihitung dari teks dengan BigInt, bukan
+ * Number, supaya nilai Numeric(18,2) di atas 2^53 tidak meleset. Server tetap menyimpan sen.
+ */
+export function formatRupiahDown(value: string): string {
+  const match = DECIMAL.exec(value);
+  if (!match) return value;
+  const [, sign, whole, fraction = ""] = match;
+  const rupiah = BigInt(whole);
+  if (sign !== "-") return RUPIAH.format(rupiah);
+  // Negatif: ke bawah berarti menjauh dari nol bila ada sen (-0,50 menjadi -1).
+  const hasCents = /[1-9]/.test(fraction);
+  return RUPIAH.format(-rupiah - BigInt(hasCents ? 1 : 0));
+}
+
 /** Ambil angka dari isian "1.500.000" atau "Rp 1.500.000". Kosong berarti null. */
 export function parseRupiahInput(text: string): number | null {
   const digits = text.replace(/\D/g, "");
