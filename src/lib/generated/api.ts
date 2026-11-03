@@ -258,56 +258,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/suites/{suite_id}/snapshots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Daftar snapshot satu suite
-         * @description List snapshots, newest first.
-         *
-         *     Author, Reviewer, Admin, and Viewer. SCRUM-138 shows this list to Viewer.
-         *     Creating a snapshot stays Admin only.
-         */
-        get: operations["list_snapshots_suites__suite_id__snapshots_get"];
-        put?: never;
-        /**
-         * Bekukan suite sebagai snapshot
-         * @description Freeze the approved cases. No request body and no name.
-         */
-        post: operations["create_snapshot_suites__suite_id__snapshots_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/snapshots/{snapshot_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Isi satu snapshot
-         * @description Return the frozen items. The body is the stored copy.
-         *
-         *     Author, Reviewer, Admin, and Viewer. SCRUM-138 shows this page to Viewer.
-         *     Creating a snapshot stays Admin only.
-         */
-        get: operations["get_snapshot_snapshots__snapshot_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/suites/{suite_id}/cases": {
         parameters: {
             query?: never;
@@ -891,7 +841,8 @@ export interface paths {
         /** Daftar sesi pengukuran yang belum diarsipkan, terbaru di atas */
         get: operations["list_sessions_measurements_get"];
         put?: never;
-        post?: never;
+        /** Mulai pengukuran: validasi ulang lalu sesi masuk antrean */
+        post: operations["start_measurements_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1357,19 +1308,20 @@ export interface components {
         AttemptResult: {
             /** Repetition No */
             repetition_no: number;
-            /**
-             * Status
-             * @description pending, running, succeeded, atau technical_failure
-             */
-            status: string;
+            status: components["schemas"]["AttemptStatus"];
             /**
              * Answer Text
-             * @description Jawaban mentah. null bila belum ada, gagal teknis, atau disamarkan
+             * @description Jawaban mentah. null bila belum ada, gagal teknis, disamarkan, atau sesi belum berakhir untuk Developer AI
              */
             answer_text: string | null;
             /** Model Version */
             model_version: string | null;
         };
+        /**
+         * AttemptStatus
+         * @enum {string}
+         */
+        AttemptStatus: "pending" | "running" | "succeeded" | "technical_failure";
         /**
          * AuditEntityType
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
@@ -1927,11 +1879,7 @@ export interface components {
             case_count: number | null;
             /** Repetitions */
             repetitions: number;
-            /**
-             * Status
-             * @description queued, running, finished, finished_with_failures, atau failed
-             */
-            status: string;
+            status: components["schemas"]["SessionStatus"];
             progress: components["schemas"]["SessionProgressRead"];
         };
         /**
@@ -2119,6 +2067,12 @@ export interface components {
             role: components["schemas"]["Role"];
         };
         /**
+         * MeasurementPurpose
+         * @description Pengukuran Resmi atau Uji Coba (PBI-11 AC1, D2 measurement_sessions.purpose).
+         * @enum {string}
+         */
+        MeasurementPurpose: "official" | "trial";
+        /**
          * MeasurementType
          * @description MeasurementType:
          *     - automatic: dijalankan otomatis oleh sistem via API
@@ -2212,17 +2166,6 @@ export interface components {
         Page_NotificationRead_: {
             /** Items */
             items: components["schemas"]["NotificationRead"][];
-            /** Total */
-            total: number;
-            /** Page */
-            page: number;
-            /** Size */
-            size: number;
-        };
-        /** Page[SnapshotSummary] */
-        Page_SnapshotSummary_: {
-            /** Items */
-            items: components["schemas"]["SnapshotSummary"][];
             /** Total */
             total: number;
             /** Page */
@@ -2553,6 +2496,13 @@ export interface components {
              * @description true untuk kasus test yang dibuka Developer AI: isi dan jawaban disamarkan
              */
             masked: boolean;
+            /**
+             * Version No
+             * @description Versi kasus yang dibekukan. null bila disamarkan
+             */
+            version_no: number | null;
+            /** @description Delapan bagian kasus dari snapshot (AC7). null bila disamarkan */
+            sections: components["schemas"]["VersionSections"] | null;
             /** Attempts */
             attempts: components["schemas"]["AttemptResult"][];
         };
@@ -2600,11 +2550,7 @@ export interface components {
             case_count: number | null;
             /** Repetitions */
             repetitions: number;
-            /**
-             * Status
-             * @description queued, running, finished, finished_with_failures, atau failed
-             */
-            status: string;
+            status: components["schemas"]["SessionStatus"];
             progress: components["schemas"]["SessionProgressRead"];
             /**
              * Purpose
@@ -2616,6 +2562,11 @@ export interface components {
              * @description dev, test, atau both
              */
             split_filter: string;
+            /**
+             * Snapshot Created At
+             * @description Waktu snapshot kasus dibuat (AC6). null selama sesi antre
+             */
+            snapshot_created_at: string | null;
             /** Started At */
             started_at: string | null;
             /** Finished At */
@@ -2675,11 +2626,7 @@ export interface components {
             case_count: number | null;
             /** Repetitions */
             repetitions: number;
-            /**
-             * Status
-             * @description queued, running, finished, finished_with_failures, atau failed
-             */
-            status: string;
+            status: components["schemas"]["SessionStatus"];
             progress: components["schemas"]["SessionProgressRead"];
         };
         /**
@@ -2699,68 +2646,11 @@ export interface components {
             total: number;
         };
         /**
-         * SnapshotItemRead
-         * @description One frozen case. body is the copy taken at snapshot time.
+         * SessionStatus
+         * @description Status dasar. Dihentikan dan Dibatalkan menyusul di PBI-12.
+         * @enum {string}
          */
-        SnapshotItemRead: {
-            /**
-             * Case Id
-             * Format: uuid
-             */
-            case_id: string;
-            /**
-             * Case Version Id
-             * Format: uuid
-             */
-            case_version_id: string;
-            /** Body */
-            body: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * SnapshotRead
-         * @description GET /snapshots/{id} and the body of POST /suites/{id}/snapshots.
-         */
-        SnapshotRead: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Suite Id
-             * Format: uuid
-             */
-            suite_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            author: components["schemas"]["ActorRead"];
-            /** Items */
-            items: components["schemas"]["SnapshotItemRead"][];
-        };
-        /**
-         * SnapshotSummary
-         * @description One row of GET /suites/{id}/snapshots. Items are on the detail route.
-         */
-        SnapshotSummary: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            author: components["schemas"]["ActorRead"];
-            /** Case Count */
-            case_count: number;
-        };
+        SessionStatus: "queued" | "running" | "finished" | "finished_with_failures" | "failed";
         /**
          * SplitTag
          * @description Dataset split stored on a version. Only dev and test are valid.
@@ -2779,6 +2669,68 @@ export interface components {
              * @default false
              */
             confirm: boolean;
+        };
+        /**
+         * StartRequest
+         * @description Body POST /measurements (PBI-11 AC1, SCRUM-207).
+         *
+         *     Isian ringkasan diwarisi supaya Mulai divalidasi dengan aturan yang sama
+         *     seperti Lihat ringkasan, ditambah label dan tujuan yang wajib.
+         */
+        StartRequest: {
+            /**
+             * Suite Ids
+             * @description Suite yang dipilih, minimal satu. Id ganda digabung.
+             */
+            suite_ids: string[];
+            /**
+             * @description Kasus yang ikut: dev, test, atau both
+             * @default both
+             */
+            case_filter: components["schemas"]["CaseFilter"];
+            /**
+             * Repeat Count
+             * @description Pengulangan per kasus, 1 sampai 5, sama untuk seluruh pengukuran
+             * @default 3
+             */
+            repeat_count: number;
+            /**
+             * Product Id
+             * Format: uuid
+             * @description Satu produk AI otomatis yang diukur
+             */
+            product_id: string;
+            /**
+             * Label
+             * @description Nama sesi, wajib, maksimal 200
+             */
+            label: string;
+            /** @description official = Pengukuran Resmi, trial = Uji Coba */
+            purpose: components["schemas"]["MeasurementPurpose"];
+            /**
+             * Judge Provider Id
+             * @description Provider penilai (LLM judge) yang dipilih; kosong sampai PBI-14
+             */
+            judge_provider_id?: string | null;
+        };
+        /**
+         * StartResponse
+         * @description Jawaban 201 tombol Mulai (D3 langkah 23).
+         */
+        StartResponse: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /** @description Selalu queued: worker yang menjalankan saat giliran */
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Queued At
+             * Format: date-time
+             * @description Waktu masuk antrean; yang lebih awal jalan lebih dulu
+             */
+            queued_at: string;
         };
         /** SuiteCreate */
         SuiteCreate: {
@@ -3694,129 +3646,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SuiteRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_snapshots_suites__suite_id__snapshots_get: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path: {
-                suite_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Page_SnapshotSummary_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_snapshot_suites__suite_id__snapshots_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                suite_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SnapshotRead"];
-                };
-            };
-            /** @description Bukan admin. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Suite tidak ditemukan. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Suite tidak punya kasus approved (`NOTHING_TO_SNAPSHOT`). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    get_snapshot_snapshots__snapshot_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                snapshot_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SnapshotRead"];
-                };
-            };
-            /** @description Snapshot tidak ditemukan. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Validation Error */
@@ -5413,6 +5242,66 @@ export interface operations {
             };
         };
     };
+    start_measurements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartResponse"];
+                };
+            };
+            /** @description Suite atau produk AI tidak ditemukan (`AI_PRODUCT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Salah satu suite diarsipkan dan tidak bisa dipilih (`SUITE_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Isian tidak valid, produk manual atau nonaktif (`PRODUCT_NOT_AUTOMATIC`, `PRODUCT_INACTIVE`), tidak ada kasus layak (`NO_ELIGIBLE_CASES`), atau perkiraan biaya melebihi sisa anggaran (`BUDGET_EXCEEDED`, berisi `product_name` dan `remaining_budget_idr`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Konfigurasi server belum lengkap (`PRICE_NOT_CONFIGURED`, `EXCHANGE_RATE_NOT_CONFIGURED`, `AVG_ANSWER_TOKENS_NOT_CONFIGURED`). */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_session_measurements__session_id__get: {
         parameters: {
             query?: never;
@@ -5471,6 +5360,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionArchiveResponse"];
+                };
+            };
+            /** @description Peran tidak berwenang (`FORBIDDEN`), atau Developer AI mengarsipkan sesi buatan orang lain (`NOT_YOUR_SESSION`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
             /** @description Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
