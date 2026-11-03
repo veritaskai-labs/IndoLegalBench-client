@@ -258,10 +258,10 @@ describe("auditObjectLabel", () => {
   it("shows the raw type for an object type it does not know", () => {
     // Arrange / Act
     const label = auditObjectLabel(
-      entry({ entity_type: "measurement_session" as AuditEntry["entity_type"], entity_label: "Sesi 1" }),
+      entry({ entity_type: "judge_provider" as AuditEntry["entity_type"], entity_label: "Sesi 1" }),
     );
 
     // Assert
-    expect(label).toBe("measurement_session Sesi 1");
+    expect(label).toBe("judge_provider Sesi 1");
   });
 });
