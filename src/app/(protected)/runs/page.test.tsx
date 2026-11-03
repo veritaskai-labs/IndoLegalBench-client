@@ -142,18 +142,18 @@ describe("RunsPage session list (PBI-11 AC10)", () => {
 describe("RunsPage Arsipkan visibility (AC10, D10)", () => {
   it("offers Arsipkan to Admin on ended sessions only", async () => {
     list.mockResolvedValue([
-      session({ id: "a", label: "Selesai", status: "finished" }),
-      session({ id: "b", label: "Gagal", status: "failed" }),
-      session({ id: "c", label: "Berjalan", status: "running" }),
-      session({ id: "d", label: "Antre", status: "queued" }),
+      session({ id: "a", label: "Sesi selesai", status: "finished" }),
+      session({ id: "b", label: "Sesi gagal", status: "failed" }),
+      session({ id: "c", label: "Sesi berjalan", status: "running" }),
+      session({ id: "d", label: "Sesi antre", status: "queued" }),
     ]);
     renderPage();
-    await row("Selesai");
+    await row("Sesi selesai");
 
-    expect(screen.getByRole("button", { name: "Arsipkan Selesai" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Arsipkan Gagal" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Arsipkan Berjalan" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Arsipkan Antre" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Arsipkan Sesi selesai" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Arsipkan Sesi gagal" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Arsipkan Sesi berjalan" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Arsipkan Sesi antre" })).not.toBeInTheDocument();
   });
 
   it("offers Arsipkan to Developer AI only on the sessions it started", async () => {
@@ -268,6 +268,44 @@ describe("RunsPage archive flow (AC10: hidden from the list, data kept)", () => 
     expect(dialog.getByRole("button", { name: "Mengarsipkan…" })).toBeDisabled();
     expect(dialog.getByRole("button", { name: "Batal" })).toBeDisabled();
     await act(async () => finish(archived));
+  });
+
+  // Corner: Escape while the request runs must not drop the dialog with its pending result.
+  it("keeps the dialog open on Escape while archiving", async () => {
+    const user = userEvent.setup();
+    let finish: (value: SessionArchiveResponse) => void = () => undefined;
+    list.mockResolvedValue([session()]);
+    archive.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    renderPage();
+
+    const dialog = await openDialog(user);
+    await user.click(dialog.getByRole("button", { name: "Arsipkan" }));
+    await act(async () => {
+      screen.getByRole("dialog", { name: "Arsipkan sesi?" }).dispatchEvent(new Event("cancel", { cancelable: true }));
+    });
+
+    expect(screen.getByRole("dialog", { name: "Arsipkan sesi?" })).toBeInTheDocument();
+    await act(async () => finish(archived));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  // jsdom has no showModal; a real browser opens the confirmation as a modal (focus trap, Escape).
+  it("opens the confirmation with showModal when the browser has it", async () => {
+    const user = userEvent.setup();
+    const showModal = vi.fn(function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", { value: showModal, configurable: true });
+    try {
+      list.mockResolvedValue([session()]);
+      renderPage();
+
+      await openDialog(user);
+
+      expect(showModal).toHaveBeenCalledTimes(1);
+    } finally {
+      Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
+    }
   });
 
   // Developer AI on a stale list: the message stays in the dialog, no redirect (runsApi test).

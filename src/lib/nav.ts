@@ -28,7 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
     heading: "Pengukuran",
     items: [
       { label: "Penyedia", href: "/admin/providers", roles: ["admin"] },
-      { label: "Eksekusi", href: "/runs", roles: ["admin"] },
+      { label: "Eksekusi", href: "/runs", roles: ["admin", "developer_ai"] },
       { label: "Laporan", href: "/reports", roles: ["admin", "contributor", "viewer"] },
     ],
   },
