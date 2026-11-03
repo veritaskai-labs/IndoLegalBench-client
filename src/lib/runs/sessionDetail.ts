@@ -35,7 +35,8 @@ export function attemptSummary(attempts: readonly AttemptResult[]): string {
   return failed > 0 ? `${base} · ${failed} gagal teknis` : base;
 }
 
-export type AnswerContext = { masked: boolean; sessionEnded: boolean; viewerRole: Role };
+/** viewerRole null: pengguna belum diketahui (/me belum dijawab); tidak ada aturan khusus peran. */
+export type AnswerContext = { masked: boolean; sessionEnded: boolean; viewerRole: Role | null };
 
 /**
  * Server (#91 session_detail) mengirim answer_text null karena beberapa alasan tanpa menyebut

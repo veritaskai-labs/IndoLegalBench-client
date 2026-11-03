@@ -49,7 +49,7 @@ function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult 
       category: "Kategori sintetis",
       case_code: "QA-001",
       split_tag: "dev",
-      legal_refs: [{ display_text: "Rujukan sintetis 1" }],
+      legal_refs: [{ kind: "free_text", free_text: "Rujukan sintetis 1", links: [], display_text: "Rujukan sintetis 1" }],
       answer_criteria: { must_contain: ["unsur sintetis"], must_not_contain: [], expected_conclusion: "kesimpulan sintetis" },
       traps: [{ description: "jebakan sintetis", expected_model_behavior: "menolak" }],
     },
@@ -82,14 +82,15 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
   };
 }
 
+// The code also appears in the snapshot's "ID kasus" section, so look for it in the summary.
 function caseCard(code: string) {
-  return screen.getByText(code).closest("details") as HTMLElement;
+  return screen.getByText(code, { selector: "summary span" }).closest("details") as HTMLElement;
 }
 
 async function openCase(user: ReturnType<typeof userEvent.setup>, code = "QA-001") {
   await screen.findByRole("heading", { level: 1 });
   const card = caseCard(code);
-  await user.click(within(card).getByText(code));
+  await user.click(within(card).getByText(code, { selector: "summary span" }));
   return within(card);
 }
 
@@ -169,9 +170,10 @@ describe("SessionDetailPage snapshot detail (PBI-11 AC7)", () => {
     await screen.findByRole("heading", { level: 1 });
 
     const card = within(caseCard("QA-001"));
-    expect(card.getByText("Judul kasus sintetis")).toBeInTheDocument();
-    expect(card.getByLabelText(/Tag Dev set/)).toBeInTheDocument();
-    expect(card.getByText("1 dari 1 berhasil")).toBeInTheDocument();
+    const summary = within(card.getByText("QA-001", { selector: "summary span" }).closest("summary") as HTMLElement);
+    expect(summary.getByText("Judul kasus sintetis")).toBeInTheDocument();
+    expect(summary.getByLabelText(/Tag Dev set/)).toBeInTheDocument();
+    expect(summary.getByText("1 dari 1 berhasil")).toBeInTheDocument();
   });
 
   // AC7: every section of the snapshot table, not the live case.
@@ -293,6 +295,18 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
 });
 
 describe("SessionDetailPage load states", () => {
+  // The page sits behind AuthGuard, but it must not crash or pick a role before /me answers.
+  it("shows the session while the signed-in user is still unknown, without a role-specific answer message", async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({ status: "loading" });
+    get.mockResolvedValue(session({ status: "running", finished_at: null, cases: [devCase({ attempts: [attempt({ answer_text: null })] })] }));
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    expect(card.getByText("Tidak ada jawaban tersimpan.")).toBeInTheDocument();
+    expect(card.queryByText("Jawaban tampil setelah sesi selesai.")).not.toBeInTheDocument();
+  });
+
   it("shows a loading state while the session loads", () => {
     get.mockReturnValue(new Promise(() => undefined));
     render(<SessionDetailPage />);
