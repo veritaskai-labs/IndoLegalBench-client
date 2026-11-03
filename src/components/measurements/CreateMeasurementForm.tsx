@@ -141,10 +141,10 @@ export function CreateMeasurementForm() {
       const payload: StartMeasurementRequest = {
         suite_ids: selectedSuiteIds,
         case_filter: caseFilter,
-        repeat_count: repeatCount as number,
+        repeat_count: repeatCount,
         product_id: productId,
         label: label.trim(),
-        purpose: purpose as MeasurementPurpose,
+        purpose,
         judge_provider_id: null,
       };
 
