@@ -55,7 +55,7 @@ export function caseCountText(count: number | null): string {
   return count === null ? "–" : String(count);
 }
 
-/** Akun atau produk yang sudah tidak ada dikirim server sebagai null. */
+/** Akun atau produk yang sudah tidak ada dikirim server sebagai null; nama kosong diperlakukan sama. */
 export function unknownName(name: string | null): string {
-  return name || "Tidak diketahui";
+  return name === null || name === "" ? "Tidak diketahui" : name;
 }
