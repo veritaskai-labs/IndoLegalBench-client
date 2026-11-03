@@ -93,11 +93,14 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     expect(answerPlaceholder(attempt({ answer_text: "" }), open)).toBeNull();
   });
 
-  it("explains a masked test case first, whatever the attempt status", () => {
-    expect(answerPlaceholder(attempt({ answer_text: null }), { ...open, masked: true, viewerRole: "developer_ai" })).toBe(
-      "Isi kasus test disembunyikan untuk Developer AI.",
-    );
-  });
+  it.each<AttemptStatus>(["pending", "running", "succeeded", "technical_failure"])(
+    "explains a masked test case first, even for a %s attempt",
+    (status) => {
+      expect(
+        answerPlaceholder(attempt({ status, answer_text: null }), { ...open, masked: true, viewerRole: "developer_ai" }),
+      ).toBe("Isi kasus test disembunyikan untuk Developer AI.");
+    },
+  );
 
   it.each<AttemptStatus>(["pending", "running"])("says a %s attempt has no answer yet", (status) => {
     expect(answerPlaceholder(attempt({ status, answer_text: null }), { ...open, sessionEnded: false })).toBe("Belum ada jawaban.");
@@ -114,6 +117,13 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     expect(
       answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded: false, viewerRole: "developer_ai" }),
     ).toBe("Jawaban tampil setelah sesi selesai.");
+  });
+
+  // Once the session has ended, Developer AI gets the answers, so a null one is not "wait for the end".
+  it("does not tell Developer AI to wait once the session has ended", () => {
+    expect(
+      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded: true, viewerRole: "developer_ai" }),
+    ).toBe("Tidak ada jawaban tersimpan.");
   });
 
   // Negative: a succeeded attempt without text for Admin should not happen; say so instead of a blank.
