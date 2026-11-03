@@ -324,7 +324,7 @@ function ProductRow({
   onEdit,
   onToggle,
   onDelete,
-}: {
+}: Readonly<{
   product: AiProductListItem;
   testing: boolean;
   live: LiveResult | undefined;
@@ -332,7 +332,7 @@ function ProductRow({
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
-}) {
+}>) {
   // Produk manual: kolom API dan uji koneksi tidak berlaku.
   const manual = product.measurement_type === "manual";
   return (
