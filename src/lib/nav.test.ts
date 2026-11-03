@@ -29,8 +29,9 @@ describe("navForRole", () => {
     expect(labels("viewer")).toEqual(["Dasbor", "Laporan"]);
   });
 
-  it("gives developer AI only the suites page, without the dashboard (SCRUM-184)", () => {
-    expect(labels("developer_ai")).toEqual(["Suite dan kasus"]);
+  // PBI-11 AC1 & D10: Admin and Developer AI can run automatic measurements.
+  it("gives developer AI the suites and execution pages, without the dashboard (PBI-11, SCRUM-184)", () => {
+    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi"]);
   });
 
   it("gives admin the admin pages and reports but not the review queue", () => {
@@ -85,5 +86,12 @@ describe("navForRole", () => {
     expect(hrefs("admin")).toContain("/admin/reviews");
     expect(hrefs("contributor")).not.toContain("/admin/reviews");
     expect(hrefs("viewer")).not.toContain("/admin/reviews");
+  });
+
+  // PBI-11 AC1 & D10: Admin and Developer AI can run automatic measurements.
+  it("offers the execution page to admin and developer AI only", () => {
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
+    const withRuns = roles.filter((role) => hrefs(role).includes("/runs"));
+    expect(withRuns).toEqual(["admin", "developer_ai"]);
   });
 });
