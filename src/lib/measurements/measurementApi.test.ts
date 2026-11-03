@@ -7,6 +7,7 @@ import {
 } from "./measurementApi";
 import type {
   StartMeasurementRequest,
+  StartMeasurementResponse,
   SummaryRequest,
   SummaryResponse,
 } from "@/types/measurement";
@@ -70,10 +71,10 @@ describe("measurementApi", () => {
         purpose: "trial",
       };
 
-      const mockResponse = {
+      const mockResponse: StartMeasurementResponse = {
         session_id: "sess-123",
         status: "queued",
-        queue_order: 1,
+        queued_at: "2026-11-03T02:00:00Z",
       };
 
       fetchMock.mockResolvedValue(

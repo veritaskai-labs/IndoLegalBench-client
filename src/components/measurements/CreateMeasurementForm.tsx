@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProductSelect } from "@/components/providers/ProductSelect";
 import { MeasurementSummaryCard } from "./MeasurementSummaryCard";
@@ -14,16 +14,20 @@ import {
 } from "@/lib/measurements/measurementApi";
 import type {
   CaseFilter,
-  JudgeProvider,
   MeasurementPurpose,
   StartMeasurementRequest,
   SummaryResponse,
 } from "@/types/measurement";
 import {
   CASE_FILTER_LABEL,
-  JUDGE_PROVIDER_OPTIONS,
   MEASUREMENT_PURPOSE_LABEL,
 } from "@/types/measurement";
+
+function openAsModal(dialog: HTMLDialogElement | null) {
+  if (!dialog) return;
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+}
 
 export function CreateMeasurementForm() {
   const router = useRouter();
@@ -34,7 +38,7 @@ export function CreateMeasurementForm() {
   // Step 1: Informasi Sesi
   const labelId = useId();
   const [label, setLabel] = useState("");
-  const [purpose, setPurpose] = useState<MeasurementPurpose>("official");
+  const [purpose, setPurpose] = useState<MeasurementPurpose | "">("");
 
   // Step 2: Suite & Filter Kasus
   const [selectedSuiteIds, setSelectedSuiteIds] = useState<string[]>([]);
@@ -45,15 +49,15 @@ export function CreateMeasurementForm() {
 
   // Step 4: Pengulangan & Penilai LLM
   const [repeatCount, setRepeatCount] = useState<number | "">(3);
-  const [judgeProviderId, setJudgeProviderId] = useState<JudgeProvider>(
-    JUDGE_PROVIDER_OPTIONS[0].value,
-  );
+  const hasValidRepeat =
+    typeof repeatCount === "number" && repeatCount >= 1 && repeatCount <= 5;
 
   // Step 5: Summary & Error State
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [budgetExceeded, setBudgetExceeded] = useState<BudgetExceededInfo | null>(null);
+  const summaryRequestIdRef = useRef(0);
 
   // Step 6: Confirmation Dialog & Starting
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -62,6 +66,7 @@ export function CreateMeasurementForm() {
 
   // Invalidate summary if relevant inputs change
   function invalidateSummary() {
+    summaryRequestIdRef.current += 1;
     if (summary !== null || budgetExceeded !== null || summaryError !== null) {
       setSummary(null);
       setBudgetExceeded(null);
@@ -90,8 +95,9 @@ export function CreateMeasurementForm() {
 
   async function handleFetchSummary() {
     /* v8 ignore next */
-    if (selectedSuiteIds.length === 0 || !productId) return;
+    if (selectedSuiteIds.length === 0 || !productId || !hasValidRepeat) return;
 
+    const currentRequestId = ++summaryRequestIdRef.current;
     setIsSummaryLoading(true);
     setSummaryError(null);
     setBudgetExceeded(null);
@@ -100,27 +106,33 @@ export function CreateMeasurementForm() {
       const result = await getMeasurementSummary({
         suite_ids: selectedSuiteIds,
         case_filter: caseFilter,
-        repeat_count: repeatCount as number,
+        repeat_count: repeatCount,
         product_id: productId,
       });
-      setSummary(result);
+      if (summaryRequestIdRef.current === currentRequestId) {
+        setSummary(result);
+      }
     } catch (err: unknown) {
-      const budgetInfo = extractBudgetExceeded(err);
-      if (budgetInfo) {
-        setBudgetExceeded(budgetInfo);
-      } else if (err instanceof Error) {
-        setSummaryError(err.message || "Gagal memuat ringkasan pengukuran.");
-      } else {
-        setSummaryError("Gagal memuat ringkasan pengukuran.");
+      if (summaryRequestIdRef.current === currentRequestId) {
+        const budgetInfo = extractBudgetExceeded(err);
+        if (budgetInfo) {
+          setBudgetExceeded(budgetInfo);
+        } else if (err instanceof Error) {
+          setSummaryError(err.message || "Gagal memuat ringkasan pengukuran.");
+        } else {
+          setSummaryError("Gagal memuat ringkasan pengukuran.");
+        }
       }
     } finally {
-      setIsSummaryLoading(false);
+      if (summaryRequestIdRef.current === currentRequestId) {
+        setIsSummaryLoading(false);
+      }
     }
   }
 
   async function handleStart() {
     /* v8 ignore next */
-    if (!label.trim() || selectedSuiteIds.length === 0 || !productId) return;
+    if (!label.trim() || selectedSuiteIds.length === 0 || !productId || !purpose || !hasValidRepeat) return;
 
     setIsStarting(true);
     setStartError(null);
@@ -132,17 +144,14 @@ export function CreateMeasurementForm() {
         repeat_count: repeatCount as number,
         product_id: productId,
         label: label.trim(),
-        purpose,
+        purpose: purpose as MeasurementPurpose,
+        judge_provider_id: null,
       };
 
-      const res = await startMeasurement(payload);
+      await startMeasurement(payload);
       showToast("Sesi pengukuran berhasil dibuat");
       setIsConfirmOpen(false);
-      if (res?.session_id) {
-        router.push(`/runs/${res.session_id}`);
-      } else {
-        router.push("/runs");
-      }
+      router.push("/runs");
     } catch (err: unknown) {
       const budgetInfo = extractBudgetExceeded(err);
       if (budgetInfo) {
@@ -158,14 +167,13 @@ export function CreateMeasurementForm() {
     }
   }
 
-  const hasValidRepeat =
-    typeof repeatCount === "number" && repeatCount >= 1 && repeatCount <= 5;
   const canRequestSummary =
     selectedSuiteIds.length > 0 && Boolean(productId) && hasValidRepeat;
   const canStart =
     label.trim().length > 0 &&
     selectedSuiteIds.length > 0 &&
     Boolean(productId) &&
+    Boolean(purpose) &&
     hasValidRepeat &&
     summary !== null &&
     budgetExceeded === null &&
@@ -185,7 +193,7 @@ export function CreateMeasurementForm() {
           </p>
         </header>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor={labelId} className="block text-sm font-medium text-slate-700">
               Nama / Label Sesi <span className="text-red-500">*</span>
@@ -195,40 +203,43 @@ export function CreateMeasurementForm() {
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
+              placeholder="Contoh: Evaluasi Perdata v1.2"
               maxLength={200}
-              placeholder="Contoh: Evaluasi Gemini Flash vs Putusan MA 2026"
               required
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
             />
-            <p className="mt-1 text-xs text-slate-400">Maksimal 200 karakter.</p>
+            <p className="mt-1 text-xs text-slate-500">Maksimal 200 karakter.</p>
           </div>
 
           <div>
             <span className="block text-sm font-medium text-slate-700">
               Tujuan Sesi <span className="text-red-500">*</span>
             </span>
-            <div className="mt-2 flex flex-wrap gap-4">
-              {(["official", "trial"] as const).map((p) => (
-                <label
-                  key={p}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    purpose === p
-                      ? "border-indigo-600 bg-indigo-50/50 text-indigo-900"
-                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="purpose"
-                    value={p}
-                    checked={purpose === p}
-                    onChange={() => setPurpose(p)}
-                    className="text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span>{MEASUREMENT_PURPOSE_LABEL[p]}</span>
-                </label>
-              ))}
+            <div className="mt-2 flex flex-wrap gap-3">
+              {(["official", "trial"] as const).map((p) => {
+                const isSelected = purpose === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPurpose(p)}
+                    aria-pressed={isSelected}
+                    className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                      isSelected
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold shadow-xs"
+                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {MEASUREMENT_PURPOSE_LABEL[p]}
+                  </button>
+                );
+              })}
             </div>
+            {!purpose && (
+              <p className="mt-1.5 text-xs text-slate-500">
+                Pilih tujuan sesi untuk mengaktifkan tombol mulai.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -293,7 +304,7 @@ export function CreateMeasurementForm() {
                 <button
                   type="button"
                   onClick={activeSuites.reload}
-                  className="font-semibold underline hover:text-red-900"
+                  className="font-medium underline hover:text-red-900"
                 >
                   Coba lagi
                 </button>
@@ -305,25 +316,25 @@ export function CreateMeasurementForm() {
                 data-testid="suites-empty"
                 className="rounded-md border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500"
               >
-                Belum ada suite aktif yang tersedia.
+                Tidak ada suite aktif yang tersedia.
               </p>
             )}
 
             {activeSuites.status === "ready" && activeSuites.suites.length > 0 && (
               <div
                 data-testid="suites-list"
-                className="max-h-48 overflow-y-auto divide-y divide-slate-100 rounded-md border border-slate-300 bg-white"
+                className="max-h-48 overflow-y-auto rounded-md border border-slate-200 divide-y divide-slate-100"
               >
                 {activeSuites.suites.map((suite) => {
-                  const checked = selectedSuiteIds.includes(suite.id);
+                  const isChecked = selectedSuiteIds.includes(suite.id);
                   return (
                     <label
                       key={suite.id}
-                      className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-slate-50"
+                      className="flex cursor-pointer items-center gap-3 p-3 hover:bg-slate-50 transition-colors"
                     >
                       <input
                         type="checkbox"
-                        checked={checked}
+                        checked={isChecked}
                         onChange={() => handleSuiteToggle(suite.id)}
                         className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                       />
@@ -344,30 +355,28 @@ export function CreateMeasurementForm() {
             <span className="block text-sm font-medium text-slate-700">
               Filter Kasus <span className="text-red-500">*</span>
             </span>
-            <div className="mt-2 flex flex-wrap gap-4">
-              {(["both", "dev", "test"] as const).map((cf) => (
-                <label
-                  key={cf}
-                  className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
-                    caseFilter === cf
-                      ? "border-indigo-600 bg-indigo-50/50 text-indigo-900"
-                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="caseFilter"
-                    value={cf}
-                    checked={caseFilter === cf}
-                    onChange={() => {
+            <div className="mt-2 flex flex-wrap gap-3">
+              {(["both", "dev", "test"] as const).map((cf) => {
+                const isSelected = caseFilter === cf;
+                return (
+                  <button
+                    key={cf}
+                    type="button"
+                    onClick={() => {
                       invalidateSummary();
                       setCaseFilter(cf);
                     }}
-                    className="text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span>{CASE_FILTER_LABEL[cf]}</span>
-                </label>
-              ))}
+                    aria-pressed={isSelected}
+                    className={`rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
+                      isSelected
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold shadow-xs"
+                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {CASE_FILTER_LABEL[cf]}
+                  </button>
+                );
+              })}
             </div>
             <p className="mt-1 text-xs text-slate-500">
               Hanya kasus yang sudah disetujui (Approved) dan bertag sesuai filter yang akan diuji.
@@ -389,14 +398,13 @@ export function CreateMeasurementForm() {
 
         <div>
           <ProductSelect
+            label="Pilih Produk AI"
             purpose="automatic_run"
             value={productId}
-            onChange={(val) => {
+            onChange={(id) => {
               invalidateSummary();
-              setProductId(val);
+              setProductId(id);
             }}
-            required
-            label="Pilih Produk AI"
           />
         </div>
       </section>
@@ -433,14 +441,18 @@ export function CreateMeasurementForm() {
                 let val = Number.parseInt(raw, 10);
                 if (raw.length > 1) {
                   const lastDigit = Number.parseInt(raw.slice(-1), 10);
-                  if (lastDigit >= 1 && lastDigit <= 5) {
+                  if (!Number.isNaN(lastDigit) && lastDigit >= 1 && lastDigit <= 5) {
                     val = lastDigit;
                   }
                 }
-                setRepeatCount(Math.min(5, Math.max(1, val)));
+                setRepeatCount(Number.isNaN(val) ? 3 : Math.min(5, Math.max(1, val)));
               }}
               onBlur={() => {
-                if (repeatCount === "") {
+                if (
+                  repeatCount === "" ||
+                  typeof repeatCount !== "number" ||
+                  Number.isNaN(repeatCount)
+                ) {
                   setRepeatCount(3);
                 }
               }}
@@ -449,7 +461,7 @@ export function CreateMeasurementForm() {
             />
             <p className="mt-1 text-xs text-slate-500">Standar 3 kali (rentang 1 sampai 5).</p>
 
-            {repeatCount === 1 && (
+            {hasValidRepeat && repeatCount === 1 && (
               <div
                 data-testid="repeat-single-warning"
                 className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800"
@@ -466,18 +478,16 @@ export function CreateMeasurementForm() {
             </label>
             <select
               id="judge-provider-select"
-              value={judgeProviderId}
-              onChange={(e) => setJudgeProviderId(e.target.value as JudgeProvider)}
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
+              disabled
+              value="default"
+              className="mt-1 w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
             >
-              {JUDGE_PROVIDER_OPTIONS.map((judge) => (
-                <option key={judge.value} value={judge.value}>
-                  {judge.label}
-                </option>
-              ))}
+              <option value="default">
+                DeepSeek V4-Flash (Default)
+              </option>
             </select>
             <p className="mt-1 text-xs text-slate-500">
-              Biaya LLM judge dicatat pada anggaran penilai terpisah.
+              Provider penilai khusus akan dikonfigurasi pada PBI-14. Saat ini otomatis menggunakan penilai default sistem.
             </p>
           </div>
         </div>
@@ -498,7 +508,7 @@ export function CreateMeasurementForm() {
             type="button"
             onClick={handleFetchSummary}
             disabled={!canRequestSummary || isSummaryLoading}
-            className="rounded-md border border-indigo-600 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-md border border-indigo-600 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-xs hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSummaryLoading ? "Menghitung…" : "Tinjau Ringkasan Biaya"}
           </button>
@@ -506,18 +516,18 @@ export function CreateMeasurementForm() {
 
         <MeasurementSummaryCard
           summary={summary}
-          budgetExceeded={budgetExceeded}
-          errorMessage={summaryError}
           isLoading={isSummaryLoading}
+          errorMessage={summaryError}
+          budgetExceeded={budgetExceeded}
         />
       </section>
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-2">
+      {/* Tombol Aksi Bawah */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
         <button
           type="button"
           onClick={() => router.push("/runs")}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-md border border-slate-300 bg-white px-5 py-2 text-sm font-medium text-slate-700 shadow-xs hover:bg-slate-50"
         >
           Batal
         </button>
@@ -534,58 +544,57 @@ export function CreateMeasurementForm() {
 
       {/* Confirmation Modal */}
       {isConfirmOpen && (
-        <div
-          data-testid="modal-backdrop"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+        <dialog
+          ref={openAsModal}
+          onCancel={(e) => {
+            e.preventDefault();
+            setIsConfirmOpen(false);
+          }}
+          aria-labelledby="confirm-modal-title"
+          data-testid="start-confirm-dialog"
+          className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40 space-y-4"
         >
-          <dialog
-            open
-            aria-modal="true"
-            data-testid="start-confirm-dialog"
-            className="relative m-0 w-full max-w-md space-y-4 rounded-lg border-0 bg-white p-6 shadow-xl text-slate-900"
-          >
-            <h3 className="text-lg font-semibold text-slate-900">
-              Konfirmasi Mulai Pengukuran
-            </h3>
+          <h3 id="confirm-modal-title" className="text-lg font-semibold text-slate-900">
+            Konfirmasi Mulai Pengukuran
+          </h3>
 
-            {summary && (
-              <p className="text-sm text-slate-600">
-                Pengukuran <strong className="text-slate-900">&quot;{label.trim()}&quot;</strong> akan
-                dijalankan sebanyak{" "}
-                <strong>{summary.total_calls} panggilan</strong> ({summary.case_count} kasus × {repeatCount} pengulangan). Sesi akan
-                masuk ke antrean eksekusi sistem.
-              </p>
-            )}
+          {summary && (
+            <p className="text-sm text-slate-600">
+              Pengukuran <strong className="text-slate-900">&quot;{label.trim()}&quot;</strong> akan
+              dijalankan sebanyak{" "}
+              <strong>{summary.total_calls} panggilan</strong> ({summary.case_count} kasus × {repeatCount} pengulangan). Sesi akan
+              masuk ke antrean eksekusi sistem.
+            </p>
+          )}
 
-            {startError && (
-              <div
-                role="alert"
-                className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700"
-              >
-                {startError}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsConfirmOpen(false)}
-                disabled={isStarting}
-                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleStart}
-                disabled={isStarting}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {isStarting ? "Memulai…" : "Ya, Mulai Pengukuran"}
-              </button>
+          {startError && (
+            <div
+              role="alert"
+              className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+            >
+              {startError}
             </div>
-          </dialog>
-        </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsConfirmOpen(false)}
+              disabled={isStarting}
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleStart}
+              disabled={isStarting}
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isStarting ? "Memulai…" : "Ya, Mulai Pengukuran"}
+            </button>
+          </div>
+        </dialog>
       )}
     </div>
   );

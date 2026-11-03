@@ -80,6 +80,19 @@ async function parseError(response: Response): Promise<ApiError> {
     affectedCount = affectedCountOrNull(body?.affected_count);
     if (typeof body?.details === "object" && body?.details !== null && !Array.isArray(body?.details)) {
       details = body.details as Record<string, unknown>;
+    } else if (typeof body === "object" && body !== null && !Array.isArray(body)) {
+      // Server flattens extra fields into the root error object (e.g. BUDGET_EXCEEDED puts
+      // product_name, remaining_budget_idr, and estimated_cost_idr at the top level).
+      const knownKeys = new Set(["code", "message", "field", "missing", "affected_count", "details"]);
+      const extra: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
+        if (!knownKeys.has(key)) {
+          extra[key] = value;
+        }
+      }
+      if (Object.keys(extra).length > 0) {
+        details = extra;
+      }
     }
   } catch {
     // bukan JSON: halaman error HTML, balasan kosong, atau koneksi terputus.
