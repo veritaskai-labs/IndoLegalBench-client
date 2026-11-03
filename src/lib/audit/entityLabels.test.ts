@@ -7,7 +7,11 @@ describe("entityLabel", () => {
     expect(entityLabel("call_log")).toBe("Log panggilan");
   });
 
+  it("names the measurement session entity that the server audits since #91", () => {
+    expect(entityLabel("measurement_session")).toBe("Sesi pengukuran");
+  });
+
   it("falls back to the raw type for an entity the client does not know yet", () => {
-    expect(entityLabel("measurement_session")).toBe("measurement_session");
+    expect(entityLabel("judge_provider")).toBe("judge_provider");
   });
 });
