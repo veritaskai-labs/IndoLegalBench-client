@@ -776,6 +776,17 @@ describe("ProvidersPage session count and remaining budget (PBI-23 AC6, SCRUM-21
     expect(cells.getByText(/Rp\s?1\.500\.000/)).toBeInTheDocument();
   });
 
+  // PO decision (Aileen, 3 Nov): the remaining budget rounds down, so it never looks larger
+  // than what is left. The monthly budget column keeps rounding as before.
+  it("rounds the remaining budget down to the Rupiah, never up", async () => {
+    list.mockResolvedValue([listItem({ remaining_budget_idr: "374999.50" })]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getByText(/Rp\s?374\.999$/)).toBeInTheDocument();
+    expect(cells.queryByText(/Rp\s?375\.000/)).not.toBeInTheDocument();
+  });
+
   // Edge: a spent-out budget is a real number, not "not applicable".
   it("shows Rp 0 when this month's budget is used up", async () => {
     list.mockResolvedValue([listItem({ remaining_budget_idr: "0.00" })]);
