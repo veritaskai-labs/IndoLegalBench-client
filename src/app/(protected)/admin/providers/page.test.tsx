@@ -11,7 +11,7 @@ import {
   testConnection,
   updateProduct,
 } from "@/lib/providers/providerApi";
-import type { AiProduct } from "@/types/provider";
+import type { AiProduct, AiProductListItem } from "@/types/provider";
 import ProvidersPage from "./page";
 
 // providerApi has its own request tests; here only the page's reaction matters.
@@ -53,6 +53,11 @@ function product(overrides: Partial<AiProduct> = {}): AiProduct {
     updated_at: "2026-09-29T01:00:00Z",
     ...overrides,
   };
+}
+
+/** A list row: GET /admin/providers adds the derived columns from SCRUM-210 (server#91). */
+function listItem(overrides: Partial<AiProductListItem> = {}): AiProductListItem {
+  return { ...product(), session_count: 4, remaining_budget_idr: "250000.00", ...overrides };
 }
 
 function renderPage() {
@@ -746,5 +751,173 @@ describe("ProvidersPage remaining branches (SCRUM-204)", () => {
 
     expect(screen.queryByRole("dialog", { name: "Nonaktifkan produk AI" })).not.toBeInTheDocument();
     expect(toggle).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProvidersPage session count and remaining budget (PBI-23 AC6, SCRUM-212)", () => {
+  it("adds the two columns to the table header", async () => {
+    list.mockResolvedValue([listItem()]);
+    renderPage();
+    await row("DeepSeek");
+
+    expect(screen.getByRole("columnheader", { name: "Jumlah sesi" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Sisa anggaran bulan ini" })).toBeInTheDocument();
+  });
+
+  // Positive
+  it("shows the session count and this month's remaining budget in Rupiah for an automatic product", async () => {
+    list.mockResolvedValue([listItem()]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getByRole("cell", { name: "4" })).toBeInTheDocument();
+    expect(cells.getByText(/Rp\s?250\.000/)).toBeInTheDocument();
+    // The monthly budget column still shows the full budget next to it.
+    expect(cells.getByText(/Rp\s?1\.500\.000/)).toBeInTheDocument();
+  });
+
+  // Edge: a spent-out budget is a real number, not "not applicable".
+  it("shows Rp 0 when this month's budget is used up", async () => {
+    list.mockResolvedValue([listItem({ remaining_budget_idr: "0.00" })]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getByText(/Rp\s?0$/)).toBeInTheDocument();
+  });
+
+  // Edge: a product that was never measured shows 0, not a dash.
+  it("shows 0 sessions for a product without any session", async () => {
+    list.mockResolvedValue([listItem({ session_count: 0 })]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getByRole("cell", { name: "0" })).toBeInTheDocument();
+  });
+
+  // Manual products have sessions too (PBI-22) but no budget (D2 table 6).
+  it("shows the session count of a manual product and marks its remaining budget as not applicable", async () => {
+    list.mockResolvedValue([
+      listItem({
+        name: "Justisio",
+        measurement_type: "manual",
+        provider_type: null,
+        monthly_budget_idr: null,
+        remaining_budget_idr: null,
+        session_count: 2,
+      }),
+    ]);
+    renderPage();
+    const cells = within(await row("Justisio"));
+
+    expect(cells.getByRole("cell", { name: "2" })).toBeInTheDocument();
+    // model, key, limit, budget, remaining budget, last test
+    expect(cells.getAllByText("Tidak berlaku")).toHaveLength(6);
+  });
+
+  // Negative: the server never sends null for an automatic product, but if it does the
+  // page must not print "Rp NaN" or "null".
+  it("marks a missing remaining budget on an automatic product as not applicable", async () => {
+    list.mockResolvedValue([listItem({ remaining_budget_idr: null })]);
+    renderPage();
+    const cells = within(await row("DeepSeek"));
+
+    expect(cells.getAllByText("Tidak berlaku")).toHaveLength(1);
+    expect(cells.queryByText(/NaN|null/)).not.toBeInTheDocument();
+  });
+
+  // PATCH answers with AiProductRead, which has neither column.
+  it("keeps both values after an edit that does not touch the budget, without reloading", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([listItem()]);
+    update.mockResolvedValue(product({ rate_limit_per_minute: 30 }));
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Ubah DeepSeek" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Ubah produk AI" }));
+    const limit = dialog.getByLabelText("Limit panggilan per menit");
+    await user.clear(limit);
+    await user.type(limit, "30");
+    await user.click(dialog.getByRole("button", { name: "Simpan" }));
+
+    const cells = within(await row("DeepSeek"));
+    expect(await cells.findByText("30")).toBeInTheDocument();
+    expect(cells.getByRole("cell", { name: "4" })).toBeInTheDocument();
+    expect(cells.getByText(/Rp\s?250\.000/)).toBeInTheDocument();
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  // Only the server knows what was spent, so a new budget means a fresh list.
+  it("reloads the list after the monthly budget is changed and shows the new remaining budget", async () => {
+    const user = userEvent.setup();
+    list
+      .mockResolvedValueOnce([listItem()])
+      .mockResolvedValueOnce([listItem({ monthly_budget_idr: "2000000.00", remaining_budget_idr: "750000.00" })]);
+    update.mockResolvedValue(product({ monthly_budget_idr: "2000000.00" }));
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Ubah DeepSeek" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Ubah produk AI" }));
+    const budget = dialog.getByLabelText("Budget per bulan (Rp)");
+    await user.clear(budget);
+    await user.type(budget, "2000000");
+    await user.click(dialog.getByRole("button", { name: "Simpan" }));
+
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    expect(await within(await row("DeepSeek")).findByText(/Rp\s?750\.000/)).toBeInTheDocument();
+    expect(screen.getByText("Produk AI tersimpan")).toBeInTheDocument();
+  });
+
+  it("keeps both values after a connection test", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([listItem()]);
+    test.mockResolvedValue({ status: "ok", latency_ms: 120 });
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Uji koneksi DeepSeek" }));
+
+    const cells = within(await row("DeepSeek"));
+    expect(await cells.findByText(/Berhasil · 120 ms/)).toBeInTheDocument();
+    expect(cells.getByRole("cell", { name: "4" })).toBeInTheDocument();
+    expect(cells.getByText(/Rp\s?250\.000/)).toBeInTheDocument();
+  });
+
+  it("moves an activated product out of the Nonaktif tab without reloading the list", async () => {
+    const user = userEvent.setup();
+    list
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([listItem({ is_active: false })]);
+    toggle.mockResolvedValue(product({ is_active: true }));
+    renderPage();
+    await screen.findByText("Belum ada produk AI aktif");
+
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    await user.click(await screen.findByRole("button", { name: "Aktifkan DeepSeek" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Aktifkan produk AI" })).getByRole("button", { name: "Aktifkan" }));
+
+    // It leaves the Nonaktif tab without a reload: the toggle never changes the budget.
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "DeepSeek" })).not.toBeInTheDocument());
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  // Corner (page.tsx removeRow): a delete that finishes while the tab is reloading.
+  it("keeps the loading list when a delete finishes while the tab is reloading", async () => {
+    const user = userEvent.setup();
+    let finish: () => void = () => undefined;
+    list.mockResolvedValueOnce([listItem()]).mockReturnValueOnce(new Promise(() => undefined));
+    remove.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+    renderPage();
+    await row("DeepSeek");
+
+    await user.click(screen.getByRole("button", { name: "Hapus DeepSeek" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Hapus produk AI" })).getByRole("button", { name: "Hapus produk" }));
+    await user.click(screen.getByRole("tab", { name: "Nonaktif" }));
+    // act flushes the delete and the row removal it triggers before the assertions run.
+    await act(async () => finish());
+
+    expect(screen.queryByRole("cell", { name: "DeepSeek" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Tidak ada produk AI nonaktif")).not.toBeInTheDocument();
   });
 });
