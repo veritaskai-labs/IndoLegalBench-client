@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
-import { formatDate, formatDateTime, formatRupiah, MEASUREMENT_TYPE_LABEL, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
+import { formatDate, formatDateTime, formatRupiah, formatRupiahDown, MEASUREMENT_TYPE_LABEL, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
 import { mergeSavedProduct } from "@/lib/providers/productUsage";
 import type { AiProduct, AiProductListItem, MeasurementType } from "@/types/provider";
 
@@ -355,7 +355,7 @@ function ProductRow({
         {manual ? <NotApplicable /> : product.monthly_budget_idr != null && formatRupiah(product.monthly_budget_idr)}
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-        {manual || product.remaining_budget_idr == null ? <NotApplicable /> : formatRupiah(product.remaining_budget_idr)}
+        {manual || product.remaining_budget_idr == null ? <NotApplicable /> : formatRupiahDown(product.remaining_budget_idr)}
       </td>
       {/* Produk manual juga punya sesi (PBI-22). Termasuk sesi yang diarsipkan. */}
       <td className="px-4 py-3 text-slate-600">{product.session_count}</td>
