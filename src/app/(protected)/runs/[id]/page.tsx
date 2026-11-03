@@ -71,7 +71,7 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
       )}
 
       <section aria-label="Ringkasan sesi" className="rounded-lg border border-slate-200 bg-white p-4">
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:gap-x-6 lg:grid-cols-3">
           {facts.map((fact) => (
             <div key={fact.label}>
               <dt className="text-xs font-semibold text-slate-500">{fact.label}</dt>
