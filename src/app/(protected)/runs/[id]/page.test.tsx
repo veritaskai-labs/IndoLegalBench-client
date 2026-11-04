@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
-import { getSession } from "@/lib/runs/runsApi";
+import { getProgress, getSession } from "@/lib/runs/runsApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
@@ -13,13 +13,14 @@ const params = vi.hoisted(() => ({ id: "s-1" }));
 vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // runsApi has its own request tests (stubbed fetch); here only the page's reaction matters.
-vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn() }));
+vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn(), getProgress: vi.fn() }));
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 // The role decides which answer placeholder Developer AI sees.
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const get = vi.mocked(getSession);
+const progressRead = vi.mocked(getProgress);
 
 function signedInAs(role: Role) {
   useAuthMock.mockReturnValue({
@@ -98,6 +99,7 @@ beforeEach(() => {
   get.mockReset();
   params.id = "s-1";
   signedInAs("admin");
+  progressRead.mockReturnValue(new Promise(() => {}));
 });
 
 describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
@@ -334,4 +336,39 @@ describe("SessionDetailPage load states", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(2);
   });
+});
+
+describe("SessionDetailPage progress panel (PBI-12 AC5, AC6)", () => {
+  it("shows the live numbers of a running session", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(session({ status: "running" }));
+    progressRead.mockResolvedValue({
+      completed_calls: 240,
+      total_calls: 300,
+      percent_complete: "80.0",
+      failed_calls: 12,
+      percent_failed: "5.0",
+      remaining_seconds: 300,
+      running_cost_idr: "120000.00",
+      remaining_budget_idr: "380000.00",
+      started_at: "2026-11-04T03:00:00Z",
+      updated_at: "2026-11-04T03:40:00Z",
+    });
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByText("240 dari 300")).toBeInTheDocument();
+  });
+
+  // The session itself loaded fine, so one failed progress read must not empty the page.
+  it("keeps the session on screen when the progress read fails", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(session({ status: "running" }));
+    progressRead.mockRejectedValue(new Error("boom"));
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByText(/gagal memuat progres/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
+    });
 });
