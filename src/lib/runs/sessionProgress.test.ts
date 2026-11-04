@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { formatDateTime } from "@/lib/providers/format";
 import {
+  budgetExhausted,
   callCountText,
   failedText,
   percentText,
   progressBarPercent,
   remainingTimeText,
+  startedAtText,
 } from "./sessionProgress";
 
 describe("callCountText (PBI-12 AC5)", () => {
@@ -95,5 +98,35 @@ describe("remainingTimeText (PBI-12 AC5)", () => {
   it("reads in hours once an hour is left", () => {
     expect(remainingTimeText(3600)).toBe("sekitar 1 jam");
     expect(remainingTimeText(7500)).toBe("sekitar 2 jam 5 menit");
+  });
+});
+
+describe("startedAtText (PBI-12 AC5)", () => {
+  // started_at is nullable in the contract (server SCRUM-215): a queued session has not started.
+  it("says it has not started when the server sends null", () => {
+    expect(startedAtText(null)).toBe("Belum mulai");
+  });
+
+  // Compared against the shared formatter instead of a fixed string, so a CI timezone
+  // cannot make this flaky, and so the panel reads the same as every other page.
+  it("uses the same date format as the rest of the app", () => {
+    const iso = "2026-11-04T03:00:00Z";
+    expect(startedAtText(iso)).toBe(formatDateTime(iso));
+  });
+});
+
+describe("budgetExhausted (PBI-12 AC5)", () => {
+  it("is false while there is budget left", () => {
+    expect(budgetExhausted("380000.00")).toBe(false);
+  });
+
+  // The server stops an automatic measurement once the cost reaches the product budget.
+  it("is true at zero and below, because the measurement stops there", () => {
+    expect(budgetExhausted("0.00")).toBe(true);
+    expect(budgetExhausted("-1500.00")).toBe(true);
+  });
+
+  it("stays quiet when the value is not a number, rather than warning wrongly", () => {
+    expect(budgetExhausted("abc")).toBe(false);
   });
 });
