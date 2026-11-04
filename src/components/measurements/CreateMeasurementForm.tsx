@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import {
   extractBudgetExceeded,
   getMeasurementSummary,
+  measurementErrorMessage,
   startMeasurement,
   type BudgetExceededInfo,
 } from "@/lib/measurements/measurementApi";
@@ -118,10 +119,8 @@ export function CreateMeasurementForm() {
         const budgetInfo = extractBudgetExceeded(err);
         if (budgetInfo) {
           setBudgetExceeded(budgetInfo);
-        } else if (err instanceof Error) {
-          setSummaryError(err.message || "Gagal memuat ringkasan pengukuran.");
         } else {
-          setSummaryError("Gagal memuat ringkasan pengukuran.");
+          setSummaryError(measurementErrorMessage(err, "Gagal memuat ringkasan pengukuran."));
         }
       }
     } finally {
@@ -158,10 +157,8 @@ export function CreateMeasurementForm() {
       if (budgetInfo) {
         setBudgetExceeded(budgetInfo);
         setIsConfirmOpen(false);
-      } else if (err instanceof Error) {
-        setStartError(err.message || "Gagal memulai pengukuran.");
       } else {
-        setStartError("Gagal memulai pengukuran.");
+        setStartError(measurementErrorMessage(err, "Gagal memulai pengukuran."));
       }
     } finally {
       setIsStarting(false);
