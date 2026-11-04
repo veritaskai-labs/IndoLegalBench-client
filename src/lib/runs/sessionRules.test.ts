@@ -48,6 +48,13 @@ describe("formatProgress", () => {
     expect(formatProgress(session({ status: "running", progress: { completed: 12, total: 60 } }))).toBe("12 dari 60");
   });
 
+  // The list and the panel show the same numbers, so they group thousands the same way.
+  it("groups thousands like the progress panel", () => {
+    expect(formatProgress(session({ status: "running", progress: { completed: 1200, total: 1500 } }))).toBe(
+      "1.200 dari 1.500",
+    );
+  });
+
   it("shows a finished session as complete", () => {
     expect(formatProgress(session())).toBe("60 dari 60");
   });
