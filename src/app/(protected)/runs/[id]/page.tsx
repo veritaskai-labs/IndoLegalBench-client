@@ -17,6 +17,7 @@ import { formatProgress, hasEnded, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
+import { SessionErrorSummary } from "@/components/runs/SessionErrorSummary";
 import { useMeasurementProgress } from "@/hooks/useMeasurementProgress";
 
 /** Detail satu sesi pengukuran: snapshot kasus dan jawaban mentah (PBI-11 AC6–AC8, SCRUM-212). */
@@ -84,7 +85,7 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
           ))}
         </dl>
       </section>
-      
+
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Progres</h2>
         {progress.status === "loading" && <LoadingState />}
@@ -96,6 +97,10 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
         )}
         {progress.status === "ready" && <MeasurementProgressPanel progress={progress.data} />}
       </section>
+
+      {/* Komponen ini menghilang sendiri kalau tidak ada panggilan yang gagal (AC4). */}
+      <SessionErrorSummary cases={session.cases} />
+
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
         {session.cases.length === 0 ? (
