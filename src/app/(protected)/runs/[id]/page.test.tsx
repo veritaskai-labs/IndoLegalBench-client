@@ -372,3 +372,35 @@ describe("SessionDetailPage progress panel (PBI-12 AC5, AC6)", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
     });
 });
+describe("SessionDetailPage error summary (PBI-12 AC4)", () => {
+  it("shows the error summary when a call failed technically", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        cases: [
+          devCase({
+            attempts: [attempt(), attempt({ repetition_no: 2, status: "technical_failure", answer_text: null })],
+          }),
+        ],
+      }),
+    );
+
+    render(<SessionDetailPage />);
+
+    const ringkasan = await screen.findByRole("region", { name: "Ringkasan kegagalan" });
+    expect(within(ringkasan).getByText("1 panggilan gagal karena masalah teknis")).toBeInTheDocument();
+    expect(within(ringkasan).getByRole("button", { name: "Lihat detail teknis" })).toBeInTheDocument();
+  });
+
+  // Sesi yang mulus tidak perlu kotak merah sama sekali.
+  it("says nothing about failures when every call succeeded", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(session());
+
+    render(<SessionDetailPage />);
+
+    await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
+    expect(screen.queryByRole("region", { name: "Ringkasan kegagalan" })).not.toBeInTheDocument();
+  });
+});
