@@ -18,6 +18,11 @@ export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
 const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
 
+/** Sesi sudah berakhir: boleh diarsipkan, dan Developer AI boleh membaca jawabannya (server#91 has_ended). */
+export function hasEnded(status: SessionStatus): boolean {
+  return ENDED.has(status);
+}
+
 /** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
   const { completed, total } = session.progress;
@@ -33,7 +38,7 @@ export function canArchive(
   session: Pick<SessionListItem, "status" | "created_by">,
   me: Pick<Me, "id" | "role">,
 ): boolean {
-  if (!ENDED.has(session.status)) return false;
+  if (!hasEnded(session.status)) return false;
   if (me.role === "admin") return true;
   return me.role === "developer_ai" && session.created_by === me.id;
 }

@@ -1,27 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { ArchiveSessionDialog } from "@/components/runs/ArchiveSessionDialog";
+import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessions } from "@/hooks/useSessions";
 import { formatWib } from "@/lib/datetime/formatWib";
-import { canArchive, caseCountText, formatProgress, SESSION_STATUS_LABEL, unknownName } from "@/lib/runs/sessionRules";
+import { canArchive, caseCountText, formatProgress, unknownName } from "@/lib/runs/sessionRules";
 import type { Me } from "@/types";
-import type { SessionListItem, SessionStatus } from "@/types/measurement";
+import type { SessionListItem } from "@/types/measurement";
 
 const COLUMNS = 9;
-
-const STATUS_BADGE: Record<SessionStatus, string> = {
-  queued: "bg-slate-100 text-slate-700",
-  running: "bg-indigo-50 text-indigo-800",
-  finished: "bg-emerald-50 text-emerald-800",
-  finished_with_failures: "bg-amber-50 text-amber-800",
-  failed: "bg-red-50 text-red-800",
-};
 
 /** Halaman Eksekusi: daftar sesi pengukuran dan Arsipkan (PBI-11 AC10, SCRUM-212). */
 export default function RunsPage() {
@@ -122,16 +115,18 @@ function SessionRow({
 }>) {
   return (
     <tr className="align-top">
-      <td className="px-4 py-3 font-medium text-slate-900">{session.label}</td>
+      <td className="px-4 py-3 font-medium text-slate-900">
+        <Link href={`/runs/${encodeURIComponent(session.id)}`} className="hover:underline">
+          {session.label}
+        </Link>
+      </td>
       <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatWib(session.created_at)}</td>
       <td className="px-4 py-3 text-slate-600">{unknownName(session.created_by_name)}</td>
       <td className="px-4 py-3 text-slate-600">{unknownName(session.product_name)}</td>
       <td className="px-4 py-3 text-slate-600">{caseCountText(session.case_count)}</td>
       <td className="px-4 py-3 text-slate-600">{session.repetitions}</td>
       <td className="px-4 py-3">
-        <span className={`rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap ${STATUS_BADGE[session.status]}`}>
-          {SESSION_STATUS_LABEL[session.status]}
-        </span>
+        <SessionStatusBadge status={session.status} />
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatProgress(session)}</td>
       <td className="px-4 py-3">

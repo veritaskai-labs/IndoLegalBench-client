@@ -336,6 +336,10 @@ describe("CreateMeasurementForm", () => {
     // While in flight, user unchecks suite1
     await user.click(suite1Check);
 
+    // Re-check suite1: button must not be stuck on "Menghitung…"
+    await user.click(suite1Check);
+    expect(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" })).toBeEnabled();
+
     // Stale summary now resolves
     await act(async () => {
       resolveSummary(MOCK_SUMMARY);
@@ -344,6 +348,7 @@ describe("CreateMeasurementForm", () => {
     // Summary must NOT be saved and Mulai button must remain disabled
     expect(screen.queryByTestId("summary-card")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mulai Pengukuran" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" })).toBeEnabled();
   });
 
   it("discards stale summary error when inputs change while summary request is in flight", async () => {
@@ -376,6 +381,10 @@ describe("CreateMeasurementForm", () => {
     // While in flight, user unchecks suite1
     await user.click(suite1Check);
 
+    // Re-check suite1: button must be enabled
+    await user.click(suite1Check);
+    expect(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" })).toBeEnabled();
+
     // Stale summary now rejects with an error
     await act(async () => {
       rejectSummary(new Error("Network error"));
@@ -383,6 +392,7 @@ describe("CreateMeasurementForm", () => {
 
     // Summary error must NOT be shown
     expect(screen.queryByText("Network error")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" })).toBeEnabled();
   });
 
   it("handles confirmation modal and starts measurement session successfully", async () => {
@@ -443,7 +453,7 @@ describe("CreateMeasurementForm", () => {
     });
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith("/runs");
+      expect(pushMock).toHaveBeenCalledWith("/runs/sess-999");
     });
   });
 
@@ -608,10 +618,26 @@ describe("CreateMeasurementForm", () => {
     await user.click(startBtn);
     const dialog3 = screen.getByTestId("start-confirm-dialog");
 
-    // 1. Error instance when starting
-    mockStartMeasurement.mockRejectedValueOnce(new Error("Gagal memulai worker"));
+    // Cancel is ignored while isStarting is in flight
+    let rejectStart!: (reason: unknown) => void;
+    mockStartMeasurement.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectStart = reject;
+        }),
+    );
     const confirmBtn = within(dialog3).getByRole("button", { name: "Ya, Mulai Pengukuran" });
     await user.click(confirmBtn);
+    expect(screen.getByRole("button", { name: "Memulai…" })).toBeInTheDocument();
+    await act(async () => {
+      dialog3.dispatchEvent(new Event("cancel", { cancelable: true }));
+    });
+    expect(screen.getByTestId("start-confirm-dialog")).toBeInTheDocument();
+
+    // 1. Error instance when starting
+    await act(async () => {
+      rejectStart(new Error("Gagal memulai worker"));
+    });
     expect(await screen.findByText("Gagal memulai worker")).toBeInTheDocument();
 
     // Error with empty message

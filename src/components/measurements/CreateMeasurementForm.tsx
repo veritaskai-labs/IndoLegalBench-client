@@ -67,6 +67,7 @@ export function CreateMeasurementForm() {
   // Invalidate summary if relevant inputs change
   function invalidateSummary() {
     summaryRequestIdRef.current += 1;
+    setIsSummaryLoading(false);
     if (summary !== null || budgetExceeded !== null || summaryError !== null) {
       setSummary(null);
       setBudgetExceeded(null);
@@ -148,10 +149,10 @@ export function CreateMeasurementForm() {
         judge_provider_id: null,
       };
 
-      await startMeasurement(payload);
+      const res = await startMeasurement(payload);
       showToast("Sesi pengukuran berhasil dibuat");
       setIsConfirmOpen(false);
-      router.push("/runs");
+      router.push(`/runs/${res.session_id}`);
     } catch (err: unknown) {
       const budgetInfo = extractBudgetExceeded(err);
       if (budgetInfo) {
@@ -474,7 +475,7 @@ export function CreateMeasurementForm() {
 
           <div>
             <label htmlFor="judge-provider-select" className="block text-sm font-medium text-slate-700">
-              Provider Penilai (LLM Judge) <span className="text-red-500">*</span>
+              Provider Penilai (LLM Judge)
             </label>
             <select
               id="judge-provider-select"
@@ -548,7 +549,9 @@ export function CreateMeasurementForm() {
           ref={openAsModal}
           onCancel={(e) => {
             e.preventDefault();
-            setIsConfirmOpen(false);
+            if (!isStarting) {
+              setIsConfirmOpen(false);
+            }
           }}
           aria-labelledby="confirm-modal-title"
           data-testid="start-confirm-dialog"
