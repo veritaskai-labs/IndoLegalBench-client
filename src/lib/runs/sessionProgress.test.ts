@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { callCountText, progressBarPercent } from "./sessionProgress";
-
-import { callCountText, failedText, percentText, progressBarPercent } from "./sessionProgress";
+import {
+  callCountText,
+  failedText,
+  percentText,
+  progressBarPercent,
+  remainingTimeText,
+} from "./sessionProgress";
 
 describe("callCountText (PBI-12 AC5)", () => {
   it("reads the way the AC spells it", () => {
@@ -64,5 +68,32 @@ describe("failedText (PBI-12 AC5)", () => {
 
   it("groups thousands the same way the call count does", () => {
     expect(failedText(1200, "80.0")).toBe("1.200 gagal (80,0%)");
+  });
+});
+
+describe("remainingTimeText (PBI-12 AC5)", () => {
+  // The server sends null until one call has finished, because the speed is not known yet.
+  it("says it cannot be estimated yet when the server sends null", () => {
+    expect(remainingTimeText(null)).toBe("Belum bisa diperkirakan");
+  });
+
+  it("says it is done when nothing is left", () => {
+    expect(remainingTimeText(0)).toBe("Selesai");
+  });
+
+  it("does not promise a number of minutes below one minute", () => {
+    expect(remainingTimeText(1)).toBe("kurang dari 1 menit");
+    expect(remainingTimeText(59)).toBe("kurang dari 1 menit");
+  });
+
+  it("rounds minutes up, so it never promises faster than it is", () => {
+    expect(remainingTimeText(60)).toBe("sekitar 1 menit");
+    expect(remainingTimeText(300)).toBe("sekitar 5 menit");
+    expect(remainingTimeText(301)).toBe("sekitar 6 menit");
+  });
+
+  it("reads in hours once an hour is left", () => {
+    expect(remainingTimeText(3600)).toBe("sekitar 1 jam");
+    expect(remainingTimeText(7500)).toBe("sekitar 2 jam 5 menit");
   });
 });
