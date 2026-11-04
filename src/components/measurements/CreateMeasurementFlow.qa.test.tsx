@@ -6,7 +6,7 @@
  * palsu yang menjawab seperti server asli. Jadi yang diuji adalah bentuk request yang
  * dikirim, bentuk galat yang dibaca, dan apa yang dilihat pengguna.
  */
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateMeasurementForm } from "./CreateMeasurementForm";
@@ -257,5 +257,56 @@ describe("CreateMeasurementForm against a server-shaped API", () => {
 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/runs/${SESSION_ID}`));
     expect(callsTo(START_URL)).toHaveLength(1);
+  });
+
+  describe.each([
+    {
+      status: 422,
+      code: "PRODUCT_NOT_AUTOMATIC",
+      message: "Produk ini dicatat manual, jadi tidak bisa diukur otomatis.",
+    },
+    {
+      status: 422,
+      code: "NO_ELIGIBLE_CASES",
+      message: "Tidak ada kasus yang layak untuk filter ini.",
+    },
+    {
+      status: 500,
+      code: "PRICE_NOT_CONFIGURED",
+      message: "Harga model belum diatur di server.",
+    },
+  ])("when the server answers $code", ({ status, code, message }) => {
+    it("tells the person the server message while reviewing the summary, not the raw code", async () => {
+      const user = userEvent.setup();
+      stubServer({ summary: () => jsonResponse(status, buildServerError(code, message)) });
+      renderForm();
+
+      await fillForm(user);
+      await reviewSummary(user);
+
+      const alert = await screen.findByTestId("summary-error");
+      expect(alert).toHaveTextContent(message);
+      expect(alert).not.toHaveTextContent(code);
+      expect(screen.getByRole("button", { name: "Mulai Pengukuran" })).toBeDisabled();
+    });
+
+    it("tells the person the server message when Mulai is refused, keeps the dialog open and does not leave the page", async () => {
+      const user = userEvent.setup();
+      stubServer({ start: () => jsonResponse(status, buildServerError(code, message)) });
+      renderForm();
+
+      await fillForm(user);
+      await reviewSummary(user);
+      await screen.findByTestId("summary-card");
+      await openConfirm(user);
+      await user.click(screen.getByRole("button", { name: "Ya, Mulai Pengukuran" }));
+
+      const dialog = await screen.findByTestId("start-confirm-dialog");
+      const alert = await within(dialog).findByRole("alert");
+      expect(alert).toHaveTextContent(message);
+      expect(alert).not.toHaveTextContent(code);
+      expect(within(dialog).getByRole("button", { name: "Ya, Mulai Pengukuran" })).toBeEnabled();
+      expect(pushMock).not.toHaveBeenCalled();
+    });
   });
 });
