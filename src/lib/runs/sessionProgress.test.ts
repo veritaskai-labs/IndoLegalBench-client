@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { callCountText, progressBarPercent } from "./sessionProgress";
 
+import { callCountText, failedText, percentText, progressBarPercent } from "./sessionProgress";
+
 describe("callCountText (PBI-12 AC5)", () => {
   it("reads the way the AC spells it", () => {
     expect(callCountText(240, 300)).toBe("240 dari 300");
@@ -33,5 +35,34 @@ describe("progressBarPercent (PBI-12 AC5)", () => {
 
   it("falls back to 0 when the value is not a number at all", () => {
     expect(progressBarPercent("")).toBe(0);
+  });
+});
+
+describe("percentText (PBI-12 AC5)", () => {
+  it("writes the server decimal with an Indonesian comma", () => {
+    expect(percentText("80.0")).toBe("80,0%");
+  });
+
+  it("keeps one decimal, the same precision the server rounds to", () => {
+    expect(percentText(12.5)).toBe("12,5%");
+    expect(percentText("0.0")).toBe("0,0%");
+  });
+
+  it("shows a dash when the value is not a number, like caseCountText does", () => {
+    expect(percentText("abc")).toBe("–");
+  });
+});
+
+describe("failedText (PBI-12 AC5)", () => {
+  it("says the count and the percentage together", () => {
+    expect(failedText(12, "5.0")).toBe("12 gagal (5,0%)");
+  });
+
+  it("says there are none instead of writing a zero", () => {
+    expect(failedText(0, "0.0")).toBe("Tidak ada kegagalan");
+  });
+
+  it("groups thousands the same way the call count does", () => {
+    expect(failedText(1200, "80.0")).toBe("1.200 gagal (80,0%)");
   });
 });
