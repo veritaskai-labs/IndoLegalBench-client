@@ -128,7 +128,7 @@ describe("ApiError body details", () => {
     ]);
   });
 
-  //Negative
+  // Negative
   it("leaves the missing list empty when the body has none", async () => {
     fetchMock.mockResolvedValue(
       errorResponse(
@@ -140,5 +140,56 @@ describe("ApiError body details", () => {
     const error = await caught();
 
     expect(error.missing).toEqual([]);
+    expect(error.details).toBeNull();
+  });
+
+  it("captures details object from 422 BUDGET_EXCEEDED", async () => {
+    fetchMock.mockResolvedValue(
+      errorResponse(
+        422,
+        JSON.stringify({
+          code: "BUDGET_EXCEEDED",
+          message: "Anggaran habis",
+          details: {
+            product_name: "Gemini Pro",
+            remaining_budget_idr: "50000.00",
+            estimated_cost_idr: "120000.00",
+          },
+        }),
+      ),
+    );
+
+    const error = await caught();
+
+    expect(error.code).toBe("BUDGET_EXCEEDED");
+    expect(error.details).toEqual({
+      product_name: "Gemini Pro",
+      remaining_budget_idr: "50000.00",
+      estimated_cost_idr: "120000.00",
+    });
+  });
+
+  it("captures top-level extra fields into details from server 422 BUDGET_EXCEEDED", async () => {
+    fetchMock.mockResolvedValue(
+      errorResponse(
+        422,
+        JSON.stringify({
+          code: "BUDGET_EXCEEDED",
+          message: "Anggaran habis",
+          product_name: "Gemini Flash (anggaran kecil)",
+          remaining_budget_idr: "1000.00",
+          estimated_cost_idr: "1425.60",
+        }),
+      ),
+    );
+
+    const error = await caught();
+
+    expect(error.code).toBe("BUDGET_EXCEEDED");
+    expect(error.details).toEqual({
+      product_name: "Gemini Flash (anggaran kecil)",
+      remaining_budget_idr: "1000.00",
+      estimated_cost_idr: "1425.60",
+    });
   });
 });

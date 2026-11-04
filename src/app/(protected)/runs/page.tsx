@@ -31,11 +31,19 @@ export default function RunsPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900">Eksekusi</h1>
-        <p className="text-sm text-slate-500">
-          Sesi pengukuran otomatis, terbaru di atas. Sesi yang diarsipkan disembunyikan, datanya tetap tersimpan.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Eksekusi</h1>
+          <p className="text-sm text-slate-500">
+            Sesi pengukuran otomatis, terbaru di atas. Sesi yang diarsipkan disembunyikan, datanya tetap tersimpan.
+          </p>
+        </div>
+        <Link
+          href="/runs/new"
+          className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors"
+        >
+          Pengukuran Baru
+        </Link>
       </header>
 
       {sessions.status === "error" && <ErrorState variant="card" message={sessions.message} onRetry={sessions.reload} />}

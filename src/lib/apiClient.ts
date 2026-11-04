@@ -16,6 +16,8 @@ export class ApiError extends Error {
     readonly missing: MissingSection[] = [],
     /** Jumlah kasus yang menunggu penilaian pada 409 CONFIRMATION_REQUIRED (PBI-24 AC8). */
     readonly affectedCount: number | null = null,
+    /** Detail tambahan dari server, misalnya rincian 422 BUDGET_EXCEEDED (PBI-11 AC5). */
+    readonly details: Record<string, unknown> | null = null,
   ) {
     super(code);
     this.name = "ApiError";
@@ -68,6 +70,7 @@ async function parseError(response: Response): Promise<ApiError> {
   let field: string | null = null;
   let missing: MissingSection[] = [];
   let affectedCount: number | null = null;
+  let details: Record<string, unknown> | null = null;
   try {
     const body = await response.json();
     if (typeof body?.code === "string") code = body.code;
@@ -75,10 +78,21 @@ async function parseError(response: Response): Promise<ApiError> {
     field = stringOrNull(body?.field);
     missing = missingSections(body?.missing);
     affectedCount = affectedCountOrNull(body?.affected_count);
+    if (typeof body?.details === "object" && body?.details !== null && !Array.isArray(body?.details)) {
+      details = body.details as Record<string, unknown>;
+    } else if (code === "BUDGET_EXCEEDED" && typeof body === "object" && body !== null && !Array.isArray(body)) {
+      // Server flattens budget info at the top level of HTTP 422 BUDGET_EXCEEDED errors.
+      const b = body as Record<string, unknown>;
+      details = {
+        product_name: b.product_name,
+        remaining_budget_idr: b.remaining_budget_idr,
+        estimated_cost_idr: b.estimated_cost_idr,
+      };
+    }
   } catch {
     // bukan JSON: halaman error HTML, balasan kosong, atau koneksi terputus.
   }
-  return new ApiError(response.status, code, message, field, missing, affectedCount);
+  return new ApiError(response.status, code, message, field, missing, affectedCount, details);
 }
 
 /**

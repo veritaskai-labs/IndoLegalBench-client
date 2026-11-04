@@ -64,6 +64,12 @@ beforeEach(() => {
 });
 
 describe("RunsPage session list (PBI-11 AC10)", () => {
+  it("renders a link to /runs/new in the header", async () => {
+    list.mockResolvedValue([session()]);
+    renderPage();
+    expect(screen.getByRole("link", { name: "Pengukuran Baru" })).toHaveAttribute("href", "/runs/new");
+  });
+
   it("shows the AC10 columns in the header", async () => {
     list.mockResolvedValue([session()]);
     renderPage();
