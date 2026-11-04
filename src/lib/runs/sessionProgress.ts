@@ -7,6 +7,9 @@
 
 const COUNT = new Intl.NumberFormat("id-ID");
 
+/** Satu desimal, sama dengan yang dibulatkan server (progress._percent). */
+const PERCENT = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 /**
  * "240 dari 300" (AC5). Total 0 di panel berarti snapshot belum ada. Daftar sesi
  * sengaja berbeda di kasus ini: lihat formatProgress di sessionRules.
@@ -35,3 +38,15 @@ export function countOfTotal(completed: number, total: number): string {
   return `${COUNT.format(completed)} dari ${COUNT.format(total)}`;
 }
 
+/** "80,0%". Bukan angka berarti agregasinya rusak, jadi tanda hubung, bukan "NaN%". */
+export function percentText(value: string | number): string {
+  const percent = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(percent)) return "–";
+  return `${PERCENT.format(percent)}%`;
+}
+
+/** "12 gagal (5,0%)" (AC5). Persennya dari panggilan yang sudah selesai, dihitung server. */
+export function failedText(failed: number, percentFailed: string | number): string {
+  if (failed === 0) return "Tidak ada kegagalan";
+  return `${COUNT.format(failed)} gagal (${percentText(percentFailed)})`;
+}
