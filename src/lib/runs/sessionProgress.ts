@@ -5,6 +5,7 @@
  * diuji tanpa merender panel dan tanpa menunggu polling.
  */
 
+import { formatDateTime } from "@/lib/providers/format";
 const COUNT = new Intl.NumberFormat("id-ID");
 
 /** Satu desimal, sama dengan yang dibulatkan server (progress._percent). */
@@ -65,4 +66,22 @@ export function remainingTimeText(seconds: number | null): string {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return rest === 0 ? `sekitar ${hours} jam` : `sekitar ${hours} jam ${rest} menit`;
+}
+
+/**
+ * Waktu mulai sesi (AC5). null berarti sesi masih antre dan belum berjalan:
+ * kolomnya nullable di kontrak (server SCRUM-215), mengikuti measurement_sessions.
+ */
+export function startedAtText(iso: string | null): string {
+  return iso === null ? "Belum mulai" : formatDateTime(iso);
+}
+
+/**
+ * Sisa anggaran bulan ini sudah habis. Server menghentikan pengukuran otomatis saat
+ * biaya mencapai batas anggaran produk, jadi panel perlu menandainya. Hanya tandanya
+ * yang dibaca, bukan nilainya, sehingga Number cukup dan presisi sen tidak terpakai.
+ */
+export function budgetExhausted(remainingBudgetIdr: string): boolean {
+  const remaining = Number(remainingBudgetIdr);
+  return Number.isFinite(remaining) && remaining <= 0;
 }
