@@ -7,10 +7,13 @@
 
 const COUNT = new Intl.NumberFormat("id-ID");
 
-/** "240 dari 300" (AC5). Total 0 berarti snapshot belum ada, jadi belum ada yang bisa dihitung. */
+/**
+ * "240 dari 300" (AC5). Total 0 di panel berarti snapshot belum ada. Daftar sesi
+ * sengaja berbeda di kasus ini: lihat formatProgress di sessionRules.
+ */
 export function callCountText(completed: number, total: number): string {
   if (total === 0) return "Belum ada panggilan";
-  return `${COUNT.format(completed)} dari ${COUNT.format(total)}`;
+  return countOfTotal(completed, total);
 }
 
 /**
@@ -23,3 +26,12 @@ export function progressBarPercent(value: string | number): number {
   if (!Number.isFinite(percent)) return 0;
   return Math.min(100, Math.max(0, percent));
 }
+
+/**
+ * "1.200 dari 1.500". Satu-satunya tempat angka ini diformat, dipakai panel progres
+ * dan daftar sesi, supaya satu sesi terbaca sama di kedua halaman.
+ */
+export function countOfTotal(completed: number, total: number): string {
+  return `${COUNT.format(completed)} dari ${COUNT.format(total)}`;
+}
+

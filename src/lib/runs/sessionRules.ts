@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me } from "@/types";
 import type { SessionListItem, SessionStatus } from "@/types/measurement";
+import { countOfTotal } from "@/lib/runs/sessionProgress";
 
 /**
  * Label status sesi (PBI-11 AC10). Record atas enum kontrak, bukan switch dengan default:
@@ -27,7 +28,7 @@ export function hasEnded(status: SessionStatus): boolean {
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
   const { completed, total } = session.progress;
   if (session.status === "queued" && total === 0) return "Menunggu antrean";
-  return `${completed} dari ${total}`;
+  return countOfTotal(completed, total);
 }
 
 /**
