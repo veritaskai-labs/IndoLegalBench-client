@@ -16,6 +16,8 @@ import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/session
 import { formatProgress, hasEnded, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
+import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
+import { useMeasurementProgress } from "@/hooks/useMeasurementProgress";
 
 /** Detail satu sesi pengukuran: snapshot kasus dan jawaban mentah (PBI-11 AC6–AC8, SCRUM-212). */
 export default function SessionDetailPage() {
@@ -41,6 +43,8 @@ export default function SessionDetailPage() {
 }
 
 function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
+  const progress = useMeasurementProgress(session.id, { poll: !hasEnded(session.status) });
+
   const facts: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SessionStatusBadge status={session.status} /> },
     { label: "Produk", value: unknownName(session.product_name) },
@@ -80,7 +84,18 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
           ))}
         </dl>
       </section>
-
+      
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-slate-900">Progres</h2>
+        {progress.status === "loading" && <LoadingState />}
+        {/* Tanpa tombol Coba lagi: polling 5 detik akan mencobanya sendiri selama sesi berjalan. */}
+        {progress.status === "error" && (
+          <p className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+            {progress.message}
+          </p>
+        )}
+        {progress.status === "ready" && <MeasurementProgressPanel progress={progress.data} />}
+      </section>
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
         {session.cases.length === 0 ? (
