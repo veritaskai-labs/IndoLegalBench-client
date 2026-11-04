@@ -50,3 +50,19 @@ export function failedText(failed: number, percentFailed: string | number): stri
   if (failed === 0) return "Tidak ada kegagalan";
   return `${COUNT.format(failed)} gagal (${percentText(percentFailed)})`;
 }
+
+/**
+ * Perkiraan sisa waktu dalam kata (AC5). null berarti belum ada panggilan selesai,
+ * jadi kecepatannya belum diketahui. Menit dibulatkan ke atas dengan alasan yang
+ * sama seperti di server: lebih baik terlalu lama daripada menjanjikan terlalu cepat.
+ */
+export function remainingTimeText(seconds: number | null): string {
+  if (seconds === null) return "Belum bisa diperkirakan";
+  if (seconds <= 0) return "Selesai";
+  if (seconds < 60) return "kurang dari 1 menit";
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return `sekitar ${minutes} menit`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `sekitar ${hours} jam` : `sekitar ${hours} jam ${rest} menit`;
+}
