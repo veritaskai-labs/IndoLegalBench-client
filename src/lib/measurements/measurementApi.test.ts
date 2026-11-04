@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/apiClient";
 import {
   extractBudgetExceeded,
   getMeasurementSummary,
+  measurementErrorMessage,
   startMeasurement,
 } from "./measurementApi";
 import type {
@@ -143,6 +144,36 @@ describe("measurementApi", () => {
       const result = extractBudgetExceeded(error);
       expect(result?.productName).toBeNull();
       expect(result?.message).toContain("Perkiraan biaya melebihi sisa anggaran");
+    });
+  });
+
+  describe("measurementErrorMessage", () => {
+    const FALLBACK = "Gagal memulai pengukuran.";
+
+    // Positif
+    it("returns the message the server sent for an ApiError, not its code", () => {
+      const error = new ApiError(422, "NO_ELIGIBLE_CASES", "Tidak ada kasus yang layak.");
+
+      expect(measurementErrorMessage(error, FALLBACK)).toBe("Tidak ada kasus yang layak.");
+    });
+
+    it("returns the message of a plain Error such as a lost connection", () => {
+      expect(measurementErrorMessage(new TypeError("Failed to fetch"), FALLBACK)).toBe(
+        "Failed to fetch",
+      );
+    });
+
+    // Edge
+    it("uses the fallback for an ApiError the server gave no message for", () => {
+      const error = new ApiError(502, "UNKNOWN_ERROR");
+
+      expect(measurementErrorMessage(error, FALLBACK)).toBe(FALLBACK);
+    });
+
+    it("uses the fallback for an Error without a message and for a value that is not an Error", () => {
+      expect(measurementErrorMessage(new Error(""), FALLBACK)).toBe(FALLBACK);
+      expect(measurementErrorMessage("boom", FALLBACK)).toBe(FALLBACK);
+      expect(measurementErrorMessage(null, FALLBACK)).toBe(FALLBACK);
     });
   });
 });
