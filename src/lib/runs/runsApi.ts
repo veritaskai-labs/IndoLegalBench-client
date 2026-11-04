@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { SessionArchiveResponse, SessionDetail, SessionListItem } from "@/types/measurement";
+import type { SessionArchiveResponse, SessionDetail, SessionListItem, MeasurementProgress } from "@/types/measurement";
 
 const BASE = "/measurements";
 
@@ -29,4 +29,14 @@ export function archiveSession(sessionId: string): Promise<SessionArchiveRespons
     method: "PATCH",
     silentForbidden: true,
   });
+}
+
+/**
+ * GET /measurements/{id}/progress: angka layar pemantauan, di-poll tiap beberapa detik
+ * (PBI-12 AC5, AC6). 404 MEASUREMENT_NOT_FOUND diteruskan ke panel supaya pesannya tampil
+ * di tempat; 403 tetap dialihkan ke /forbidden, karena peran yang berubah saat halaman
+ * terbuka memang tidak boleh lagi memantau.
+ */
+export function getProgress(sessionId: string): Promise<MeasurementProgress> {
+  return apiFetch<MeasurementProgress>(`${sessionPath(sessionId)}/progress`);
 }
