@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDateTime } from "@/lib/providers/format";
+import { formatWib } from "@/lib/datetime/formatWib";
 import {
   budgetExhausted,
   callCountText,
@@ -111,10 +111,9 @@ describe("startedAtText (PBI-12 AC5)", () => {
   // cannot make this flaky, and so the panel reads the same as every other page.
   it("uses the same date format as the rest of the app", () => {
     const iso = "2026-11-04T03:00:00Z";
-    expect(startedAtText(iso)).toBe(formatDateTime(iso));
+    expect(startedAtText(iso)).toBe(formatWib(iso));
   });
 });
-
 describe("budgetExhausted (PBI-12 AC5)", () => {
   it("is false while there is budget left", () => {
     expect(budgetExhausted("380000.00")).toBe(false);

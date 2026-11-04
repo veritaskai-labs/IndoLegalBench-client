@@ -5,7 +5,8 @@
  * diuji tanpa merender panel dan tanpa menunggu polling.
  */
 
-import { formatDateTime } from "@/lib/providers/format";
+import { formatWib } from "@/lib/datetime/formatWib";
+
 const COUNT = new Intl.NumberFormat("id-ID");
 
 /** Satu desimal, sama dengan yang dibulatkan server (progress._percent). */
@@ -73,7 +74,7 @@ export function remainingTimeText(seconds: number | null): string {
  * kolomnya nullable di kontrak (server SCRUM-215), mengikuti measurement_sessions.
  */
 export function startedAtText(iso: string | null): string {
-  return iso === null ? "Belum mulai" : formatDateTime(iso);
+  return iso === null ? "Belum mulai" : formatWib(iso);
 }
 
 /**
