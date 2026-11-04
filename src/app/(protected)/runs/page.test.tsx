@@ -74,6 +74,14 @@ describe("RunsPage session list (PBI-11 AC10)", () => {
     }
   });
 
+  // PBI-11 AC7/AC8: the detail page with the snapshot and raw answers opens from the label.
+  it("links each session label to its detail page", async () => {
+    list.mockResolvedValue([session({ id: "a/b" })]);
+    renderPage();
+
+    expect(await screen.findByRole("link", { name: "Uji Coba DeepSeek" })).toHaveAttribute("href", "/runs/a%2Fb");
+  });
+
   // Positive: every column of one row.
   it("shows label, creation time in WIB, creator, product, cases, repetitions, status and progress", async () => {
     list.mockResolvedValue([session({ status: "running", progress: { completed: 12, total: 60 } })]);
