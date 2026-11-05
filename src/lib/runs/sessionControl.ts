@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me, Role } from "@/types";
-import type { AttemptStatus, SessionDetail, SessionStatus } from "@/types/measurement";
+import type { RetrySelection } from "@/lib/runs/sessionControlApi";
+import type { AttemptStatus, SessionCaseResult, SessionDetail, SessionStatus } from "@/types/measurement";
 
 type ControlState = Pick<SessionDetail, "status" | "archived_at" | "resume_error_code">;
 
@@ -57,6 +58,34 @@ export function canRetry(session: RetryState, me: Pick<Me, "id" | "role"> | null
     session.accepted_as_is_at === null &&
     failedAttemptCount(session.cases) > 0
   );
+}
+
+/** Satu baris checkbox di dialog Coba ulang: satu kasus dengan percobaan yang gagal (AC3). */
+export type FailedCase = { key: string; label: string; attemptIds: string[] };
+
+type CaseRow = Pick<SessionCaseResult, "snapshot_item_id" | "case_code" | "title" | "masked"> & {
+  attempts: ReadonlyArray<{ id: string; status: AttemptStatus }>;
+};
+
+/** Kasus yang punya percobaan gagal, urutan sama dengan detail sesi. Kasus tersamar memakai judul samarannya. */
+export function failedCases(cases: ReadonlyArray<CaseRow>): FailedCase[] {
+  return cases.flatMap((item) => {
+    const attemptIds = item.attempts.filter((attempt) => attempt.status === "technical_failure").map((attempt) => attempt.id);
+    if (attemptIds.length === 0) return [];
+    const label = item.masked ? item.title : `${item.case_code} · ${item.title}`;
+    return [{ key: item.snapshot_item_id, label, attemptIds }];
+  });
+}
+
+/**
+ * Pilihan checkbox menjadi body Coba ulang. Semua kasus gagal dicentang berarti "semua yang gagal"
+ * (all_failed); sebagian berarti attempt_ids. Tanpa centang tidak ada yang dikirim.
+ */
+export function retrySelection(chosen: ReadonlySet<string>, failed: ReadonlyArray<FailedCase>): RetrySelection | null {
+  const picked = failed.filter((item) => chosen.has(item.key));
+  if (picked.length === 0) return null;
+  if (picked.length === failed.length) return { allFailed: true };
+  return { attemptIds: picked.flatMap((item) => item.attemptIds) };
 }
 
 const CONTROL_ERRORS: Record<string, string> = {
