@@ -2639,6 +2639,11 @@ export interface components {
              */
             accepted_as_is_reason: string | null;
             /**
+             * Report Eligible
+             * @description Boleh jadi dasar laporan (D4): finished, atau finished_with_failures yang diterima apa adanya. cancelled dan status lain false (PBI-15/16)
+             */
+            report_eligible: boolean;
+            /**
              * Cases
              * @description Kosong selama sesi antre, karena snapshot dibuat saat sesi mulai
              */

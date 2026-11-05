@@ -86,6 +86,7 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     accepted_as_is_at: null,
     accepted_as_is_by: null,
     accepted_as_is_reason: null,
+    report_eligible: true,
     cases: [devCase()],
     ...overrides,
   };
