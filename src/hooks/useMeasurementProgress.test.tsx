@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiFetch } from "@/lib/apiClient";
@@ -93,4 +93,29 @@ describe("useMeasurementProgress (PBI-12 AC5, AC6)", () => {
 
     expect(result.current).toMatchObject({ status: "ready", data: progress(240) });
   });
+
+it("reloads progress after a failed first request even when polling is off", async () => {
+  apiFetchMock
+    .mockRejectedValueOnce(new Error("network error"))
+    .mockResolvedValueOnce(progress(300));
+
+  const { result } = renderHook(() =>
+    useMeasurementProgress("s-1", { poll: false }),
+  );
+
+  await waitFor(() => expect(result.current.status).toBe("error"));
+
+  act(() => {
+    result.current.reload();
+  });
+
+  await waitFor(() => expect(result.current.status).toBe("ready"));
+
+  expect(result.current).toMatchObject({
+    status: "ready",
+    data: progress(300),
+  });
+  expect(apiFetchMock).toHaveBeenCalledTimes(2);
+});
+
 });

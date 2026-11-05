@@ -7,6 +7,8 @@ import { getProgress, getSession } from "@/lib/runs/runsApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
+import { act, render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The page reads the id from the URL; useParams hands it over still encoded.
 const params = vi.hoisted(() => ({ id: "s-1" }));
@@ -163,6 +165,112 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     expect(facts.getByText("Menunggu antrean")).toBeInTheDocument();
     expect(screen.getByText("Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.")).toBeInTheDocument();
   });
+
+it("updates the session status and failures without reloading the page", async () => {
+  const running = session({
+    status: "running",
+    finished_at: null,
+    cases: [devCase({ attempts: [attempt()] })],
+  });
+
+  const finished = session({
+    status: "finished_with_failures",
+    cases: [
+      devCase({
+        attempts: [
+          attempt(),
+          attempt({
+            repetition_no: 2,
+            status: "technical_failure",
+            answer_text: null,
+          }),
+        ],
+      }),
+    ],
+  });
+
+  get.mockResolvedValueOnce(running).mockResolvedValue(finished);
+  vi.useFakeTimers();
+
+  try {
+    render(<SessionDetailPage />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(
+      within(screen.getByRole("region", { name: "Ringkasan sesi" }))
+        .getByText("Berjalan"),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(
+      within(screen.getByRole("region", { name: "Ringkasan sesi" }))
+        .getByText("Selesai dengan kegagalan"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("1 panggilan gagal karena masalah teknis"),
+    ).toBeInTheDocument();
+
+    const callsAfterFinish = get.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+
+    expect(get).toHaveBeenCalledTimes(callsAfterFinish);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+
+it("allows retry when an ended session progress request fails", async () => {
+  const user = userEvent.setup();
+
+  get.mockResolvedValue(session({ status: "finished" }));
+
+  progressRead
+    .mockRejectedValueOnce(new Error("network error"))
+    .mockResolvedValueOnce({
+      completed_calls: 3,
+      total_calls: 3,
+      percent_complete: "100.0",
+      failed_calls: 0,
+      percent_failed: "0.0",
+      remaining_seconds: 0,
+      running_cost_idr: "3000.00",
+      remaining_budget_idr: "497000.00",
+      started_at: "2026-11-03T02:05:00Z",
+      updated_at: "2026-11-03T02:30:00Z",
+    });
+
+  render(<SessionDetailPage />);
+
+  expect(
+    await screen.findByText(/gagal memuat progres/i),
+  ).toBeInTheDocument();
+
+  await user.click(
+    screen.getByRole("button", { name: "Coba lagi" }),
+  );
+
+  expect(
+    within(
+      await screen.findByRole("region", {
+        name: "Progres pengukuran",
+      }),
+    ).getByText("3 dari 3"),
+  ).toBeInTheDocument();
+
+  expect(progressRead).toHaveBeenCalledTimes(2);
+});
+
 });
 
 describe("SessionDetailPage snapshot detail (PBI-11 AC7)", () => {
