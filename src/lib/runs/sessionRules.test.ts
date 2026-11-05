@@ -53,7 +53,8 @@ describe("sessionStatusLabel (PBI-12 AC9: Dijeda vs Dihentikan)", () => {
     expect(sessionStatusLabel("paused", "user")).toBe("Dijeda");
   });
 
-  it.each(["budget", "restart"] as const)("names a session the system stopped (%s) Dihentikan", (reason) => {
+  // server#102: error on a paused session means the model version changed after a resume.
+  it.each(["budget", "restart", "error"] as const)("names a session the system stopped (%s) Dihentikan", (reason) => {
     expect(sessionStatusLabel("paused", reason)).toBe("Dihentikan");
   });
 
