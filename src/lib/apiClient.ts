@@ -46,6 +46,18 @@ function notifyForbidden(): void {
   for (const listener of forbiddenListeners) listener();
 }
 
+/** Why the session is gone: same values as AuthState "unauthenticated" (SCRUM-252). */
+export type UnauthorizedReason = "expired" | "no_session";
+
+type UnauthorizedListener = (reason: UnauthorizedReason) => void;
+
+/** Subscribe to 401 responses from apiFetch. Returns an unsubscribe function. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
+  // TODO(SCRUM-252): red stub, the tests describe the behaviour.
+  return () => {};
+}
+
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
