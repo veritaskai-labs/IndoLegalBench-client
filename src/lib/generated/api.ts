@@ -2617,6 +2617,28 @@ export interface components {
              */
             archived_at: string | null;
             /**
+             * Stopped At
+             * @description Waktu sesi berhenti (jeda, anggaran, restart, error). null selama berjalan
+             */
+            stopped_at: string | null;
+            /** @description Penyebab berhenti: user, budget, restart (paused) atau error (failed) */
+            stop_reason: components["schemas"]["StopReason"] | null;
+            /**
+             * Accepted As Is At
+             * @description Waktu Admin menandai terima apa adanya. null bila tidak tertanda
+             */
+            accepted_as_is_at: string | null;
+            /**
+             * Accepted As Is By
+             * @description Admin yang menerima sesi
+             */
+            accepted_as_is_by: string | null;
+            /**
+             * Accepted As Is Reason
+             * @description Alasan tertulis terima apa adanya
+             */
+            accepted_as_is_reason: string | null;
+            /**
              * Cases
              * @description Kosong selama sesi antre, karena snapshot dibuat saat sesi mulai
              */
@@ -2775,6 +2797,12 @@ export interface components {
              */
             queued_at: string;
         };
+        /**
+         * StopReason
+         * @description Penyebab sesi berhenti (D2 stop_reason). paused: user, budget, restart; failed: error.
+         * @enum {string}
+         */
+        StopReason: "user" | "budget" | "restart" | "error";
         /** SuiteCreate */
         SuiteCreate: {
             /**
@@ -3212,7 +3240,10 @@ export interface operations {
     auth_done_auth_done_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Exact value `passive` authenticates without updating last_activity_at. Any other value, or omitting the header, refreshes activity. Every route that uses get_current_user or require_role honors this header and, on success, sets X-Veritask-Idle-Timeout, X-Veritask-Idle-Deadline, and X-Veritask-Absolute-Expires-At. */
+                "X-Veritask-Activity"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3221,6 +3252,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Configured idle timeout in seconds (IDLE_TIMEOUT_MINUTES * 60). */
+                    "X-Veritask-Idle-Timeout"?: string;
+                    /** @description When the idle window ends, after this request's activity decision. Not taken from the client. */
+                    "X-Veritask-Idle-Deadline"?: string;
+                    /** @description sessions.expires_at, set at login and not extended by requests. */
+                    "X-Veritask-Absolute-Expires-At"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -3234,6 +3271,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3241,7 +3287,10 @@ export interface operations {
     me_me_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Exact value `passive` authenticates without updating last_activity_at. Any other value, or omitting the header, refreshes activity. Every route that uses get_current_user or require_role honors this header and, on success, sets X-Veritask-Idle-Timeout, X-Veritask-Idle-Deadline, and X-Veritask-Absolute-Expires-At. */
+                "X-Veritask-Activity"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3250,6 +3299,12 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description Configured idle timeout in seconds (IDLE_TIMEOUT_MINUTES * 60). */
+                    "X-Veritask-Idle-Timeout"?: string;
+                    /** @description When the idle window ends, after this request's activity decision. Not taken from the client. */
+                    "X-Veritask-Idle-Deadline"?: string;
+                    /** @description sessions.expires_at, set at login and not extended by requests. */
+                    "X-Veritask-Absolute-Expires-At"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -3263,6 +3318,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

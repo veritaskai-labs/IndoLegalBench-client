@@ -77,6 +77,11 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     started_at: "2026-11-03T02:05:00Z",
     finished_at: "2026-11-03T02:30:00Z",
     archived_at: null,
+    stopped_at: null,
+    stop_reason: null,
+    accepted_as_is_at: null,
+    accepted_as_is_by: null,
+    accepted_as_is_reason: null,
     cases: [devCase()],
     ...overrides,
   };
