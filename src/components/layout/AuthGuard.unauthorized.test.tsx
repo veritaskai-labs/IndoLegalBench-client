@@ -77,7 +77,8 @@ describe("AuthGuard 401 handling", () => {
     expect(screen.queryByText("protected content")).not.toBeInTheDocument();
   });
 
-  // Edge: the unread-count poll and the dashboard poll can fail in the same tick.
+  // Edge: the unread-count poll (every 30 s) and the dashboard poll (every 60 s) can fail in the
+  // same moment, so two 401s arrive together. If missed, the user would be redirected twice.
   it("redirects once when several calls fail with 401 together", async () => {
     renderGuard();
     fetchMock.mockResolvedValue(response(401, "SESSION_EXPIRED"));
@@ -90,7 +91,9 @@ describe("AuthGuard 401 handling", () => {
     await waitFor(() => expect(replaceMock).toHaveBeenCalledTimes(1));
   });
 
-  // Edge: the first reason wins, so a later UNAUTHENTICATED does not drop the "expired" message.
+  // Edge: two 401s can disagree. The first says SESSION_EXPIRED; the server then deletes the row,
+  // so the next call gets UNAUTHENTICATED. If the second overwrote the first, the login page would
+  // lose the "your session expired" message.
   it("keeps the first reason when a different 401 follows", async () => {
     renderGuard();
     fetchMock.mockResolvedValueOnce(response(401, "SESSION_EXPIRED"));

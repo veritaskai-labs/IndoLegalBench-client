@@ -59,7 +59,9 @@ describe("onUnauthorized", () => {
     expect(listener).toHaveBeenCalledWith("no_session");
   });
 
-  // Edge: a proxy answering 401 with an HTML page still means the session is not usable.
+  // Edge: our server always sends {code}, but a proxy or gateway in front of it can answer 401
+  // with an HTML page, so there is no code to read. If missed, that 401 would be ignored and the
+  // old data would stay on screen although the session is unusable.
   it("reports no session when the 401 body is not JSON", async () => {
     const listener = vi.fn();
     listen(listener);
