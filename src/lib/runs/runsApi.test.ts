@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
-import { archiveSession, getProgress, getSession, listSessions } from "./runsApi";
+import { archiveSession, getProgress, getSession, listSessions, getAttemptCalls } from "./runsApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
 // and whether a 403 fires the /forbidden redirect listener, not just which helper was called.
@@ -153,5 +153,48 @@ describe("getProgress (GET /measurements/{id}/progress, PBI-12 AC5, AC6)", () =>
 
     await expect(getProgress("s-1")).rejects.toBeInstanceOf(ApiError);
     expect(forbidden).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getAttemptCalls (PBI-12 AC4)", () => {
+  it("requests the calls of the correct attempt", async () => {
+    const detail = {
+      attempt_id: "a/1",
+      repetition_no: 2,
+      status: "technical_failure",
+      masked: false,
+      calls: [],
+    };
+
+    fetchMock.mockResolvedValue(fakeResponse(200, detail));
+
+    await expect(
+      getAttemptCalls("s/1", "a/1")
+    ).resolves.toEqual(detail);
+
+    const [url, init] = fetchMock.mock.calls[0];
+
+    expect(url).toMatch(
+      /\/measurements\/s%2F1\/attempts\/a%2F1\/calls$/
+    );
+
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  it("returns a 404 without redirecting to forbidden", async () => {
+    const forbidden = listenForbidden();
+
+    fetchMock.mockResolvedValue(
+      fakeResponse(404, { code: "ATTEMPT_NOT_FOUND" })
+    );
+
+    await expect(
+      getAttemptCalls("s-1", "a-404")
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "ATTEMPT_NOT_FOUND",
+    });
+
+    expect(forbidden).not.toHaveBeenCalled();
   });
 });
