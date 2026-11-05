@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getSession } from "@/lib/runs/runsApi";
-import { acceptAsIs } from "@/lib/runs/sessionControlApi";
+import { acceptAsIs, pauseSession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
@@ -15,7 +15,13 @@ vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // runsApi has its own request tests (stubbed fetch); here only the page's reaction matters.
 vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn() }));
-vi.mock("@/lib/runs/sessionControlApi", () => ({ acceptAsIs: vi.fn(), clearAcceptAsIs: vi.fn() }));
+vi.mock("@/lib/runs/sessionControlApi", () => ({
+  acceptAsIs: vi.fn(),
+  clearAcceptAsIs: vi.fn(),
+  pauseSession: vi.fn(),
+  cancelSession: vi.fn(),
+  resumeSession: vi.fn(),
+}));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
@@ -394,5 +400,22 @@ describe("SessionDetailPage controls (PBI-12 AC9)", () => {
     render(<SessionDetailPage />);
 
     expect(await screen.findByRole("region", { name: "Diterima apa adanya" })).toBeInTheDocument();
+  });
+
+  // PBI-12 AC7: Jeda sits on the detail page too, and the page loads the session again after it.
+  it("lets Admin pause a running session and loads it again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "running", finished_at: null }));
+    vi.mocked(pauseSession).mockResolvedValue({
+      id: "s-1",
+      status: "paused",
+      stopped_at: "2026-11-05T03:00:00Z",
+      stop_reason: "user",
+    });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Jeda" }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
   });
 });

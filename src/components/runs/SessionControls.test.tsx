@@ -4,16 +4,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
-import { acceptAsIs, clearAcceptAsIs } from "@/lib/runs/sessionControlApi";
+import { acceptAsIs, cancelSession, clearAcceptAsIs, pauseSession, resumeSession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { SessionControls } from "./SessionControls";
 
 // sessionControlApi has its own request tests (stubbed fetch); here only the controls' reaction matters.
-vi.mock("@/lib/runs/sessionControlApi", () => ({ acceptAsIs: vi.fn(), clearAcceptAsIs: vi.fn() }));
+vi.mock("@/lib/runs/sessionControlApi", () => ({
+  acceptAsIs: vi.fn(),
+  clearAcceptAsIs: vi.fn(),
+  pauseSession: vi.fn(),
+  cancelSession: vi.fn(),
+  resumeSession: vi.fn(),
+}));
 
 const accept = vi.mocked(acceptAsIs);
 const clear = vi.mocked(clearAcceptAsIs);
+const pause = vi.mocked(pauseSession);
+const cancel = vi.mocked(cancelSession);
+const resume = vi.mocked(resumeSession);
 
 const ACCEPTED = {
   accepted_as_is_at: "2026-11-05T03:00:00Z",
@@ -23,7 +32,17 @@ const ACCEPTED = {
 
 type ControlState = Pick<
   SessionDetail,
-  "id" | "label" | "status" | "accepted_as_is_at" | "accepted_as_is_by" | "accepted_as_is_reason"
+  | "id"
+  | "label"
+  | "status"
+  | "progress"
+  | "archived_at"
+  | "accepted_as_is_at"
+  | "accepted_as_is_by"
+  | "accepted_as_is_reason"
+  | "resumed_after_long_pause"
+  | "model_version_unverified"
+  | "resume_error_code"
 >;
 
 function session(overrides: Partial<ControlState> = {}): ControlState {
@@ -31,9 +50,14 @@ function session(overrides: Partial<ControlState> = {}): ControlState {
     id: "s-1",
     label: "Run November",
     status: "finished_with_failures",
+    progress: { completed: 240, total: 300 },
+    archived_at: null,
     accepted_as_is_at: null,
     accepted_as_is_by: null,
     accepted_as_is_reason: null,
+    resumed_after_long_pause: false,
+    model_version_unverified: false,
+    resume_error_code: null,
     ...overrides,
   };
 }
@@ -55,8 +79,7 @@ function expectNothingShown() {
 }
 
 beforeEach(() => {
-  accept.mockReset();
-  clear.mockReset();
+  for (const mock of [accept, clear, pause, cancel, resume]) mock.mockReset();
 });
 
 describe("SessionControls: Terima apa adanya (PBI-12 AC9)", () => {
@@ -136,5 +159,144 @@ describe("SessionControls: accepted mark (PBI-12 AC9)", () => {
 
     expect(screen.getByRole("region", { name: "Diterima apa adanya" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Hapus tanda" })).not.toBeInTheDocument();
+  });
+});
+
+const stopped = { id: "s-1", stopped_at: "2026-11-05T03:00:00Z", stop_reason: "user" as const };
+const resumed = { id: "s-1", status: "running" as const, resumed_after_long_pause: false, model_version_unverified: false };
+
+describe("SessionControls: Jeda, Batalkan, Lanjutkan (PBI-12 AC7, AC8)", () => {
+  it("offers Jeda and Batalkan to Admin on a running session, not Lanjutkan", () => {
+    renderControls(session({ status: "running" }));
+
+    expect(screen.getByRole("button", { name: "Jeda" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Batalkan" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lanjutkan" })).not.toBeInTheDocument();
+  });
+
+  it("pauses at once, says so and reloads", async () => {
+    const user = userEvent.setup();
+    pause.mockResolvedValue({ ...stopped, status: "paused" });
+    const { onChanged } = renderControls(session({ status: "running" }));
+
+    await user.click(screen.getByRole("button", { name: "Jeda" }));
+
+    expect(pause).toHaveBeenCalledWith("s-1");
+    expect(await screen.findByText("Sesi “Run November” dijeda")).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  // Corner: a double click must not send two requests.
+  it("sends one pause when Jeda is clicked twice", async () => {
+    const user = userEvent.setup();
+    pause.mockReturnValue(new Promise(() => undefined));
+    renderControls(session({ status: "running" }));
+
+    await user.click(screen.getByRole("button", { name: "Jeda" }));
+    await user.click(screen.getByRole("button", { name: "Jeda" }));
+
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Batalkan" })).toBeDisabled();
+  });
+
+  // Negative: the reason stays on screen; a reload would wipe it, so the page is not reloaded.
+  it("shows why a pause was refused without reloading", async () => {
+    const user = userEvent.setup();
+    pause.mockRejectedValue(new ApiError(409, "INVALID_TRANSITION"));
+    const { onChanged } = renderControls(session({ status: "running" }));
+
+    await user.click(screen.getByRole("button", { name: "Jeda" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Status sesi sudah berubah. Muat ulang halaman.");
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("cancels after the AC7 confirmation and reloads", async () => {
+    const user = userEvent.setup();
+    cancel.mockResolvedValue({ ...stopped, status: "cancelled" });
+    const { onChanged } = renderControls(session({ status: "paused" }));
+
+    await user.click(screen.getByRole("button", { name: "Batalkan" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Batalkan sesi?" }));
+    expect(dialog.getByText(/240 dari 300/)).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Batalkan sesi" }));
+
+    expect(await screen.findByText("Sesi “Run November” dibatalkan")).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["paused", "cancelled"] as const)("resumes a %s session, says so and reloads", async (status) => {
+    const user = userEvent.setup();
+    resume.mockResolvedValue(resumed);
+    const { onChanged } = renderControls(session({ status }));
+
+    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(resume).toHaveBeenCalledWith("s-1");
+    expect(await screen.findByText("Sesi “Run November” dilanjutkan")).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  // server#102: no version was ever reported, so Admin confirms before the resume goes through.
+  it("asks Admin to confirm an unverified model version, then resumes with that confirmation", async () => {
+    const user = userEvent.setup();
+    resume.mockRejectedValueOnce(new ApiError(409, "MODEL_VERSION_CONFIRMATION_REQUIRED")).mockResolvedValueOnce({
+      ...resumed,
+      model_version_unverified: true,
+    });
+    const { onChanged } = renderControls(session({ status: "paused" }));
+
+    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "Lanjutkan tanpa versi model terverifikasi?" }));
+    await user.click(dialog.getByRole("button", { name: "Tetap lanjutkan" }));
+
+    expect(resume).toHaveBeenLastCalledWith("s-1", { confirmUnverifiedVersion: true });
+    expect(await screen.findByText("Sesi “Run November” dilanjutkan")).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  // Negative (AC8): the version moved on; the session cannot go on.
+  it("explains a changed model version on resume", async () => {
+    const user = userEvent.setup();
+    resume.mockRejectedValue(new ApiError(409, "MODEL_VERSION_CHANGED"));
+    renderControls(session({ status: "paused" }));
+
+    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Versi model produk sudah berbeda dari saat sesi dimulai. Buat sesi baru untuk mengukur lagi.",
+    );
+  });
+
+  // Negative: server#102 default gives the controls to Admin only.
+  it("offers no control to Developer AI", () => {
+    renderControls(session({ status: "running" }), "developer_ai");
+
+    expectNothingShown();
+  });
+});
+
+describe("SessionControls: resume markers (PBI-12 AC8)", () => {
+  it("marks a session resumed after a long pause, for every reader", () => {
+    renderControls(session({ status: "running", resumed_after_long_pause: true }), "developer_ai");
+
+    expect(screen.getByText(/Dilanjutkan setelah jeda panjang/)).toBeInTheDocument();
+  });
+
+  it("marks a session resumed without a verified model version", () => {
+    renderControls(session({ status: "finished", model_version_unverified: true }), "developer_ai");
+
+    expect(screen.getByText(/Versi model belum terverifikasi/)).toBeInTheDocument();
+  });
+
+  // AC8: once the version changed, the only way forward is a new session.
+  it("says the version changed and points to a new session instead of Lanjutkan", () => {
+    renderControls(session({ status: "paused", resume_error_code: "MODEL_VERSION_CHANGED" }));
+
+    expect(screen.getByText(/Versi model produk berubah setelah sesi dilanjutkan/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Buat sesi baru" })).toHaveAttribute("href", "/runs/new");
+    expect(screen.queryByRole("button", { name: "Lanjutkan" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Batalkan" })).toBeInTheDocument();
   });
 });
