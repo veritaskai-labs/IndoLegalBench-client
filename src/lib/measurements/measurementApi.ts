@@ -34,6 +34,17 @@ export async function startMeasurement(
   });
 }
 
+/**
+ * Pesan untuk pengguna dari galat panggilan pengukuran. ApiError membawa kode galat sebagai
+ * message, jadi yang ditampilkan adalah pesan dari server; fallback bila server tidak
+ * mengirimnya (misalnya balasan 502 bukan JSON).
+ */
+export function measurementErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) return error.serverMessage ?? fallback;
+  if (error instanceof Error) return error.message || fallback;
+  return fallback;
+}
+
 export interface BudgetExceededInfo {
   productName: string | null;
   remainingBudgetIdr: string | null;

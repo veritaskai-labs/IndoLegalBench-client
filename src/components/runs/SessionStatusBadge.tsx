@@ -7,6 +7,7 @@ const STATUS_BADGE: Record<SessionStatus, string> = {
   finished: "bg-emerald-50 text-emerald-800",
   finished_with_failures: "bg-amber-50 text-amber-800",
   failed: "bg-red-50 text-red-800",
+  // Warna sendiri: amber sudah dipakai Selesai dengan kegagalan, slate-100 sudah dipakai Menunggu.
   paused: "bg-sky-50 text-sky-800",
   cancelled: "bg-slate-200 text-slate-800",
 };
