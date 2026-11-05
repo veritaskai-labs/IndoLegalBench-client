@@ -3,7 +3,16 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { AttemptStatus, SessionStatus } from "@/types/measurement";
-import { canCancel, canPause, canResume, canRetry, controlErrorMessage, failedAttemptCount } from "./sessionControl";
+import {
+  canCancel,
+  canPause,
+  canResume,
+  canRetry,
+  controlErrorMessage,
+  failedAttemptCount,
+  failedCases,
+  retrySelection,
+} from "./sessionControl";
 
 const ARCHIVED_AT = "2026-11-05T04:00:00Z";
 
@@ -150,5 +159,67 @@ describe("canRetry (PBI-12 AC3, server#99)", () => {
   // Edge: a session can finish with failures in the list yet have nothing left to retry here.
   it("does not offer it when no attempt failed", () => {
     expect(canRetry(retryable({ cases: [{ attempts: [{ status: "succeeded" }] }] }), ADMIN)).toBe(false);
+  });
+});
+
+type CaseRow = {
+  snapshot_item_id: string;
+  case_code: string;
+  title: string;
+  masked: boolean;
+  attempts: { id: string; status: AttemptStatus }[];
+};
+
+function caseRow(key: string, statuses: AttemptStatus[], overrides: Partial<CaseRow> = {}): CaseRow {
+  return {
+    snapshot_item_id: key,
+    case_code: `QA-${key}`,
+    title: `Kasus sintetis ${key}`,
+    masked: false,
+    attempts: statuses.map((status, index) => ({ id: `${key}-a${index + 1}`, status })),
+    ...overrides,
+  };
+}
+
+describe("failedCases (PBI-12 AC3: one checkbox per case)", () => {
+  it("lists only cases with a failed attempt, with the ids of their failed attempts", () => {
+    const rows = [
+      caseRow("1", ["succeeded", "technical_failure"]),
+      caseRow("2", ["succeeded", "succeeded"]),
+      caseRow("3", ["technical_failure", "technical_failure"]),
+    ];
+
+    expect(failedCases(rows)).toEqual([
+      { key: "1", label: "QA-1 · Kasus sintetis 1", attemptIds: ["1-a2"] },
+      { key: "3", label: "QA-3 · Kasus sintetis 3", attemptIds: ["3-a1", "3-a2"] },
+    ]);
+  });
+
+  // Developer AI sees a test case masked (server#91); the label keeps the masked title only.
+  it("labels a masked case by its masked title", () => {
+    const rows = [caseRow("9", ["technical_failure"], { masked: true, case_code: "TERSEMBUNYI", title: "Kasus test disembunyikan" })];
+
+    expect(failedCases(rows)[0].label).toBe("Kasus test disembunyikan");
+  });
+});
+
+describe("retrySelection (PBI-12 AC3: per case or all)", () => {
+  const failed = [
+    { key: "1", label: "QA-1", attemptIds: ["1-a2"] },
+    { key: "3", label: "QA-3", attemptIds: ["3-a1", "3-a2"] },
+  ];
+
+  it("sends the failed attempts of the ticked cases", () => {
+    expect(retrySelection(new Set(["3"]), failed)).toEqual({ attemptIds: ["3-a1", "3-a2"] });
+  });
+
+  // Every failed case ticked means "semua yang gagal", which the server handles as all_failed.
+  it("asks for all failed attempts when every failed case is ticked", () => {
+    expect(retrySelection(new Set(["1", "3"]), failed)).toEqual({ allFailed: true });
+  });
+
+  // Edge: nothing ticked, nothing to send; the button stays off.
+  it("returns nothing when no case is ticked", () => {
+    expect(retrySelection(new Set(), failed)).toBeNull();
   });
 });
