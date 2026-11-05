@@ -1,7 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
@@ -12,10 +14,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSessionDetail } from "@/hooks/useSessionDetail";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { decodeRouteParam } from "@/lib/routeParams";
+import { getSession } from "@/lib/runs/runsApi";
 import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
 import { formatProgress, hasEnded, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
+import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
+import { SessionErrorSummary } from "@/components/runs/SessionErrorSummary";
+import { useMeasurementProgress } from "@/hooks/useMeasurementProgress";
+import { failedAttempts } from "@/lib/runs/sessionErrors";
 
 /** Detail satu sesi pengukuran: snapshot kasus dan jawaban mentah (PBI-11 AC6–AC8, SCRUM-212). */
 export default function SessionDetailPage() {
@@ -37,10 +44,43 @@ export default function SessionDetailPage() {
     );
   }
 
-  return <SessionDetailView session={detail.data} role={role} />;
+  return <SessionDetailView key={detail.data.id} session={detail.data} role={role} />;
 }
 
-function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
+function SessionDetailView({ session: initialSession, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
+  const [session, setSession] = useState(initialSession);
+  const ended = hasEnded(session.status);
+  const progress = useMeasurementProgress(session.id, { poll: !ended });
+
+  useEffect(() => {
+    if (ended) return;
+
+    let active = true;
+    let fetching = false;
+
+    const refresh = () => {
+      if (fetching) return;
+      fetching = true;
+
+      getSession(session.id)
+        .then((updated) => {
+          if (active) setSession(updated);
+        })
+        .catch(() => {
+          // Pertahankan detail terakhir jika refresh gagal.
+        })
+        .finally(() => {
+          fetching = false;
+        });
+    };
+
+    const timer = setInterval(refresh, 5000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [ended, session.id]);
+
   const facts: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SessionStatusBadge status={session.status} /> },
     { label: "Produk", value: unknownName(session.product_name) },
@@ -80,6 +120,19 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
           ))}
         </dl>
       </section>
+
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold text-slate-900">Progres</h2>
+        {progress.status === "loading" && <LoadingState />}
+        {progress.status === "error" && (
+          <ErrorState variant="card" message={progress.message} onRetry={progress.reload} />
+        )}
+        {progress.status === "ready" && <MeasurementProgressPanel progress={progress.data} />}
+      </section>
+
+      {/* Komponen ini menghilang sendiri kalau tidak ada panggilan yang gagal (AC4). */}
+      <SessionErrorSummary sessionId={session.id} failures={failedAttempts(session.cases)}
+      />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>

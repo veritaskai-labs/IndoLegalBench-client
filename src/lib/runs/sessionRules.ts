@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me } from "@/types";
 import type { SessionListItem, SessionStatus } from "@/types/measurement";
+import { countOfTotal } from "@/lib/runs/sessionProgress";
 
 /**
  * Label status sesi (PBI-11 AC10). Record atas enum kontrak, bukan switch dengan default:
@@ -10,13 +11,16 @@ import type { SessionListItem, SessionStatus } from "@/types/measurement";
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   queued: "Menunggu",
   running: "Berjalan",
+  paused: "Dijeda",
+  cancelled: "Dibatalkan",
   finished: "Selesai",
   finished_with_failures: "Selesai dengan kegagalan",
   failed: "Gagal",
+  
 };
 
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
-const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
+const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed", "cancelled"]);
 
 /** Sesi sudah berakhir: boleh diarsipkan, dan Developer AI boleh membaca jawabannya (server#91 has_ended). */
 export function hasEnded(status: SessionStatus): boolean {
@@ -27,7 +31,7 @@ export function hasEnded(status: SessionStatus): boolean {
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
   const { completed, total } = session.progress;
   if (session.status === "queued" && total === 0) return "Menunggu antrean";
-  return `${completed} dari ${total}`;
+  return countOfTotal(completed, total);
 }
 
 /**

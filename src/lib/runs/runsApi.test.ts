@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
-import { archiveSession, getSession, listSessions } from "./runsApi";
+import { archiveSession, getProgress, getSession, listSessions, getAttemptCalls } from "./runsApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
 // and whether a 403 fires the /forbidden redirect listener, not just which helper was called.
@@ -123,5 +123,78 @@ describe("archiveSession (PATCH /measurements/{id}/archive)", () => {
     fetchMock.mockRejectedValue(offline);
 
     await expect(archiveSession("s-1")).rejects.toBe(offline);
+  });
+});
+
+describe("getProgress (GET /measurements/{id}/progress, PBI-12 AC5, AC6)", () => {
+  it("asks for the progress of one session with its id encoded", async () => {
+    const progress = { completed_calls: 240, total_calls: 300 };
+    fetchMock.mockResolvedValue(fakeResponse(200, progress));
+
+    await expect(getProgress("a/b")).resolves.toEqual(progress);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/a%2Fb\/progress$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  // Polling an id that no longer exists: the panel says so in place, it does not redirect.
+  it("hands a 404 MEASUREMENT_NOT_FOUND to the caller without a redirect", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(404, { code: "MEASUREMENT_NOT_FOUND" }));
+
+    await expect(getProgress("s-404")).rejects.toMatchObject({ status: 404, code: "MEASUREMENT_NOT_FOUND" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  // A role changed while the page stayed open: AC6 lets only Admin and Developer AI watch.
+  it("lets a 403 send the user to /forbidden", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(getProgress("s-1")).rejects.toBeInstanceOf(ApiError);
+    expect(forbidden).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getAttemptCalls (PBI-12 AC4)", () => {
+  it("requests the calls of the correct attempt", async () => {
+    const detail = {
+      attempt_id: "a/1",
+      repetition_no: 2,
+      status: "technical_failure",
+      masked: false,
+      calls: [],
+    };
+
+    fetchMock.mockResolvedValue(fakeResponse(200, detail));
+
+    await expect(
+      getAttemptCalls("s/1", "a/1")
+    ).resolves.toEqual(detail);
+
+    const [url, init] = fetchMock.mock.calls[0];
+
+    expect(url).toMatch(
+      /\/measurements\/s%2F1\/attempts\/a%2F1\/calls$/
+    );
+
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  it("returns a 404 without redirecting to forbidden", async () => {
+    const forbidden = listenForbidden();
+
+    fetchMock.mockResolvedValue(
+      fakeResponse(404, { code: "ATTEMPT_NOT_FOUND" })
+    );
+
+    await expect(
+      getAttemptCalls("s-1", "a-404")
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "ATTEMPT_NOT_FOUND",
+    });
+
+    expect(forbidden).not.toHaveBeenCalled();
   });
 });

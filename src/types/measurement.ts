@@ -19,3 +19,11 @@ export type SessionDetail = components["schemas"]["SessionDetail"];
 export type SessionCaseResult = components["schemas"]["SessionCaseResult"];
 export type AttemptResult = components["schemas"]["AttemptResult"];
 export type AttemptStatus = components["schemas"]["AttemptStatus"];
+
+export type MeasurementProgress = components["schemas"]["ProgressResponse"];
+
+
+
+export type CallAttemptLog = components["schemas"]["CallAttemptLog"];
+export type AttemptCalls = components["schemas"]["AttemptCalls"];
+
