@@ -17,6 +17,10 @@ export type StopReason = components["schemas"]["StopReason"];
 export type SessionArchiveResponse = components["schemas"]["SessionArchiveResponse"];
 /** PATCH dan DELETE /measurements/{id}/accept: tanda terima apa adanya (PBI-12 AC9, server SCRUM-214). */
 export type SessionAcceptResponse = components["schemas"]["SessionAcceptResponse"];
+/** 202 dari Jeda dan Batalkan (PBI-12 AC7, server SCRUM-216). */
+export type SessionControlResponse = components["schemas"]["SessionControlResponse"];
+/** 202 dari Lanjutkan, dengan penanda jeda panjang dan versi model belum terverifikasi (AC8). */
+export type SessionResumeResponse = components["schemas"]["SessionResumeResponse"];
 
 /** GET /measurements/{id}: daftar kolom ditambah snapshot dan jawaban mentah (PBI-11 AC7, AC8). */
 export type SessionDetail = components["schemas"]["SessionDetail"];
