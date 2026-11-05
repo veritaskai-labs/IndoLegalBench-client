@@ -147,6 +147,18 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     expect(get).toHaveBeenCalledWith("a/b");
   });
 
+  // PBI-12 AC9: a budget or restart stop reads Dihentikan, a user pause Dijeda.
+  it.each([
+    ["budget", "Dihentikan"],
+    ["user", "Dijeda"],
+  ] as const)("names a paused session by why it stopped (%s)", async (reason, label) => {
+    get.mockResolvedValue(session({ status: "paused", stop_reason: reason, stopped_at: "2026-11-03T02:20:00Z" }));
+    render(<SessionDetailPage />);
+
+    const facts = within(await screen.findByRole("region", { name: "Ringkasan sesi" }));
+    expect(facts.getByText("Status").nextElementSibling).toHaveTextContent(label);
+  });
+
   it("says when a session has been archived", async () => {
     get.mockResolvedValue(session({ archived_at: "2026-11-03T03:00:00Z" }));
     render(<SessionDetailPage />);

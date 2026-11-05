@@ -8,6 +8,7 @@ import {
   caseCountText,
   formatProgress,
   SESSION_STATUS_LABEL,
+  sessionStatusLabel,
   unknownName,
 } from "./sessionRules";
 
@@ -43,6 +44,28 @@ describe("SESSION_STATUS_LABEL (PBI-11 AC10, PBI-12 AC9, D4 status enum)", () =>
     ["cancelled", "Dibatalkan"],
   ])("names %s as %s", (status, label) => {
     expect(SESSION_STATUS_LABEL[status]).toBe(label);
+  });
+});
+
+// server#97: paused covers Jeda and a system stop; stop_reason tells them apart (Rafa, group chat).
+describe("sessionStatusLabel (PBI-12 AC9: Dijeda vs Dihentikan)", () => {
+  it("names a session the user paused Dijeda", () => {
+    expect(sessionStatusLabel("paused", "user")).toBe("Dijeda");
+  });
+
+  it.each(["budget", "restart"] as const)("names a session the system stopped (%s) Dihentikan", (reason) => {
+    expect(sessionStatusLabel("paused", reason)).toBe("Dihentikan");
+  });
+
+  // Edge: a session paused before stop_reason existed, or a list row that does not carry it.
+  it.each([null, undefined])("falls back to Dijeda when the reason is %s", (reason) => {
+    expect(sessionStatusLabel("paused", reason)).toBe("Dijeda");
+  });
+
+  // Negative: the reason only refines paused; a failed session with reason error stays Gagal.
+  it("keeps every other status on its own label", () => {
+    expect(sessionStatusLabel("failed", "error")).toBe("Gagal");
+    expect(sessionStatusLabel("running", null)).toBe("Berjalan");
   });
 });
 
