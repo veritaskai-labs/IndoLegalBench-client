@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { acceptAsIs, cancelSession, clearAcceptAsIs, pauseSession, resumeSession } from "./sessionControlApi";
+import { acceptAsIs, cancelSession, clearAcceptAsIs, pauseSession, resumeSession, retrySession } from "./sessionControlApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
 // and whether a 403 fires the /forbidden redirect listener.
@@ -176,4 +176,49 @@ describe("resumeSession (POST .../resume, PBI-12 AC8)", () => {
       expect(forbidden).not.toHaveBeenCalled();
     },
   );
+});
+
+describe("retrySession (POST .../retry, PBI-12 AC3)", () => {
+  const retried = { id: "s-1", status: "running", retried_attempt_ids: ["a-1", "a-2"] };
+
+  it("asks to retry every failed attempt", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, retried));
+
+    await expect(retrySession("s-1", { allFailed: true })).resolves.toEqual(retried);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/retry$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ all_failed: true });
+  });
+
+  // The per-case checkboxes send the ticked attempts; server#99 wants exactly one of the two.
+  it("asks to retry only the chosen attempts", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, retried));
+
+    await retrySession("a/b", { attemptIds: ["a-1", "a-2"] });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/a%2Fb\/retry$/);
+    expect(JSON.parse(init.body)).toEqual({ attempt_ids: ["a-1", "a-2"] });
+  });
+
+  // Negative: Developer AI on someone else's session stays on the page.
+  it("keeps the user on the page on 403 NOT_YOUR_SESSION", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "NOT_YOUR_SESSION" }));
+
+    await expect(retrySession("s-1", { allFailed: true })).rejects.toMatchObject({ status: 403, code: "NOT_YOUR_SESSION" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [409, "SESSION_NOT_RETRYABLE"],
+    [409, "ANOTHER_SESSION_RUNNING"],
+    [422, "ATTEMPT_NOT_RETRYABLE"],
+    [422, "NO_FAILED_ATTEMPTS"],
+  ])("hands a %i %s to the caller", async (status, code) => {
+    fetchMock.mockResolvedValue(fakeResponse(status, { code }));
+
+    await expect(retrySession("s-1", { allFailed: true })).rejects.toMatchObject({ status, code });
+  });
 });
