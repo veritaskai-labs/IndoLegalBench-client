@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
-import type { SessionStatus } from "@/types/measurement";
-import { canCancel, canPause, canResume, controlErrorMessage } from "./sessionControl";
+import type { AttemptStatus, SessionStatus } from "@/types/measurement";
+import { canCancel, canPause, canResume, canRetry, controlErrorMessage, failedAttemptCount } from "./sessionControl";
 
 const ARCHIVED_AT = "2026-11-05T04:00:00Z";
 
@@ -69,11 +69,86 @@ describe("controlErrorMessage", () => {
     ["NOT_YOUR_SESSION", "Anda hanya bisa mengontrol sesi yang Anda buat."],
     ["FORBIDDEN", "Peran Anda tidak bisa mengontrol sesi ini. Muat ulang halaman."],
     ["ADMIN_CONFIRMATION_REQUIRED", "Melanjutkan tanpa versi model terverifikasi perlu konfirmasi Admin."],
+    ["SESSION_NOT_RETRYABLE", "Hanya sesi yang selesai dengan kegagalan yang bisa dicoba ulang."],
+    ["ATTEMPT_NOT_RETRYABLE", "Sebagian percobaan yang dipilih sudah tidak gagal. Muat ulang halaman."],
+    ["NO_FAILED_ATTEMPTS", "Tidak ada percobaan yang gagal untuk dicoba ulang. Muat ulang halaman."],
   ])("explains %s", (code, message) => {
     expect(controlErrorMessage(new ApiError(409, code))).toBe(message);
   });
 
   it.each([new TypeError("Failed to fetch"), new ApiError(500, "INTERNAL_ERROR")])("asks to try again after %s", (error) => {
     expect(controlErrorMessage(error)).toBe("Permintaan gagal. Coba lagi.");
+  });
+});
+
+type RetryCase = { attempts: { status: AttemptStatus }[] };
+
+function retryable(overrides: { status?: SessionStatus; archived_at?: string | null; accepted_as_is_at?: string | null; created_by?: string; cases?: RetryCase[] } = {}) {
+  return {
+    status: "finished_with_failures" as SessionStatus,
+    archived_at: null,
+    accepted_as_is_at: null,
+    created_by: "dev-1",
+    cases: [
+      { attempts: [{ status: "succeeded" as AttemptStatus }, { status: "technical_failure" as AttemptStatus }] },
+      { attempts: [{ status: "technical_failure" as AttemptStatus }, { status: "technical_failure" as AttemptStatus }] },
+    ],
+    ...overrides,
+  };
+}
+
+const ADMIN = { id: "admin-1", role: "admin" as const };
+const OWNER = { id: "dev-1", role: "developer_ai" as const };
+
+describe("failedAttemptCount (PBI-12 AC3)", () => {
+  it("counts every technical failure across cases", () => {
+    expect(failedAttemptCount(retryable().cases)).toBe(3);
+  });
+
+  it("is zero when nothing failed", () => {
+    expect(failedAttemptCount([{ attempts: [{ status: "succeeded" }] }])).toBe(0);
+  });
+});
+
+describe("canRetry (PBI-12 AC3, server#99)", () => {
+  it("offers it to Admin on a session that finished with failures", () => {
+    expect(canRetry(retryable(), ADMIN)).toBe(true);
+  });
+
+  // server#99: Developer AI may retry its own sessions (same rule as archive in #91).
+  it("offers it to Developer AI on its own session", () => {
+    expect(canRetry(retryable(), OWNER)).toBe(true);
+  });
+
+  // Negative: 403 NOT_YOUR_SESSION.
+  it("does not offer it to Developer AI on someone else's session", () => {
+    expect(canRetry(retryable({ created_by: "someone-else" }), OWNER)).toBe(false);
+  });
+
+  it.each<Role | null>(["contributor", "viewer"])("never offers it to %s", (role) => {
+    expect(canRetry(retryable(), role === null ? null : { id: "dev-1", role })).toBe(false);
+  });
+
+  it("offers nothing while the user is unknown", () => {
+    expect(canRetry(retryable(), null)).toBe(false);
+  });
+
+  // Negative: 409 SESSION_NOT_RETRYABLE for every other status.
+  it.each(ALL.filter((status) => status !== "finished_with_failures"))("never offers it on a %s session", (status) => {
+    expect(canRetry(retryable({ status }), ADMIN)).toBe(false);
+  });
+
+  // Negative: 409 SESSION_ACCEPTED, 409 SESSION_ARCHIVED, 422 NO_FAILED_ATTEMPTS.
+  it("does not offer it once the session is accepted as-is", () => {
+    expect(canRetry(retryable({ accepted_as_is_at: ARCHIVED_AT }), ADMIN)).toBe(false);
+  });
+
+  it("does not offer it on an archived session", () => {
+    expect(canRetry(retryable({ archived_at: ARCHIVED_AT }), ADMIN)).toBe(false);
+  });
+
+  // Edge: a session can finish with failures in the list yet have nothing left to retry here.
+  it("does not offer it when no attempt failed", () => {
+    expect(canRetry(retryable({ cases: [{ attempts: [{ status: "succeeded" }] }] }), ADMIN)).toBe(false);
   });
 });
