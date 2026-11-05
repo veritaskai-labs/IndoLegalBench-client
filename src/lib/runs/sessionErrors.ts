@@ -1,4 +1,4 @@
-import type { SessionCaseResult } from "@/types/measurement";
+import type { SessionCaseResult, AttemptResult } from "@/types/measurement";
 
 const COUNT = new Intl.NumberFormat("id-ID");
 
@@ -9,7 +9,22 @@ export type FailedAttempt = {
   title: string;
   repetitionNo: number;
   modelVersion: string | null;
+  attemptId: string | null;
 };
+
+/**
+ * The current SessionDetail contract may not contain attempt_id.
+ * Return null until the backend provides it.
+ */
+export function attemptIdOf(
+  attempt: AttemptResult
+): string | null {
+  const id = (attempt as { attempt_id?: unknown }).attempt_id;
+
+  return typeof id === "string" && id.trim() !== ""
+    ? id
+    : null;
+}
 
 /**
  * Panggilan yang gagal teknis dari seluruh kasus sesi (PBI-12 AC4). Urutan kasus dibiarkan
@@ -27,6 +42,7 @@ export function failedAttempts(cases: readonly SessionCaseResult[]): FailedAttem
         title: kasus.title,
         repetitionNo: attempt.repetition_no,
         modelVersion: attempt.model_version,
+        attemptId: attemptIdOf(attempt),
       })),
   );
 }
