@@ -11,13 +11,16 @@ import { countOfTotal } from "@/lib/runs/sessionProgress";
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   queued: "Menunggu",
   running: "Berjalan",
+  paused: "Dijeda",
+  cancelled: "Dibatalkan",
   finished: "Selesai",
   finished_with_failures: "Selesai dengan kegagalan",
   failed: "Gagal",
+  
 };
 
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
-const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
+const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed", "cancelled"]);
 
 /** Sesi sudah berakhir: boleh diarsipkan, dan Developer AI boleh membaca jawabannya (server#91 has_ended). */
 export function hasEnded(status: SessionStatus): boolean {

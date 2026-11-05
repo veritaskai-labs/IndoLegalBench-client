@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -34,7 +35,7 @@ function toMessage(error: unknown): string {
  *
  * poll false untuk sesi yang sudah berakhir: angkanya tidak akan berubah lagi.
  */
-export function useMeasurementProgress(sessionId: string, options: { poll: boolean }): ProgressResource {
+export function useMeasurementProgress(sessionId: string, options: { poll: boolean }): ProgressResource & { reload: () => void } {
   const [settled, setSettled] = useState<{ key: string; state: ProgressResource } | null>(null);
   const alive = useRef(true);
   const withNumbers = useRef<string | null>(null);
@@ -68,5 +69,5 @@ export function useMeasurementProgress(sessionId: string, options: { poll: boole
 
 
 
-  return settled?.key === sessionId ? settled.state : { status: "loading" };
+  return { ...(settled?.key === sessionId ? settled.state : { status: "loading" as const }), reload: read };
 }

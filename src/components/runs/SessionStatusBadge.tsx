@@ -4,6 +4,8 @@ import type { SessionStatus } from "@/types/measurement";
 const STATUS_BADGE: Record<SessionStatus, string> = {
   queued: "bg-slate-100 text-slate-700",
   running: "bg-indigo-50 text-indigo-800",
+  paused: "bg-amber-50 text-amber-800",
+  cancelled: "bg-slate-100 text-slate-700",
   finished: "bg-emerald-50 text-emerald-800",
   finished_with_failures: "bg-amber-50 text-amber-800",
   failed: "bg-red-50 text-red-800",
