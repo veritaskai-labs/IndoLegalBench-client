@@ -13,6 +13,8 @@ export { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/session
 export type SessionListItem = components["schemas"]["SessionListItem"];
 export type SessionStatus = components["schemas"]["SessionStatus"];
 export type SessionArchiveResponse = components["schemas"]["SessionArchiveResponse"];
+/** PATCH dan DELETE /measurements/{id}/accept: tanda terima apa adanya (PBI-12 AC9, server SCRUM-214). */
+export type SessionAcceptResponse = components["schemas"]["SessionAcceptResponse"];
 
 /** GET /measurements/{id}: daftar kolom ditambah snapshot dan jawaban mentah (PBI-11 AC7, AC8). */
 export type SessionDetail = components["schemas"]["SessionDetail"];
