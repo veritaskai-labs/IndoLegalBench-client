@@ -85,10 +85,12 @@ function renderControls(state: ControlState, role: Role | null = "admin", viewer
   return { onChanged };
 }
 
-// The toast provider renders its own region, so check for the controls themselves.
-function expectNothingShown() {
-  expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  expect(screen.queryByRole("region", { name: "Diterima apa adanya" })).not.toBeInTheDocument();
+// The toast provider renders its own region, so collect the controls themselves. The test asserts
+// on the list (Sonar S2699 only counts expect() written in the test), and a failure names what showed up.
+function shownControls(): string[] {
+  const buttons = screen.queryAllByRole("button").map((button) => button.textContent ?? "");
+  const mark = screen.queryByRole("region", { name: "Diterima apa adanya" }) ? ["Diterima apa adanya"] : [];
+  return [...buttons, ...mark];
 }
 
 beforeEach(() => {
@@ -134,13 +136,13 @@ describe("SessionControls: Terima apa adanya (PBI-12 AC9)", () => {
   it.each<Role>(["developer_ai", "contributor", "viewer"])("offers nothing to %s on a session that is not accepted", (role) => {
     renderControls(session(), role);
 
-    expectNothingShown();
+    expect(shownControls()).toEqual([]);
   });
 
   it("offers nothing on a session that finished without failures", () => {
     renderControls(session({ status: "finished" }));
 
-    expectNothingShown();
+    expect(shownControls()).toEqual([]);
   });
 });
 
@@ -286,7 +288,7 @@ describe("SessionControls: Jeda, Batalkan, Lanjutkan (PBI-12 AC7, AC8)", () => {
   it("offers no control to Developer AI", () => {
     renderControls(session({ status: "running" }), "developer_ai");
 
-    expectNothingShown();
+    expect(shownControls()).toEqual([]);
   });
 });
 
@@ -361,7 +363,7 @@ describe("SessionControls: Coba ulang yang gagal (PBI-12 AC3)", () => {
   it("does not offer retry to Developer AI on someone else's session", () => {
     renderControls(session(withFailures), "developer_ai", "dev-1");
 
-    expectNothingShown();
+    expect(shownControls()).toEqual([]);
   });
 
   // Negative: 409 SESSION_ACCEPTED while the mark is on.
