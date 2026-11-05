@@ -12,6 +12,8 @@ export { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/session
 /** Satu baris GET /measurements (PBI-11 AC10, server SCRUM-210). */
 export type SessionListItem = components["schemas"]["SessionListItem"];
 export type SessionStatus = components["schemas"]["SessionStatus"];
+/** Penyebab sesi berhenti (server#97): user, budget, restart untuk paused; error untuk failed. */
+export type StopReason = components["schemas"]["StopReason"];
 export type SessionArchiveResponse = components["schemas"]["SessionArchiveResponse"];
 /** PATCH dan DELETE /measurements/{id}/accept: tanda terima apa adanya (PBI-12 AC9, server SCRUM-214). */
 export type SessionAcceptResponse = components["schemas"]["SessionAcceptResponse"];

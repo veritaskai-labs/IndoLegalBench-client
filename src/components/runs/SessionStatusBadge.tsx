@@ -1,5 +1,5 @@
-import { SESSION_STATUS_LABEL } from "@/lib/runs/sessionRules";
-import type { SessionStatus } from "@/types/measurement";
+import { sessionStatusLabel } from "@/lib/runs/sessionRules";
+import type { SessionStatus, StopReason } from "@/types/measurement";
 
 const STATUS_BADGE: Record<SessionStatus, string> = {
   queued: "bg-slate-100 text-slate-700",
@@ -11,11 +11,17 @@ const STATUS_BADGE: Record<SessionStatus, string> = {
   cancelled: "bg-slate-200 text-slate-800",
 };
 
-/** Status sesi dengan warnanya, sama di daftar dan detail sesi. */
-export function SessionStatusBadge({ status }: Readonly<{ status: SessionStatus }>) {
+/**
+ * Status sesi dengan warnanya, sama di daftar dan detail sesi. stopReason hanya dikirim detail
+ * sesi; tanpanya sesi paused tetap terbaca "Dijeda".
+ */
+export function SessionStatusBadge({
+  status,
+  stopReason,
+}: Readonly<{ status: SessionStatus; stopReason?: StopReason | null }>) {
   return (
     <span className={`rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap ${STATUS_BADGE[status]}`}>
-      {SESSION_STATUS_LABEL[status]}
+      {sessionStatusLabel(status, stopReason)}
     </span>
   );
 }

@@ -42,7 +42,7 @@ export default function SessionDetailPage() {
 
 function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
   const facts: { label: string; value: React.ReactNode }[] = [
-    { label: "Status", value: <SessionStatusBadge status={session.status} /> },
+    { label: "Status", value: <SessionStatusBadge status={session.status} stopReason={session.stop_reason} /> },
     { label: "Produk", value: unknownName(session.product_name) },
     { label: "Tujuan", value: MEASUREMENT_PURPOSE_LABEL[session.purpose] },
     { label: "Filter kasus", value: CASE_FILTER_LABEL[session.split_filter] },

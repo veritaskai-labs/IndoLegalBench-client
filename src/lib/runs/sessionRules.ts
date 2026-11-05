@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me } from "@/types";
-import type { SessionListItem, SessionStatus } from "@/types/measurement";
+import type { SessionListItem, SessionStatus, StopReason } from "@/types/measurement";
 
 /**
  * Label status sesi (PBI-11 AC10). Record atas enum kontrak, bukan switch dengan default:
@@ -13,11 +13,20 @@ export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   finished: "Selesai",
   finished_with_failures: "Selesai dengan kegagalan",
   failed: "Gagal",
-  // server#97: paused covers Jeda and a system stop. Telling "Dihentikan" apart needs stop_reason,
-  // which the session responses do not carry yet.
+  // server#97: paused mencakup Jeda dan berhenti oleh sistem; sessionStatusLabel membedakannya.
   paused: "Dijeda",
   cancelled: "Dibatalkan",
 };
+
+/**
+ * Label status dengan penyebab berhenti (PBI-12 AC9). paused karena anggaran habis atau server
+ * dimulai ulang dibaca "Dihentikan"; Jeda dari pengguna, atau baris tanpa stop_reason (daftar
+ * sesi, sesi lama), tetap "Dijeda".
+ */
+export function sessionStatusLabel(status: SessionStatus, stopReason?: StopReason | null): string {
+  if (status === "paused" && stopReason != null && stopReason !== "user") return "Dihentikan";
+  return SESSION_STATUS_LABEL[status];
+}
 
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
 const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
