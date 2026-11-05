@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
-import type { Role } from "@/types";
-import type { SessionDetail, SessionStatus } from "@/types/measurement";
+import type { Me, Role } from "@/types";
+import type { AttemptStatus, SessionDetail, SessionStatus } from "@/types/measurement";
 
 type ControlState = Pick<SessionDetail, "status" | "archived_at" | "resume_error_code">;
 
@@ -32,6 +32,33 @@ export function canResume(session: ControlState, role: Role | null): boolean {
   return controllable(session, role, RESUME_FROM) && session.resume_error_code === null;
 }
 
+type RetryCase = { attempts: ReadonlyArray<{ status: AttemptStatus }> };
+type RetryState = Pick<SessionDetail, "status" | "archived_at" | "accepted_as_is_at" | "created_by"> & {
+  cases: ReadonlyArray<RetryCase>;
+};
+
+/** Percobaan yang gagal teknis: hanya itu yang bisa dicoba ulang (AC3, server#99 ATTEMPT_NOT_RETRYABLE). */
+export function failedAttemptCount(cases: ReadonlyArray<RetryCase>): number {
+  return cases.reduce((total, item) => total + item.attempts.filter((attempt) => attempt.status === "technical_failure").length, 0);
+}
+
+/**
+ * Coba ulang yang gagal (AC3): sesi Selesai dengan kegagalan yang belum diterima apa adanya, belum
+ * diarsipkan, dan masih punya percobaan gagal. Berbeda dengan Jeda/Batalkan, server#99 juga
+ * mengizinkan Developer AI pada sesi yang ia buat (403 NOT_YOUR_SESSION untuk sesi orang lain).
+ */
+export function canRetry(session: RetryState, me: Pick<Me, "id" | "role"> | null): boolean {
+  if (me === null) return false;
+  const allowed = me.role === "admin" || (me.role === "developer_ai" && session.created_by === me.id);
+  return (
+    allowed &&
+    session.status === "finished_with_failures" &&
+    session.archived_at === null &&
+    session.accepted_as_is_at === null &&
+    failedAttemptCount(session.cases) > 0
+  );
+}
+
 const CONTROL_ERRORS: Record<string, string> = {
   INVALID_TRANSITION: "Status sesi sudah berubah. Muat ulang halaman.",
   SESSION_NOT_RESUMABLE: "Sesi ini tidak sedang dijeda atau dibatalkan. Muat ulang halaman.",
@@ -46,6 +73,9 @@ const CONTROL_ERRORS: Record<string, string> = {
   // Aksi kontrol memakai silentForbidden, jadi 403 (peran berubah saat halaman terbuka) sampai di sini.
   FORBIDDEN: "Peran Anda tidak bisa mengontrol sesi ini. Muat ulang halaman.",
   ADMIN_CONFIRMATION_REQUIRED: "Melanjutkan tanpa versi model terverifikasi perlu konfirmasi Admin.",
+  SESSION_NOT_RETRYABLE: "Hanya sesi yang selesai dengan kegagalan yang bisa dicoba ulang.",
+  ATTEMPT_NOT_RETRYABLE: "Sebagian percobaan yang dipilih sudah tidak gagal. Muat ulang halaman.",
+  NO_FAILED_ATTEMPTS: "Tidak ada percobaan yang gagal untuk dicoba ulang. Muat ulang halaman.",
 };
 
 export function controlErrorMessage(error: unknown): string {
