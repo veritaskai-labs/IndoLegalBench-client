@@ -38,6 +38,14 @@ export function hasEnded(status: SessionStatus): boolean {
   return ENDED.has(status);
 }
 
+/**
+ * Status yang tidak berubah sendiri: sudah berakhir, atau dibatalkan dan menunggu Lanjutkan.
+ * Halaman detail berhenti polling di sini (SCRUM-219); aturan arsip dan jawaban tetap memakai hasEnded.
+ */
+export function isSettled(status: SessionStatus): boolean {
+  return hasEnded(status) || status === "cancelled";
+}
+
 /** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
   const { completed, total } = session.progress;
