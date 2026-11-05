@@ -1,5 +1,10 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { SessionAcceptResponse, SessionControlResponse, SessionResumeResponse } from "@/types/measurement";
+import type {
+  SessionAcceptResponse,
+  SessionControlResponse,
+  SessionResumeResponse,
+  SessionRetryResponse,
+} from "@/types/measurement";
 
 /**
  * Aksi kontrol sesi di halaman detail (PBI-12, SCRUM-220). Semua memakai silentForbidden:
@@ -52,6 +57,22 @@ export function resumeSession(
   return apiFetch<SessionResumeResponse>(actionPath(sessionId, "resume"), {
     method: "POST",
     body: JSON.stringify({ confirm_unverified_version: confirmUnverifiedVersion }),
+    silentForbidden: true,
+  });
+}
+
+/** Pilihan Coba ulang (AC3): semua percobaan yang gagal, atau yang dicentang per kasus. */
+export type RetrySelection = { allFailed: true } | { attemptIds: string[] };
+
+/**
+ * POST /measurements/{id}/retry (AC3): percobaan gagal yang dipilih kembali pending dan sesi berjalan
+ * lagi. Server#99 menerima tepat satu dari attempt_ids atau all_failed, jadi hanya satu yang dikirim.
+ */
+export function retrySession(sessionId: string, selection: RetrySelection): Promise<SessionRetryResponse> {
+  const body = "allFailed" in selection ? { all_failed: true } : { attempt_ids: selection.attemptIds };
+  return apiFetch<SessionRetryResponse>(actionPath(sessionId, "retry"), {
+    method: "POST",
+    body: JSON.stringify(body),
     silentForbidden: true,
   });
 }

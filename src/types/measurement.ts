@@ -21,6 +21,8 @@ export type SessionAcceptResponse = components["schemas"]["SessionAcceptResponse
 export type SessionControlResponse = components["schemas"]["SessionControlResponse"];
 /** 202 dari Lanjutkan, dengan penanda jeda panjang dan versi model belum terverifikasi (AC8). */
 export type SessionResumeResponse = components["schemas"]["SessionResumeResponse"];
+/** 202 dari Coba ulang yang gagal: percobaan yang kembali pending (PBI-12 AC3, server SCRUM-218). */
+export type SessionRetryResponse = components["schemas"]["SessionRetryResponse"];
 
 /** GET /measurements/{id}: daftar kolom ditambah snapshot dan jawaban mentah (PBI-11 AC7, AC8). */
 export type SessionDetail = components["schemas"]["SessionDetail"];
