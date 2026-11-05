@@ -51,11 +51,21 @@ export type UnauthorizedReason = "expired" | "no_session";
 
 type UnauthorizedListener = (reason: UnauthorizedReason) => void;
 
-/** Subscribe to 401 responses from apiFetch. Returns an unsubscribe function. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+/**
+ * Subscribe to 401 responses from apiFetch. Returns an unsubscribe function.
+ * Like onForbidden, this module only reports; clearing the screen and the redirect live in AuthGuard.
+ */
 export function onUnauthorized(listener: UnauthorizedListener): () => void {
-  // TODO(SCRUM-252): red stub, the tests describe the behaviour.
-  return () => {};
+  unauthorizedListeners.add(listener);
+  return () => {
+    unauthorizedListeners.delete(listener);
+  };
+}
+
+function notifyUnauthorized(reason: UnauthorizedReason): void {
+  for (const listener of unauthorizedListeners) listener(reason);
 }
 
 function stringOrNull(value: unknown): string | null {
@@ -130,6 +140,8 @@ export async function apiFetch<T>(
     // Kasus test yang dibuka Developer AI bukan soal izin halaman: halaman kasus menampilkan
     // pesannya sendiri, jadi tidak dialihkan ke /forbidden (SCRUM-184).
     if (err.status === 403 && err.code !== TEST_CASE_HIDDEN && !silentForbidden) notifyForbidden();
+    // Any 401 means the session is no longer usable, whatever the body says (SCRUM-252).
+    if (err.status === 401) notifyUnauthorized(err.code === "SESSION_EXPIRED" ? "expired" : "no_session");
     throw err;
   }
   if (response.status === 204) return undefined as T;
