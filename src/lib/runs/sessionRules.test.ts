@@ -31,13 +31,16 @@ function session(overrides: Partial<SessionListItem> = {}): SessionListItem {
   };
 }
 
-describe("SESSION_STATUS_LABEL (PBI-11 AC10, D2 status enum)", () => {
+describe("SESSION_STATUS_LABEL (PBI-11 AC10, PBI-12 AC9, D4 status enum)", () => {
   it.each<[SessionStatus, string]>([
     ["queued", "Menunggu"],
     ["running", "Berjalan"],
     ["finished", "Selesai"],
     ["finished_with_failures", "Selesai dengan kegagalan"],
     ["failed", "Gagal"],
+    // server#97 (SCRUM-214): Jeda lands on paused, Batalkan on cancelled.
+    ["paused", "Dijeda"],
+    ["cancelled", "Dibatalkan"],
   ])("names %s as %s", (status, label) => {
     expect(SESSION_STATUS_LABEL[status]).toBe(label);
   });
@@ -71,7 +74,8 @@ describe("canArchive (AC10, D10: Developer AI only own sessions)", () => {
     },
   );
 
-  it.each<SessionStatus>(["queued", "running"])("never offers it for a %s session, even to Admin", (status) => {
+  // paused and cancelled can still be resumed (D4), so they have not ended either.
+  it.each<SessionStatus>(["queued", "running", "paused", "cancelled"])("never offers it for a %s session, even to Admin", (status) => {
     expect(canArchive(session({ status }), ADMIN)).toBe(false);
   });
 
