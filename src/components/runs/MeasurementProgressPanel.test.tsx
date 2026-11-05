@@ -30,7 +30,7 @@ describe("MeasurementProgressPanel (PBI-12 AC5)", () => {
   it("puts the percentage on the bar so a screen reader reads it too", () => {
     render(<MeasurementProgressPanel progress={progress()} />);
 
-    expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("80");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("value", "80");
   });
 
   it("shows the failures as a count and a percentage", () => {

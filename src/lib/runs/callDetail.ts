@@ -54,11 +54,11 @@ export function rawResponseText(
   }
 }
 
-export function maskedNotice(masked: boolean): string | null {
-  return masked
-    ? "Isi mentah disembunyikan. Hanya jenis kegagalan dan waktunya yang bisa ditampilkan."
-    : null;
+
+export function maskedNotice(): string {
+  return "Isi mentah disembunyikan. Hanya jenis kegagalan dan waktunya yang bisa ditampilkan.";
 }
+
 
 export function mapCallDetailError(error: unknown): string {
   if (!(error instanceof ApiError)) {

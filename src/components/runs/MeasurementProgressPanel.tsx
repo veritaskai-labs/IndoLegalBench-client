@@ -35,16 +35,12 @@ export function MeasurementProgressPanel({ progress }: Readonly<{ progress: Meas
         <p className="text-sm text-slate-500">{percentText(progress.percent_complete)}</p>
       </div>
 
-      <div
-        role="progressbar"
-        aria-label="Persen selesai"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="h-2 w-full overflow-hidden rounded-full bg-slate-100"
-      >
-        <div className="h-full rounded-full bg-slate-900" style={{ width: `${percent}%` }} />
-      </div>
+      
+      <progress
+      value={percent} max={100} aria-label="Persen selesai"
+      className="h-2 w-full appearance-none overflow-hidden rounded-full bg-slate-100 [&::-webkit-progress-bar]:bg-slate-100 [&::-webkit-progress-value]:bg-slate-900 [&::-moz-progress-bar]:bg-slate-900"
+/>
+
 
       {budgetExhausted(progress.remaining_budget_idr) && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

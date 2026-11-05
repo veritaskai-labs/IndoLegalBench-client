@@ -110,8 +110,7 @@ describe("rawResponseText", () => {
 
 describe("maskedNotice", () => {
   it("explains masking", () => {
-    expect(maskedNotice(true)).toMatch(/disembunyikan/);
-    expect(maskedNotice(false)).toBeNull();
+    expect(maskedNotice()).toMatch(/disembunyikan/);
   });
 });
 

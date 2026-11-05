@@ -172,7 +172,7 @@ export function SessionErrorSummary({
 function CallList({
   calls,
 }: Readonly<{ calls: AttemptCalls }>) {
-  const notice = maskedNotice(calls.masked);
+  const notice = calls.masked ? maskedNotice() : null;
 
   return (
     <div className="space-y-3">
