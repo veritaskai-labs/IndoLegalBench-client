@@ -3,28 +3,54 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
-import { acceptErrorMessage, canAcceptAsIs, isReasonWritten } from "./sessionAccept";
+import { acceptErrorMessage, canAcceptAsIs, canClearAcceptAsIs, isReasonWritten } from "./sessionAccept";
+
+const ACCEPTED_AT = "2026-11-05T03:00:00Z";
+
+function session(status: SessionStatus = "finished_with_failures", accepted_as_is_at: string | null = null) {
+  return { status, accepted_as_is_at };
+}
 
 describe("canAcceptAsIs (PBI-12 AC9, server#97: Admin only, finished_with_failures only)", () => {
   it("offers it to Admin on a session that finished with failures", () => {
-    expect(canAcceptAsIs("finished_with_failures", "admin")).toBe(true);
+    expect(canAcceptAsIs(session(), "admin")).toBe(true);
   });
 
   // Negative: every other status gets 409 SESSION_NOT_ACCEPTABLE on the server.
   it.each<SessionStatus>(["queued", "running", "paused", "cancelled", "finished", "failed"])(
     "never offers it on a %s session, even to Admin",
     (status) => {
-      expect(canAcceptAsIs(status, "admin")).toBe(false);
+      expect(canAcceptAsIs(session(status), "admin")).toBe(false);
     },
   );
 
+  // Negative: the server answers 409 ALREADY_ACCEPTED; the page shows the mark instead.
+  it("does not offer it again once the session is accepted", () => {
+    expect(canAcceptAsIs(session("finished_with_failures", ACCEPTED_AT), "admin")).toBe(false);
+  });
+
   // Negative: the server answers 403 to every other role.
   it.each<Role>(["developer_ai", "contributor", "viewer"])("never offers it to %s", (role) => {
-    expect(canAcceptAsIs("finished_with_failures", role)).toBe(false);
+    expect(canAcceptAsIs(session(), role)).toBe(false);
   });
 
   it("offers nothing while the role is unknown", () => {
-    expect(canAcceptAsIs("finished_with_failures", null)).toBe(false);
+    expect(canAcceptAsIs(session(), null)).toBe(false);
+  });
+});
+
+describe("canClearAcceptAsIs (AC9: Admin removes the mark so the session can be retried)", () => {
+  it("offers it to Admin on an accepted session", () => {
+    expect(canClearAcceptAsIs(session("finished_with_failures", ACCEPTED_AT), "admin")).toBe(true);
+  });
+
+  // Negative: nothing to clear; the server answers 409 NOT_ACCEPTED.
+  it("offers nothing while the session is not accepted", () => {
+    expect(canClearAcceptAsIs(session(), "admin")).toBe(false);
+  });
+
+  it.each<Role | null>(["developer_ai", "contributor", "viewer", null])("never offers it to %s", (role) => {
+    expect(canClearAcceptAsIs(session("finished_with_failures", ACCEPTED_AT), role)).toBe(false);
   });
 });
 
@@ -58,7 +84,8 @@ describe("acceptErrorMessage", () => {
     [new ApiError(409, "SESSION_NOT_ACCEPTABLE"), "Hanya sesi yang selesai dengan kegagalan yang bisa diterima apa adanya."],
     [new ApiError(409, "NOT_ACCEPTED"), "Sesi ini belum diterima apa adanya. Muat ulang halaman."],
     [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
-    [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa menerima sesi apa adanya. Muat ulang halaman."],
+    // Shared by accept and clear, so it names the mark, not one of the two actions.
+    [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa mengubah tanda terima apa adanya. Muat ulang halaman."],
   ])("explains %s", (error, message) => {
     expect(acceptErrorMessage(error)).toBe(message);
   });
