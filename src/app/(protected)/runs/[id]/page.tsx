@@ -19,6 +19,7 @@ import type { SessionDetail } from "@/types/measurement";
 import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
 import { SessionErrorSummary } from "@/components/runs/SessionErrorSummary";
 import { useMeasurementProgress } from "@/hooks/useMeasurementProgress";
+import { failedAttempts } from "@/lib/runs/sessionErrors";
 
 /** Detail satu sesi pengukuran: snapshot kasus dan jawaban mentah (PBI-11 AC6–AC8, SCRUM-212). */
 export default function SessionDetailPage() {
@@ -99,7 +100,8 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
       </section>
 
       {/* Komponen ini menghilang sendiri kalau tidak ada panggilan yang gagal (AC4). */}
-      <SessionErrorSummary cases={session.cases} />
+      <SessionErrorSummary sessionId={session.id} failures={failedAttempts(session.cases)}
+      />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
