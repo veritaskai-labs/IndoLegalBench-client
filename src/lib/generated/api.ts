@@ -882,6 +882,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/{measurement_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Angka progres pengukuran untuk layar pemantauan */
+        get: operations["read_progress_measurements__measurement_id__progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements": {
         parameters: {
             query?: never;
@@ -2407,6 +2424,66 @@ export interface components {
          * @enum {string}
          */
         ProductPurpose: "automatic_run" | "manual_entry";
+        /**
+         * ProgressResponse
+         * @description Angka layar progres yang di-poll tiap beberapa detik (PBI-12 AC5, AC6).
+         *
+         *     Tidak memuat jumlah coba ulang yang sedang berjalan dan tidak memuat
+         *     penanda produk bermasalah (AC5). Uang dikirim sebagai string.
+         */
+        ProgressResponse: {
+            /**
+             * Completed Calls
+             * @description Panggilan selesai, termasuk yang gagal
+             */
+            completed_calls: number;
+            /**
+             * Total Calls
+             * @description Kasus kali pengulangan
+             */
+            total_calls: number;
+            /**
+             * Percent Complete
+             * @description Persen selesai, satu desimal
+             */
+            percent_complete: string;
+            /**
+             * Failed Calls
+             * @description Panggilan selesai yang gagal
+             */
+            failed_calls: number;
+            /**
+             * Percent Failed
+             * @description Persen gagal dari panggilan yang sudah selesai, satu desimal
+             */
+            percent_failed: string;
+            /**
+             * Remaining Seconds
+             * @description Perkiraan sisa waktu dalam detik, null sebelum ada panggilan selesai
+             */
+            remaining_seconds: number | null;
+            /**
+             * Running Cost Idr
+             * @description Biaya berjalan dalam rupiah
+             */
+            running_cost_idr: string;
+            /**
+             * Remaining Budget Idr
+             * @description Sisa anggaran bulan ini untuk produk
+             */
+            remaining_budget_idr: string;
+            /**
+             * Started At
+             * @description Waktu sesi mulai berjalan, null selama sesi masih antre
+             */
+            started_at: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description Waktu angka ini terakhir diperbarui
+             */
+            updated_at: string;
+        };
         /**
          * ProviderType
          * @description ProviderType:
@@ -5786,6 +5863,55 @@ export interface operations {
                 };
             };
             /** @description Konfigurasi server belum lengkap (`PRICE_NOT_CONFIGURED`, `EXCHANGE_RATE_NOT_CONFIGURED`, `AVG_ANSWER_TOKENS_NOT_CONFIGURED`). */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    read_progress_measurements__measurement_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                measurement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgressResponse"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`) atau produknya sudah dihapus (`AI_PRODUCT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Anggaran bulanan produk belum disetel (`BUDGET_NOT_CONFIGURED`). */
             500: {
                 headers: {
                     [name: string]: unknown;
