@@ -30,10 +30,10 @@ function signedInAs(role: Role) {
   });
 }
 
-// Placeholder text only: students do not write legal case content (L1).
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
-  return { repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", ...overrides };
+  return { id: "44444444-4444-4444-4444-444444444444", repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", ...overrides };
 }
+
 
 function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult {
   return {
@@ -79,8 +79,17 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     started_at: "2026-11-03T02:05:00Z",
     finished_at: "2026-11-03T02:30:00Z",
     archived_at: null,
+    stopped_at: null,
+    stop_reason: null,
+    accepted_as_is_at: null,
+    accepted_as_is_by: null,
+    accepted_as_is_reason: null,
+    report_eligible: true,
+    resumed_after_long_pause: false,
+    model_version_unverified: false,
     cases: [devCase()],
     ...overrides,
+
   };
 }
 

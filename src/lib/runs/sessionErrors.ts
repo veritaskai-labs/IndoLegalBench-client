@@ -12,19 +12,14 @@ export type FailedAttempt = {
   attemptId: string | null;
 };
 
-/**
- * The current SessionDetail contract may not contain attempt_id.
- * Return null until the backend provides it.
- */
+
+/** ID percobaan dari kontrak OpenAPI SCRUM-218. */
 export function attemptIdOf(
   attempt: AttemptResult
-): string | null {
-  const id = (attempt as { attempt_id?: unknown }).attempt_id;
-
-  return typeof id === "string" && id.trim() !== ""
-    ? id
-    : null;
+): string {
+  return attempt.id;
 }
+
 
 /**
  * Panggilan yang gagal teknis dari seluruh kasus sesi (PBI-12 AC4). Urutan kasus dibiarkan

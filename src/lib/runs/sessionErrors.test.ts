@@ -6,6 +6,7 @@ import type { AttemptResult, SessionCaseResult } from "@/types/measurement";
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
   return {
+    id: "44444444-4444-4444-4444-444444444444",
     repetition_no: 1,
     status: "succeeded",
     answer_text: "jawaban",
@@ -49,7 +50,7 @@ describe("failedAttempts (PBI-12 AC4)", () => {
         title: "Pajak penghasilan karyawan",
         repetitionNo: 2,
         modelVersion: "gemini-2.0-flash",
-        attemptId: null,
+        attemptId: "44444444-4444-4444-4444-444444444444",
       },
     ]);
   });
@@ -114,32 +115,11 @@ describe("modelVersionText", () => {
   });
 });
 
-type AttemptWithId = AttemptResult & {
-  attempt_id: string;
-};
 
 describe("attemptIdOf", () => {
-  it("returns null when the server provides no id", () => {
-    expect(attemptIdOf(attempt())).toBeNull();
-  });
-
-  it("returns the attempt id when provided", () => {
-    const record: AttemptWithId = {
-      ...attempt(),
-      attempt_id: "44444444-4444-4444-4444-444444444444",
-    };
-
-    expect(attemptIdOf(record)).toBe(
+  it("returns the attempt id from the OpenAPI contract", () => {
+    expect(attemptIdOf(attempt())).toBe(
       "44444444-4444-4444-4444-444444444444"
     );
-  });
-
-  it("returns null for an empty id", () => {
-    const record: AttemptWithId = {
-      ...attempt(),
-      attempt_id: "",
-    };
-
-    expect(attemptIdOf(record)).toBeNull();
   });
 });
