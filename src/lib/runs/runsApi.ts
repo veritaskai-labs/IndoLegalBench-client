@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { SessionArchiveResponse, SessionDetail, SessionListItem, MeasurementProgress } from "@/types/measurement";
+import type { SessionArchiveResponse, SessionDetail, SessionListItem, MeasurementProgress, AttemptCalls} from "@/types/measurement";
 
 const BASE = "/measurements";
 
@@ -39,4 +39,17 @@ export function archiveSession(sessionId: string): Promise<SessionArchiveRespons
  */
 export function getProgress(sessionId: string): Promise<MeasurementProgress> {
   return apiFetch<MeasurementProgress>(`${sessionPath(sessionId)}/progress`);
+}
+
+/**
+ * Fetch the technical call details of one attempt.
+ * Server: SCRUM-218, PR #99.
+ */
+export function getAttemptCalls(
+  sessionId: string,
+  attemptId: string
+): Promise<AttemptCalls> {
+  return apiFetch<AttemptCalls>(
+    `${sessionPath(sessionId)}/attempts/${encodeURIComponent(attemptId)}/calls`
+  );
 }
