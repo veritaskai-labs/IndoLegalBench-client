@@ -814,6 +814,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/{session_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Jeda seluruh sesi; call aktif tetap disimpan sebelum worker berhenti */
+        post: operations["pause_measurements__session_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/measurements/{session_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Batalkan seluruh sesi; hasil, call log dan biaya tetap tersimpan */
+        post: operations["cancel_measurements__session_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/measurements/{session_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lanjutkan sisa pekerjaan dengan guard versi dan penanda jeda panjang */
+        post: operations["resume_measurements__session_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements/summary": {
         parameters: {
             query?: never;
@@ -2555,6 +2606,24 @@ export interface components {
             attempts: components["schemas"]["AttemptResult"][];
         };
         /**
+         * SessionControlResponse
+         * @description Kontrol diterima (202); call aktif masih boleh menyelesaikan persistence.
+         */
+        SessionControlResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Stopped At
+             * Format: date-time
+             */
+            stopped_at: string;
+            stop_reason: components["schemas"]["StopReason"];
+        };
+        /**
          * SessionDetail
          * @description Detail sesi: kolom daftar ditambah hasil per kasus (PBI-11 AC8).
          */
@@ -2621,7 +2690,7 @@ export interface components {
              * @description Waktu sesi berhenti (jeda, anggaran, restart, error). null selama berjalan
              */
             stopped_at: string | null;
-            /** @description Penyebab berhenti: user, budget, restart (paused) atau error (failed) */
+            /** @description Penyebab berhenti: user, budget, restart; error untuk persiapan gagal atau versi berubah setelah resume */
             stop_reason: components["schemas"]["StopReason"] | null;
             /**
              * Accepted As Is At
@@ -2638,6 +2707,20 @@ export interface components {
              * @description Alasan tertulis terima apa adanya
              */
             accepted_as_is_reason: string | null;
+            /**
+             * Resumed After Long Pause
+             * @description Pernah dilanjutkan setelah jeda melebihi batas konfigurasi
+             * @default false
+             */
+            resumed_after_long_pause: boolean;
+            /**
+             * Model Version Unverified
+             * @description Pernah dilanjutkan tanpa bukti versi terverifikasi
+             * @default false
+             */
+            model_version_unverified: boolean;
+            /** Resume Error Code */
+            resume_error_code?: "MODEL_VERSION_CHANGED" | null;
             /**
              * Report Eligible
              * @description Boleh jadi dasar laporan (D4): finished, atau finished_with_failures yang diterima apa adanya. cancelled dan status lain false (PBI-15/16)
@@ -2711,6 +2794,33 @@ export interface components {
              * @description Semua percobaan sesi, kasus kali pengulangan. 0 selama antre
              */
             total: number;
+        };
+        /**
+         * SessionResumeRequest
+         * @description Konfirmasi eksplisit Admin bila pernah sukses tetapi provider belum memberi versi.
+         */
+        SessionResumeRequest: {
+            /**
+             * Confirm Unverified Version
+             * @default false
+             */
+            confirm_unverified_version: boolean;
+        };
+        /**
+         * SessionResumeResponse
+         * @description 202: worker yang sama melanjutkan pending; cancellation sebelum mulai masuk queued.
+         */
+        SessionResumeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["SessionStatus"];
+            /** Resumed After Long Pause */
+            resumed_after_long_pause: boolean;
+            /** Model Version Unverified */
+            model_version_unverified: boolean;
         };
         /**
          * SessionStatus
@@ -2804,7 +2914,7 @@ export interface components {
         };
         /**
          * StopReason
-         * @description Penyebab sesi berhenti (D2 stop_reason). paused: user, budget, restart; failed: error.
+         * @description paused: user, budget, restart, atau error versi setelah resume; failed: error persiapan.
          * @enum {string}
          */
         StopReason: "user" | "budget" | "restart" | "error";
@@ -5256,6 +5366,211 @@ export interface operations {
             };
             /** @description Notifikasi tidak ditemukan (`NOTIFICATION_NOT_FOUND`) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_measurements__session_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionControlResponse"];
+                };
+            };
+            /** @description Belum masuk (`UNAUTHENTICATED`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya Admin, atau Dev AI pemilik bila flag aktif (`FORBIDDEN`, `NOT_YOUR_SESSION`, `ADMIN_CONFIRMATION_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ada (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Transisi tidak sah atau berulang (`INVALID_TRANSITION`), sesi diarsipkan (`SESSION_ARCHIVED`), diterima apa adanya (`SESSION_ACCEPTED`), atau manual (`SESSION_NOT_AUTOMATIC`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_measurements__session_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionControlResponse"];
+                };
+            };
+            /** @description Belum masuk (`UNAUTHENTICATED`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya Admin, atau Dev AI pemilik bila flag aktif (`FORBIDDEN`, `NOT_YOUR_SESSION`, `ADMIN_CONFIRMATION_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ada (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Transisi tidak sah atau berulang (`INVALID_TRANSITION`), sesi diarsipkan (`SESSION_ARCHIVED`), diterima apa adanya (`SESSION_ACCEPTED`), atau manual (`SESSION_NOT_AUTOMATIC`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_measurements__session_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SessionResumeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResumeResponse"];
+                };
+            };
+            /** @description Belum masuk (`UNAUTHENTICATED`). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Hanya Admin, atau Dev AI pemilik bila flag aktif (`FORBIDDEN`, `NOT_YOUR_SESSION`, `ADMIN_CONFIRMATION_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ada (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Resume ditolak: MODEL_VERSION_CHANGED (mulai sesi baru), MODEL_VERSION_CONFIRMATION_REQUIRED (konfirmasi Admin), ATTEMPT_RECOVERY_REQUIRED, ANOTHER_SESSION_RUNNING, SESSION_NOT_RESUMABLE, SESSION_ARCHIVED, SESSION_ACCEPTED, SESSION_NOT_AUTOMATIC. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
