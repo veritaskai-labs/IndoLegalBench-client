@@ -13,6 +13,10 @@ export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   finished: "Selesai",
   finished_with_failures: "Selesai dengan kegagalan",
   failed: "Gagal",
+  // server#97: paused covers Jeda and a system stop. Telling "Dihentikan" apart needs stop_reason,
+  // which the session responses do not carry yet.
+  paused: "Dijeda",
+  cancelled: "Dibatalkan",
 };
 
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
