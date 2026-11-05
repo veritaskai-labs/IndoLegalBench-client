@@ -1,7 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
@@ -12,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSessionDetail } from "@/hooks/useSessionDetail";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { decodeRouteParam } from "@/lib/routeParams";
+import { getSession } from "@/lib/runs/runsApi";
 import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
 import { formatProgress, hasEnded, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
@@ -41,11 +44,42 @@ export default function SessionDetailPage() {
     );
   }
 
-  return <SessionDetailView session={detail.data} role={role} />;
+  return <SessionDetailView key={detail.data.id} session={detail.data} role={role} />;
 }
 
-function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
-  const progress = useMeasurementProgress(session.id, { poll: !hasEnded(session.status) });
+function SessionDetailView({ session: initialSession, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
+  const [session, setSession] = useState(initialSession);
+  const ended = hasEnded(session.status);
+  const progress = useMeasurementProgress(session.id, { poll: !ended });
+
+  useEffect(() => {
+    if (ended) return;
+
+    let active = true;
+    let fetching = false;
+
+    const refresh = () => {
+      if (fetching) return;
+      fetching = true;
+
+      getSession(session.id)
+        .then((updated) => {
+          if (active) setSession(updated);
+        })
+        .catch(() => {
+          // Pertahankan detail terakhir jika refresh gagal.
+        })
+        .finally(() => {
+          fetching = false;
+        });
+    };
+
+    const timer = setInterval(refresh, 5000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [ended, session.id]);
 
   const facts: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SessionStatusBadge status={session.status} /> },
@@ -90,11 +124,8 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Progres</h2>
         {progress.status === "loading" && <LoadingState />}
-        {/* Tanpa tombol Coba lagi: polling 5 detik akan mencobanya sendiri selama sesi berjalan. */}
         {progress.status === "error" && (
-          <p className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-            {progress.message}
-          </p>
+          <ErrorState variant="card" message={progress.message} onRetry={progress.reload} />
         )}
         {progress.status === "ready" && <MeasurementProgressPanel progress={progress.data} />}
       </section>
