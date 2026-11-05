@@ -886,6 +886,24 @@ export interface paths {
         patch: operations["archive_measurements__session_id__archive_patch"];
         trace?: never;
     };
+    "/measurements/{session_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Hapus tanda terima apa adanya; sesi bisa dicoba ulang lagi */
+        delete: operations["clear_accept_measurements__session_id__accept_delete"];
+        options?: never;
+        head?: never;
+        /** Terima apa adanya: sesi dengan kegagalan dianggap selesai sepenuhnya */
+        patch: operations["accept_measurements__session_id__accept_patch"];
+        trace?: never;
+    };
     "/audit-logs": {
         parameters: {
             query?: never;
@@ -2444,6 +2462,37 @@ export interface components {
          */
         RoundStatus: "awaiting_assignment" | "open" | "decided";
         /**
+         * SessionAcceptRequest
+         * @description Terima apa adanya (PBI-12 AC9). Alasan wajib; dicek di server supaya kodenya REASON_REQUIRED.
+         */
+        SessionAcceptRequest: {
+            /**
+             * Reason
+             * @description Alasan tertulis Admin menerima sesi walau ada kegagalan teknis
+             */
+            reason?: string | null;
+        };
+        /**
+         * SessionAcceptResponse
+         * @description Tanda terima apa adanya sesudah PATCH (terisi) atau DELETE (kosong).
+         */
+        SessionAcceptResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Accepted As Is At */
+            accepted_as_is_at: string | null;
+            /**
+             * Accepted As Is By
+             * @description Admin yang menerima sesi
+             */
+            accepted_as_is_by: string | null;
+            /** Accepted As Is Reason */
+            accepted_as_is_reason: string | null;
+        };
+        /**
          * SessionArchiveResponse
          * @description Hasil arsip sesi. Sesinya tidak lagi tampil di GET /measurements (PBI-11 AC10).
          */
@@ -2638,10 +2687,13 @@ export interface components {
         };
         /**
          * SessionStatus
-         * @description Status dasar. Dihentikan dan Dibatalkan menyusul di PBI-12.
+         * @description Status sesi per D4. Perpindahan yang sah ada di session_transitions (SCRUM-214).
+         *
+         *     paused mencakup Jeda dari pengguna dan sesi yang dihentikan sistem (restart, deploy,
+         *     anggaran habis); D4 tidak memisahkan Dihentikan dari Dijeda.
          * @enum {string}
          */
-        SessionStatus: "queued" | "running" | "finished" | "finished_with_failures" | "failed";
+        SessionStatus: "queued" | "running" | "paused" | "cancelled" | "finished" | "finished_with_failures" | "failed";
         /**
          * SplitTag
          * @description Dataset split stored on a version. Only dev and test are valid.
@@ -5387,6 +5439,126 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_accept_measurements__session_id__accept_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionAcceptResponse"];
+                };
+            };
+            /** @description Hanya Admin (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi belum diterima (`NOT_ACCEPTED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_measurements__session_id__accept_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SessionAcceptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionAcceptResponse"];
+                };
+            };
+            /** @description Hanya Admin (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi bukan Selesai dengan kegagalan (`SESSION_NOT_ACCEPTABLE`), atau sudah diterima (`ALREADY_ACCEPTED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Alasan kosong (`REASON_REQUIRED`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
