@@ -12,6 +12,7 @@ import {
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
   return {
+    id: "attempt-1",
     repetition_no: 1,
     status: "succeeded",
     answer_text: "Jawaban mentah",

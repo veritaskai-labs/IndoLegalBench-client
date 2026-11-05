@@ -1433,6 +1433,12 @@ export interface components {
          * @description Satu percobaan: jawaban mentah apa adanya dari produk (PBI-11 AC8).
          */
         AttemptResult: {
+            /**
+             * Id
+             * Format: uuid
+             * @description id percobaan untuk coba ulang per kasus (attempt_ids) dan detail teknis. Tetap ada di kasus yang disamarkan karena tidak memuat isi kasus
+             */
+            id: string;
             /** Repetition No */
             repetition_no: number;
             status: components["schemas"]["AttemptStatus"];

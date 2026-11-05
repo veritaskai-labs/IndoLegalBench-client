@@ -40,7 +40,14 @@ function signedInAs(role: Role) {
 
 // Placeholder text only: students do not write legal case content (L1).
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
-  return { repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", ...overrides };
+  return {
+    id: "attempt-1",
+    repetition_no: 1,
+    status: "succeeded",
+    answer_text: "Jawaban mentah percobaan 1",
+    model_version: "model-qa-1",
+    ...overrides,
+  };
 }
 
 function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult {
