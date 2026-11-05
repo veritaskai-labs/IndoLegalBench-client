@@ -7,6 +7,8 @@ import {
   canArchive,
   caseCountText,
   formatProgress,
+  hasEnded,
+  isSettled,
   SESSION_STATUS_LABEL,
   sessionStatusLabel,
   unknownName,
@@ -158,5 +160,24 @@ describe("caseCountText and unknownName", () => {
     expect(unknownName(null)).toBe("Tidak diketahui");
     expect(unknownName("")).toBe("Tidak diketahui");
     expect(unknownName("DeepSeek")).toBe("DeepSeek");
+  });
+});
+
+// server has_ended: cancelled can still be resumed (server#102), so it has not ended. It does not
+// change on its own either, so the detail page stops polling it (#70 meant the same).
+describe("hasEnded and isSettled (PBI-12 AC8, SCRUM-219 polling)", () => {
+  it.each<SessionStatus>(["finished", "finished_with_failures", "failed"])("treats %s as ended and settled", (status) => {
+    expect(hasEnded(status)).toBe(true);
+    expect(isSettled(status)).toBe(true);
+  });
+
+  it("treats cancelled as settled but not ended", () => {
+    expect(hasEnded("cancelled")).toBe(false);
+    expect(isSettled("cancelled")).toBe(true);
+  });
+
+  // Same as #70: only ended (and now cancelled) sessions stop polling; paused keeps it.
+  it.each<SessionStatus>(["queued", "running", "paused"])("keeps %s unsettled", (status) => {
+    expect(isSettled(status)).toBe(false);
   });
 });
