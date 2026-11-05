@@ -26,6 +26,7 @@ export function ConfirmDialog<T>({
   children,
   confirmLabel,
   busyLabel,
+  dismissLabel = "Batal",
   confirmDisabled = false,
   onConfirm,
   errorMessage,
@@ -36,6 +37,8 @@ export function ConfirmDialog<T>({
   children: ReactNode;
   confirmLabel: string;
   busyLabel: string;
+  /** Tombol keluar sebelum ada error. "Kembali" bila "Batal" terbaca seperti aksinya (Batalkan sesi). */
+  dismissLabel?: string;
   /** Aksi belum boleh dijalankan, misalnya alasan wajib belum diisi. */
   confirmDisabled?: boolean;
   onConfirm: () => Promise<T>;
@@ -89,7 +92,7 @@ export function ConfirmDialog<T>({
           disabled={busy}
           className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
         >
-          {error ? "Tutup" : "Batal"}
+          {error ? "Tutup" : dismissLabel}
         </button>
         <button
           type="button"
