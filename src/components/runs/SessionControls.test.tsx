@@ -4,9 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
-import { acceptAsIs, cancelSession, clearAcceptAsIs, pauseSession, resumeSession } from "@/lib/runs/sessionControlApi";
+import {
+  acceptAsIs,
+  cancelSession,
+  clearAcceptAsIs,
+  pauseSession,
+  resumeSession,
+  retrySession,
+} from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
-import type { SessionDetail } from "@/types/measurement";
+import type { AttemptStatus, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import { SessionControls } from "./SessionControls";
 
 // sessionControlApi has its own request tests (stubbed fetch); here only the controls' reaction matters.
@@ -16,6 +23,7 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   pauseSession: vi.fn(),
   cancelSession: vi.fn(),
   resumeSession: vi.fn(),
+  retrySession: vi.fn(),
 }));
 
 const accept = vi.mocked(acceptAsIs);
@@ -23,6 +31,7 @@ const clear = vi.mocked(clearAcceptAsIs);
 const pause = vi.mocked(pauseSession);
 const cancel = vi.mocked(cancelSession);
 const resume = vi.mocked(resumeSession);
+const retry = vi.mocked(retrySession);
 
 const ACCEPTED = {
   accepted_as_is_at: "2026-11-05T03:00:00Z",
@@ -43,7 +52,8 @@ type ControlState = Pick<
   | "resumed_after_long_pause"
   | "model_version_unverified"
   | "resume_error_code"
->;
+  | "created_by"
+> & { cases: Pick<SessionCaseResult, "snapshot_item_id" | "case_code" | "title" | "masked" | "attempts">[] };
 
 function session(overrides: Partial<ControlState> = {}): ControlState {
   return {
@@ -58,15 +68,18 @@ function session(overrides: Partial<ControlState> = {}): ControlState {
     resumed_after_long_pause: false,
     model_version_unverified: false,
     resume_error_code: null,
+    // Not the signed-in user and no failed attempt: retry stays out of the older tests.
+    created_by: "someone-else",
+    cases: [],
     ...overrides,
   };
 }
 
-function renderControls(state: ControlState, role: Role | null = "admin") {
+function renderControls(state: ControlState, role: Role | null = "admin", viewerId: string | null = "u-1") {
   const onChanged = vi.fn();
   render(
     <ToastProvider>
-      <SessionControls session={state} role={role} onChanged={onChanged} />
+      <SessionControls session={state} role={role} viewerId={viewerId} onChanged={onChanged} />
     </ToastProvider>,
   );
   return { onChanged };
@@ -79,7 +92,7 @@ function expectNothingShown() {
 }
 
 beforeEach(() => {
-  for (const mock of [accept, clear, pause, cancel, resume]) mock.mockReset();
+  for (const mock of [accept, clear, pause, cancel, resume, retry]) mock.mockReset();
 });
 
 describe("SessionControls: Terima apa adanya (PBI-12 AC9)", () => {
@@ -298,5 +311,63 @@ describe("SessionControls: resume markers (PBI-12 AC8)", () => {
     expect(screen.getByRole("link", { name: "Buat sesi baru" })).toHaveAttribute("href", "/runs/new");
     expect(screen.queryByRole("button", { name: "Lanjutkan" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Batalkan" })).toBeInTheDocument();
+  });
+});
+
+function failedCase(key: string, statuses: AttemptStatus[]) {
+  return {
+    snapshot_item_id: key,
+    case_code: `QA-${key}`,
+    title: `Kasus sintetis ${key}`,
+    masked: false,
+    attempts: statuses.map((status, index) => ({
+      id: `${key}-a${index + 1}`,
+      repetition_no: index + 1,
+      status,
+      answer_text: null,
+      model_version: null,
+    })),
+  };
+}
+
+const withFailures = { cases: [failedCase("1", ["succeeded", "technical_failure"]), failedCase("2", ["succeeded", "succeeded"])] };
+
+describe("SessionControls: Coba ulang yang gagal (PBI-12 AC3)", () => {
+  it("lets Admin retry the failed attempts, says so and reloads", async () => {
+    const user = userEvent.setup();
+    retry.mockResolvedValue({ id: "s-1", status: "running", retried_attempt_ids: ["1-a2"] });
+    const { onChanged } = renderControls(session(withFailures));
+
+    await user.click(screen.getByRole("button", { name: "Coba ulang yang gagal" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Coba ulang yang gagal?" }));
+    expect(dialog.getByRole("checkbox", { name: "QA-1 · Kasus sintetis 1 (1 gagal)" })).toBeChecked();
+    expect(dialog.queryByRole("checkbox", { name: /QA-2/ })).not.toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Coba ulang" }));
+
+    expect(retry).toHaveBeenCalledWith("s-1", { allFailed: true });
+    expect(await screen.findByText("Percobaan yang gagal pada “Run November” dicoba ulang")).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalledTimes(1);
+  });
+
+  // server#99: Developer AI retries its own session, but gets neither accept nor the other controls.
+  it("offers retry to Developer AI on its own session only", () => {
+    renderControls(session({ ...withFailures, created_by: "dev-1" }), "developer_ai", "dev-1");
+
+    expect(screen.getByRole("button", { name: "Coba ulang yang gagal" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Terima apa adanya" })).not.toBeInTheDocument();
+  });
+
+  // Negative: 403 NOT_YOUR_SESSION.
+  it("does not offer retry to Developer AI on someone else's session", () => {
+    renderControls(session(withFailures), "developer_ai", "dev-1");
+
+    expectNothingShown();
+  });
+
+  // Negative: 409 SESSION_ACCEPTED while the mark is on.
+  it("does not offer retry while the session is accepted as-is", () => {
+    renderControls(session({ ...withFailures, ...ACCEPTED }));
+
+    expect(screen.queryByRole("button", { name: "Coba ulang yang gagal" })).not.toBeInTheDocument();
   });
 });

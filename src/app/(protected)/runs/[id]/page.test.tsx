@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getSession } from "@/lib/runs/runsApi";
-import { acceptAsIs, pauseSession } from "@/lib/runs/sessionControlApi";
+import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
@@ -21,6 +21,7 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   pauseSession: vi.fn(),
   cancelSession: vi.fn(),
   resumeSession: vi.fn(),
+  retrySession: vi.fn(),
 }));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
@@ -423,6 +424,25 @@ describe("SessionDetailPage controls (PBI-12 AC9)", () => {
 
     await user.click(await screen.findByRole("button", { name: "Jeda" }));
 
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  // PBI-12 AC3: the page hands the signed-in user to the controls and reloads after a retry.
+  it("lets Admin retry the failed attempts and loads the session again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        cases: [devCase({ attempts: [attempt(), attempt({ id: "attempt-2", repetition_no: 2, status: "technical_failure", answer_text: null })] })],
+      }),
+    );
+    vi.mocked(retrySession).mockResolvedValue({ id: "s-1", status: "running", retried_attempt_ids: ["attempt-2"] });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Coba ulang yang gagal" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Coba ulang yang gagal?" })).getByRole("button", { name: "Coba ulang" }));
+
+    expect(retrySession).toHaveBeenCalledWith("s-1", { allFailed: true });
     await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
   });
 });
