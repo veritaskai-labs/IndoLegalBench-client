@@ -1,6 +1,6 @@
 import { render, screen, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
