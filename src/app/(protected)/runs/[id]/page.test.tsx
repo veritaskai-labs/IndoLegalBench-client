@@ -1,9 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getSession } from "@/lib/runs/runsApi";
+import { acceptAsIs } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
@@ -14,6 +15,9 @@ vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // runsApi has its own request tests (stubbed fetch); here only the page's reaction matters.
 vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn() }));
+vi.mock("@/lib/runs/sessionControlApi", () => ({ acceptAsIs: vi.fn(), clearAcceptAsIs: vi.fn() }));
+// The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 // The role decides which answer placeholder Developer AI sees.
@@ -350,5 +354,41 @@ describe("SessionDetailPage load states", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(2);
+  });
+});
+
+// PBI-12 AC9: the controls sit on the detail page and the page reloads after a change.
+describe("SessionDetailPage controls (PBI-12 AC9)", () => {
+  it("lets Admin accept a session with failures and loads it again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "finished_with_failures" }));
+    vi.mocked(acceptAsIs).mockResolvedValue({
+      id: "s-1",
+      accepted_as_is_at: "2026-11-05T03:00:00Z",
+      accepted_as_is_by: "u-1",
+      accepted_as_is_reason: "Alasan sintetis",
+    });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Terima apa adanya" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Terima sesi apa adanya?" }));
+    await user.type(dialog.getByRole("textbox", { name: "Alasan" }), "Alasan sintetis");
+    await user.click(dialog.getByRole("button", { name: "Terima apa adanya" }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows the accepted mark on the page", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        accepted_as_is_at: "2026-11-05T03:00:00Z",
+        accepted_as_is_by: "u-1",
+        accepted_as_is_reason: "Alasan sintetis",
+      }),
+    );
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByRole("region", { name: "Diterima apa adanya" })).toBeInTheDocument();
   });
 });
