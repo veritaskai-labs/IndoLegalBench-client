@@ -7,14 +7,15 @@ import { AcceptAsIsDialog } from "@/components/runs/AcceptAsIsDialog";
 import { CancelSessionDialog } from "@/components/runs/CancelSessionDialog";
 import { ClearAcceptAsIsDialog } from "@/components/runs/ClearAcceptAsIsDialog";
 import { ConfirmResumeDialog } from "@/components/runs/ConfirmResumeDialog";
+import { RetryFailedDialog } from "@/components/runs/RetryFailedDialog";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { canAcceptAsIs, canClearAcceptAsIs } from "@/lib/runs/sessionAccept";
-import { canCancel, canPause, canResume, controlErrorMessage } from "@/lib/runs/sessionControl";
+import { canCancel, canPause, canResume, canRetry, controlErrorMessage, failedCases } from "@/lib/runs/sessionControl";
 import { pauseSession, resumeSession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
-import type { SessionDetail } from "@/types/measurement";
+import type { SessionCaseResult, SessionDetail } from "@/types/measurement";
 
 type ControlState = Pick<
   SessionDetail,
@@ -29,21 +30,24 @@ type ControlState = Pick<
   | "resumed_after_long_pause"
   | "model_version_unverified"
   | "resume_error_code"
->;
+  | "created_by"
+> & { cases: ReadonlyArray<Pick<SessionCaseResult, "snapshot_item_id" | "case_code" | "title" | "masked" | "attempts">> };
 
-type OpenDialog = "accept" | "clear" | "cancel" | "confirm-resume" | null;
+type OpenDialog = "accept" | "clear" | "cancel" | "confirm-resume" | "retry" | null;
 
 /**
- * Kontrol sesi di halaman detail (PBI-12, SCRUM-220): Jeda, Batalkan, Lanjutkan (AC7, AC8) dan
- * Terima apa adanya (AC9), beserta penandanya. Jeda dan Lanjutkan langsung jalan; Batalkan dan
- * Terima apa adanya meminta konfirmasi. Setiap perubahan memuat ulang sesi lewat onChanged.
+ * Kontrol sesi di halaman detail (PBI-12, SCRUM-220): Coba ulang yang gagal (AC3), Jeda, Batalkan,
+ * Lanjutkan (AC7, AC8) dan Terima apa adanya (AC9), beserta penandanya. Jeda dan Lanjutkan langsung
+ * jalan; aksi lain meminta konfirmasi. Setiap perubahan memuat ulang sesi lewat onChanged.
+ * viewerId dibutuhkan Coba ulang: Developer AI hanya boleh pada sesi yang ia buat (server#99).
  * Aksi langsung yang ditolak tidak memuat ulang, supaya alasannya tetap terbaca.
  */
 export function SessionControls({
   session,
   role,
+  viewerId,
   onChanged,
-}: Readonly<{ session: ControlState; role: Role | null; onChanged: () => void }>) {
+}: Readonly<{ session: ControlState; role: Role | null; viewerId: string | null; onChanged: () => void }>) {
   const { showToast } = useToast();
   const [open, setOpen] = useState<OpenDialog>(null);
   const [busy, setBusy] = useState(false);
@@ -54,6 +58,7 @@ export function SessionControls({
     cancel: canCancel(session, role),
     resume: canResume(session, role),
     accept: canAcceptAsIs(session, role),
+    retry: canRetry(session, role === null || viewerId === null ? null : { id: viewerId, role }),
   };
   const hasAction = Object.values(actions).some(Boolean);
   if (!hasAction && !hasNotice(session)) return null;
@@ -121,6 +126,16 @@ export function SessionControls({
                 Batalkan
               </button>
             )}
+            {actions.retry && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setOpen("retry")}
+                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 disabled:opacity-50"
+              >
+                Coba ulang yang gagal
+              </button>
+            )}
             {actions.accept && (
               <button
                 type="button"
@@ -156,6 +171,14 @@ export function SessionControls({
       )}
       {open === "cancel" && (
         <CancelSessionDialog session={session} onCancelled={() => done(`Sesi “${session.label}” dibatalkan`)} onClose={close} />
+      )}
+      {open === "retry" && (
+        <RetryFailedDialog
+          session={session}
+          failed={failedCases(session.cases)}
+          onRetried={() => done(`Percobaan yang gagal pada “${session.label}” dicoba ulang`)}
+          onClose={close}
+        />
       )}
       {open === "confirm-resume" && (
         <ConfirmResumeDialog session={session} onResumed={() => done(`Sesi “${session.label}” dilanjutkan`)} onClose={close} />

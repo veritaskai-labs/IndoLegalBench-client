@@ -23,6 +23,7 @@ export default function SessionDetailPage() {
   const sessionId = decodeRouteParam(useParams<{ id: string }>().id);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
+  const viewerId = auth.status === "authenticated" ? auth.user.id : null;
   const detail = useSessionDetail(sessionId);
 
   if (detail.status === "loading") return <LoadingState />;
@@ -38,14 +39,15 @@ export default function SessionDetailPage() {
     );
   }
 
-  return <SessionDetailView session={detail.data} role={role} onChanged={detail.reload} />;
+  return <SessionDetailView session={detail.data} role={role} viewerId={viewerId} onChanged={detail.reload} />;
 }
 
 function SessionDetailView({
   session,
   role,
+  viewerId,
   onChanged,
-}: Readonly<{ session: SessionDetail; role: Role | null; onChanged: () => void }>) {
+}: Readonly<{ session: SessionDetail; role: Role | null; viewerId: string | null; onChanged: () => void }>) {
   const facts: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SessionStatusBadge status={session.status} stopReason={session.stop_reason} /> },
     { label: "Produk", value: unknownName(session.product_name) },
@@ -86,7 +88,7 @@ function SessionDetailView({
         </dl>
       </section>
 
-      <SessionControls session={session} role={role} onChanged={onChanged} />
+      <SessionControls session={session} role={role} viewerId={viewerId} onChanged={onChanged} />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
