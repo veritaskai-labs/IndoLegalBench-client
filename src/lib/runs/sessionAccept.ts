@@ -19,7 +19,7 @@ export function canClearAcceptAsIs(session: AcceptState, role: Role | null): boo
 }
 
 // Spasi, tab, baris baru dan NBSP (\s), ditambah karakter lebar nol yang tidak terlihat.
-const INVISIBLE = /[\s​-‍﻿]/g;
+const INVISIBLE = /[\s\u200B-\u200D\uFEFF]/g;
 
 /** Alasan tertulis wajib (AC9): harus ada sesuatu yang bisa dibaca orang lain. */
 export function isReasonWritten(reason: string): boolean {

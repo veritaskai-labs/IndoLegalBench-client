@@ -69,9 +69,9 @@ describe("isReasonWritten (AC9: a written reason is required)", () => {
     ["empty", ""],
     ["spaces", "   "],
     ["tab and newline", "\t\n"],
-    ["non-breaking space", " "],
-    ["zero-width space", "​"],
-    ["zero-width joiner and BOM", "‍﻿"],
+    ["non-breaking space", "\u00A0"],
+    ["zero-width space", "\u200B"],
+    ["zero-width joiner and BOM", "\u200D\uFEFF"],
   ])("refuses a reason that is only %s", (_name, reason) => {
     expect(isReasonWritten(reason)).toBe(false);
   });
