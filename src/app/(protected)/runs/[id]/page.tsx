@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
+import { SessionControls } from "@/components/runs/SessionControls";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -37,10 +38,14 @@ export default function SessionDetailPage() {
     );
   }
 
-  return <SessionDetailView session={detail.data} role={role} />;
+  return <SessionDetailView session={detail.data} role={role} onChanged={detail.reload} />;
 }
 
-function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
+function SessionDetailView({
+  session,
+  role,
+  onChanged,
+}: Readonly<{ session: SessionDetail; role: Role | null; onChanged: () => void }>) {
   const facts: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SessionStatusBadge status={session.status} stopReason={session.stop_reason} /> },
     { label: "Produk", value: unknownName(session.product_name) },
@@ -80,6 +85,8 @@ function SessionDetailView({ session, role }: Readonly<{ session: SessionDetail;
           ))}
         </dl>
       </section>
+
+      <SessionControls session={session} role={role} onChanged={onChanged} />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
