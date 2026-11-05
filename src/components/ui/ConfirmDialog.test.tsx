@@ -129,6 +129,16 @@ describe("ConfirmDialog (shared by Arsipkan, Batalkan and Terima apa adanya)", (
     expect(dialog.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  // Batalkan sesi: "Batal" next to "Batalkan sesi" reads like the same action.
+  it("names the dismiss button as the caller asks, and keeps Tutup after a failure", async () => {
+    const user = userEvent.setup();
+    const { dialog } = renderDialog({ dismissLabel: "Kembali", onConfirm: vi.fn().mockRejectedValue(new Error("x")) });
+
+    expect(dialog.getByRole("button", { name: "Kembali" })).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Arsipkan" }));
+    expect(await dialog.findByRole("button", { name: "Tutup" })).toBeInTheDocument();
+  });
+
   // Edge: Terima apa adanya keeps the button off until a reason is written.
   it("keeps the action off while the caller says it cannot run yet", async () => {
     const user = userEvent.setup();
