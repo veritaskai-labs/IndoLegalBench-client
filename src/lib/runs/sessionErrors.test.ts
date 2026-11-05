@@ -1,6 +1,7 @@
+
 import { describe, expect, it } from "vitest";
 
-import { errorSummaryText, failedAttempts, modelVersionText } from "@/lib/runs/sessionErrors";
+import { errorSummaryText, failedAttempts, modelVersionText, attemptIdOf } from "@/lib/runs/sessionErrors";
 import type { AttemptResult, SessionCaseResult } from "@/types/measurement";
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
@@ -48,6 +49,7 @@ describe("failedAttempts (PBI-12 AC4)", () => {
         title: "Pajak penghasilan karyawan",
         repetitionNo: 2,
         modelVersion: "gemini-2.0-flash",
+        attemptId: null,
       },
     ]);
   });
@@ -109,5 +111,35 @@ describe("modelVersionText", () => {
 
   it("says the version was not recorded when the server sends null", () => {
     expect(modelVersionText(null)).toBe("Tidak tercatat");
+  });
+});
+
+type AttemptWithId = AttemptResult & {
+  attempt_id: string;
+};
+
+describe("attemptIdOf", () => {
+  it("returns null when the server provides no id", () => {
+    expect(attemptIdOf(attempt())).toBeNull();
+  });
+
+  it("returns the attempt id when provided", () => {
+    const record: AttemptWithId = {
+      ...attempt(),
+      attempt_id: "44444444-4444-4444-4444-444444444444",
+    };
+
+    expect(attemptIdOf(record)).toBe(
+      "44444444-4444-4444-4444-444444444444"
+    );
+  });
+
+  it("returns null for an empty id", () => {
+    const record: AttemptWithId = {
+      ...attempt(),
+      attempt_id: "",
+    };
+
+    expect(attemptIdOf(record)).toBeNull();
   });
 });
