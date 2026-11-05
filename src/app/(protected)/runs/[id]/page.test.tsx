@@ -1,14 +1,13 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
-import { act, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 
 // The page reads the id from the URL; useParams hands it over still encoded.
 const params = vi.hoisted(() => ({ id: "s-1" }));
