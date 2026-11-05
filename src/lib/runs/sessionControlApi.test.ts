@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { acceptAsIs, clearAcceptAsIs } from "./sessionControlApi";
+import { acceptAsIs, cancelSession, clearAcceptAsIs, pauseSession, resumeSession } from "./sessionControlApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
 // and whether a 403 fires the /forbidden redirect listener.
@@ -110,4 +110,70 @@ describe("clearAcceptAsIs (DELETE /measurements/{id}/accept, PBI-12 AC9)", () =>
     await expect(clearAcceptAsIs("s-1")).rejects.toMatchObject({ code: "NOT_ACCEPTED" });
     expect(forbidden).not.toHaveBeenCalled();
   });
+});
+
+const stopped = { id: "s-1", status: "paused", stopped_at: "2026-11-05T03:00:00Z", stop_reason: "user" };
+
+describe("pauseSession and cancelSession (POST, PBI-12 AC7)", () => {
+  it.each([
+    ["pause", pauseSession],
+    ["cancel", cancelSession],
+  ] as const)("sends POST .../%s without a body and returns the 202 answer", async (action, call) => {
+    fetchMock.mockResolvedValue(fakeResponse(202, stopped));
+
+    await expect(call("a/b")).resolves.toEqual(stopped);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(new RegExp(`/measurements/a%2Fb/${action}$`));
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+  });
+
+  // Negative: a role or the Developer AI flag changed while the page was open.
+  it.each([pauseSession, cancelSession])("keeps the user on the page on 403", async (call) => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "NOT_YOUR_SESSION" }));
+
+    await expect(call("s-1")).rejects.toMatchObject({ status: 403, code: "NOT_YOUR_SESSION" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it("hands a 409 INVALID_TRANSITION to the caller", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(409, { code: "INVALID_TRANSITION" }));
+
+    await expect(pauseSession("s-1")).rejects.toMatchObject({ status: 409, code: "INVALID_TRANSITION" });
+  });
+});
+
+describe("resumeSession (POST .../resume, PBI-12 AC8)", () => {
+  const resumed = { id: "s-1", status: "running", resumed_after_long_pause: false, model_version_unverified: false };
+
+  it("asks to resume without confirming an unverified model version", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, resumed));
+
+    await expect(resumeSession("s-1")).resolves.toEqual(resumed);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/resume$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ confirm_unverified_version: false });
+  });
+
+  // server#102: Admin confirms explicitly after a 409 MODEL_VERSION_CONFIRMATION_REQUIRED.
+  it("sends the Admin confirmation when asked to", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, { ...resumed, model_version_unverified: true }));
+
+    await resumeSession("s-1", { confirmUnverifiedVersion: true });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ confirm_unverified_version: true });
+  });
+
+  it.each(["MODEL_VERSION_CHANGED", "MODEL_VERSION_CONFIRMATION_REQUIRED", "ANOTHER_SESSION_RUNNING"])(
+    "hands a 409 %s to the caller without a redirect",
+    async (code) => {
+      const forbidden = listenForbidden();
+      fetchMock.mockResolvedValue(fakeResponse(409, { code }));
+
+      await expect(resumeSession("s-1")).rejects.toMatchObject({ status: 409, code });
+      expect(forbidden).not.toHaveBeenCalled();
+    },
+  );
 });
