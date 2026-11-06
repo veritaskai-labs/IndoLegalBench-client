@@ -227,18 +227,29 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
   });
 
   // Positive: more than one dimension is possible.
-  it("adds and removes aspects", async () => {
+  it("adds a blank aspect and lets the first one be removed", async () => {
     // Arrange
     const { user } = setup();
 
     // Act
     await user.click(screen.getByRole("button", { name: "Tambah aspek" }));
-    const added = screen.getByLabelText("Nama aspek 2");
+
+    // Assert
+    expect(screen.getByLabelText("Nama aspek 2")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Hapus aspek 1" })).toBeEnabled();
+  });
+
+  it("removes an added aspect", async () => {
+    // Arrange
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Tambah aspek" }));
+
+    // Act
     await user.click(screen.getByRole("button", { name: "Hapus aspek 2" }));
 
     // Assert
-    expect(added).toBeInTheDocument();
     expect(screen.queryByLabelText("Nama aspek 2")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Nama aspek 1")).toBeInTheDocument();
   });
 
   // Negative: a version needs at least one aspect, so the only one cannot be removed.
