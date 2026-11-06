@@ -140,7 +140,8 @@ describe("createEmptyDraft (form versi baru tanpa template)", () => {
     const draft = createEmptyDraft();
 
     // Assert
-    expect(draft.aspects).toEqual([{ name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} }]);
+    expect(draft.aspects).toHaveLength(1);
+    expect(draft.aspects[0]).toMatchObject({ name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} });
   });
 
   // Negative: the text fields are blank, not prefilled with anything.
@@ -170,5 +171,37 @@ describe("createEmptyDraft (form versi baru tanpa template)", () => {
     // Assert
     expect(second.aspects[0].name).toBe("");
     expect(second.levels[0].label).toBe("");
+  });
+});
+
+describe("aspect ids (stable keys for the form)", () => {
+  // Positive: the form needs an identity per aspect that survives removing another one.
+  it("gives every aspect of the v1 template its own non-empty id", () => {
+    // Arrange / Act
+    const ids = createRubricV1Draft().aspects.map((aspect) => aspect.id);
+
+    // Assert
+    expect(ids.every((id) => id.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(3);
+  });
+
+  it("gives the blank aspect of the empty draft an id", () => {
+    // Arrange / Act
+    const [aspect] = createEmptyDraft().aspects;
+
+    // Assert
+    expect(aspect.id.length).toBeGreaterThan(0);
+  });
+
+  // Edge: ids do not repeat across drafts, so an aspect of an old draft never matches a new one.
+  it("never repeats an id between two drafts", () => {
+    // Arrange
+    const first = createRubricV1Draft().aspects.map((aspect) => aspect.id);
+
+    // Act
+    const second = createRubricV1Draft().aspects.map((aspect) => aspect.id);
+
+    // Assert
+    expect(second.filter((id) => first.includes(id))).toEqual([]);
   });
 });

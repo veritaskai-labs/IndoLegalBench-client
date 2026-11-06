@@ -6,8 +6,8 @@ import { addAspect, removeAspect, setDescriptor, setField, updateAspect, updateL
 function twoAspects(): RubricDraft {
   const draft = createEmptyDraft();
   draft.aspects = [
-    { name: "A", graderPath: "llm", weight: "", definition: "a", descriptors: { 5: "lima" } },
-    { name: "B", graderPath: "deterministic", weight: "", definition: "b", descriptors: {} },
+    { id: "a-1", name: "A", graderPath: "llm", weight: "", definition: "a", descriptors: { 5: "lima" } },
+    { id: "a-2", name: "B", graderPath: "deterministic", weight: "", definition: "b", descriptors: {} },
   ];
   return draft;
 }
@@ -42,6 +42,17 @@ describe("setField", () => {
 });
 
 describe("updateAspect", () => {
+  it("keeps the id of the aspect it changes", () => {
+    // Arrange
+    const draft = twoAspects();
+
+    // Act
+    const next = updateAspect(draft, 1, { name: "B baru" });
+
+    // Assert
+    expect(next.aspects.map((aspect) => aspect.id)).toEqual(["a-1", "a-2"]);
+  });
+
   it("changes only the given aspect", () => {
     // Arrange
     const draft = twoAspects();
@@ -138,6 +149,20 @@ describe("setDescriptor", () => {
 });
 
 describe("addAspect", () => {
+  // Positive: the form keys its editors by id, so a new aspect needs one nobody else has.
+  it("gives the added aspect an id that no other aspect has", () => {
+    // Arrange
+    const draft = twoAspects();
+
+    // Act
+    const next = addAspect(draft);
+
+    // Assert
+    const ids = next.aspects.map((aspect) => aspect.id);
+    expect(ids[2].length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(3);
+  });
+
   it("appends a blank aspect on the LLM path", () => {
     // Arrange
     const draft = twoAspects();
@@ -147,7 +172,7 @@ describe("addAspect", () => {
 
     // Assert
     expect(next.aspects).toHaveLength(3);
-    expect(next.aspects[2]).toEqual({ name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} });
+    expect(next.aspects[2]).toMatchObject({ name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} });
   });
 
   it("does not change the draft it was given", () => {
@@ -163,6 +188,18 @@ describe("addAspect", () => {
 });
 
 describe("removeAspect", () => {
+  // Edge: removing one aspect must not renumber the ids of the ones that stay.
+  it("keeps the ids of the aspects that stay", () => {
+    // Arrange
+    const draft = twoAspects();
+
+    // Act
+    const next = removeAspect(draft, 0);
+
+    // Assert
+    expect(next.aspects.map((aspect) => aspect.id)).toEqual(["a-2"]);
+  });
+
   it("removes the aspect at the index and keeps the order of the others", () => {
     // Arrange
     const draft = createRubricV1Draft();

@@ -11,8 +11,8 @@ function draft(overrides: Partial<RubricDraft> = {}): RubricDraft {
     judgePromptQuality: "Nilai kualitas.",
     judgePromptFormat: "Nilai format.",
     aspects: [
-      { name: "Kesimpulan", graderPath: "llm", weight: "60", definition: "Ketepatan hasil akhir", descriptors: { 5: "Benar", 4: "Cukup" } },
-      { name: "Dasar Hukum", graderPath: "deterministic", weight: "40", definition: "Ketepatan rujukan", descriptors: { 5: "Akurat" } },
+      { id: "a-1", name: "Kesimpulan", graderPath: "llm", weight: "60", definition: "Ketepatan hasil akhir", descriptors: { 5: "Benar", 4: "Cukup" } },
+      { id: "a-2", name: "Dasar Hukum", graderPath: "deterministic", weight: "40", definition: "Ketepatan rujukan", descriptors: { 5: "Akurat" } },
     ],
     levels: [
       { score: 5, label: "Sempurna", isPassing: true },
@@ -95,7 +95,7 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
 
   it("reads a decimal weight as a number", () => {
     // Arrange
-    const source = draft({ aspects: [{ name: "A", graderPath: "llm", weight: "33.5", definition: "d", descriptors: {} }] });
+    const source = draft({ aspects: [{ id: "a-1", name: "A", graderPath: "llm", weight: "33.5", definition: "d", descriptors: {} }] });
 
     // Act
     const request = toCreateRequest(source);
@@ -132,7 +132,7 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
   it("leaves out blank descriptors", () => {
     // Arrange
     const source = draft({
-      aspects: [{ name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 5: "Ada", 4: "", 3: "   " } }],
+      aspects: [{ id: "a-1", name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 5: "Ada", 4: "", 3: "   " } }],
     });
 
     // Act
@@ -145,7 +145,7 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
   it("orders descriptors from the highest score to the lowest", () => {
     // Arrange
     const source = draft({
-      aspects: [{ name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 0: "Nol", 5: "Lima", 3: "Tiga" } }],
+      aspects: [{ id: "a-1", name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 0: "Nol", 5: "Lima", 3: "Tiga" } }],
     });
 
     // Act
@@ -158,7 +158,7 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
   // Negative: the server judges the content (422), so blank required text is sent as typed.
   it("sends blank required text as typed for the server to refuse", () => {
     // Arrange
-    const source = draft({ judgePromptQuality: "", aspects: [{ name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} }] });
+    const source = draft({ judgePromptQuality: "", aspects: [{ id: "a-1", name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} }] });
 
     // Act
     const request = toCreateRequest(source);
@@ -171,13 +171,25 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
   // Negative: text that is not a number must not turn into NaN, which JSON would send as null anyway.
   it("sends a weight that is not a number as null", () => {
     // Arrange
-    const source = draft({ aspects: [{ name: "A", graderPath: "llm", weight: "abc", definition: "d", descriptors: {} }] });
+    const source = draft({ aspects: [{ id: "a-1", name: "A", graderPath: "llm", weight: "abc", definition: "d", descriptors: {} }] });
 
     // Act
     const request = toCreateRequest(source);
 
     // Assert
     expect(request.aspects[0].weight).toBeNull();
+  });
+
+  // Negative: the id is only for the form's keys, the server has no such field.
+  it("does not send the editing id of an aspect to the server", () => {
+    // Arrange
+    const source = draft();
+
+    // Act
+    const request = toCreateRequest(source);
+
+    // Assert
+    expect(request.aspects[0]).not.toHaveProperty("id");
   });
 
   it("does not change the draft it was given", () => {

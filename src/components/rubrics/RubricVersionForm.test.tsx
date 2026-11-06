@@ -294,6 +294,20 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
     expect(screen.getByRole("button", { name: "Hapus aspek 1" })).toBeDisabled();
   });
 
+  // Edge: the editor of an aspect that stays must stay the same element, so focus and cursor survive.
+  it("keeps the editor of the aspects that stay when another one is removed", async () => {
+    // Arrange
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Isi dari template rubrik v1" }));
+    const thirdBefore = screen.getByLabelText("Nama aspek 3");
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Hapus aspek 1" }));
+
+    // Assert
+    expect(screen.getByLabelText("Nama aspek 2")).toBe(thirdBefore);
+  });
+
   it("removes the aspect it names and keeps the others", async () => {
     // Arrange
     const { user } = setup();
