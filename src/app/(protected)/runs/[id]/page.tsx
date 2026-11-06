@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
+import { SessionControls } from "@/components/runs/SessionControls";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -16,7 +17,7 @@ import { formatWib } from "@/lib/datetime/formatWib";
 import { decodeRouteParam } from "@/lib/routeParams";
 import { getSession } from "@/lib/runs/runsApi";
 import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
-import { formatProgress, hasEnded, unknownName } from "@/lib/runs/sessionRules";
+import { formatProgress, hasEnded, isSettled, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
@@ -29,6 +30,7 @@ export default function SessionDetailPage() {
   const sessionId = decodeRouteParam(useParams<{ id: string }>().id);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
+  const viewerId = auth.status === "authenticated" ? auth.user.id : null;
   const detail = useSessionDetail(sessionId);
 
   if (detail.status === "loading") return <LoadingState />;
@@ -44,12 +46,17 @@ export default function SessionDetailPage() {
     );
   }
 
-  return <SessionDetailView key={detail.data.id} session={detail.data} role={role} />;
+  return <SessionDetailView key={detail.data.id} session={detail.data} role={role} viewerId={viewerId} />;
 }
 
-function SessionDetailView({ session: initialSession, role }: Readonly<{ session: SessionDetail; role: Role | null }>) {
+function SessionDetailView({
+  session: initialSession,
+  role,
+  viewerId,
+}: Readonly<{ session: SessionDetail; role: Role | null; viewerId: string | null }>) {
   const [session, setSession] = useState(initialSession);
-  const ended = hasEnded(session.status);
+  // Sesi yang tidak berubah sendiri tidak perlu polling (berakhir atau dibatalkan).
+  const ended = isSettled(session.status);
   const progress = useMeasurementProgress(session.id, { poll: !ended });
 
   useEffect(() => {
@@ -81,8 +88,17 @@ function SessionDetailView({ session: initialSession, role }: Readonly<{ session
     };
   }, [ended, session.id]);
 
+  // Setelah aksi kontrol (SCRUM-220): ambil sesi terbaru tanpa spinner; polling di atas tetap jalan.
+  function reloadSession() {
+    getSession(session.id)
+      .then(setSession)
+      .catch(() => {
+        // Pertahankan detail terakhir; polling atau muat ulang halaman mencoba lagi.
+      });
+  }
+
   const facts: { label: string; value: React.ReactNode }[] = [
-    { label: "Status", value: <SessionStatusBadge status={session.status} /> },
+    { label: "Status", value: <SessionStatusBadge status={session.status} stopReason={session.stop_reason} /> },
     { label: "Produk", value: unknownName(session.product_name) },
     { label: "Tujuan", value: MEASUREMENT_PURPOSE_LABEL[session.purpose] },
     { label: "Filter kasus", value: CASE_FILTER_LABEL[session.split_filter] },
@@ -120,6 +136,8 @@ function SessionDetailView({ session: initialSession, role }: Readonly<{ session
           ))}
         </dl>
       </section>
+
+      <SessionControls session={session} role={role} viewerId={viewerId} onChanged={reloadSession} />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Progres</h2>

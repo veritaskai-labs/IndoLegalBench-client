@@ -1,9 +1,10 @@
-import { render, screen, within, act } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
+import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
@@ -15,6 +16,16 @@ vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // runsApi has its own request tests (stubbed fetch); here only the page's reaction matters.
 vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn(), getProgress: vi.fn() }));
+vi.mock("@/lib/runs/sessionControlApi", () => ({
+  acceptAsIs: vi.fn(),
+  clearAcceptAsIs: vi.fn(),
+  pauseSession: vi.fn(),
+  cancelSession: vi.fn(),
+  resumeSession: vi.fn(),
+  retrySession: vi.fn(),
+}));
+// The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 // The role decides which answer placeholder Developer AI sees.
@@ -87,6 +98,7 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     report_eligible: true,
     resumed_after_long_pause: false,
     model_version_unverified: false,
+    resume_error_code: null,
     cases: [devCase()],
     ...overrides,
 
@@ -152,6 +164,18 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
 
     await screen.findByRole("heading", { level: 1 });
     expect(get).toHaveBeenCalledWith("a/b");
+  });
+
+  // PBI-12 AC9: a budget or restart stop reads Dihentikan, a user pause Dijeda.
+  it.each([
+    ["budget", "Dihentikan"],
+    ["user", "Dijeda"],
+  ] as const)("names a paused session by why it stopped (%s)", async (reason, label) => {
+    get.mockResolvedValue(session({ status: "paused", stop_reason: reason, stopped_at: "2026-11-03T02:20:00Z" }));
+    render(<SessionDetailPage />);
+
+    const facts = within(await screen.findByRole("region", { name: "Ringkasan sesi" }));
+    expect(facts.getByText("Status").nextElementSibling).toHaveTextContent(label);
   });
 
   it("says when a session has been archived", async () => {
@@ -454,6 +478,77 @@ describe("SessionDetailPage load states", () => {
   });
 });
 
+// PBI-12 AC9: the controls sit on the detail page and the page reloads after a change.
+describe("SessionDetailPage controls (PBI-12 AC9)", () => {
+  it("lets Admin accept a session with failures and loads it again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "finished_with_failures" }));
+    vi.mocked(acceptAsIs).mockResolvedValue({
+      id: "s-1",
+      accepted_as_is_at: "2026-11-05T03:00:00Z",
+      accepted_as_is_by: "u-1",
+      accepted_as_is_reason: "Alasan sintetis",
+    });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Terima apa adanya" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Terima sesi apa adanya?" }));
+    await user.type(dialog.getByRole("textbox", { name: "Alasan" }), "Alasan sintetis");
+    await user.click(dialog.getByRole("button", { name: "Terima apa adanya" }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows the accepted mark on the page", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        accepted_as_is_at: "2026-11-05T03:00:00Z",
+        accepted_as_is_by: "u-1",
+        accepted_as_is_reason: "Alasan sintetis",
+      }),
+    );
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByRole("region", { name: "Diterima apa adanya" })).toBeInTheDocument();
+  });
+
+  // PBI-12 AC7: Jeda sits on the detail page too, and the page loads the session again after it.
+  it("lets Admin pause a running session and loads it again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "running", finished_at: null }));
+    vi.mocked(pauseSession).mockResolvedValue({
+      id: "s-1",
+      status: "paused",
+      stopped_at: "2026-11-05T03:00:00Z",
+      stop_reason: "user",
+    });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Jeda" }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  // PBI-12 AC3: the page hands the signed-in user to the controls and reloads after a retry.
+  it("lets Admin retry the failed attempts and loads the session again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        cases: [devCase({ attempts: [attempt(), attempt({ id: "attempt-2", repetition_no: 2, status: "technical_failure", answer_text: null })] })],
+      }),
+    );
+    vi.mocked(retrySession).mockResolvedValue({ id: "s-1", status: "running", retried_attempt_ids: ["attempt-2"] });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Coba ulang yang gagal" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Coba ulang yang gagal?" })).getByRole("button", { name: "Coba ulang" }));
+
+    expect(retrySession).toHaveBeenCalledWith("s-1", { allFailed: true });
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+});
 describe("SessionDetailPage progress panel (PBI-12 AC5, AC6)", () => {
   it("shows the live numbers of a running session", async () => {
     signedInAs("admin");

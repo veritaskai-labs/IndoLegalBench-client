@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me } from "@/types";
-import type { SessionListItem, SessionStatus } from "@/types/measurement";
+import type { SessionListItem, SessionStatus, StopReason } from "@/types/measurement";
 import { countOfTotal } from "@/lib/runs/sessionProgress";
 
 /**
@@ -11,20 +11,39 @@ import { countOfTotal } from "@/lib/runs/sessionProgress";
 export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   queued: "Menunggu",
   running: "Berjalan",
+  // server#97: paused mencakup Jeda dan berhenti oleh sistem; sessionStatusLabel membedakannya.
   paused: "Dijeda",
   cancelled: "Dibatalkan",
   finished: "Selesai",
   finished_with_failures: "Selesai dengan kegagalan",
   failed: "Gagal",
-  
 };
 
+/**
+ * Label status dengan penyebab berhenti (PBI-12 AC9). paused karena anggaran habis atau server
+ * dimulai ulang dibaca "Dihentikan"; Jeda dari pengguna, atau baris tanpa stop_reason (daftar
+ * sesi, sesi lama), tetap "Dijeda".
+ */
+export function sessionStatusLabel(status: SessionStatus, stopReason?: StopReason | null): string {
+  if (status === "paused" && stopReason != null && stopReason !== "user") return "Dihentikan";
+  return SESSION_STATUS_LABEL[status];
+}
+
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
-const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed", "cancelled"]);
+// cancelled belum berakhir: server#102 masih bisa melanjutkannya, dan server has_ended tidak memuatnya.
+const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
 
 /** Sesi sudah berakhir: boleh diarsipkan, dan Developer AI boleh membaca jawabannya (server#91 has_ended). */
 export function hasEnded(status: SessionStatus): boolean {
   return ENDED.has(status);
+}
+
+/**
+ * Status yang tidak berubah sendiri: sudah berakhir, atau dibatalkan dan menunggu Lanjutkan.
+ * Halaman detail berhenti polling di sini (SCRUM-219); aturan arsip dan jawaban tetap memakai hasEnded.
+ */
+export function isSettled(status: SessionStatus): boolean {
+  return hasEnded(status) || status === "cancelled";
 }
 
 /** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
