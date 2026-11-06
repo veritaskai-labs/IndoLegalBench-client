@@ -106,6 +106,22 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
   });
 
+  // State: error on the other call. The rubric list failing must not leave the button silently off.
+  it("shows an error with a retry when the rubric versions cannot be loaded", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const listVersions = vi.fn().mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR")).mockResolvedValueOnce([v1, v2]);
+    setup({ listVersions });
+    const alert = await screen.findByRole("alert");
+
+    // Act
+    await user.click(within(alert).getByRole("button", { name: "Coba lagi" }));
+
+    // Assert
+    expect(alert).toHaveTextContent("Gagal memuat daftar versi rubrik. Coba lagi.");
+    expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
+  });
+
   // Positive: after the re-grade starts, the dialog closes, the history reloads and the Admin is told.
   it("closes the dialog, reloads the history and says the re-grade started", async () => {
     // Arrange
