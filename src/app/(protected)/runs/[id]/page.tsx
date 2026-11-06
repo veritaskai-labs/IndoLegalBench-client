@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { RegradeSection } from "@/components/rubrics/RegradeSection";
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionControls } from "@/components/runs/SessionControls";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
@@ -138,6 +139,9 @@ function SessionDetailView({
       </section>
 
       <SessionControls session={session} role={role} viewerId={viewerId} onChanged={reloadSession} />
+
+      {/* Hanya Admin yang melihatnya, dan peran lain tidak memicu permintaan apa pun (PBI-14 AC7). */}
+      <RegradeSection sessionId={session.id} role={role} />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Progres</h2>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatWib, formatWibClock } from "./formatWib";
+import { formatWib, formatWibClock, formatWibDate } from "./formatWib";
 
 
 describe("formatWib", () => {
@@ -130,5 +130,53 @@ describe("formatWibClock", () => {
 
     // Assert
     expect(text).toBe("");
+  });
+});
+describe("formatWibDate", () => {
+  // Positive: tanggal berlaku rubrik datang dari server sebagai tanggal saja.
+  it("shows a date-only value as day, month and year without a clock", () => {
+    // Arrange
+    const isoDate = "2026-10-27";
+
+    // Act
+    const text = formatWibDate(isoDate);
+
+    // Assert
+    expect(text).toBe("27 Okt 2026");
+  });
+
+  it("pads a single digit day", () => {
+    // Arrange
+    const isoDate = "2026-02-02";
+
+    // Act
+    const text = formatWibDate(isoDate);
+
+    // Assert
+    expect(text).toBe("02 Feb 2026");
+  });
+
+  // Edge: the date is the WIB date, so 20:30 UTC already belongs to the next day.
+  it("reads the WIB date of a timestamp that crosses midnight", () => {
+    // Arrange
+    const iso = "2026-12-31T20:30:00Z";
+
+    // Act
+    const text = formatWibDate(iso);
+
+    // Assert
+    expect(text).toBe("01 Jan 2027");
+  });
+
+  // Negative: a value that is not a date is returned as it came, like formatWib.
+  it("returns the input as is when it is not a date", () => {
+    // Arrange
+    const isoDate = "bukan tanggal";
+
+    // Act
+    const text = formatWibDate(isoDate);
+
+    // Assert
+    expect(text).toBe("bukan tanggal");
   });
 });
