@@ -5,6 +5,8 @@ import type { GraderPath } from "@/types/rubric";
  * diubah menjadi permintaan server saat dikirim. Server yang menilai isinya (422).
  */
 export interface DraftAspect {
+  /** Identitas aspek hanya untuk form (key React); tidak dikirim ke server. */
+  id: string;
   name: string;
   graderPath: GraderPath;
   /** Teks kosong berarti tanpa bobot, seperti rubrik holistik klien. */
@@ -28,6 +30,14 @@ export interface RubricDraft {
   judgePromptFormat: string;
   aspects: DraftAspect[];
   levels: DraftLevel[];
+}
+
+let lastAspectId = 0;
+
+/** Id baru yang belum pernah dipakai di draf mana pun, supaya aspek lama tidak cocok dengan yang baru. */
+export function newAspectId(): string {
+  lastAspectId += 1;
+  return `aspek-${lastAspectId}`;
 }
 
 /** Skala klien: 5 sampai 0, lulus 4 dan 5 (jawaban klien No. 48). */
@@ -105,6 +115,7 @@ export function createRubricV1Draft(): RubricDraft {
   return {
     ...emptyTexts(),
     aspects: V1_DIMENSIONS.map(({ name, descriptors }) => ({
+      id: newAspectId(),
       name,
       graderPath: "llm",
       weight: "",
@@ -119,7 +130,7 @@ export function createRubricV1Draft(): RubricDraft {
 export function createEmptyDraft(): RubricDraft {
   return {
     ...emptyTexts(),
-    aspects: [{ name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} }],
+    aspects: [{ id: newAspectId(), name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} }],
     levels: buildLevels(() => ""),
   };
 }

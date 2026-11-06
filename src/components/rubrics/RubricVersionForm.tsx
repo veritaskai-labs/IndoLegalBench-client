@@ -61,8 +61,7 @@ export function RubricVersionForm({
 
       {draft.aspects.map((aspect, index) => (
         <AspectEditor
-          // Aspek belum punya id; urutannya satu-satunya identitas, dan hanya berubah lewat tombol di bawah.
-          key={index}
+          key={aspect.id}
           aspect={aspect}
           index={index}
           levels={draft.levels}

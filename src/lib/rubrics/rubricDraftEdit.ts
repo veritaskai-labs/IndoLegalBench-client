@@ -1,4 +1,4 @@
-import type { DraftAspect, DraftLevel, RubricDraft } from "./rubricDraft";
+import { newAspectId, type DraftAspect, type DraftLevel, type RubricDraft } from "./rubricDraft";
 
 /**
  * Perubahan draf form versi baru sebagai fungsi murni (PBI-14 AC7), supaya aturannya tidak
@@ -13,7 +13,7 @@ export function setField(draft: RubricDraft, key: TextField, value: string): Rub
   return { ...draft, [key]: value };
 }
 
-export function updateAspect(draft: RubricDraft, index: number, patch: Partial<Omit<DraftAspect, "descriptors">>): RubricDraft {
+export function updateAspect(draft: RubricDraft, index: number, patch: Partial<Omit<DraftAspect, "id" | "descriptors">>): RubricDraft {
   if (!isAspect(draft, index)) return draft;
   return { ...draft, aspects: draft.aspects.map((aspect, i) => (i === index ? { ...aspect, ...patch } : aspect)) };
 }
@@ -30,7 +30,7 @@ export function setDescriptor(draft: RubricDraft, aspectIndex: number, score: nu
 }
 
 export function addAspect(draft: RubricDraft): RubricDraft {
-  const blank: DraftAspect = { name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} };
+  const blank: DraftAspect = { id: newAspectId(), name: "", graderPath: "llm", weight: "", definition: "", descriptors: {} };
   return { ...draft, aspects: [...draft.aspects, blank] };
 }
 

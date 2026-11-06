@@ -27,7 +27,7 @@ export function AspectEditor({
   levels: DraftLevel[];
   canRemove: boolean;
   errorFor: (path: string) => string | null;
-  onChange: (patch: Partial<Omit<DraftAspect, "descriptors">>) => void;
+  onChange: (patch: Partial<Omit<DraftAspect, "id" | "descriptors">>) => void;
   onDescriptor: (score: number, text: string) => void;
   onRemove: () => void;
 }>) {
