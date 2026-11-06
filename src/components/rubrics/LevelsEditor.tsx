@@ -34,7 +34,7 @@ export function LevelsEditor({
               onChange={(event) => onChange(level.score, { isPassing: event.target.checked })}
               aria-label={`Lulus skor ${level.score}`}
             />
-            Lulus
+            <span>Lulus</span>
           </label>
         </div>
       ))}
