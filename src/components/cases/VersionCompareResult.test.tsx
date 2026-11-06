@@ -63,7 +63,6 @@ describe("VersionCompareResult", () => {
       "Tag dev/test",
       "Rujukan hukum",
       "Kriteria jawaban",
-      "Pengurang Poin",
     ]);
   });
 
@@ -130,13 +129,26 @@ describe("VersionCompareResult", () => {
   // K-05: a summary above the table, so many changes can be read without scanning every row.
   it("summarises the changed sections above the table", () => {
     // Arrange
+    const result = comparison({ changed: ["answer_criteria", "category"] });
+
+    // Act
+    render(<VersionCompareResult result={result} />);
+
+    // Assert
+    expect(screen.getByRole("status")).toHaveTextContent("2 bagian berubah: Kategori, Kriteria jawaban.");
+  });
+
+  // Edge: an older server may still list the retired traps section.
+  it("ignores a reported traps change in the summary and in the rows", () => {
+    // Arrange
     const result = comparison({ changed: ["traps", "category"] });
 
     // Act
     render(<VersionCompareResult result={result} />);
 
     // Assert
-    expect(screen.getByRole("status")).toHaveTextContent("2 bagian berubah: Kategori, Pengurang Poin.");
+    expect(screen.getByRole("status")).toHaveTextContent("1 bagian berubah: Kategori.");
+    expect(screen.queryByText("Pengurang Poin")).not.toBeInTheDocument();
   });
 
   // Negative: even if the server reports it, the case code has no row.

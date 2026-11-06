@@ -35,7 +35,6 @@ export function makeReviewCopy(overrides: Partial<ReviewCopy> = {}): ReviewCopy 
     },
     legal_refs: [],
     answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
-    traps: [],
     ...overrides,
   };
 }
