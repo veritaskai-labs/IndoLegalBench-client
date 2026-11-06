@@ -44,12 +44,6 @@ function filledForm(): CaseFormValues {
       must_not_contain: "PP 35/2021 Pasal 37",
       expected_conclusion: "Wajib ada pemberitahuan tertulis.",
     },
-    traps: [
-      {
-        description: "Menyitasi peraturan pelaksana yang sudah dicabut",
-        expected_model_behavior: "Menyebut UU 6/2023 sebagai perubahan",
-      },
-    ],
     split_tag: "dev",
   };
 }
@@ -96,14 +90,22 @@ describe("toCaseWritePayload", () => {
         must_not_contain: ["PP 35/2021 Pasal 37"],
         expected_conclusion: "Wajib ada pemberitahuan tertulis.",
       },
-      traps: [
-        {
-          description: "Menyitasi peraturan pelaksana yang sudah dicabut",
-          expected_model_behavior: "Menyebut UU 6/2023 sebagai perubahan",
-        },
-      ],
       split_tag: "dev",
     });
+  });
+
+  it("never sends traps, even when stale form values still carry them", () => {
+    // Arrange
+    const stale = {
+      ...filledForm(),
+      traps: [{ description: "Sisa jebakan", expected_model_behavior: "x" }],
+    };
+
+    // Act
+    const payload = toCaseWritePayload(stale);
+
+    // Assert
+    expect(payload).not.toHaveProperty("traps");
   });
 
   it("keeps the test split tag", () => {
@@ -119,7 +121,6 @@ describe("toCaseWritePayload", () => {
     form.identity.title = "";
     form.identity.question = "";
     form.legal_refs = [emptyLegalRef()];
-    form.traps = [{ description: "", expected_model_behavior: "" }];
 
     const payload = toCaseWritePayload(form);
 
@@ -131,7 +132,6 @@ describe("toCaseWritePayload", () => {
       number: "",
       pasal: "",
     });
-    expect(payload.traps?.[0]?.description).toBe("");
   });
 
   it("sends split_tag as null when no radio is chosen, so the server answers SPLIT_TAG_REQUIRED", () => {
@@ -149,13 +149,11 @@ describe("toCaseWritePayload", () => {
     const form = filledForm();
     form.identity.category = "";
     form.answer_criteria.expected_conclusion = "";
-    form.traps = [{ description: "Jebakan", expected_model_behavior: "" }];
 
     const payload = toCaseWritePayload(form);
 
     expect(payload.identity.category).toBeNull();
     expect(payload.answer_criteria?.expected_conclusion).toBeNull();
-    expect(payload.traps?.[0]?.expected_model_behavior).toBeNull();
   });
 
   it("treats a whitespace-only category as blank", () => {
@@ -353,24 +351,6 @@ describe("toCaseWritePayload", () => {
     ]);
   });
 
-  it("keeps traps length and order", () => {
-    const form = filledForm();
-    form.traps = [
-      { description: "A", expected_model_behavior: "" },
-      { description: "", expected_model_behavior: "" },
-      { description: "C", expected_model_behavior: "x" },
-    ];
-
-    const traps = toCaseWritePayload(form).traps ?? [];
-
-    expect(traps.map((trap) => trap.description)).toEqual(["A", "", "C"]);
-  });
-
-  it("sends an empty traps list when the author added none", () => {
-    const form = { ...filledForm(), traps: [] };
-    expect(toCaseWritePayload(form).traps).toEqual([]);
-  });
-
   it("keeps every row when there are many", () => {
     const form = filledForm();
     form.legal_refs = Array.from({ length: 50 }, (_, i) =>
@@ -409,11 +389,11 @@ describe("toCaseWritePayload", () => {
 });
 
 describe("emptyCaseFormValues", () => {
-  it("starts with one blank legal reference row, no traps, and no split tag", () => {
+  it("starts with one blank legal reference row and no split tag", () => {
     const values = emptyCaseFormValues();
 
     expect(values.legal_refs).toEqual([emptyLegalRef()]);
-    expect(values.traps).toEqual([]);
+    expect(values).not.toHaveProperty("traps");
     expect(values.split_tag).toBe("");
     expect(values.case_code).toBe("");
   });
@@ -467,7 +447,6 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
       must_not_contain: [],
       expected_conclusion: "Wajib.",
     },
-    traps: [{ description: "Sitasi PP yang dicabut", expected_model_behavior: null }],
     split_tag: "test",
     status: "draft",
     completeness_pct: 86,
@@ -514,7 +493,6 @@ describe("fromCaseRead", () => {
         must_not_contain: "",
         expected_conclusion: "Wajib.",
       },
-      traps: [{ description: "Sitasi PP yang dicabut", expected_model_behavior: "" }],
       split_tag: "test",
     });
   });
@@ -537,7 +515,6 @@ describe("fromCaseRead", () => {
       identity: saved.identity,
       legal_refs: legalRefs,
       answer_criteria: saved.answer_criteria,
-      traps: saved.traps,
       split_tag: saved.split_tag,
     });
   });
@@ -595,11 +572,30 @@ describe("fromCaseRead", () => {
     });
   });
 
+  it("opens a legacy case whose response still carries traps without putting them in the form", () => {
+    // Arrange
+    const legacy = {
+      ...savedCase(),
+      traps: [{ description: "Sitasi PP yang dicabut", expected_model_behavior: null }],
+    } as CaseRead;
+
+    // Act
+    const values = fromCaseRead(legacy);
+
+    // Assert
+    expect(values).not.toHaveProperty("traps");
+    expect(values.identity.title).toBe("Pemberitahuan PHK");
+    expect(toCaseWritePayload(values)).not.toHaveProperty("traps");
+  });
+
+  it("opens a case whose response has traps set to null", () => {
+    const legacy = { ...savedCase(), traps: null } as unknown as CaseRead;
+
+    expect(fromCaseRead(legacy)).not.toHaveProperty("traps");
+  });
+
   it("keeps an empty list of legal references empty instead of adding a blank row", () => {
-    expect(fromCaseRead(savedCase({ legal_refs: [], traps: [] }))).toMatchObject({
-      legal_refs: [],
-      traps: [],
-    });
+    expect(fromCaseRead(savedCase({ legal_refs: [] }))).toMatchObject({ legal_refs: [] });
   });
 
   it("treats missing optional answer criteria from the server as empty", () => {
