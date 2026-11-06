@@ -1,5 +1,5 @@
 import type { VersionCompare, VersionSections } from "@/types/caseVersion";
-import { SECTION_KEYS, sectionLabel, sectionLines } from "./versionSections";
+import { SECTION_KEYS, sectionLabel, sectionLines, visibleChanged } from "./versionSections";
 
 type SectionKey = keyof VersionSections;
 
@@ -13,12 +13,12 @@ export const COMPARE_SECTION_KEYS: SectionKey[] = SECTION_KEYS.filter((key) => k
 const NOTHING_CHANGED = "Tidak ada bagian yang berubah di antara kedua versi.";
 
 /**
- * Ringkasan di atas tabel, misalnya "2 bagian berubah: Kategori, Pengurang Poin." Urutannya
+ * Ringkasan di atas tabel, misalnya "2 bagian berubah: Kategori, Rujukan hukum." Urutannya
  * mengikuti tabel, bukan urutan dari server. Nama yang belum dikenal client tetap disebut di akhir
  * supaya perubahan dari server yang lebih baru tidak hilang diam-diam.
  */
 export function changeSummary(changed: readonly string[]): string {
-  const names = new Set(changed);
+  const names = new Set(visibleChanged(changed));
   const known = COMPARE_SECTION_KEYS.filter((key) => names.has(key));
   const unknown = [...names].filter((name) => name !== "case_code" && !SECTION_KEYS.includes(name as SectionKey));
   const labels = [...known, ...unknown].map(sectionLabel);
@@ -45,7 +45,7 @@ function markSide(lines: readonly string[], other: readonly string[], onlyHere: 
 /**
  * Baris mana di satu bagian yang hanya ada di salah satu versi. Perbandingannya per baris utuh
  * (multiset), bukan urutan: baris yang sama dengan urutan berbeda tidak dianggap beda isi.
- * Cukup untuk daftar rujukan, kriteria, dan pengurang poin yang memang ditampilkan per baris.
+ * Cukup untuk daftar rujukan dan kriteria yang memang ditampilkan per baris.
  */
 export function compareLines(a: readonly string[], b: readonly string[]): { a: MarkedLine[]; b: MarkedLine[] } {
   return { a: markSide(a, b, "only_a"), b: markSide(b, a, "only_b") };
