@@ -136,6 +136,24 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
     expect(request.levels.find((level) => level.score === 4)?.is_passing).toBe(false);
   });
 
+  // Positive: the approver is optional, but when it is typed it goes out with its date.
+  it("sends the approver name and the approval date when they are typed", async () => {
+    // Arrange
+    const { user, gateway } = setup();
+    await user.type(screen.getByLabelText("Nama penyetuju"), "Steven & Deanne");
+    await user.type(screen.getByLabelText("Tanggal persetujuan"), "2026-10-27");
+
+    // Act
+    await user.click(submit());
+
+    // Assert
+    await waitFor(() => expect(gateway.createVersion).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(gateway.createVersion).mock.calls[0][0]).toMatchObject({
+      approved_by_name: "Steven & Deanne",
+      approved_at: "2026-10-27",
+    });
+  });
+
   // Edge: the rules live on the server, so even an empty form goes out and the server answers 422.
   it("sends an empty form to the server instead of judging it in the browser", async () => {
     // Arrange
@@ -178,6 +196,21 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
     expect(document.getElementById(describedBy)).toHaveTextContent("Bobot harus berjumlah 100");
     expect(screen.getByRole("alert")).toHaveTextContent("Bobot harus berjumlah 100");
     expect(onCreated).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Nama aspek 1")).not.toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("shows a 422 on the path beside the path choice and marks it invalid", async () => {
+    // Arrange
+    const refusal = new ApiError(422, "VALIDATION_ERROR", "Jalur penilaian tidak dikenal", "aspects[0].grader_path");
+    const { user } = setup(vi.fn().mockRejectedValue(refusal));
+
+    // Act
+    await user.click(submit());
+
+    // Assert
+    const path = await screen.findByLabelText("Jalur aspek 1");
+    await waitFor(() => expect(path).toHaveAttribute("aria-invalid", "true"));
+    expect(screen.getByText("Jalur penilaian tidak dikenal", { selector: "p:not([role='alert'])" })).toBeInTheDocument();
     expect(screen.getByLabelText("Nama aspek 1")).not.toHaveAttribute("aria-invalid", "true");
   });
 
