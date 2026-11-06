@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
+import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { useGradingRuns } from "@/hooks/useGradingRuns";
 import { useRubricVersions } from "@/hooks/useRubricVersions";
 import { REGRADE_UNAVAILABLE_TEXT, regradeAvailability, type RegradeUnavailableReason } from "@/lib/rubrics/regradeRules";
@@ -25,17 +26,25 @@ export function RegradeSection({
   return <AdminRegrade sessionId={sessionId} gateway={gateway} />;
 }
 
+/** Pesan dari sumber data pertama yang gagal dimuat, atau null kalau semuanya baik-baik saja. */
+function firstError(...resources: AsyncResource<unknown>[]): string | null {
+  for (const resource of resources) {
+    if (resource.status === "error") return resource.message;
+  }
+  return null;
+}
+
 function AdminRegrade({ sessionId, gateway }: Readonly<{ sessionId: string; gateway: RubricsGateway }>) {
   const { showToast } = useToast();
   const versions = useRubricVersions(gateway);
   const runs = useGradingRuns(sessionId, gateway);
   const [open, setOpen] = useState(false);
 
-  const failed = versions.status === "error" ? versions : runs.status === "error" ? runs : null;
-  if (failed !== null) {
+  const failureMessage = firstError(versions, runs);
+  if (failureMessage !== null) {
     return (
       <ErrorState
-        message={failed.message}
+        message={failureMessage}
         onRetry={() => {
           versions.reload();
           runs.reload();
