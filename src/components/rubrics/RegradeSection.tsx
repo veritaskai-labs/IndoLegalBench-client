@@ -73,7 +73,7 @@ function AdminRegrade({
           version={availability.version}
           latest={latest}
           gateway={gradingGateway}
-          onRegraded={(result) => {
+          onRegraded={() => {
             setOpen(false);
             onChanged();
             showToast(`Penilaian ulang selesai dengan Versi ${availability.version.version_no}.`);
