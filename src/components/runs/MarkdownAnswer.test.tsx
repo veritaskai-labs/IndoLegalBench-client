@@ -139,6 +139,19 @@ describe("MarkdownAnswer (PBI-11 AC8, jawaban mentah dirender dari markdown)", (
     expect(screen.getByText("grafik putusan")).toBeInTheDocument();
   });
 
+  it("renders a blocked link as plain text, not as an anchor that reopens this page", () => {
+    // Arrange
+    const source = "[klik saya](javascript:alert(1)) dan [proto](//evil.example/x)";
+
+    // Act
+    const { container } = render(<MarkdownAnswer source={source} />);
+
+    // Assert
+    expect(container.querySelector("a")).toBeNull();
+    expect(screen.getByText("klik saya").tagName).toBe("SPAN");
+    expect(screen.getByText("proto").tagName).toBe("SPAN");
+  });
+
   // Positive: tautan aman
   it("opens an https link in a new tab without leaking the opener", () => {
     // Arrange
@@ -166,6 +179,18 @@ describe("MarkdownAnswer (PBI-11 AC8, jawaban mentah dirender dari markdown)", (
   });
 
   // Edge
+  it("shows raw html tags as literal text so the answer is shown as the AI wrote it", () => {
+    // Arrange
+    const source = "Isi <nama pihak> dan <br> lalu <script>alert(1)</script> serta 5 < 7";
+
+    // Act
+    const { container } = render(<MarkdownAnswer source={source} />);
+
+    // Assert
+    expect(container.textContent).toBe("Isi <nama pihak> dan <br> lalu <script>alert(1)</script> serta 5 < 7");
+    expect(container.querySelector("script, br")).toBeNull();
+  });
+
   it("renders plain text without markdown as one paragraph", () => {
     // Arrange
     const source = "Jawaban singkat tanpa markup.";
