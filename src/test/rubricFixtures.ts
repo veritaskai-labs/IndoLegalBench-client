@@ -60,8 +60,6 @@ export function makeFakeGateway(overrides: Partial<RubricsGateway> = {}): Rubric
   return {
     listVersions: unset("listVersions"),
     createVersion: unset("createVersion"),
-    regrade: unset("regrade"),
-    listGradingRuns: unset("listGradingRuns"),
     ...overrides,
   };
 }
