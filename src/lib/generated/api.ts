@@ -1635,8 +1635,6 @@ export interface components {
             pct: number;
             /** Missing */
             missing: components["schemas"]["CompletenessIssue"][];
-            /** Trap Count */
-            trap_count: number;
             /** Legal Ref Count */
             legal_ref_count: number;
         };
@@ -1714,8 +1712,6 @@ export interface components {
             /** Legal Refs */
             legal_refs: components["schemas"]["LegalRefRead"][];
             answer_criteria: components["schemas"]["AnswerCriteria"];
-            /** Traps */
-            traps: components["schemas"]["Trap"][];
             split_tag: components["schemas"]["SplitTag"];
             status: components["schemas"]["CaseStatus"];
             /**
@@ -1817,8 +1813,6 @@ export interface components {
              */
             legal_refs: components["schemas"]["LegalRefWrite"][];
             answer_criteria?: components["schemas"]["AnswerCriteria"];
-            /** Traps */
-            traps?: components["schemas"]["Trap"][];
             split_tag: components["schemas"]["SplitTag"];
         };
         /** CommentDiscussion */
@@ -2639,10 +2633,6 @@ export interface components {
             answer_criteria: {
                 [key: string]: unknown;
             };
-            /** Traps */
-            traps: {
-                [key: string]: unknown;
-            }[];
         };
         /**
          * ReviewSubmission
@@ -3294,16 +3284,6 @@ export interface components {
              */
             requires_confirmation: boolean;
         };
-        /**
-         * Trap
-         * @description An optionally included known mistake and how the model is expected to handle it.
-         */
-        Trap: {
-            /** Description */
-            description: string;
-            /** Expected Model Behavior */
-            expected_model_behavior?: string | null;
-        };
         /** UnreadCount */
         UnreadCount: {
             /**
@@ -3416,7 +3396,7 @@ export interface components {
         };
         /**
          * VersionSections
-         * @description One version split into the eight SCRUM-137 sections.
+         * @description One version split into the seven SCRUM-137 sections.
          *
          *     The dotted names are the API keys. See app/modules/cases/sections.py.
          */
@@ -3437,12 +3417,10 @@ export interface components {
             answer_criteria: {
                 [key: string]: unknown;
             };
-            /** Traps */
-            traps: unknown[];
         };
         /**
          * VersionSide
-         * @description One side of a compare. sections uses the eight section names.
+         * @description One side of a compare. sections uses the seven section names.
          */
         VersionSide: {
             /** Version No */

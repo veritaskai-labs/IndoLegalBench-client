@@ -106,7 +106,7 @@ describe("ReviewCaseContent", () => {
   });
 
   // Positive
-  it("shows the answer criteria and numbers the traps with the expected model behaviour", () => {
+  it("shows the answer criteria", () => {
     // Arrange
     const copy = makeReviewCopy({
       answer_criteria: {
@@ -114,10 +114,6 @@ describe("ReviewCaseContent", () => {
         must_not_contain: ["dilarang_menyitasi"],
         expected_conclusion: "Wajib tertulis",
       },
-      traps: [
-        { description: "Menyitasi peraturan yang dicabut", expected_model_behavior: "Menolak menyitasi" },
-        { description: "Mengabaikan caveat" },
-      ],
     });
 
     // Act
@@ -128,11 +124,21 @@ describe("ReviewCaseContent", () => {
     expect(within(criteria).getByText("Wajib ada: harus_menyebut")).toBeInTheDocument();
     expect(within(criteria).getByText("Tidak boleh ada: dilarang_menyitasi")).toBeInTheDocument();
     expect(within(criteria).getByText("Kesimpulan: Wajib tertulis")).toBeInTheDocument();
-    const traps = section("Pengurang Poin");
-    expect(
-      within(traps).getByText("1. Menyitasi peraturan yang dicabut (perilaku yang diharapkan: Menolak menyitasi)"),
-    ).toBeInTheDocument();
-    expect(within(traps).getByText("2. Mengabaikan caveat")).toBeInTheDocument();
+  });
+
+  // AC2 SCRUM-257: the reviewer no longer sees a trap part, even for a copy that still carries traps.
+  it("shows no trap part and no trap text for a copy that still carries traps", () => {
+    // Arrange
+    const legacy = makeReviewCopy({
+      traps: [{ description: "Menyitasi peraturan yang dicabut" }],
+    } as Parameters<typeof makeReviewCopy>[0]);
+
+    // Act
+    render(<ReviewCaseContent copy={legacy} />);
+
+    // Assert
+    expect(screen.queryByText("Pengurang Poin")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Menyitasi peraturan yang dicabut/)).not.toBeInTheDocument();
   });
 
   // Edge: a part with nothing in it shows a dash instead of an empty gap.
@@ -140,7 +146,6 @@ describe("ReviewCaseContent", () => {
     // Arrange
     const copy = makeReviewCopy({
       legal_refs: [],
-      traps: [],
       identity: { title: "Judul", question: "Tanya?", category: null },
     });
 
@@ -149,7 +154,6 @@ describe("ReviewCaseContent", () => {
 
     // Assert
     expect(within(section("Rujukan hukum")).getByText("—")).toBeInTheDocument();
-    expect(within(section("Pengurang Poin")).getByText("—")).toBeInTheDocument();
     expect(within(section("Kategori")).getByText("—")).toBeInTheDocument();
   });
 
