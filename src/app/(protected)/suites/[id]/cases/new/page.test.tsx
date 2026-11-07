@@ -51,7 +51,6 @@ function createdCase(id: string): CaseRead {
     identity: { title: "", question: "", category: null },
     legal_refs: [],
     answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
-    traps: [],
     split_tag: "dev",
     status: "draft",
     completeness_pct: 0,

@@ -328,6 +328,8 @@ function failedCase(key: string, statuses: AttemptStatus[]) {
       status,
       answer_text: null,
       model_version: null,
+      started_at: null,
+      finished_at: null,
     })),
   };
 }

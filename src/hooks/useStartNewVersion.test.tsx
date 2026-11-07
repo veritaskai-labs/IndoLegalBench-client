@@ -17,7 +17,6 @@ function draftCase(): CaseRead {
     identity: { title: "Judul", question: "Tanya?", category: null },
     legal_refs: [],
     answer_criteria: {},
-    traps: [],
     split_tag: "dev",
     status: "draft",
     completeness_pct: 50,

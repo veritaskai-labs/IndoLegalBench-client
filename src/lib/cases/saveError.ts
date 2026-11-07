@@ -1,6 +1,6 @@
 import type { FieldPath } from "react-hook-form";
 import { ApiError } from "@/lib/apiClient";
-import type { CaseFormValues, TrapFormValues } from "./caseFormMapping";
+import type { CaseFormValues } from "./caseFormMapping";
 import type { LegalRefFormValues, LegalRefLinkFormValues } from "./legalRefForm";
 import { VERSION_LOCKED_MESSAGE } from "./versionErrors";
 
@@ -23,7 +23,6 @@ const FIXED_PATHS = new Map<string, CaseFieldPath>([
   ["identity.question", "identity.question"],
   ["identity.category", "identity.category"],
   ["legal_refs", "legal_refs"],
-  ["traps", "traps"],
   ["answer_criteria.must_contain", "answer_criteria.must_contain"],
   ["answer_criteria.must_not_contain", "answer_criteria.must_not_contain"],
   ["answer_criteria.expected_conclusion", "answer_criteria.expected_conclusion"],
@@ -46,12 +45,7 @@ const LEGAL_REF_LINK_KEYS: readonly (keyof LegalRefLinkFormValues)[] = [
   "huruf",
 ];
 
-const TRAP_KEYS: readonly (keyof TrapFormValues)[] = [
-  "description",
-  "expected_model_behavior",
-];
-
-const ROW_FIELD = /^(legal_refs|traps)\[(\d+)\]\.(\w+)$/;
+const ROW_FIELD = /^legal_refs\[(\d+)\]\.(\w+)$/;
 const LINK_FIELD = /^legal_refs\[(\d+)\]\.links\[(\d+)\]\.(\w+)$/;
 /** Satu frasa di server, satu textarea di form: buang indeks frasanya. */
 const PHRASE_ITEM = /^(answer_criteria\.must(?:_not)?_contain)\[\d+\]$/;
@@ -71,14 +65,9 @@ function toFormPath(field: string): CaseFieldPath | null {
 
   const row = ROW_FIELD.exec(field);
   if (row === null) return null;
-  const [, list, index, key] = row;
-  const rowIndex = Number(index);
-  if (list === "legal_refs") {
-    const refKey = LEGAL_REF_KEYS.find((candidate) => candidate === key);
-    return refKey === undefined ? null : `legal_refs.${rowIndex}.${refKey}`;
-  }
-  const trapKey = TRAP_KEYS.find((candidate) => candidate === key);
-  return trapKey === undefined ? null : `traps.${rowIndex}.${trapKey}`;
+  const [, index, key] = row;
+  const refKey = LEGAL_REF_KEYS.find((candidate) => candidate === key);
+  return refKey === undefined ? null : `legal_refs.${Number(index)}.${refKey}`;
 }
 
 /**

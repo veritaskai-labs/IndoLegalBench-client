@@ -22,7 +22,6 @@ export function makeSections(overrides: SectionOverrides = {}): VersionSections 
     split_tag: "dev",
     legal_refs: [],
     answer_criteria: {},
-    traps: [],
     ...(overrides as Partial<VersionSections>),
   };
 }

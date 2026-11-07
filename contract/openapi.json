@@ -3423,19 +3423,41 @@
         "tags": [
           "measurements"
         ],
-        "summary": "Daftar sesi pengukuran yang belum diarsipkan, terbaru di atas",
+        "summary": "Daftar sesi pengukuran, terbaru di atas. archived=true menampilkan sesi arsip",
         "operationId": "list_sessions_measurements_get",
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Archived"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
+                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/SessionListItem"
                   },
-                  "type": "array",
                   "title": "Response List Sessions Measurements Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3618,6 +3640,79 @@
           },
           "409": {
             "description": "Sesi masih antre atau berjalan (`SESSION_NOT_ARCHIVABLE`), atau sudah diarsipkan (`SESSION_ALREADY_ARCHIVED`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/measurements/{session_id}/unarchive": {
+      "patch": {
+        "tags": [
+          "measurements"
+        ],
+        "summary": "Kembalikan sesi dari arsip ke daftar utama tanpa mengubah status",
+        "operationId": "unarchive_measurements__session_id__unarchive_patch",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionUnarchiveResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak berwenang (`FORBIDDEN`), atau Developer AI memulihkan sesi buatan orang lain (`NOT_YOUR_SESSION`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sesi belum diarsipkan (`SESSION_NOT_ARCHIVED`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -5697,6 +5792,32 @@
               }
             ],
             "title": "Model Version"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At",
+            "description": "Waktu worker mulai memanggil produk (ISO 8601 UTC) pada upaya terakhir. null untuk data lama dan percobaan yang belum jalan"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At",
+            "description": "Waktu respons diterima atau gagal (ISO 8601 UTC) pada upaya terakhir. null bila belum selesai, setelah coba ulang dibuka, atau data lama"
           }
         },
         "type": "object",
@@ -5705,7 +5826,9 @@
           "repetition_no",
           "status",
           "answer_text",
-          "model_version"
+          "model_version",
+          "started_at",
+          "finished_at"
         ],
         "title": "AttemptResult",
         "description": "Satu percobaan: jawaban mentah apa adanya dari produk (PBI-11 AC8)."
@@ -6069,10 +6192,6 @@
             "type": "array",
             "title": "Missing"
           },
-          "trap_count": {
-            "type": "integer",
-            "title": "Trap Count"
-          },
           "legal_ref_count": {
             "type": "integer",
             "title": "Legal Ref Count"
@@ -6084,7 +6203,6 @@
           "ready_for_review",
           "pct",
           "missing",
-          "trap_count",
           "legal_ref_count"
         ],
         "title": "CaseCompleteness",
@@ -6225,13 +6343,6 @@
           "answer_criteria": {
             "$ref": "#/components/schemas/AnswerCriteria"
           },
-          "traps": {
-            "items": {
-              "$ref": "#/components/schemas/Trap"
-            },
-            "type": "array",
-            "title": "Traps"
-          },
           "split_tag": {
             "$ref": "#/components/schemas/SplitTag"
           },
@@ -6272,7 +6383,6 @@
           "identity",
           "legal_refs",
           "answer_criteria",
-          "traps",
           "split_tag",
           "status",
           "was_dev",
@@ -6446,13 +6556,6 @@
           },
           "answer_criteria": {
             "$ref": "#/components/schemas/AnswerCriteria"
-          },
-          "traps": {
-            "items": {
-              "$ref": "#/components/schemas/Trap"
-            },
-            "type": "array",
-            "title": "Traps"
           },
           "split_tag": {
             "$ref": "#/components/schemas/SplitTag"
@@ -8087,14 +8190,6 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Answer Criteria"
-          },
-          "traps": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Traps"
           }
         },
         "type": "object",
@@ -8107,8 +8202,7 @@
           "split_tag",
           "identity",
           "legal_refs",
-          "answer_criteria",
-          "traps"
+          "answer_criteria"
         ],
         "title": "ReviewCopy",
         "description": "One version as a reviewer reads it (PBI-6, SCRUM-145).\n\nsplit_tag is shown read-only and is not graded (PBI-9 AC2)."
@@ -8938,6 +9032,25 @@
         "title": "SessionStatus",
         "description": "Status sesi per D4. Perpindahan yang sah ada di session_transitions (SCRUM-214).\n\npaused mencakup Jeda dari pengguna dan sesi yang dihentikan sistem (restart, deploy,\nanggaran habis); D4 tidak memisahkan Dihentikan dari Dijeda."
       },
+      "SessionUnarchiveResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "SessionUnarchiveResponse",
+        "description": "Hasil unarchive. Sesinya tampil lagi di GET /measurements, status tidak berubah (AC10)."
+      },
       "SplitTag": {
         "type": "string",
         "enum": [
@@ -9316,34 +9429,6 @@
         "title": "TagConfirmationBody",
         "description": "409 TAG_CHANGE_NEEDS_CONFIRMATION: tampilkan peringatan lalu kirim ulang dengan confirm."
       },
-      "Trap": {
-        "properties": {
-          "description": {
-            "type": "string",
-            "maxLength": 2000,
-            "minLength": 1,
-            "title": "Description"
-          },
-          "expected_model_behavior": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 2000
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expected Model Behavior"
-          }
-        },
-        "type": "object",
-        "required": [
-          "description"
-        ],
-        "title": "Trap",
-        "description": "An optionally included known mistake and how the model is expected to handle it."
-      },
       "UnreadCount": {
         "properties": {
           "count": {
@@ -9666,11 +9751,6 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Answer Criteria"
-          },
-          "traps": {
-            "items": {},
-            "type": "array",
-            "title": "Traps"
           }
         },
         "type": "object",
@@ -9680,11 +9760,10 @@
           "case_code",
           "split_tag",
           "legal_refs",
-          "answer_criteria",
-          "traps"
+          "answer_criteria"
         ],
         "title": "VersionSections",
-        "description": "One version split into the eight SCRUM-137 sections.\n\nThe dotted names are the API keys. See app/modules/cases/sections.py."
+        "description": "One version split into the seven SCRUM-137 sections.\n\nThe dotted names are the API keys. See app/modules/cases/sections.py."
       },
       "VersionSide": {
         "properties": {
@@ -9716,7 +9795,7 @@
           "sections"
         ],
         "title": "VersionSide",
-        "description": "One side of a compare. sections uses the eight section names."
+        "description": "One side of a compare. sections uses the seven section names."
       },
       "VersionSummary": {
         "properties": {

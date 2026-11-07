@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
@@ -48,7 +48,7 @@ function signedInAs(role: Role) {
 }
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
-  return { id: "44444444-4444-4444-4444-444444444444", repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", ...overrides };
+  return { id: "44444444-4444-4444-4444-444444444444", repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", started_at: null, finished_at: null, ...overrides };
 }
 
 
@@ -70,7 +70,6 @@ function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult 
       split_tag: "dev",
       legal_refs: [{ kind: "free_text", free_text: "Rujukan sintetis 1", links: [], display_text: "Rujukan sintetis 1" }],
       answer_criteria: { must_contain: ["unsur sintetis"], must_not_contain: [], expected_conclusion: "kesimpulan sintetis" },
-      traps: [{ description: "jebakan sintetis", expected_model_behavior: "menolak" }],
     },
     attempts: [attempt()],
     ...overrides,
@@ -332,12 +331,28 @@ describe("SessionDetailPage snapshot detail (PBI-11 AC7)", () => {
 
     const card = await openCase(user);
     expect(card.getByText("Snapshot versi 2")).toBeInTheDocument();
-    for (const label of ["Judul", "Pertanyaan", "Kategori", "ID kasus", "Tag dev/test", "Rujukan hukum", "Kriteria jawaban", "Pengurang Poin"]) {
+    for (const label of ["Judul", "Pertanyaan", "Kategori", "ID kasus", "Tag dev/test", "Rujukan hukum", "Kriteria jawaban"]) {
       expect(card.getByText(label)).toBeInTheDocument();
     }
     expect(card.getByText("Rujukan sintetis 1")).toBeInTheDocument();
     expect(card.getByText("Kesimpulan: kesimpulan sintetis")).toBeInTheDocument();
-    expect(card.getByText("1. jebakan sintetis (perilaku yang diharapkan: menolak)")).toBeInTheDocument();
+  });
+
+  // Edge: snapshots taken before traps were retired still hold them in their JSON.
+  it("opens a legacy snapshot that still holds traps without showing them", async () => {
+    const user = userEvent.setup();
+    const legacy = devCase();
+    (legacy.sections as Record<string, unknown>).traps = [
+      { description: "jebakan sintetis", expected_model_behavior: "menolak" },
+    ];
+    get.mockResolvedValue(session({ cases: [legacy] }));
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    expect(card.getByText("Snapshot versi 2")).toBeInTheDocument();
+    expect(card.getByText("Rujukan sintetis 1")).toBeInTheDocument();
+    expect(card.queryByText("Pengurang Poin")).not.toBeInTheDocument();
+    expect(card.queryByText(/jebakan sintetis/)).not.toBeInTheDocument();
   });
 });
 
@@ -367,16 +382,46 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     expect(within(items[0]).getByText("Jawaban pertama")).toBeInTheDocument();
   });
 
-  // The raw answer is shown as text: a provider's markup must never become HTML.
-  it("shows markup in a raw answer as plain text", async () => {
+  // The formatted view drops raw html; the raw view shows it as literal text. It never becomes an element.
+  it("never turns markup in a raw answer into html, and still shows it as text in the raw view", async () => {
     const user = userEvent.setup();
     const payload = '<img src=x onerror="alert(1)"> **tebal**';
     get.mockResolvedValue(session({ cases: [devCase({ attempts: [attempt({ answer_text: payload })] })] }));
     const { container } = render(<SessionDetailPage />);
 
     const card = await openCase(user);
-    expect(card.getByText(payload)).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
+    expect(card.getByText("tebal").tagName).toBe("STRONG");
+
+    await user.click(card.getByRole("button", { name: "Teks mentah" }));
+    expect(card.getByTestId("raw-answer").textContent).toBe(payload);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("renders the raw answer as markdown and shows the WIB timestamps of each attempt", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(
+      session({
+        cases: [
+          devCase({
+            attempts: [
+              attempt({ answer_text: "## Kesimpulan\n\n- poin satu", started_at: "2026-11-03T03:00:00Z", finished_at: "2026-11-03T03:01:30Z" }),
+              attempt({ repetition_no: 2, answer_text: "Jawaban kedua", started_at: null, finished_at: null }),
+            ],
+          }),
+        ],
+      }),
+    );
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    const [first, second] = card.getAllByRole("listitem", { name: /^Percobaan/ });
+    expect(within(first).getByRole("heading", { level: 2, name: "Kesimpulan" })).toBeInTheDocument();
+    expect(within(first).getByRole("listitem")).toHaveTextContent("poin satu");
+    expect(within(first).getByText("1 mnt 30 dtk")).toBeInTheDocument();
+    expect(within(first).getAllByText(/WIB$/)).toHaveLength(2);
+    expect(within(second).getByText("Belum dimulai")).toBeInTheDocument();
+    expect(within(second).getByText("Belum selesai")).toBeInTheDocument();
   });
 
   it("explains an attempt without an answer instead of leaving it blank", async () => {
@@ -400,16 +445,23 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
   });
 
-  // server#91: Developer AI sees progress but no answer until the session ends.
-  it("tells Developer AI that answers appear once a running session ends", async () => {
+  // SCRUM-261/262 (AC9): Developer AI reads dev answers while the session still runs.
+  it("shows Developer AI the answer of a dev case while the session is still running", async () => {
     const user = userEvent.setup();
     signedInAs("developer_ai");
-    get.mockResolvedValue(session({ status: "running", finished_at: null, cases: [devCase({ attempts: [attempt({ answer_text: null })] })] }));
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ attempts: [attempt({ answer_text: "Jawaban dev saat berjalan" }), attempt({ repetition_no: 2, status: "running", answer_text: null })] })],
+      }),
+    );
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
-    expect(card.getByText("Jawaban tampil setelah sesi selesai.")).toBeInTheDocument();
-    expect(card.getByText("Berhasil")).toBeInTheDocument();
+    expect(card.getByText("Jawaban dev saat berjalan")).toBeInTheDocument();
+    expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
+    expect(card.queryByText("Jawaban tampil setelah sesi selesai.")).not.toBeInTheDocument();
   });
 
   // AC9 / D10 section C: a test case opened by Developer AI is masked by the server.
@@ -671,5 +723,126 @@ describe("SessionDetailPage re-grade (PBI-14 AC7)", () => {
 
     // Assert
     expect(screen.queryByTestId("regrade-section")).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionDetailPage live answers (PBI-11 AC9, SCRUM-262)", () => {
+  const EMPTY_NOTE = /Belum ada jawaban\. Jawaban kasus dev tampil di sini/;
+  const STALE_NOTE = "Pembaruan otomatis gagal. Menampilkan data terakhir yang berhasil dimuat.";
+
+  function running(attempts: AttemptResult[]) {
+    return session({ status: "running", finished_at: null, cases: [devCase({ attempts })] });
+  }
+
+  async function renderAndTick(ms = 0) {
+    render(<SessionDetailPage />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    signedInAs("developer_ai");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("shows a new dev answer after the next refresh, without reloading the page", async () => {
+    const waiting = running([attempt({ status: "running", answer_text: null })]);
+    const answered = running([attempt({ answer_text: "Jawaban baru dari polling" })]);
+    get.mockResolvedValueOnce(waiting).mockResolvedValue(answered);
+
+    await renderAndTick();
+    expect(screen.queryByText("Jawaban baru dari polling")).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.getByText("Jawaban baru dari polling")).toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
+  it("tells the user nothing is answered yet while a running session has no answer", async () => {
+    get.mockResolvedValue(running([attempt({ status: "pending", answer_text: null })]));
+
+    await renderAndTick();
+
+    expect(screen.getByText(EMPTY_NOTE)).toBeInTheDocument();
+  });
+
+  it("drops the empty note once an answer arrives", async () => {
+    get
+      .mockResolvedValueOnce(running([attempt({ status: "pending", answer_text: null })]))
+      .mockResolvedValue(running([attempt({ answer_text: "Sudah ada" })]));
+
+    await renderAndTick();
+    expect(screen.getByText(EMPTY_NOTE)).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.queryByText(EMPTY_NOTE)).not.toBeInTheDocument();
+  });
+
+  it("does not show the empty note when every case is a masked test case", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ split_tag: "test", masked: true, sections: null, attempts: [attempt({ answer_text: null })] })],
+      }),
+    );
+
+    await renderAndTick();
+
+    expect(screen.queryByText(EMPTY_NOTE)).not.toBeInTheDocument();
+  });
+
+  it("does not show the empty note for a session that has ended", async () => {
+    get.mockResolvedValue(session({ status: "finished", cases: [devCase({ attempts: [attempt({ answer_text: null, status: "technical_failure" })] })] }));
+
+    await renderAndTick();
+
+    expect(screen.queryByText(EMPTY_NOTE)).not.toBeInTheDocument();
+  });
+
+  it("keeps the last data and warns when a refresh fails, then clears the warning", async () => {
+    const first = running([attempt({ answer_text: "Jawaban lama" })]);
+    get
+      .mockResolvedValueOnce(first)
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValue(running([attempt({ answer_text: "Jawaban pulih" })]));
+
+    await renderAndTick();
+    expect(screen.queryByText(STALE_NOTE)).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText(STALE_NOTE)).toBeInTheDocument();
+    expect(screen.getByText("Jawaban lama")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.queryByText(STALE_NOTE)).not.toBeInTheDocument();
+    expect(screen.getByText("Jawaban pulih")).toBeInTheDocument();
+  });
+
+  it("never shows content of a masked test case to Developer AI while the session runs", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ case_code: "KASUS-TEST", title: "Kasus test", split_tag: "test", masked: true, question: null, sections: null, attempts: [attempt({ answer_text: null })] })],
+      }),
+    );
+
+    await renderAndTick(5000);
+
+    expect(screen.getAllByText("Isi kasus test disembunyikan untuk Developer AI.").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Jawaban mentah percobaan 1")).not.toBeInTheDocument();
   });
 });
