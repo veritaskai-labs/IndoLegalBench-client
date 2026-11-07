@@ -9,6 +9,7 @@ export function gradedAttempt(overrides: Partial<AttemptGradeResult> = {}): Atte
     attempt_id: "a-1",
     repetition_no: 1,
     status: "succeeded",
+    source: "automatic",
     is_technical_disruption: false,
     score: { deterministic: "1.00", quality: "0.80", format: "0.75" },
     answer_text: "Jawaban contoh",

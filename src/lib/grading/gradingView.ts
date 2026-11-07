@@ -10,20 +10,27 @@ export const SCORE_GROUP_LABEL: Record<keyof ThreeScores, string> = {
   combined: "Gabungan",
 };
 
+/**
+ * Jalur deterministik, lalu dua aspek penilai LLM yang dilaporkan terpisah (server#114 bff8755,
+ * SCRUM-225). Urutan di sini adalah urutan kolom di setiap tabel skor.
+ */
 export const SCORE_PATH_LABEL: Record<keyof ScorePair, string> = {
   deterministic: "Deterministik",
-  judge: "Penilai LLM",
+  quality: "Kualitas LLM",
+  format: "Format LLM",
 };
+
+export type ScorePath = keyof ScorePair;
+
+/** Tabel mengulang daftar ini, jadi jalur baru cukup ditambah di SCORE_PATH_LABEL. */
+export const SCORE_PATHS = Object.keys(SCORE_PATH_LABEL) as ScorePath[];
 
 export const MASKED_CASE_LABEL = "Kasus test disamarkan";
 
 const NOT_GRADED_NOTE = "Tidak dinilai: gangguan teknis";
 
-/** Dua jalur, masing-masing sudah berupa teks. Tidak ada nilai gabungan (AC1). */
-export interface ScoreCells {
-  deterministic: string;
-  judge: string;
-}
+/** Setiap skor sudah berupa teks, satu per jalur. Tidak ada nilai gabungan (AC1). */
+export type ScoreCells = Record<ScorePath, string>;
 
 export interface AttemptRow {
   id: string;
@@ -45,11 +52,11 @@ export interface CaseRow {
   attempts: AttemptRow[];
 }
 
-const NO_SCORE: ScoreCells = { deterministic: "–", judge: "–" };
+const NO_SCORE: ScoreCells = scoreCells(null);
 
+/** Skor yang null atau tidak dikirim (semua field ScorePair opsional) tampil sebagai tanda pisah. */
 export function scoreCells(pair: ScorePair | null | undefined): ScoreCells {
-  if (pair == null) return { ...NO_SCORE };
-  return { deterministic: formatScore(pair.deterministic), judge: formatScore(pair.judge) };
+  return Object.fromEntries(SCORE_PATHS.map((path) => [path, formatScore(pair?.[path])])) as ScoreCells;
 }
 
 /**

@@ -4,13 +4,14 @@ import { Fragment, useId, useState } from "react";
 
 import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SCORE_PATH_LABEL, toCaseRow, type AttemptRow, type CaseRow } from "@/lib/grading/gradingView";
+import { SCORE_PATH_LABEL, SCORE_PATHS, toCaseRow, type AttemptRow, type CaseRow } from "@/lib/grading/gradingView";
 import type { CaseGradeResult } from "@/types/grading";
 
-const COLUMNS = 4;
+// Kasus dan Split, lalu satu kolom per jalur skor.
+const COLUMNS = 2 + SCORE_PATHS.length;
 
 /**
- * Tabel hasil per sesi (PBI-14 AC8): baris = kasus, isi = skor dua jalur dengan dua desimal.
+ * Tabel hasil per sesi (PBI-14 AC8): baris = kasus, isi = skor tiap jalur dengan dua desimal.
  * Klik baris membuka percobaannya dan versi rubrik yang dipakai hasil ini (AC7). Semua aturan
  * tampil (format, penyamaran, gangguan teknis) sudah diputuskan toCaseRow; di sini hanya markup.
  */
@@ -43,12 +44,11 @@ export function SessionScoreTable({
             <th scope="col" className="px-4 py-2">
               Split
             </th>
-            <th scope="col" className="px-4 py-2 text-right">
-              {SCORE_PATH_LABEL.deterministic}
-            </th>
-            <th scope="col" className="px-4 py-2 text-right">
-              {SCORE_PATH_LABEL.judge}
-            </th>
+            {SCORE_PATHS.map((path) => (
+              <th key={path} scope="col" className="px-4 py-2 text-right">
+                {SCORE_PATH_LABEL[path]}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -70,8 +70,11 @@ export function SessionScoreTable({
                     <CaseCell row={row} detailId={detailId} isOpen={isOpen} onToggle={() => toggle(row.id)} />
                   </td>
                   <td className="px-4 py-2">{row.splitTag && <SplitTagBadge tag={row.splitTag} />}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-slate-900">{row.scores.deterministic}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-slate-900">{row.scores.judge}</td>
+                  {SCORE_PATHS.map((path) => (
+                    <td key={path} className="px-4 py-2 text-right tabular-nums text-slate-900">
+                      {row.scores[path]}
+                    </td>
+                  ))}
                 </tr>
                 {isOpen && (
                   <tr>
@@ -143,14 +146,11 @@ function AttemptLine({ attempt }: Readonly<{ attempt: AttemptRow }>) {
       <span className="font-medium text-slate-900">{attempt.label}</span>
       <span className="text-slate-600">{attempt.statusLabel}</span>
       {attempt.scored ? (
-        <>
-          <span className="tabular-nums text-slate-900">
-            {SCORE_PATH_LABEL.deterministic} {attempt.scores.deterministic}
+        SCORE_PATHS.map((path) => (
+          <span key={path} className="tabular-nums text-slate-900">
+            {SCORE_PATH_LABEL[path]} {attempt.scores[path]}
           </span>
-          <span className="tabular-nums text-slate-900">
-            {SCORE_PATH_LABEL.judge} {attempt.scores.judge}
-          </span>
-        </>
+        ))
       ) : (
         <span className="text-amber-800">{attempt.note}</span>
       )}
