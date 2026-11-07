@@ -906,7 +906,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Daftar sesi pengukuran yang belum diarsipkan, terbaru di atas */
+        /** Daftar sesi pengukuran, terbaru di atas. archived=true menampilkan sesi arsip */
         get: operations["list_sessions_measurements_get"];
         put?: never;
         /** Mulai pengukuran: validasi ulang lalu sesi masuk antrean */
@@ -952,6 +952,23 @@ export interface paths {
         head?: never;
         /** Arsipkan sesi yang sudah berakhir supaya tidak tampil di daftar */
         patch: operations["archive_measurements__session_id__archive_patch"];
+        trace?: never;
+    };
+    "/measurements/{session_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Kembalikan sesi dari arsip ke daftar utama tanpa mengubah status */
+        patch: operations["unarchive_measurements__session_id__unarchive_patch"];
         trace?: never;
     };
     "/measurements/{session_id}/accept": {
@@ -4109,6 +4126,18 @@ export interface components {
          */
         SessionStatus: "queued" | "running" | "paused" | "cancelled" | "finished" | "finished_with_failures" | "failed" | "not_filled" | "partially_filled" | "complete" | "graded" | "finalized";
         /**
+         * SessionUnarchiveResponse
+         * @description Hasil unarchive. Sesinya tampil lagi di GET /measurements, status tidak berubah (AC10).
+         */
+        SessionUnarchiveResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            status: components["schemas"]["SessionStatus"];
+        };
+        /**
          * SplitTag
          * @description Dataset split stored on a version. Only dev and test are valid.
          * @enum {string}
@@ -6977,7 +7006,9 @@ export interface operations {
     };
     list_sessions_measurements_get: {
         parameters: {
-            query?: never;
+            query?: {
+                archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6991,6 +7022,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -7134,6 +7174,64 @@ export interface operations {
                 };
             };
             /** @description Sesi masih antre atau berjalan (`SESSION_NOT_ARCHIVABLE`), atau sudah diarsipkan (`SESSION_ALREADY_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_measurements__session_id__unarchive_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionUnarchiveResponse"];
+                };
+            };
+            /** @description Peran tidak berwenang (`FORBIDDEN`), atau Developer AI memulihkan sesi buatan orang lain (`NOT_YOUR_SESSION`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi belum diarsipkan (`SESSION_NOT_ARCHIVED`). */
             409: {
                 headers: {
                     [name: string]: unknown;

@@ -5,12 +5,14 @@ import type { SessionListItem, SessionStatus } from "@/types/measurement";
 import {
   archiveErrorMessage,
   canArchive,
+  canUnarchive,
   caseCountText,
   formatProgress,
   hasEnded,
   isSettled,
   SESSION_STATUS_LABEL,
   sessionStatusLabel,
+  unarchiveErrorMessage,
   unknownName,
 } from "./sessionRules";
 
@@ -150,6 +152,49 @@ describe("archiveErrorMessage", () => {
     ["a non-error value", "boom"],
   ])("falls back to a retry message for %s", (_name, error) => {
     expect(archiveErrorMessage(error)).toBe("Sesi gagal diarsipkan. Coba lagi.");
+  });
+});
+
+describe("canUnarchive (AC10, D10: Developer AI only own sessions)", () => {
+  // An archived session has ended by definition and the server ignores its status, so does the rule.
+  it.each<SessionStatus>(["finished", "finished_with_failures", "failed"])(
+    "lets Admin restore a %s session of someone else",
+    (status) => {
+      expect(canUnarchive(session({ status, created_by: "someone-else" }), ADMIN)).toBe(true);
+    },
+  );
+
+  it("lets Developer AI restore a session it started", () => {
+    expect(canUnarchive(session({ created_by: "dev-1" }), DEV_AI)).toBe(true);
+  });
+
+  it("hides it from Developer AI on a session someone else started", () => {
+    expect(canUnarchive(session({ created_by: "admin-1" }), DEV_AI)).toBe(false);
+  });
+
+  it.each(["contributor", "viewer"] as const)("hides it from %s, who cannot open the page anyway", (role) => {
+    expect(canUnarchive(session({ created_by: "u-1" }), { id: "u-1", role })).toBe(false);
+  });
+});
+
+describe("unarchiveErrorMessage", () => {
+  it.each([
+    [new ApiError(409, "SESSION_NOT_ARCHIVED"), "Sesi ini sudah dikembalikan. Muat ulang daftar."],
+    [new ApiError(403, "NOT_YOUR_SESSION"), "Developer AI hanya bisa mengembalikan sesi yang ia buat."],
+    [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang daftar."],
+    // unarchiveSession is silentForbidden, so a plain 403 (role changed while the page was open)
+    // lands here; "Coba lagi" would only retry something that keeps failing.
+    [new ApiError(403, "FORBIDDEN"), "Peran Anda tidak lagi boleh mengembalikan sesi. Muat ulang halaman."],
+  ])("explains %s", (error, message) => {
+    expect(unarchiveErrorMessage(error)).toBe(message);
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+    ["a non-error value", "boom"],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(unarchiveErrorMessage(error)).toBe("Sesi gagal dikembalikan. Coba lagi.");
   });
 });
 

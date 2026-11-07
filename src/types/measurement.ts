@@ -15,6 +15,8 @@ export type SessionStatus = components["schemas"]["SessionStatus"];
 /** Penyebab sesi berhenti (server#97): user, budget, restart untuk paused; error untuk failed. */
 export type StopReason = components["schemas"]["StopReason"];
 export type SessionArchiveResponse = components["schemas"]["SessionArchiveResponse"];
+/** PATCH /measurements/{id}/unarchive: sesi tampil lagi di daftar utama, status tidak berubah (PBI-11 AC10, server SCRUM-263). */
+export type SessionUnarchiveResponse = components["schemas"]["SessionUnarchiveResponse"];
 /** PATCH dan DELETE /measurements/{id}/accept: tanda terima apa adanya (PBI-12 AC9, server SCRUM-214). */
 export type SessionAcceptResponse = components["schemas"]["SessionAcceptResponse"];
 /** 202 dari Jeda dan Batalkan (PBI-12 AC7, server SCRUM-216). */
