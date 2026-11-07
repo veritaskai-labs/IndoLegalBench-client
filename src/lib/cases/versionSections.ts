@@ -83,18 +83,6 @@ function answerCriteriaLines(value: unknown): string[] {
   ].filter((line) => line !== "");
 }
 
-function trapLines(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  const lines: string[] = [];
-  for (const trap of value) {
-    if (!isRecord(trap) || text(trap.description) === "") continue;
-    const behavior = text(trap.expected_model_behavior);
-    const suffix = behavior === "" ? "" : ` (perilaku yang diharapkan: ${behavior})`;
-    lines.push(`${lines.length + 1}. ${text(trap.description)}${suffix}`);
-  }
-  return lines;
-}
-
 /**
  * Satu entri per bagian kasus: nama dan cara menampilkannya. Menambah bagian baru dari
  * server cukup menambah satu entri di sini; tampilan riwayat dan compare tidak perlu diubah.
@@ -109,8 +97,21 @@ const SECTION_VIEW: Record<SectionKey, SectionView> = {
   split_tag: { label: "Tag dev/test", lines: (s) => single(s.split_tag) },
   legal_refs: { label: "Rujukan hukum", lines: (s) => legalRefLines(s.legal_refs) },
   answer_criteria: { label: "Kriteria jawaban", lines: (s) => answerCriteriaLines(s.answer_criteria) },
-  traps: { label: "Pengurang Poin", lines: (s) => trapLines(s.traps) },
 };
+
+/**
+ * Nama bagian yang sudah dicabut dari kontrak (SCRUM-256) tetapi mungkin masih ada di daftar
+ * `changed` untuk versi lama. Tidak ditampilkan, supaya tampilan tidak memunculkan jebakan lagi.
+ * Server SCRUM-256 menghitung `changed` dari 7 bagian saat dibaca, jadi filter ini hanya berguna
+ * selama server yang dipakai belum memuat perubahan itu. Hapus bersama `visibleChanged` setelah
+ * server SCRUM-256 ada di dev dan prod.
+ */
+const RETIRED_SECTIONS: ReadonlySet<string> = new Set(["traps"]);
+
+/** Daftar `changed` dari server tanpa bagian yang sudah dicabut. */
+export function visibleChanged(changed: readonly string[]): string[] {
+  return changed.filter((name) => !RETIRED_SECTIONS.has(name));
+}
 
 /** Nama semua bagian, dalam urutan tampilan. */
 export const SECTION_KEYS = Object.keys(SECTION_VIEW) as SectionKey[];
@@ -130,6 +131,7 @@ export function sectionLines(name: SectionKey, sections: VersionSections): strin
  * tidak ada versi sebelumnya; versi lain dengan daftar kosong berarti tidak ada bagian yang beda.
  */
 export function describeChanged(versionNo: number, changed: readonly string[]): string {
-  if (changed.length > 0) return changed.map(sectionLabel).join(", ");
+  const shown = visibleChanged(changed);
+  if (shown.length > 0) return shown.map(sectionLabel).join(", ");
   return versionNo === 1 ? "Versi pertama" : "Tidak ada bagian yang berubah";
 }

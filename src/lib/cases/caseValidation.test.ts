@@ -14,13 +14,12 @@ function link(overrides: Partial<LegalRefLinkFormValues> = {}): LegalRefLinkForm
   };
 }
 
-// Minimum a draft needs to be saved: no traps, no answer criteria (AC2).
+// Minimum a draft needs to be saved: no answer criteria (AC2).
 const draft: CaseFormValues = {
   case_code: "ILB-PT-0142",
   identity: { title: "Pemberitahuan PHK", question: "Wajib?", category: "" },
   legal_refs: [{ kind: "structured", free_text: "", links: [link()] }],
   answer_criteria: { must_contain: "", must_not_contain: "", expected_conclusion: "" },
-  traps: [],
   split_tag: "dev",
 };
 
@@ -37,8 +36,8 @@ function withFreeText(freeText: string): CaseFormValues {
 }
 
 describe("validateCaseForm", () => {
-  // Positive: AC2, a draft without traps or criteria is valid to save.
-  it("accepts a draft with no traps and no answer criteria", () => {
+  // Positive: AC2, a draft without criteria is valid to save.
+  it("accepts a draft with no answer criteria", () => {
     expect(validateCaseForm(draft)).toEqual([]);
   });
 
@@ -128,13 +127,15 @@ describe("validateCaseForm", () => {
     expect(issues).toEqual([]);
   });
 
-  it("rejects a trap row without a description instead of dropping it", () => {
-    const issues = validateCaseForm({
-      ...draft,
-      traps: [{ description: "", expected_model_behavior: "Menolak" }],
-    });
+  it("does not validate leftover traps in the form values, because they are never sent", () => {
+    // Arrange
+    const stale = { ...draft, traps: [{ description: "", expected_model_behavior: "x" }] };
 
-    expect(issues).toEqual([{ path: "traps.0.description", message: "Deskripsi pengurang poin wajib diisi." }]);
+    // Act
+    const issues = validateCaseForm(stale);
+
+    // Assert
+    expect(issues).toEqual([]);
   });
 
   it("asks to pick a split tag", () => {

@@ -29,11 +29,6 @@ export const CASE_HELP = {
   mustContain: "Frasa yang wajib ada di jawaban yang benar. Satu frasa per baris.",
   mustNotContain: "Frasa yang menandakan jawaban salah bila muncul. Satu frasa per baris.",
   expectedConclusion: "Kesimpulan hukum yang seharusnya dicapai jawaban.",
-  // SCRUM-131: contoh pasal masih draf, tunggu konfirmasi tim legal (SA-1).
-  traps:
-    "Opsional. Pengurang Poin adalah skenario yang memancing jawaban yang tampak benar tapi sebenarnya keliru, untuk menguji ketelitian model. Jika model jatuh ke skenario ini, poin penilaiannya dikurangi. Contoh: model menjawab dengan pasal yang sudah dicabut atau diubah oleh peraturan yang lebih baru, misalnya mengutip Pasal 164 UU 13/2003 untuk PHK karena efisiensi, padahal pasal itu sudah dihapus UU Cipta Kerja. Kasus tetap bisa diajukan review tanpa pengurang poin.",
-  trapDescription: "Kesalahan apa yang ingin dipancing dari model, dan di bagian mana ia biasanya keliru.",
-  trapBehavior: "Opsional. Apa yang seharusnya dilakukan model saat menghadapi pengurang poin ini.",
   splitTag:
     "Tag menentukan metodologi dataset (pembagian data dev dan test), bukan tingkat kesulitan kasus.",
 } as const;
@@ -59,6 +54,4 @@ export const CASE_PLACEHOLDER = {
   mustContain: "pesangon",
   mustNotContain: "tidak berhak atas pesangon",
   expectedConclusion: "Pekerja berhak atas pesangon.",
-  trapDescription: "Model mengutip pasal yang sudah dicabut.",
-  trapBehavior: "Menyebut aturan yang berlaku sekarang.",
 } as const;

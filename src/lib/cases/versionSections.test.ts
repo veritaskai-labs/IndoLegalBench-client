@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeSections as sections } from "@/test/versionFixtures";
+import type { VersionSections } from "@/types/caseVersion";
 import { SECTION_KEYS, describeChanged, sectionLabel, sectionLines } from "./versionSections";
 
 describe("sectionLabel", () => {
@@ -12,7 +13,6 @@ describe("sectionLabel", () => {
     ["split_tag", "Tag dev/test"],
     ["legal_refs", "Rujukan hukum"],
     ["answer_criteria", "Kriteria jawaban"],
-    ["traps", "Pengurang Poin"],
   ])("labels %s as %s", (name, expected) => {
     // Arrange / Act
     const label = sectionLabel(name);
@@ -51,6 +51,23 @@ describe("describeChanged", () => {
   });
 
   // Edge: version 1 has no previous version to differ from.
+  // Edge: versions saved before traps were retired may still list it as changed.
+  it("leaves the retired traps section out of the list", () => {
+    // Arrange / Act
+    const text = describeChanged(2, ["traps", "category"]);
+
+    // Assert
+    expect(text).toBe("Kategori");
+  });
+
+  it("says nothing changed when traps was the only change", () => {
+    // Arrange / Act
+    const text = describeChanged(2, ["traps"]);
+
+    // Assert
+    expect(text).toBe("Tidak ada bagian yang berubah");
+  });
+
   it("calls version 1 the first version", () => {
     // Arrange / Act
     const text = describeChanged(1, []);
@@ -84,8 +101,29 @@ describe("SECTION_KEYS", () => {
       "split_tag",
       "legal_refs",
       "answer_criteria",
-      "traps",
     ]);
+  });
+
+  // AC2 SCRUM-257: no section for the retired trap field.
+  it("has no section for traps", () => {
+    // Arrange / Act / Assert
+    expect(SECTION_KEYS).not.toContain("traps");
+  });
+});
+
+describe("sections of a legacy snapshot that still holds traps", () => {
+  // Edge: old snapshots keep traps in their JSON, the page must neither show nor trip over it.
+  it("shows no line from the leftover traps in any section", () => {
+    // Arrange
+    const legacy = sections({
+      traps: [{ description: "Sitasi PP yang dicabut", expected_model_behavior: "Menolak" }],
+    } as Partial<VersionSections>);
+
+    // Act
+    const lines = SECTION_KEYS.flatMap((key) => sectionLines(key, legacy));
+
+    // Assert
+    expect(lines.join(" ")).not.toContain("Sitasi PP yang dicabut");
   });
 });
 
@@ -143,71 +181,48 @@ describe("sectionLines", () => {
     expect(lines).toEqual(["Wajib ada: Pasal 151; pemberitahuan tertulis", "Kesimpulan: Wajib."]);
   });
 
-  it("numbers the traps and adds the expected behavior when there is one", () => {
-    // Arrange
-    const version = sections({
-      traps: [
-        { description: "Sitasi PP yang dicabut", expected_model_behavior: "Menolak sitasi" },
-        { description: "Pasal fiktif", expected_model_behavior: null },
-      ],
-    });
-
-    // Act
-    const lines = sectionLines("traps", version);
-
-    // Assert
-    expect(lines).toEqual([
-      "1. Sitasi PP yang dicabut (perilaku yang diharapkan: Menolak sitasi)",
-      "2. Pasal fiktif",
-    ]);
-  });
-
   // Edge: nothing filled in.
   it("returns no lines for sections that are empty", () => {
     // Arrange
-    const version = sections({ category: null, legal_refs: [], answer_criteria: {}, traps: [] });
+    const version = sections({ category: null, legal_refs: [], answer_criteria: {} });
 
     // Act
     const lines = [
       sectionLines("category", version),
       sectionLines("legal_refs", version),
       sectionLines("answer_criteria", version),
-      sectionLines("traps", version),
     ];
 
     // Assert
-    expect(lines).toEqual([[], [], [], []]);
+    expect(lines).toEqual([[], [], []]);
   });
 
   // Edge: the contract types these as unknown, so odd data must not crash the page.
-  it("skips legal references, traps and criteria that are not objects", () => {
+  it("skips legal references and criteria that are not objects", () => {
     // Arrange
     const version = sections({
       legal_refs: ["UU 13", null, 5, {}],
-      traps: [null, "x", { description: "   " }, { description: "Sah" }],
       answer_criteria: { must_contain: "bukan daftar", must_not_contain: [1, "", "ok"] },
     });
 
     // Act
     const refs = sectionLines("legal_refs", version);
-    const traps = sectionLines("traps", version);
     const criteria = sectionLines("answer_criteria", version);
 
     // Assert
     expect(refs).toEqual([]);
-    expect(traps).toEqual(["1. Sah"]);
     expect(criteria).toEqual(["Tidak boleh ada: 1; ok"]);
   });
 
   it("shows nothing for a list section that arrives as a non-list", () => {
     // Arrange
-    const broken = sections({ legal_refs: "oops" as unknown as unknown[], traps: undefined as unknown as unknown[] });
+    const broken = sections({ legal_refs: "oops" as unknown as unknown[] });
 
     // Act
-    const lines = [sectionLines("legal_refs", broken), sectionLines("traps", broken)];
+    const lines = [sectionLines("legal_refs", broken)];
 
     // Assert
-    expect(lines).toEqual([[], []]);
+    expect(lines).toEqual([[]]);
   });
 });
 

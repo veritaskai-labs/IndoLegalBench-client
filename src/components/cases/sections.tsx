@@ -1,20 +1,14 @@
 import { useId } from "react";
 import type { SplitTag } from "@/types/case";
 import { SplitTagBadge } from "./SplitTagBadge";
-import {
-  useFieldArray,
-  type Control,
-  type UseFormRegister,
-} from "react-hook-form";
-import { emptyTrap, type CaseFormValues } from "@/lib/cases/caseFormMapping";
+import type { UseFormRegister } from "react-hook-form";
+import type { CaseFormValues } from "@/lib/cases/caseFormMapping";
 import { CASE_HELP, CASE_PLACEHOLDER } from "@/lib/cases/caseHelpText";
 import type { CaseFieldPath } from "@/lib/cases/saveError";
 import {
-  AddRowButton,
   ErrorText,
   FormSection,
   invalidProps,
-  RowGroup,
   TextAreaField,
   TextField,
 } from "./fields";
@@ -25,11 +19,6 @@ export type ErrorLookup = (path: CaseFieldPath) => string | undefined;
 type SectionProps = {
   register: UseFormRegister<CaseFormValues>;
   errorFor: ErrorLookup;
-};
-type ArrayProps = SectionProps & {
-  control: Control<CaseFormValues>;
-  /** True bila ada error di dalam satu baris, misalnya `legal_refs.0`. */
-  rowHasError: (row: `legal_refs.${number}` | `traps.${number}`) => boolean;
 };
 
 export function IdentitySection({ register, errorFor }: SectionProps) {
@@ -92,39 +81,6 @@ export function AnswerCriteriaSection({ register, errorFor }: SectionProps) {
         registration={register("answer_criteria.expected_conclusion")}
         error={errorFor("answer_criteria.expected_conclusion")}
       />
-    </FormSection>
-  );
-}
-
-export function TrapsSection({ register, control, errorFor, rowHasError }: ArrayProps) {
-  const { fields, append, remove } = useFieldArray({ control, name: "traps" });
-  return (
-    <FormSection title="Pengurang Poin" help={CASE_HELP.traps} error={errorFor("traps")}>
-      {fields.map((field, index) => (
-        <RowGroup
-          key={field.id}
-          title={`Pengurang Poin ${index + 1}`}
-          removeLabel={`Hapus pengurang poin ${index + 1}`}
-          onRemove={() => remove(index)}
-          invalid={rowHasError(`traps.${index}`)}
-        >
-          <TextAreaField
-            label="Deskripsi"
-            hint={CASE_HELP.trapDescription}
-            placeholder={CASE_PLACEHOLDER.trapDescription}
-            registration={register(`traps.${index}.description`)}
-            error={errorFor(`traps.${index}.description`)}
-          />
-          <TextAreaField
-            label="Perilaku model yang diharapkan"
-            hint={CASE_HELP.trapBehavior}
-            placeholder={CASE_PLACEHOLDER.trapBehavior}
-            registration={register(`traps.${index}.expected_model_behavior`)}
-            error={errorFor(`traps.${index}.expected_model_behavior`)}
-          />
-        </RowGroup>
-      ))}
-      <AddRowButton label="+ Tambah pengurang poin" onClick={() => append(emptyTrap())} />
     </FormSection>
   );
 }

@@ -18,7 +18,6 @@ function savedCase(id: string): CaseRead {
     identity: { title: "", question: "", category: null },
     legal_refs: [],
     answer_criteria: {},
-    traps: [],
     split_tag: "dev",
     status: "draft",
     completeness_pct: 0,

@@ -33,11 +33,6 @@ export const AnswerCriteriaSchema = z.object({
   expected_conclusion: z.string().nullable().optional(),
 });
 
-export const TrapSchema = z.object({
-  description: z.string().min(1).max(2000),
-  expected_model_behavior: z.string().max(2000).nullable().optional(),
-});
-
 export const SplitTagSchema = z.enum(["dev","test"]);
 
 export const CaseWriteSchema = z.object({
@@ -45,6 +40,5 @@ export const CaseWriteSchema = z.object({
   identity: CaseIdentitySchema,
   legal_refs: z.array(LegalRefWriteSchema).min(1),
   answer_criteria: AnswerCriteriaSchema.optional(),
-  traps: z.array(TrapSchema).optional(),
   split_tag: SplitTagSchema,
 });
