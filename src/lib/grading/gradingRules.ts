@@ -23,6 +23,17 @@ export function canGrade({ session, role, graded }: GradeInput): boolean {
   return role === "admin" && session.archived_at === null && GRADABLE.has(session.status) && !graded;
 }
 
+/** Sama dengan list_graded_sessions di server#114: peran lain dijawab 403. */
+const GRADED_SESSION_ROLES: ReadonlySet<Role> = new Set(["admin", "viewer"]);
+
+/**
+ * Daftar sesi yang dinilai di Laporan (keputusan PO) hanya ditawarkan ke Admin dan Viewer. Ini hanya
+ * menyembunyikan; server tetap menolak peran lain, jadi menyembunyikan tidak menjadi satu-satunya pagar.
+ */
+export function canSeeGradedSessions(role: Role | null): boolean {
+  return role !== null && GRADED_SESSION_ROLES.has(role);
+}
+
 /** 404 sebelum penilaian pertama: hasil kosong, bukan kesalahan. */
 export function isNotGraded(error: unknown): boolean {
   return error instanceof ApiError && error.code === "GRADING_NOT_FOUND";

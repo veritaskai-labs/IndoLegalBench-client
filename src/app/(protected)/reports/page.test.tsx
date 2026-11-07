@@ -58,6 +58,16 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     expect(sessionsRead).not.toHaveBeenCalled();
   });
 
+  // Edge: the session ended while the page was open; AuthGuard redirects, and the list is never asked for.
+  it("asks for nothing once the session has ended", () => {
+    useAuthMock.mockReturnValue({ status: "unauthenticated", reason: "expired" });
+
+    render(<ReportsPage />);
+
+    expect(screen.queryByRole("region", { name: "Hasil penilaian sesi" })).not.toBeInTheDocument();
+    expect(sessionsRead).not.toHaveBeenCalled();
+  });
+
   // Until the role is known, neither the placeholder nor the list flashes on screen.
   it("waits for the role before showing anything or asking for the list", () => {
     useAuthMock.mockReturnValue({ status: "loading" });
