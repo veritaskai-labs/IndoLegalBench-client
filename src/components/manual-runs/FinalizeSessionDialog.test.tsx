@@ -81,4 +81,24 @@ describe("FinalizeSessionDialog (PBI-22 AC8)", () => {
       });
     });
   });
+
+  it("renders error message when finalizeManualSession fails", async () => {
+    const user = userEvent.setup();
+    mockFinalize.mockRejectedValueOnce(new Error("Gagal menandai sesi selesai. Coba lagi."));
+
+    render(
+      <FinalizeSessionDialog
+        sessionId="session-123"
+        sessionLabel="LegalHero Test"
+        onFinalized={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tandai Selesai" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Gagal menandai sesi selesai. Coba lagi.")).toBeInTheDocument();
+    });
+  });
 });
