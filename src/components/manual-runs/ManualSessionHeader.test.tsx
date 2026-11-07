@@ -4,6 +4,27 @@ import { describe, expect, it, vi } from "vitest";
 import { ManualSessionHeader } from "./ManualSessionHeader";
 import type { ManualSessionDetail } from "@/types/measurement";
 
+vi.mock("./FinalizeSessionDialog", () => ({
+  FinalizeSessionDialog: ({
+    onFinalized,
+    onClose,
+  }: {
+    sessionId: string;
+    sessionLabel: string;
+    onFinalized: () => void;
+    onClose: () => void;
+  }) => (
+    <div data-testid="finalize-dialog">
+      <button type="button" onClick={onFinalized}>
+        Confirm Finalize
+      </button>
+      <button type="button" onClick={onClose}>
+        Cancel Finalize
+      </button>
+    </div>
+  ),
+}));
+
 function createMockDetail(overrides: Partial<ManualSessionDetail> = {}): ManualSessionDetail {
   return {
     id: "session-1",
@@ -203,5 +224,109 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(screen.queryByText(/anggaran/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/biaya berjalan/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/tingkat kegagalan/i)).not.toBeInTheDocument();
+  });
+
+  it("opens FinalizeSessionDialog on 'Tandai Selesai' click and closes on cancel", async () => {
+    const user = userEvent.setup();
+    const session = createMockDetail({
+      status: "complete",
+      filled_answers: 50,
+      total_answers: 50,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    const finalizeBtn = screen.getByRole("button", { name: "Tandai Selesai" });
+    await user.click(finalizeBtn);
+
+    expect(screen.getByTestId("finalize-dialog")).toBeInTheDocument();
+
+    const cancelBtn = screen.getByRole("button", { name: "Cancel Finalize" });
+    await user.click(cancelBtn);
+
+    expect(screen.queryByTestId("finalize-dialog")).not.toBeInTheDocument();
+  });
+
+  it("handles finalize completion and triggers onSessionUpdated", async () => {
+    const user = userEvent.setup();
+    const onSessionUpdated = vi.fn();
+    const session = createMockDetail({
+      status: "complete",
+      filled_answers: 50,
+      total_answers: 50,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={onSessionUpdated}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tandai Selesai" }));
+    expect(screen.getByTestId("finalize-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Confirm Finalize" }));
+
+    expect(screen.queryByTestId("finalize-dialog")).not.toBeInTheDocument();
+    expect(onSessionUpdated).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles 0 total answers with 0% progress", () => {
+    const session = createMockDetail({
+      filled_answers: 0,
+      total_answers: 0,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        (_, el) =>
+          el?.tagName.toLowerCase() === "p" &&
+          /0 dari 0 jawaban terisi \(0%\)/.test(el.textContent || ""),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("renders finalized timestamp and hides 'Tandai Selesai' button when finalized", () => {
+    const session = createMockDetail({
+      status: "finalized",
+      finalized_at: "2026-11-08T12:00:00Z",
+      filled_answers: 50,
+      total_answers: 50,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/08 Nov 2026/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tandai Selesai" })).not.toBeInTheDocument();
   });
 });
