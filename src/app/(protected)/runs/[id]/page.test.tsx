@@ -42,7 +42,7 @@ function signedInAs(role: Role) {
 }
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
-  return { id: "44444444-4444-4444-4444-444444444444", repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", ...overrides };
+  return { id: "44444444-4444-4444-4444-444444444444", repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", started_at: null, finished_at: null, ...overrides };
 }
 
 
