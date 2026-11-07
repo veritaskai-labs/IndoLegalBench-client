@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import { RegradeSection } from "@/components/rubrics/RegradeSection";
 import { SessionGradingSection } from "@/components/grading/SessionGradingSection";
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionControls } from "@/components/runs/SessionControls";
@@ -106,9 +105,6 @@ function SessionDetailView({
 
       <SessionControls session={session} role={role} viewerId={viewerId} onChanged={reloadSession} />
 
-      {/* Hanya Admin yang melihatnya, dan peran lain tidak memicu permintaan apa pun (PBI-14 AC7). */}
-      <RegradeSection sessionId={session.id} role={role} />
-
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Progres</h2>
         {progress.status === "loading" && <LoadingState />}
@@ -122,7 +118,7 @@ function SessionDetailView({
       <SessionErrorSummary sessionId={session.id} failures={failedAttempts(session.cases)}
       />
 
-      {/* Nilai dan hasil per kasus (PBI-14). Penilaian ulang ada di SCRUM-228. */}
+      {/* Nilai, hasil per kasus, dan Nilai ulang untuk Admin (PBI-14 AC6, AC7, AC8). */}
       <SessionGradingSection session={session} role={role} />
 
       <section className="space-y-3">

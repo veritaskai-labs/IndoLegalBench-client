@@ -26,12 +26,6 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   resumeSession: vi.fn(),
   retrySession: vi.fn(),
 }));
-// RegradeSection has its own tests with an injected gateway; here only where the page puts it matters.
-vi.mock("@/components/rubrics/RegradeSection", () => ({
-  RegradeSection: ({ sessionId, role }: { sessionId: string; role: string | null }) => (
-    <div data-testid="regrade-section">{`${sessionId}|${role}`}</div>
-  ),
-}));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
 vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn() } }));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
@@ -680,58 +674,6 @@ describe("SessionDetailPage error summary (PBI-12 AC4)", () => {
 
     await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
     expect(screen.queryByRole("region", { name: "Ringkasan kegagalan" })).not.toBeInTheDocument();
-  });
-});
-
-describe("SessionDetailPage re-grade (PBI-14 AC7)", () => {
-  // Positive: the Admin finds the re-grade button on the session page.
-  it("puts the re-grade section on the page for this session and the signed-in role", async () => {
-    // Arrange
-    get.mockResolvedValue(session());
-
-    // Act
-    render(<SessionDetailPage />);
-
-    // Assert
-    expect(await screen.findByTestId("regrade-section")).toHaveTextContent("s-1|admin");
-  });
-
-  // The section decides by role itself, so the page always hands the role over.
-  it("hands the role of Developer AI over as it is", async () => {
-    // Arrange
-    signedInAs("developer_ai");
-    get.mockResolvedValue(session());
-
-    // Act
-    render(<SessionDetailPage />);
-
-    // Assert
-    expect(await screen.findByTestId("regrade-section")).toHaveTextContent("s-1|developer_ai");
-  });
-
-  // Edge: the role is not known yet while the sign-in is checked; the section gets null and shows nothing.
-  it("hands over no role while the signed-in user is still unknown", async () => {
-    // Arrange
-    useAuthMock.mockReturnValue({ status: "loading" });
-    get.mockResolvedValue(session());
-
-    // Act
-    render(<SessionDetailPage />);
-
-    // Assert
-    expect(await screen.findByTestId("regrade-section")).toHaveTextContent("s-1|null");
-  });
-
-  // Negative: nothing about re-grading while the session itself is loading or missing.
-  it("does not show the re-grade section while the session loads", () => {
-    // Arrange
-    get.mockReturnValue(new Promise(() => {}));
-
-    // Act
-    render(<SessionDetailPage />);
-
-    // Assert
-    expect(screen.queryByTestId("regrade-section")).not.toBeInTheDocument();
   });
 });
 
