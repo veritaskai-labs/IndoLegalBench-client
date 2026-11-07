@@ -1,9 +1,11 @@
 "use client";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { regradeErrorMessage } from "@/lib/rubrics/rubricErrors";
-import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import type { GradingRun, RubricVersion } from "@/types/rubric";
+import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
+import { gradeErrorMessage } from "@/lib/grading/gradingRules";
+import { versionLabel } from "@/lib/rubrics/rubricVersion";
+import type { SessionGradingResponse } from "@/types/grading";
+import type { RubricVersionSummary } from "@/types/rubric";
 import { GradingHistoryList } from "./GradingHistoryList";
 
 /**
@@ -12,27 +14,27 @@ import { GradingHistoryList } from "./GradingHistoryList";
  * Terbaru. Pending, kunci tombol, dan pesan error datang dari ConfirmDialog; gateway disuntikkan.
  */
 export function RegradeDialog({
-  sessionId,
+  session,
   version,
-  runs,
-  gateway = httpRubricsGateway,
+  latest,
+  gateway = httpGradingGateway,
   onRegraded,
   onClose,
 }: Readonly<{
-  sessionId: string;
-  version: RubricVersion;
-  runs: GradingRun[];
-  gateway?: RubricsGateway;
-  onRegraded: (run: GradingRun) => void;
+  session: { id: string };
+  version: RubricVersionSummary;
+  latest: SessionGradingResponse;
+  gateway?: GradingGateway;
+  onRegraded: (result: SessionGradingResponse) => void;
   onClose: (afterError: boolean) => void;
 }>) {
   return (
     <ConfirmDialog
       title="Nilai ulang dengan versi terbaru?"
       confirmLabel="Nilai ulang"
-      busyLabel="Memulai…"
-      onConfirm={() => gateway.regrade(sessionId, { rubric_version_id: version.id })}
-      errorMessage={regradeErrorMessage}
+      busyLabel="Menilai ulang…"
+      onConfirm={() => gateway.grade(session.id, versionLabel(version.version_no))}
+      errorMessage={gradeErrorMessage}
       onDone={onRegraded}
       onClose={onClose}
     >
@@ -40,7 +42,7 @@ export function RegradeDialog({
         {`Sesi ini akan dinilai ulang dengan Versi ${version.version_no}. Hasil lama tetap tersimpan dan tetap memakai rubrik lamanya. Hasil baru ditandai Terbaru.`}
       </p>
       <div className="mt-3">
-        <GradingHistoryList runs={runs} />
+        <GradingHistoryList runs={[latest]} />
       </div>
     </ConfirmDialog>
   );

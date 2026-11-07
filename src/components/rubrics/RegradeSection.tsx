@@ -4,58 +4,55 @@ import { useState } from "react";
 
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
-import type { AsyncResource } from "@/hooks/useAsyncResource";
-import { useGradingRuns } from "@/hooks/useGradingRuns";
 import { useRubricVersions } from "@/hooks/useRubricVersions";
+import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { REGRADE_UNAVAILABLE_TEXT, regradeAvailability, type RegradeUnavailableReason } from "@/lib/rubrics/regradeRules";
 import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import type { Role } from "@/types";
+import type { SessionGradingResponse } from "@/types/grading";
+import type { SessionDetail } from "@/types/measurement";
 import { RegradeDialog } from "./RegradeDialog";
+
+type RegradeSession = Pick<SessionDetail, "id" | "status" | "archived_at">;
+
+type Props = Readonly<{
+  session: RegradeSession;
+  role: Role | null;
+  /** Hasil terbaru sesi ini; null bila sesi belum pernah dinilai. */
+  latest: SessionGradingResponse | null;
+  gradingGateway?: GradingGateway;
+  rubricsGateway?: RubricsGateway;
+  /** Hasil di halaman perlu dimuat ulang: setelah nilai ulang, atau setelah dialog ditutup karena error. */
+  onChanged: () => void;
+}>;
 
 /**
  * Nilai ulang dengan versi terbaru di halaman detail sesi (PBI-14 AC7). Hanya Admin: data
- * dimuat di komponen dalam, supaya peran lain tidak memanggil GET /rubrics yang menjawab 403 dan
- * mengalihkan mereka ke /forbidden. Kapan tombol boleh aktif ditentukan regradeAvailability.
+ * dimuat di komponen dalam, supaya peran lain tidak memanggil GET /admin/rubrics yang menjawab 403
+ * dan mengalihkan mereka ke /forbidden. Kapan tombol boleh aktif ditentukan regradeAvailability.
  */
-export function RegradeSection({
-  sessionId,
+export function RegradeSection(props: Props) {
+  if (props.role !== "admin") return null;
+  return <AdminRegrade {...props} />;
+}
+
+function AdminRegrade({
+  session,
   role,
-  gateway = httpRubricsGateway,
-}: Readonly<{ sessionId: string; role: Role | null; gateway?: RubricsGateway }>) {
-  if (role !== "admin") return null;
-  return <AdminRegrade sessionId={sessionId} gateway={gateway} />;
-}
-
-/** Pesan dari sumber data pertama yang gagal dimuat, atau null kalau semuanya baik-baik saja. */
-function firstError(...resources: AsyncResource<unknown>[]): string | null {
-  for (const resource of resources) {
-    if (resource.status === "error") return resource.message;
-  }
-  return null;
-}
-
-function AdminRegrade({ sessionId, gateway }: Readonly<{ sessionId: string; gateway: RubricsGateway }>) {
+  latest,
+  gradingGateway = httpGradingGateway,
+  rubricsGateway = httpRubricsGateway,
+  onChanged,
+}: Props) {
   const { showToast } = useToast();
-  const versions = useRubricVersions(gateway);
-  const runs = useGradingRuns(sessionId, gateway);
+  const versions = useRubricVersions(rubricsGateway);
   const [open, setOpen] = useState(false);
 
-  const failureMessage = firstError(versions, runs);
-  if (failureMessage !== null) {
-    return (
-      <ErrorState
-        message={failureMessage}
-        onRetry={() => {
-          versions.reload();
-          runs.reload();
-        }}
-      />
-    );
-  }
+  if (versions.status === "error") return <ErrorState message={versions.message} onRetry={versions.reload} />;
   // Tidak menampilkan apa pun saat memuat, supaya tombol tidak berkedip hidup lalu mati.
-  if (versions.status !== "ready" || runs.status !== "ready") return null;
+  if (versions.status !== "ready") return null;
 
-  const availability = regradeAvailability({ role: "admin", versions: versions.data, runs: runs.data });
+  const availability = regradeAvailability({ role, session, versions: versions.data, latest });
   // not_admin tidak mungkin di sini: komponen luar sudah menyaring peran.
   const reason = availability.available ? null : (availability.reason as Exclude<RegradeUnavailableReason, "not_admin">);
 
@@ -70,21 +67,21 @@ function AdminRegrade({ sessionId, gateway }: Readonly<{ sessionId: string; gate
         Nilai ulang dengan versi terbaru
       </button>
       {reason !== null && <p className="text-sm text-slate-500">{REGRADE_UNAVAILABLE_TEXT[reason]}</p>}
-      {open && availability.available && (
+      {open && availability.available && latest !== null && (
         <RegradeDialog
-          sessionId={sessionId}
+          session={session}
           version={availability.version}
-          runs={runs.data}
-          gateway={gateway}
-          onRegraded={(run) => {
+          latest={latest}
+          gateway={gradingGateway}
+          onRegraded={(result) => {
             setOpen(false);
-            runs.reload();
-            showToast(`Penilaian ulang dimulai dengan Versi ${run.rubric_version_no}.`);
+            onChanged();
+            showToast(`Penilaian ulang selesai dengan Versi ${availability.version.version_no}.`);
           }}
           onClose={(afterError) => {
             setOpen(false);
-            // Setelah penolakan, riwayat yang tampil mungkin sudah tidak sama dengan server.
-            if (afterError) runs.reload();
+            // Setelah penolakan, hasil yang tampil mungkin sudah tidak sama dengan server.
+            if (afterError) onChanged();
           }}
         />
       )}
