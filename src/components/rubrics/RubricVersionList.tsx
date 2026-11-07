@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/ui";
 import { sortNewestFirst, toVersionRow } from "@/lib/rubrics/rubricVersion";
-import type { RubricVersion } from "@/types/rubric";
+import type { RubricVersionSummary } from "@/types/rubric";
 
 const COLUMNS = ["Versi", "Berlaku sejak", "Dibuat oleh", "Penyetuju", "Status"];
 
@@ -9,7 +9,7 @@ const COLUMNS = ["Versi", "Berlaku sejak", "Dibuat oleh", "Penyetuju", "Status"]
  * adalah versi baru lewat form. Semua teks tampil datang dari toVersionRow, jadi komponen ini
  * hanya merender dan tidak memutuskan apa pun.
  */
-export function RubricVersionList({ versions }: Readonly<{ versions: RubricVersion[] }>) {
+export function RubricVersionList({ versions }: Readonly<{ versions: RubricVersionSummary[] }>) {
   const rows = sortNewestFirst(versions).map(toVersionRow);
 
   return (

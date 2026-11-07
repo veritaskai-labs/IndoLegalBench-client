@@ -1,5 +1,5 @@
 import { formatWibDate } from "@/lib/datetime/formatWib";
-import type { RubricVersion } from "@/types/rubric";
+import type { RubricVersionSummary } from "@/types/rubric";
 
 /** Satu baris daftar versi rubrik (PBI-14 AC7), siap tampil tanpa logika di komponen. */
 export interface VersionRow {
@@ -24,7 +24,7 @@ function approverText(name: string | null, approvedAt: string | null): string {
   return approvedAt === null ? trimmed : `${trimmed}, ${formatWibDate(approvedAt)}`;
 }
 
-export function toVersionRow(version: RubricVersion): VersionRow {
+export function toVersionRow(version: RubricVersionSummary): VersionRow {
   return {
     id: version.id,
     title: `Versi ${version.version_no}`,

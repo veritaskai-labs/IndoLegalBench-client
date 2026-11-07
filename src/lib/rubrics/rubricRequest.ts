@@ -1,4 +1,9 @@
-import type { CreateRubricVersionRequest, RubricAspect, RubricLevel, RubricLevelDescriptor } from "@/types/rubric";
+import type {
+  CreateRubricVersionRequest,
+  RubricAspectInput,
+  RubricDescriptorInput,
+  RubricLevelInput,
+} from "@/types/rubric";
 import type { DraftAspect, DraftLevel, RubricDraft } from "./rubricDraft";
 
 /** Kosong atau spasi saja berarti belum diisi, yang server terima sebagai null. */
@@ -17,31 +22,33 @@ function toWeight(text: string): number | null {
   return Number.isFinite(weight) ? weight : null;
 }
 
-/** Skor tertinggi dulu, seperti urutan baca di dokumen rubrik. Deskriptor yang tidak ditulis tidak dikirim. */
-function toDescriptors(descriptors: Record<number, string>): RubricLevelDescriptor[] {
-  return Object.entries(descriptors)
-    .map(([score, text]) => ({ score: Number(score), text }))
-    .filter(({ text }) => text.trim() !== "")
-    .sort((a, b) => b.score - a.score);
-}
-
-function toAspect(aspect: DraftAspect, index: number): RubricAspect {
+function toAspect(aspect: DraftAspect): RubricAspectInput {
   return {
     name: aspect.name,
     grader_path: aspect.graderPath,
     weight: toWeight(aspect.weight),
     definition: aspect.definition,
-    sort_order: index + 1,
-    level_descriptors: toDescriptors(aspect.descriptors),
   };
 }
 
-function toLevel(level: DraftLevel): RubricLevel {
-  return { score: level.score, label: level.label, is_passing: level.isPassing };
+/** Deskriptor yang ditulis untuk skor ini, urut aspek. Yang kosong atau spasi saja tidak dikirim. */
+function descriptorsOf(aspects: DraftAspect[], score: number): RubricDescriptorInput[] {
+  return aspects
+    .map((aspect) => ({ aspect_name: aspect.name, descriptor: aspect.descriptors[score] ?? "" }))
+    .filter(({ descriptor }) => descriptor.trim() !== "");
+}
+
+function toLevel(level: DraftLevel, aspects: DraftAspect[]): RubricLevelInput {
+  return {
+    score: level.score,
+    label: level.label,
+    is_passing: level.isPassing,
+    descriptors: descriptorsOf(aspects, level.score),
+  };
 }
 
 /**
- * Isian form menjadi body POST /rubrics. Tidak ada aturan validasi di sini: teks wajib dikirim
+ * Isian form menjadi body POST /admin/rubrics. Tidak ada aturan validasi di sini: teks wajib dikirim
  * apa adanya dan server yang menolak (422), supaya aturannya hanya hidup di satu tempat.
  */
 export function toCreateRequest(draft: RubricDraft): CreateRubricVersionRequest {
@@ -52,6 +59,6 @@ export function toCreateRequest(draft: RubricDraft): CreateRubricVersionRequest 
     approved_by_name: blankToNull(draft.approvedByName),
     approved_at: blankToNull(draft.approvedAt),
     aspects: draft.aspects.map(toAspect),
-    levels: draft.levels.map(toLevel),
+    levels: draft.levels.map((level) => toLevel(level, draft.aspects)),
   };
 }

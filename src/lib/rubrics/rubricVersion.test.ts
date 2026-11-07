@@ -1,23 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import type { RubricVersion } from "@/types/rubric";
+import type { RubricVersionSummary } from "@/types/rubric";
 import { latestVersion, sortNewestFirst, toVersionRow } from "./rubricVersion";
 
-function version(overrides: Partial<RubricVersion> = {}): RubricVersion {
+function version(overrides: Partial<RubricVersionSummary> = {}): RubricVersionSummary {
   return {
     id: "v-1",
     version_no: 1,
     effective_date: "2026-10-27",
     is_active: true,
-    locked_at: "2026-10-27T03:00:00Z",
-    judge_prompt_quality: "Nilai kualitas jawaban.",
-    judge_prompt_format: "Nilai format jawaban.",
+    created_by: "u-1",
     approved_by_name: "Steven & Deanne",
     approved_at: "2026-10-27",
     created_by_name: "Aileen",
     created_at: "2026-10-27T03:00:00Z",
-    aspects: [],
-    levels: [],
+    aspect_count: 3,
+    level_count: 6,
     ...overrides,
   };
 }
@@ -141,7 +139,7 @@ describe("sortNewestFirst", () => {
 
   it("returns an empty list for no versions", () => {
     // Arrange
-    const versions: RubricVersion[] = [];
+    const versions: RubricVersionSummary[] = [];
 
     // Act
     const sorted = sortNewestFirst(versions);
@@ -167,7 +165,7 @@ describe("latestVersion (AC7: nilai ulang dengan versi terbaru)", () => {
   // Negative / edge: before v1 exists there is nothing to re-grade with.
   it("returns null when there are no versions", () => {
     // Arrange
-    const versions: RubricVersion[] = [];
+    const versions: RubricVersionSummary[] = [];
 
     // Act
     const latest = latestVersion(versions);

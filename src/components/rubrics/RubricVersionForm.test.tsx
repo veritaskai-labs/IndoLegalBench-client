@@ -114,10 +114,13 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
       grader_path: "llm",
       weight: 100,
       definition: "Ketepatan hasil akhir",
-      sort_order: 1,
-      level_descriptors: [{ score: 5, text: "Benar" }],
     });
-    expect(request.levels[0]).toEqual({ score: 5, label: "Sempurna", is_passing: true });
+    expect(request.levels[0]).toEqual({
+      score: 5,
+      label: "Sempurna",
+      is_passing: true,
+      descriptors: [{ aspect_name: "Kesimpulan", descriptor: "Benar" }],
+    });
   });
 
   it("sends the path and the passing mark the Admin changed", async () => {
