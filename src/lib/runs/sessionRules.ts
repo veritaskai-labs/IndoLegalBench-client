@@ -17,6 +17,12 @@ export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
   finished: "Selesai",
   finished_with_failures: "Selesai dengan kegagalan",
   failed: "Gagal",
+  // server#116 (PBI-22): status sesi manual, dengan label yang sama dengan server (runs/models.py).
+  not_filled: "Belum terisi",
+  partially_filled: "Terisi sebagian",
+  complete: "Lengkap",
+  graded: "Dinilai",
+  finalized: "Selesai",
 };
 
 /**
@@ -31,7 +37,8 @@ export function sessionStatusLabel(status: SessionStatus, stopReason?: StopReaso
 
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
 // cancelled belum berakhir: server#102 masih bisa melanjutkannya, dan server has_ended tidak memuatnya.
-const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed"]);
+// finalized (sesi manual yang sudah ditutup Admin) berakhir sejak server#116.
+const ENDED: ReadonlySet<SessionStatus> = new Set(["finished", "finished_with_failures", "failed", "finalized"]);
 
 /** Sesi sudah berakhir: boleh diarsipkan, dan Developer AI boleh membaca jawabannya (server#91 has_ended). */
 export function hasEnded(status: SessionStatus): boolean {

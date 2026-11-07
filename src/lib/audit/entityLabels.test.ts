@@ -15,7 +15,11 @@ describe("entityLabel", () => {
     expect(entityLabel("rubric_version")).toBe("Versi rubrik");
   });
 
+  it("names the judge provider entity that the server audits since #118", () => {
+    expect(entityLabel("judge_provider")).toBe("Provider penilai");
+  });
+
   it("falls back to the raw type for an entity the client does not know yet", () => {
-    expect(entityLabel("judge_provider")).toBe("judge_provider");
+    expect(entityLabel("grading_run")).toBe("grading_run");
   });
 });

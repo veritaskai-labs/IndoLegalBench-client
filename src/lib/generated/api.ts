@@ -1009,6 +1009,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/results/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar sesi selesai yang telah dinilai untuk Admin dan Viewer (SCRUM-226)
+         * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin dan Viewer.
+         */
+        get: operations["list_graded_sessions_endpoint_measurements_results_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements/{session_id}/grade": {
         parameters: {
             query?: never;
@@ -1041,6 +1061,77 @@ export interface paths {
          * @description Hasil sesi berjalan hanya untuk Admin. Sesi selesai untuk Admin dan Viewer. Developer AI mendapat kasus test tersamar (PBI-14 AC8, PBI-11 AC9).
          */
         get: operations["get_results_endpoint_measurements__session_id__results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/results/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar sesi selesai yang telah dinilai untuk Admin dan Viewer (SCRUM-226)
+         * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin dan Viewer.
+         */
+        get: operations["list_graded_sessions_alias_endpoint_results_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Buat sesi manual: snapshot kasus saat itu juga, status Belum terisi */
+        post: operations["create_manual_session_manual_measurements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}/finalize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tandai sesi manual selesai: final, tidak dapat dibuka kembali */
+        post: operations["finalize_manual_manual_measurements__session_id__finalize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Progres sesi manual: X dari N jawaban terisi dan kartu per kasus */
+        get: operations["read_manual_session_manual_measurements__session_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1193,6 +1284,102 @@ export interface paths {
         };
         /** Detail satu versi rubrik */
         get: operations["get_version_admin_rubrics__version_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/judge-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar provider penilai
+         * @description Semua penilai termasuk yang nonaktif; yang aktif lebih dulu, lalu urut nama.
+         */
+        get: operations["list_judges_admin_judge_providers_get"];
+        put?: never;
+        /** Daftarkan provider penilai */
+        post: operations["create_judge_admin_judge_providers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/judge-providers/{judge_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail provider penilai */
+        get: operations["get_judge_admin_judge_providers__judge_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Ganti kredensial, harga, atau anggaran penilai
+         * @description Hanya credential, harga, dan monthly_budget_idr. Nama, jenis, URL, dan model tidak bisa diganti karena dirujuk sesi lama; null eksplisit ditolak.
+         */
+        patch: operations["update_judge_admin_judge_providers__judge_id__patch"];
+        trace?: never;
+    };
+    "/admin/judge-providers/{judge_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Nonaktifkan provider penilai */
+        post: operations["deactivate_judge_admin_judge_providers__judge_id__deactivate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/judge-providers/{judge_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aktifkan provider penilai */
+        post: operations["activate_judge_admin_judge_providers__judge_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/judge-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar pilihan provider penilai aktif
+         * @description Untuk dropdown penilai di form pengukuran (Admin dan Developer AI). Hanya id, nama, jenis, dan model; tanpa URL, hint kredensial, harga, atau anggaran.
+         */
+        get: operations["list_judge_options_judge_providers_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1520,7 +1707,7 @@ export interface components {
             status: components["schemas"]["AttemptStatus"];
             /**
              * Masked
-             * @description true bila Developer AI membuka kasus selain dev atau sesi yang belum berakhir: hanya jenis kegagalan dan waktu
+             * @description true bila Developer AI membuka kasus selain dev (apa pun status sesinya): hanya jenis kegagalan dan waktu
              */
             masked: boolean;
             /** Calls */
@@ -1545,6 +1732,11 @@ export interface components {
             /** @description Status percobaan */
             status: components["schemas"]["AttemptStatus"];
             /**
+             * @description Asal percobaan: automatic atau manual (PBI-12)
+             * @default automatic
+             */
+            source: components["schemas"]["AttemptSource"];
+            /**
              * Is Technical Disruption
              * @description True bila jawaban kosong, AI menolak, atau judge error (AC4)
              */
@@ -1556,6 +1748,23 @@ export interface components {
              * @description Jawaban mentah. null bila disamarkan untuk Developer AI pada kasus test
              */
             answer_text?: string | null;
+            /**
+             * Explanation
+             * @description Penjelasan evaluasi penilai LLM (llm_judge_results.explanation)
+             */
+            explanation?: string | null;
+            /**
+             * Reasons
+             * @description Daftar kode alasan standar per jalur (grading_result_reasons)
+             */
+            reasons?: string[];
+            /**
+             * Criteria
+             * @description Hasil penilaian per kriteria (llm_criterion_results)
+             */
+            criteria?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * AttemptResult
@@ -1573,7 +1782,7 @@ export interface components {
             status: components["schemas"]["AttemptStatus"];
             /**
              * Answer Text
-             * @description Jawaban mentah. null bila belum ada, gagal teknis, disamarkan, atau sesi belum berakhir untuk Developer AI
+             * @description Jawaban mentah. null bila belum ada, gagal teknis, atau disamarkan. Developer AI menerima jawaban kasus dev segera setelah percobaannya selesai, tanpa menunggu sesi berakhir
              */
             answer_text: string | null;
             /** Model Version */
@@ -1590,6 +1799,11 @@ export interface components {
             finished_at: string | null;
         };
         /**
+         * AttemptSource
+         * @enum {string}
+         */
+        AttemptSource: "automatic" | "manual";
+        /**
          * AttemptStatus
          * @enum {string}
          */
@@ -1599,7 +1813,7 @@ export interface components {
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
          */
-        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log" | "measurement_session" | "rubric_version";
+        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log" | "measurement_session" | "rubric_version" | "judge_provider";
         /**
          * AuditLogRead
          * @description Satu catatan audit, lengkap untuk dibuka kembali sebagai bukti (AC4).
@@ -2176,6 +2390,38 @@ export interface components {
             rubric_version?: string | null;
         };
         /**
+         * GradedSessionListItem
+         * @description Ringkasan sesi pengukuran selesai yang telah dinilai untuk Admin dan Viewer (PBI-14, SCRUM-226, SCRUM-227).
+         */
+        GradedSessionListItem: {
+            /**
+             * Session Id
+             * Format: uuid
+             * @description ID sesi pengukuran
+             */
+            session_id: string;
+            /**
+             * Label
+             * @description Label sesi pengukuran
+             */
+            label: string;
+            /**
+             * Product Name
+             * @description Nama produk AI yang diuji
+             */
+            product_name: string;
+            /**
+             * Finished At
+             * @description Waktu sesi selesai (null bila belum tercatat)
+             */
+            finished_at?: string | null;
+            /**
+             * Rubric Version
+             * @description Versi rubrik yang digunakan pada penilaian terbaru (mis. 'v1')
+             */
+            rubric_version?: string | null;
+        };
+        /**
          * GraderPath
          * @description Jalur penilaian satu dimensi rubrik (D6): deterministik atau LLM judge.
          * @enum {string}
@@ -2218,6 +2464,119 @@ export interface components {
             review: components["schemas"]["CaseReview"];
         };
         JsonValue: unknown;
+        /**
+         * JudgeProviderCreate
+         * @description Pendaftaran penilai oleh Admin. Isian di luar D6 ditolak, tidak dibuang diam-diam.
+         */
+        JudgeProviderCreate: {
+            /** Name */
+            name: string;
+            provider_type: components["schemas"]["ProviderType"];
+            /** Base Url */
+            base_url: string;
+            /** Model Name */
+            model_name: string;
+            /**
+             * Credential
+             * @description Hanya ditulis, spasi di ujung dibuang; respons memuat hint 4 karakter
+             */
+            credential: string;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok: number | string;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok: number | string;
+            /**
+             * Monthly Budget Idr
+             * @description Anggaran bulanan penilai, terpisah dari produk (klien No. 63 A)
+             */
+            monthly_budget_idr: number | string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+        };
+        /**
+         * JudgeProviderOption
+         * @description Satu pilihan penilai di form pengukuran (SCRUM-211). Tanpa URL, hint, dan harga.
+         */
+        JudgeProviderOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            provider_type: components["schemas"]["ProviderType"];
+            /** Model Name */
+            model_name: string;
+        };
+        /**
+         * JudgeProviderRead
+         * @description Satu penilai untuk Admin. Kredensial tidak ada di sini, hanya hint.
+         */
+        JudgeProviderRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            provider_type: components["schemas"]["ProviderType"];
+            /** Base Url */
+            base_url: string;
+            /** Model Name */
+            model_name: string;
+            /** Credential Hint */
+            credential_hint: string;
+            /** Has Credential */
+            has_credential: boolean;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok: string;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok: string;
+            /** Monthly Budget Idr */
+            monthly_budget_idr: string;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * JudgeProviderUpdate
+         * @description PATCH dibatasi kredensial, harga, dan anggaran (keputusan PO K5, 7 Nov).
+         *
+         *     Nama, jenis, URL, dan model dirujuk sesi lama, jadi tidak bisa diganti; aktif atau
+         *     nonaktif lewat endpoint sendiri. Kolomnya NOT NULL, jadi null eksplisit ditolak.
+         */
+        JudgeProviderUpdate: {
+            /**
+             * Credential
+             * @description Hanya ditulis, spasi di ujung dibuang; respons memuat hint 4 karakter
+             */
+            credential?: string | null;
+            /** Price Input Usd Per Mtok */
+            price_input_usd_per_mtok?: number | string | null;
+            /** Price Output Usd Per Mtok */
+            price_output_usd_per_mtok?: number | string | null;
+            /** Monthly Budget Idr */
+            monthly_budget_idr?: number | string | null;
+        };
         /**
          * LastTestStatus
          * @enum {string}
@@ -2440,6 +2799,224 @@ export interface components {
             free_text?: string | null;
             /** Links */
             links: components["schemas"]["LegalRefLinkWrite"][];
+        };
+        /**
+         * ManualAttemptSlot
+         * @description Satu kotak jawaban (Percobaan n) di kartu kasus sesi manual (PBI-22 AC4).
+         */
+        ManualAttemptSlot: {
+            /**
+             * Attempt Id
+             * Format: uuid
+             */
+            attempt_id: string;
+            /** Repetition No */
+            repetition_no: number;
+            /**
+             * Filled
+             * @description Teks jawaban atau 'Platform menolak menjawab' tersimpan
+             */
+            filled: boolean;
+            /**
+             * Answered At Platform
+             * @description Kapan jawaban diperoleh dari platform (AC7)
+             */
+            answered_at_platform: string | null;
+        };
+        /**
+         * ManualCaseProgress
+         * @description Satu kartu kasus: pertanyaan untuk disalin (AC3) dan slot per percobaan (AC4).
+         */
+        ManualCaseProgress: {
+            /**
+             * Snapshot Item Id
+             * Format: uuid
+             */
+            snapshot_item_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** Question */
+            question: string;
+            /** Split Tag */
+            split_tag: string;
+            /**
+             * Filled
+             * @description Semua percobaan kasus ini sudah terisi (AC8)
+             */
+            filled: boolean;
+            /** Attempts */
+            attempts: components["schemas"]["ManualAttemptSlot"][];
+        };
+        /**
+         * ManualFinalizeResponse
+         * @description Jawaban Tandai selesai sesi manual (PBI-22 AC8, D9 finalized_at/finalized_by).
+         */
+        ManualFinalizeResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** @description Selalu finalized: final, tidak dapat dibuka kembali */
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Finalized At
+             * Format: date-time
+             */
+            finalized_at: string;
+            /**
+             * Finalized By
+             * Format: uuid
+             */
+            finalized_by: string;
+        };
+        /**
+         * ManualSessionDetail
+         * @description Halaman sesi manual (PBI-22 AC8, AC11-AC13). Tanpa biaya dan anggaran (AC10).
+         */
+        ManualSessionDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            purpose: components["schemas"]["MeasurementPurpose"];
+            status: components["schemas"]["SessionStatus"];
+            /** Product Name */
+            product_name: string;
+            /** Vendor Name */
+            vendor_name: string | null;
+            /** Site Url */
+            site_url: string | null;
+            /**
+             * Manual Params
+             * @description Paket produk manual saat sesi dibuat (PBI-23)
+             */
+            manual_params: string | null;
+            case_filter: components["schemas"]["CaseFilter"];
+            /**
+             * Repetitions
+             * @description Percobaan per kasus (AC12, penanda PBI-15)
+             */
+            repetitions: number;
+            /**
+             * Filled Answers
+             * @description X pada 'X dari N jawaban terisi', seluruh sesi
+             */
+            filled_answers: number;
+            /**
+             * Total Answers
+             * @description N: kasus x percobaan
+             */
+            total_answers: number;
+            /** Answer Date From */
+            answer_date_from: string | null;
+            /** Answer Date To */
+            answer_date_to: string | null;
+            /**
+             * Date Range Warning
+             * @description Rentang tanggal jawaban melebihi batas hari (AC13; batas TBA, bawaan mati)
+             */
+            date_range_warning: boolean;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finalized At */
+            finalized_at: string | null;
+            /** Finalized By */
+            finalized_by: string | null;
+            /**
+             * Cases
+             * @description Kartu kasus urut kode; disaring bila unfilled=true
+             */
+            cases: components["schemas"]["ManualCaseProgress"][];
+        };
+        /**
+         * ManualStartRequest
+         * @description Body POST /manual-measurements (PBI-22 AC1, SCRUM-230).
+         *
+         *     Isian sesi otomatis diwarisi (suite, filter, label, tujuan, penilai), supaya aturan
+         *     validasinya satu. Bedanya: produk harus manual, dan percobaan standar 1, bukan 3.
+         */
+        ManualStartRequest: {
+            /**
+             * Suite Ids
+             * @description Suite yang dipilih, minimal satu. Id ganda digabung.
+             */
+            suite_ids: string[];
+            /**
+             * @description Kasus yang ikut: dev, test, atau both
+             * @default both
+             */
+            case_filter: components["schemas"]["CaseFilter"];
+            /**
+             * Repeat Count
+             * @description Percobaan per kasus, standar 1, maksimum 5, ditentukan saat sesi dibuat
+             * @default 1
+             */
+            repeat_count: number;
+            /**
+             * Product Id
+             * Format: uuid
+             * @description Satu produk AI manual yang dicatat tim legal
+             */
+            product_id: string;
+            /**
+             * Label
+             * @description Nama sesi, wajib, maksimal 200
+             */
+            label: string;
+            /** @description official = Pengukuran Resmi, trial = Uji Coba */
+            purpose: components["schemas"]["MeasurementPurpose"];
+            /**
+             * Judge Provider Id
+             * @description Provider penilai (LLM judge) dari GET /judge-providers. Boleh kosong; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
+             */
+            judge_provider_id?: string | null;
+        };
+        /**
+         * ManualStartResponse
+         * @description Jawaban 201 POST /manual-measurements: sesi siap diisi (D8 Belum terisi).
+         */
+        ManualStartResponse: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /** @description Selalu not_filled: tanpa antrean (PBI-22 AC10) */
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Case Count
+             * @description Kasus yang dibekukan di snapshot
+             */
+            case_count: number;
+            /**
+             * Repetitions
+             * @description Percobaan per kasus
+             */
+            repetitions: number;
+            /**
+             * Total Answers
+             * @description N pada progres 'X dari N jawaban terisi'
+             */
+            total_answers: number;
         };
         /** MeResponse */
         MeResponse: {
@@ -3084,19 +3661,24 @@ export interface components {
         };
         /**
          * ScorePair
-         * @description Pasangan skor deterministik dan penilai LLM (PBI-14, SCRUM-225).
+         * @description Skor deterministik, kualitas rubrik, dan format penilai LLM (PBI-14, SCRUM-225).
          */
         ScorePair: {
             /**
              * Deterministic
-             * @description Skor jalur deterministik (0.00-1.00 atau skala rubrik)
+             * @description Skor jalur deterministik (proporsi sitasi 0.00-1.00)
              */
             deterministic?: string | null;
             /**
-             * Judge
-             * @description Skor jalur penilai LLM (skala 0.00-5.00)
+             * Quality
+             * @description Skor kualitas substansi hukum berdasarkan rubrik (skala 0.00-5.00)
              */
-            judge?: string | null;
+            quality?: string | null;
+            /**
+             * Format
+             * @description Skor kepatuhan format dan struktur jawaban (skala 0.00-1.00)
+             */
+            format?: string | null;
         };
         /**
          * SessionAcceptRequest
@@ -3334,6 +3916,16 @@ export interface components {
              */
             session_id: string;
             /**
+             * Session Label
+             * @description Label sesi pengukuran yang diuji
+             */
+            session_label?: string | null;
+            /**
+             * Product Name
+             * @description Nama produk AI yang diuji
+             */
+            product_name?: string | null;
+            /**
              * Rubric Version
              * @description Versi rubrik yang digunakan (mis. 'v1')
              */
@@ -3506,13 +4098,16 @@ export interface components {
         };
         /**
          * SessionStatus
-         * @description Status sesi per D4. Perpindahan yang sah ada di session_transitions (SCRUM-214).
+         * @description Status sesi per D4 (otomatis) dan D8 (manual). Perpindahan sah di session_transitions.
          *
          *     paused mencakup Jeda dari pengguna dan sesi yang dihentikan sistem (restart, deploy,
          *     anggaran habis); D4 tidak memisahkan Dihentikan dari Dijeda.
+         *
+         *     Lima status terakhir milik sesi manual (PBI-22 SCRUM-230, D9 menaruhnya di kolom yang
+         *     sama): Belum terisi, Terisi sebagian, Lengkap, Dinilai, Selesai.
          * @enum {string}
          */
-        SessionStatus: "queued" | "running" | "paused" | "cancelled" | "finished" | "finished_with_failures" | "failed";
+        SessionStatus: "queued" | "running" | "paused" | "cancelled" | "finished" | "finished_with_failures" | "failed" | "not_filled" | "partially_filled" | "complete" | "graded" | "finalized";
         /**
          * SplitTag
          * @description Dataset split stored on a version. Only dev and test are valid.
@@ -3571,7 +4166,7 @@ export interface components {
             purpose: components["schemas"]["MeasurementPurpose"];
             /**
              * Judge Provider Id
-             * @description Provider penilai (LLM judge) yang dipilih; kosong sampai PBI-14
+             * @description Provider penilai (LLM judge) dari GET /judge-providers. Boleh kosong; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
              */
             judge_provider_id?: string | null;
         };
@@ -6781,6 +7376,26 @@ export interface operations {
             };
         };
     };
+    list_graded_sessions_endpoint_measurements_results_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradedSessionListItem"][];
+                };
+            };
+        };
+    };
     trigger_grade_endpoint_measurements__session_id__grade_post: {
         parameters: {
             query?: never;
@@ -6873,6 +7488,169 @@ export interface operations {
                 };
             };
             /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`) atau hasil penilaian belum tersedia (`GRADING_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_graded_sessions_alias_endpoint_results_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradedSessionListItem"][];
+                };
+            };
+        };
+    };
+    create_manual_session_manual_measurements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualStartRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualStartResponse"];
+                };
+            };
+            /** @description Suite atau produk AI tidak ditemukan (`AI_PRODUCT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Salah satu suite diarsipkan dan tidak bisa dipilih (`SUITE_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Isian tidak valid, produk otomatis atau nonaktif (`PRODUCT_NOT_MANUAL`, `PRODUCT_INACTIVE`), atau tidak ada kasus layak (`NO_ELIGIBLE_CASES`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    finalize_manual_manual_measurements__session_id__finalize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualFinalizeResponse"];
+                };
+            };
+            /** @description Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Masih ada jawaban kosong (`MANUAL_SESSION_INCOMPLETE`) atau sesi sudah selesai (`MANUAL_SESSION_FINALIZED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_manual_session_manual_measurements__session_id__get: {
+        parameters: {
+            query?: {
+                /** @description Filter 'belum terisi': hanya kasus yang masih kosong */
+                unfilled?: boolean;
+            };
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualSessionDetail"];
+                };
+            };
+            /** @description Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`). */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7284,6 +8062,261 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_judges_admin_judge_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderRead"][];
+                };
+            };
+        };
+    };
+    create_judge_admin_judge_providers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgeProviderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderRead"];
+                };
+            };
+            /** @description Nama sudah dipakai (`JUDGE_PROVIDER_NAME_TAKEN`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_judge_admin_judge_providers__judge_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                judge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderRead"];
+                };
+            };
+            /** @description Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_judge_admin_judge_providers__judge_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                judge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JudgeProviderUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderRead"];
+                };
+            };
+            /** @description Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_judge_admin_judge_providers__judge_id__deactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                judge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderRead"];
+                };
+            };
+            /** @description Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_judge_admin_judge_providers__judge_id__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                judge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderRead"];
+                };
+            };
+            /** @description Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_judge_options_judge_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JudgeProviderOption"][];
+                };
+            };
+            /** @description Peran tidak berwenang. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
