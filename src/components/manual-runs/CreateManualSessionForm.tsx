@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ProductSelect } from "@/components/providers/ProductSelect";
 import { useSuites } from "@/hooks/useSuites";
@@ -60,7 +60,7 @@ export function CreateManualSessionForm() {
     setSelectedSuiteIds([]);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!isFormValid || !purpose) return;
 
