@@ -80,6 +80,33 @@ export function archiveErrorMessage(error: unknown): string {
   return known ?? "Sesi gagal diarsipkan. Coba lagi.";
 }
 
+/** Admin mengelola sesi siapa pun, Developer AI hanya sesi yang ia buat (D10). */
+function isAdminOrCreator(session: Pick<SessionListItem, "created_by">, me: Pick<Me, "id" | "role">): boolean {
+  if (me.role === "admin") return true;
+  return me.role === "developer_ai" && session.created_by === me.id;
+}
+
+/**
+ * Tombol Kembalikan di tab Arsip (AC10). Status tidak dicek: sesi arsip pasti sudah berakhir dan
+ * server mengabaikan statusnya. Server tetap yang menolak (403/409).
+ */
+export function canUnarchive(session: Pick<SessionListItem, "created_by">, me: Pick<Me, "id" | "role">): boolean {
+  return isAdminOrCreator(session, me);
+}
+
+const UNARCHIVE_ERRORS: Record<string, string> = {
+  SESSION_NOT_ARCHIVED: "Sesi ini sudah dikembalikan. Muat ulang daftar.",
+  NOT_YOUR_SESSION: "Developer AI hanya bisa mengembalikan sesi yang ia buat.",
+  MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang daftar.",
+  // unarchiveSession memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
+  FORBIDDEN: "Peran Anda tidak lagi boleh mengembalikan sesi. Muat ulang halaman.",
+};
+
+export function unarchiveErrorMessage(error: unknown): string {
+  const known = error instanceof ApiError ? UNARCHIVE_ERRORS[error.code] : undefined;
+  return known ?? "Sesi gagal dikembalikan. Coba lagi.";
+}
+
 /** case_count null selama sesi antre: snapshot baru dibuat saat sesi mulai. */
 export function caseCountText(count: number | null): string {
   return count === null ? "–" : String(count);
