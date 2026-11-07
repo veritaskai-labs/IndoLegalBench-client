@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
-import { canGrade, gradeErrorMessage, isNotGraded, resultsErrorMessage, sessionsErrorMessage } from "./gradingRules";
+import {
+  canGrade,
+  canSeeGradedSessions,
+  gradeErrorMessage,
+  isNotGraded,
+  resultsErrorMessage,
+  sessionsErrorMessage,
+} from "./gradingRules";
 
 /*
  * Test design for canGrade: Input Space Partitioning with Base Choice Coverage.
@@ -121,5 +128,22 @@ describe("sessionsErrorMessage (AC8, Laporan list)", () => {
     ["a network error", new TypeError("Failed to fetch")],
   ])("falls back to a retry message for %s", (_name, error) => {
     expect(sessionsErrorMessage(error)).toBe("Gagal memuat daftar sesi yang dinilai. Coba lagi.");
+  });
+});
+
+// server#114 list_graded_sessions answers 403 to every other role, so the list is not offered to them.
+// The API stays the real gate (AGENTS.md: hiding alone is not enough).
+describe("canSeeGradedSessions (AC8, PO decision: Viewer reads results under Laporan)", () => {
+  it.each<[Role, boolean]>([
+    ["admin", true],
+    ["viewer", true],
+    ["contributor", false],
+    ["developer_ai", false],
+  ])("answers %s with %s", (role, allowed) => {
+    expect(canSeeGradedSessions(role)).toBe(allowed);
+  });
+
+  it("offers nothing while the role is still loading", () => {
+    expect(canSeeGradedSessions(null)).toBe(false);
   });
 });
