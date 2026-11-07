@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { SessionGradingSection } from "@/components/grading/SessionGradingSection";
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
@@ -13,12 +12,12 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
+import { useLiveSession } from "@/hooks/useLiveSession";
 import { useSessionDetail } from "@/hooks/useSessionDetail";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { decodeRouteParam } from "@/lib/routeParams";
-import { getSession } from "@/lib/runs/runsApi";
-import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
-import { formatProgress, hasEnded, isSettled, unknownName } from "@/lib/runs/sessionRules";
+import { awaitingFirstAnswer, CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
+import { formatProgress, isSettled, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
@@ -55,48 +54,10 @@ function SessionDetailView({
   role,
   viewerId,
 }: Readonly<{ session: SessionDetail; role: Role | null; viewerId: string | null }>) {
-  const [session, setSession] = useState(initialSession);
+  const { session, stale, reload: reloadSession } = useLiveSession(initialSession);
   // Sesi yang tidak berubah sendiri tidak perlu polling (berakhir atau dibatalkan).
   const ended = isSettled(session.status);
   const progress = useMeasurementProgress(session.id, { poll: !ended });
-
-  useEffect(() => {
-    if (ended) return;
-
-    let active = true;
-    let fetching = false;
-
-    const refresh = () => {
-      if (fetching) return;
-      fetching = true;
-
-      getSession(session.id)
-        .then((updated) => {
-          if (active) setSession(updated);
-        })
-        .catch(() => {
-          // Pertahankan detail terakhir jika refresh gagal.
-        })
-        .finally(() => {
-          fetching = false;
-        });
-    };
-
-    const timer = setInterval(refresh, 5000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, [ended, session.id]);
-
-  // Setelah aksi kontrol (SCRUM-220): ambil sesi terbaru tanpa spinner; polling di atas tetap jalan.
-  function reloadSession() {
-    getSession(session.id)
-      .then(setSession)
-      .catch(() => {
-        // Pertahankan detail terakhir; polling atau muat ulang halaman mencoba lagi.
-      });
-  }
 
   const facts: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SessionStatusBadge status={session.status} stopReason={session.stop_reason} /> },
@@ -113,8 +74,6 @@ function SessionDetailView({
       value: session.snapshot_created_at ? formatWib(session.snapshot_created_at) : "Dibuat saat sesi mulai",
     },
   ];
-  // Developer AI melihat jawaban hanya setelah sesi berakhir (server#91 session_detail).
-  const context = { sessionEnded: hasEnded(session.status), viewerRole: role };
 
   return (
     <div className="space-y-6">
@@ -138,6 +97,12 @@ function SessionDetailView({
         </dl>
       </section>
 
+      {stale && !ended && (
+        <output className="block rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Pembaruan otomatis gagal. Menampilkan data terakhir yang berhasil dimuat.
+        </output>
+      )}
+
       <SessionControls session={session} role={role} viewerId={viewerId} onChanged={reloadSession} />
 
       <section className="space-y-3">
@@ -158,10 +123,15 @@ function SessionDetailView({
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
+        {!ended && awaitingFirstAnswer(session.cases) && (
+          <p className="text-sm text-slate-500">
+            Belum ada jawaban. Jawaban kasus dev tampil di sini begitu tiap percobaan selesai, halaman diperbarui otomatis.
+          </p>
+        )}
         {session.cases.length === 0 ? (
           <p className="text-sm text-slate-500">Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.</p>
         ) : (
-          session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} context={context} />)
+          session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} />)
         )}
       </section>
     </div>

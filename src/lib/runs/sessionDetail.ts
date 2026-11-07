@@ -1,5 +1,4 @@
-import type { Role } from "@/types";
-import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose } from "@/types/measurement";
+import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose, SessionCaseResult } from "@/types/measurement";
 
 /** Status satu percobaan (D2 attempts). Record atas enum kontrak: status baru membuat tsc gagal di sini. */
 export const ATTEMPT_STATUS_LABEL: Record<AttemptStatus, string> = {
@@ -35,8 +34,8 @@ export function attemptSummary(attempts: readonly AttemptResult[]): string {
   return failed > 0 ? `${base} · ${failed} gagal teknis` : base;
 }
 
-/** viewerRole null: pengguna belum diketahui (/me belum dijawab); tidak ada aturan khusus peran. */
-export type AnswerContext = { masked: boolean; sessionEnded: boolean; viewerRole: Role | null };
+/** Hanya masked yang menentukan teks pengganti; Developer AI dan Admin membaca jawaban dev dengan cara yang sama. */
+export type AnswerContext = { masked: boolean };
 
 /**
  * Server (#91 session_detail) mengirim answer_text null karena beberapa alasan tanpa menyebut
@@ -48,6 +47,19 @@ export function answerPlaceholder(attempt: AttemptResult, context: AnswerContext
   if (context.masked) return "Isi kasus test disembunyikan untuk Developer AI.";
   if (attempt.status === "pending" || attempt.status === "running") return "Belum ada jawaban.";
   if (attempt.status === "technical_failure") return "Gagal teknis, tidak ada jawaban.";
-  if (context.viewerRole === "developer_ai" && !context.sessionEnded) return "Jawaban tampil setelah sesi selesai.";
   return "Tidak ada jawaban tersimpan.";
+}
+
+/**
+ * Belum ada satu pun jawaban yang bisa dibaca dan masih ada percobaan yang akan menjawab (PBI-11
+ * AC9, state empty). Kasus yang disamarkan tidak dihitung: isinya tidak akan pernah tampil. Kalau
+ * semua percobaan sudah berakhir tanpa jawaban (mis. gagal teknis), tidak ada yang ditunggu.
+ */
+export function awaitingFirstAnswer(cases: readonly SessionCaseResult[]): boolean {
+  const attempts = cases.filter((item) => !item.masked).flatMap((item) => item.attempts);
+  return (
+    attempts.length > 0 &&
+    attempts.every((attempt) => attempt.answer_text === null) &&
+    attempts.some((attempt) => attempt.status === "pending" || attempt.status === "running")
+  );
 }

@@ -1578,6 +1578,16 @@ export interface components {
             answer_text: string | null;
             /** Model Version */
             model_version: string | null;
+            /**
+             * Started At
+             * @description Waktu worker mulai memanggil produk (ISO 8601 UTC) pada upaya terakhir. null untuk data lama dan percobaan yang belum jalan
+             */
+            started_at: string | null;
+            /**
+             * Finished At
+             * @description Waktu respons diterima atau gagal (ISO 8601 UTC) pada upaya terakhir. null bila belum selesai, setelah coba ulang dibuka, atau data lama
+             */
+            finished_at: string | null;
         };
         /**
          * AttemptStatus
