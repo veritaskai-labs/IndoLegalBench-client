@@ -73,9 +73,9 @@ function AnswerBody({ answer }: Readonly<{ answer: string }>) {
           {status === "copied" ? "Tersalin" : "Salin"}
         </button>
         {status === "failed" && (
-          <span role="status" className="text-xs text-red-700">
+          <output className="text-xs text-red-700">
             Gagal menyalin, pilih teksnya lalu salin manual.
-          </span>
+          </output>
         )}
       </div>
       {view === "formatted" ? (
