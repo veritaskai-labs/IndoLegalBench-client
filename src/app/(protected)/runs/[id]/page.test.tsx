@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
+import { httpGradingGateway } from "@/lib/grading/gradingApi";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
+import { gradingResponse } from "@/test/gradingFixtures";
 import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
@@ -24,6 +26,8 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   resumeSession: vi.fn(),
   retrySession: vi.fn(),
 }));
+// The grading section has its own tests with a fake gateway; here the page uses the default one.
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn() } }));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
@@ -33,6 +37,8 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const get = vi.mocked(getSession);
 const progressRead = vi.mocked(getProgress);
+const gradeRequest = vi.mocked(httpGradingGateway.grade);
+const resultsRead = vi.mocked(httpGradingGateway.results);
 
 function signedInAs(role: Role) {
   useAuthMock.mockReturnValue({
@@ -121,6 +127,9 @@ beforeEach(() => {
   params.id = "s-1";
   signedInAs("admin");
   progressRead.mockReturnValue(new Promise(() => {}));
+  gradeRequest.mockReset();
+  resultsRead.mockReset();
+  resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
 });
 
 describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
@@ -665,6 +674,57 @@ describe("SessionDetailPage error summary (PBI-12 AC4)", () => {
 
     await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
     expect(screen.queryByRole("region", { name: "Ringkasan kegagalan" })).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
+  // Scores are read after the progress and before the raw answers they are based on.
+  it("shows the results section after the progress and before the cases", async () => {
+    get.mockResolvedValue(session());
+
+    render(<SessionDetailPage />);
+
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    const progress = screen.getByRole("heading", { name: "Progres" });
+    const cases = screen.getByRole("heading", { name: "Kasus dan jawaban mentah" });
+    expect(progress.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(results.compareDocumentPosition(cases) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(resultsRead).toHaveBeenCalledWith("s-1");
+  });
+
+  it("lets Admin grade a finished session from the page", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "finished" }));
+    gradeRequest.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    await user.click(await within(results).findByRole("button", { name: "Nilai" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Nilai sesi ini?" })).getByRole("button", { name: "Nilai" }));
+
+    expect(gradeRequest).toHaveBeenCalledWith("s-1");
+  });
+
+  it("shows the scores of a graded session", async () => {
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    expect(await within(results).findByRole("table", { name: "Skor per kasus" })).toBeInTheDocument();
+  });
+
+  // The page passes the signed-in role on; Developer AI never gets the action.
+  it("offers Developer AI no Nilai", async () => {
+    signedInAs("developer_ai");
+    get.mockResolvedValue(session({ status: "finished" }));
+
+    render(<SessionDetailPage />);
+
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    expect(await within(results).findByText("Sesi ini belum dinilai.")).toBeInTheDocument();
+    expect(within(results).queryByRole("button", { name: "Nilai" })).not.toBeInTheDocument();
   });
 });
 
