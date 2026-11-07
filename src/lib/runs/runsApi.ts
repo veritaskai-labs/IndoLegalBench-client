@@ -1,5 +1,12 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { SessionArchiveResponse, SessionDetail, SessionListItem, MeasurementProgress, AttemptCalls} from "@/types/measurement";
+import type {
+  AttemptCalls,
+  MeasurementProgress,
+  SessionArchiveResponse,
+  SessionDetail,
+  SessionListItem,
+  SessionUnarchiveResponse,
+} from "@/types/measurement";
 
 const BASE = "/measurements";
 
@@ -7,9 +14,12 @@ function sessionPath(sessionId: string): string {
   return `${BASE}/${encodeURIComponent(sessionId)}`;
 }
 
-/** GET /measurements: sesi yang belum diarsipkan, terbaru di atas (PBI-11 AC10). */
-export function listSessions(): Promise<SessionListItem[]> {
-  return apiFetch<SessionListItem[]>(BASE);
+/**
+ * GET /measurements: sesi yang belum diarsipkan, terbaru di atas (PBI-11 AC10).
+ * archived=true meminta sesi arsip dengan kolom yang sama (server SCRUM-263).
+ */
+export function listSessions(archived = false): Promise<SessionListItem[]> {
+  return apiFetch<SessionListItem[]>(archived ? `${BASE}?archived=true` : BASE);
 }
 
 /**
@@ -26,6 +36,17 @@ export function getSession(sessionId: string): Promise<SessionDetail> {
  */
 export function archiveSession(sessionId: string): Promise<SessionArchiveResponse> {
   return apiFetch<SessionArchiveResponse>(`${sessionPath(sessionId)}/archive`, {
+    method: "PATCH",
+    silentForbidden: true,
+  });
+}
+
+/**
+ * PATCH /measurements/{id}/unarchive: sesi tampil lagi di daftar utama, status tidak berubah.
+ * silentForbidden seperti archiveSession: 403 NOT_YOUR_SESSION tampil di dialog, bukan /forbidden.
+ */
+export function unarchiveSession(sessionId: string): Promise<SessionUnarchiveResponse> {
+  return apiFetch<SessionUnarchiveResponse>(`${sessionPath(sessionId)}/unarchive`, {
     method: "PATCH",
     silentForbidden: true,
   });
