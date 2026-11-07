@@ -1,88 +1,91 @@
 import { describe, expect, it } from "vitest";
 
-import type { GradingRun, RubricVersion } from "@/types/rubric";
+import { gradingResponse } from "@/test/gradingFixtures";
+import { makeRubricSummary } from "@/test/rubricFixtures";
+import type { Role } from "@/types";
+import type { SessionStatus } from "@/types/measurement";
 import { REGRADE_UNAVAILABLE_TEXT, regradeAvailability } from "./regradeRules";
 
-function version(no: number): RubricVersion {
-  return { id: `v-${no}`, version_no: no } as RubricVersion;
-}
+const SESSION = { status: "finished" as SessionStatus, archived_at: null as string | null };
+const V1 = makeRubricSummary({ id: "id-1", version_no: 1 });
+const V2 = makeRubricSummary({ id: "id-2", version_no: 2 });
+const GRADED_WITH_V1 = gradingResponse({ rubric_version: "v1" });
 
-function run(overrides: Partial<GradingRun> = {}): GradingRun {
-  return {
-    id: "r-1",
-    kind: "initial",
-    status: "finished",
-    rubric_version_id: "v-1",
-    rubric_version_no: 1,
-    triggered_by_name: "Aileen",
-    triggered_at: "2026-11-06T03:00:00Z",
-    is_latest: true,
-    ...overrides,
-  };
+function input(overrides: Partial<Parameters<typeof regradeAvailability>[0]> = {}) {
+  return { role: "admin" as Role | null, session: SESSION, versions: [V1, V2], latest: GRADED_WITH_V1, ...overrides };
 }
 
 describe("regradeAvailability (AC7: Nilai ulang dengan versi terbaru)", () => {
   // Positive: graded with v1 while v2 exists, so re-grading with v2 makes sense.
   it("offers the newest version to an Admin when the session was graded with an older one", () => {
     // Arrange
-    const versions = [version(1), version(2)];
-    const runs = [run()];
+    const arranged = input();
 
     // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
+    const result = regradeAvailability(arranged);
 
     // Assert
-    expect(result).toEqual({ available: true, version: version(2) });
+    expect(result).toEqual({ available: true, version: V2 });
   });
 
   // Edge: "terbaru" is the highest number, whatever order the server listed the versions in.
   it("picks the highest version number whatever the order", () => {
     // Arrange
-    const versions = [version(3), version(1), version(2)];
-    const runs = [run()];
+    const v3 = makeRubricSummary({ id: "id-3", version_no: 3 });
 
     // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
+    const result = regradeAvailability(input({ versions: [v3, V1, V2] }));
 
     // Assert
-    expect(result).toMatchObject({ available: true, version: { id: "v-3" } });
+    expect(result).toEqual({ available: true, version: v3 });
   });
 
-  // Edge: older results are kept, so the history can hold several runs; only the latest counts.
-  it("compares with the run marked latest, not with older runs", () => {
-    // Arrange
-    const versions = [version(1), version(2)];
-    const runs = [
-      run({ id: "r-2", kind: "regrade", rubric_version_id: "v-2", rubric_version_no: 2, is_latest: true }),
-      run({ id: "r-1", is_latest: false }),
-    ];
-
-    // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
+  // The server also grades a session that is still running (server#114), so re-grading is offered there too.
+  it.each<SessionStatus>(["running", "finished_with_failures"])("is offered on a %s session", (status) => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ session: { ...SESSION, status } }));
 
     // Assert
-    expect(result).toEqual({ available: false, reason: "already_latest" });
+    expect(result).toEqual({ available: true, version: V2 });
   });
 
-  // Negative: each reason the button stays off, in the order the Admin would care about.
-  it.each(["developer_ai", "viewer"] as const)("is not offered to %s", (role) => {
-    // Arrange
-    const versions = [version(1), version(2)];
-    const runs = [run()];
-
-    // Act
-    const result = regradeAvailability({ role, versions, runs });
+  // Negative: only an Admin sees the button, the server still answers 403 to anyone else.
+  it.each<Role | null>(["developer_ai", "viewer", "contributor", null])("is not offered to %s", (role) => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ role }));
 
     // Assert
     expect(result).toEqual({ available: false, reason: "not_admin" });
   });
 
-  it("needs at least one rubric version", () => {
-    // Arrange
-    const runs = [run()];
+  it("reports the role before anything else", () => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ role: "viewer", versions: [], latest: null }));
 
-    // Act
-    const result = regradeAvailability({ role: "admin", versions: [], runs });
+    // Assert
+    expect(result).toEqual({ available: false, reason: "not_admin" });
+  });
+
+  // Negative: the server refuses archived sessions and sessions that are not gradable (409).
+  it("is off for an archived session", () => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ session: { ...SESSION, archived_at: "2026-11-07T03:00:00Z" } }));
+
+    // Assert
+    expect(result).toEqual({ available: false, reason: "session_not_gradable" });
+  });
+
+  it.each<SessionStatus>(["queued", "paused", "cancelled", "failed"])("is off for a %s session", (status) => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ session: { ...SESSION, status } }));
+
+    // Assert
+    expect(result).toEqual({ available: false, reason: "session_not_gradable" });
+  });
+
+  it("needs at least one rubric version", () => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ versions: [] }));
 
     // Assert
     expect(result).toEqual({ available: false, reason: "no_rubric" });
@@ -90,72 +93,37 @@ describe("regradeAvailability (AC7: Nilai ulang dengan versi terbaru)", () => {
 
   // Edge: the first grading is the Nilai button of SCRUM-227, so there is nothing to re-grade yet.
   it("needs the session to have been graded before", () => {
-    // Arrange
-    const versions = [version(1), version(2)];
-
-    // Act
-    const result = regradeAvailability({ role: "admin", versions, runs: [] });
-
-    // Assert
-    expect(result).toEqual({ available: false, reason: "never_graded" });
-  });
-
-  it("treats a session whose runs never finished as never graded", () => {
-    // Arrange
-    const versions = [version(1), version(2)];
-    const runs = [run({ status: "failed", is_latest: false })];
-
-    // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
+    // Arrange / Act
+    const result = regradeAvailability(input({ latest: null }));
 
     // Assert
     expect(result).toEqual({ available: false, reason: "never_graded" });
   });
 
   it("is off when the latest result already used the newest version", () => {
-    // Arrange
-    const versions = [version(1), version(2)];
-    const runs = [run({ rubric_version_id: "v-2", rubric_version_no: 2 })];
-
-    // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
-
-    // Assert
-    expect(result).toEqual({ available: false, reason: "already_latest" });
-  });
-
-  // Edge: the run's own version number counts, so a version missing from the list cannot reopen the button.
-  it("is off when the run used a version newer than anything in the list", () => {
-    // Arrange
-    const versions = [version(1)];
-    const runs = [run({ rubric_version_id: "v-9", rubric_version_no: 9 })];
-
-    // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
-
-    // Assert
-    expect(result).toEqual({ available: false, reason: "already_latest" });
-  });
-
-  // Negative: a second run while one is queued or running would race on the "latest" marker.
-  it.each(["queued", "running"] as const)("is off while a grading run is %s", (status) => {
-    // Arrange
-    const versions = [version(1), version(2)];
-    const runs = [run({ id: "r-2", kind: "regrade", status, is_latest: false }), run()];
-
-    // Act
-    const result = regradeAvailability({ role: "admin", versions, runs });
-
-    // Assert
-    expect(result).toEqual({ available: false, reason: "in_progress" });
-  });
-
-  it("reports a missing role before anything else", () => {
     // Arrange / Act
-    const result = regradeAvailability({ role: "viewer", versions: [], runs: [] });
+    const result = regradeAvailability(input({ latest: gradingResponse({ rubric_version: "v2", kind: "regrade" }) }));
 
     // Assert
-    expect(result).toEqual({ available: false, reason: "not_admin" });
+    expect(result).toEqual({ available: false, reason: "already_latest" });
+  });
+
+  // Edge: a result from a version missing in the list (server newer than the list) must not reopen the button.
+  it("is off when the result used a version newer than anything in the list", () => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ versions: [V1], latest: gradingResponse({ rubric_version: "v9" }) }));
+
+    // Assert
+    expect(result).toEqual({ available: false, reason: "already_latest" });
+  });
+
+  // Edge: a label the client cannot read must not hide the button forever; the server decides.
+  it("offers the newest version when the result label is not a version number", () => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ latest: gradingResponse({ rubric_version: "legacy" }) }));
+
+    // Assert
+    expect(result).toEqual({ available: true, version: V2 });
   });
 });
 
@@ -167,10 +135,10 @@ describe("REGRADE_UNAVAILABLE_TEXT", () => {
 
     // Assert
     expect(text).toEqual({
+      session_not_gradable: "Sesi ini belum bisa dinilai ulang. Hanya sesi yang berjalan atau sudah selesai, dan belum diarsipkan.",
       no_rubric: "Belum ada versi rubrik. Buat versi rubrik dulu di halaman Rubrik.",
       never_graded: "Sesi ini belum pernah dinilai. Gunakan tombol Nilai terlebih dahulu.",
       already_latest: "Hasil terbaru sudah memakai versi rubrik terbaru.",
-      in_progress: "Penilaian sedang berjalan. Tunggu sampai selesai.",
     });
   });
 });
