@@ -173,5 +173,10 @@ describe("manualRunsApi", () => {
         "Terjadi kesalahan. Coba lagi.",
       );
     });
+
+    it("returns fallback for ApiError with unknown error code and no serverMessage", () => {
+      const err = new ApiError(500, "UNKNOWN_CODE");
+      expect(manualErrorMessage(err)).toBe("Terjadi kesalahan. Coba lagi.");
+    });
   });
 });
