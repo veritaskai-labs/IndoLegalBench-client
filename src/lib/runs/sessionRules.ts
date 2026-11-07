@@ -53,6 +53,18 @@ export function isSettled(status: SessionStatus): boolean {
   return hasEnded(status) || status === "cancelled";
 }
 
+/** Status yang berubah sendiri tanpa ada yang menekan tombol: worker sedang atau akan menjalankannya. */
+const SELF_CHANGING: ReadonlySet<SessionStatus> = new Set(["queued", "running"]);
+
+/**
+ * Daftar sesi perlu di-poll (SCRUM-266, AC6) selama ada sesi yang progresnya bisa berubah sendiri.
+ * Lebih sempit dari isSettled: sesi dijeda menunggu Lanjutkan, dan sesi manual berubah karena diisi
+ * seseorang, jadi daftar yang hanya berisi itu tidak perlu ditanya ulang tiap 5 detik.
+ */
+export function shouldPollSessions(sessions: readonly Pick<SessionListItem, "status">[]): boolean {
+  return sessions.some((session) => SELF_CHANGING.has(session.status));
+}
+
 /** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
   const { completed, total } = session.progress;
