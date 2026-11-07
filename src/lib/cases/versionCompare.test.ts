@@ -24,7 +24,6 @@ describe("COMPARE_SECTION_KEYS", () => {
       "split_tag",
       "legal_refs",
       "answer_criteria",
-      "traps",
     ]);
   });
 });
@@ -51,10 +50,27 @@ describe("changeSummary", () => {
   // Positive: several sections, listed in table order whatever order the server sends.
   it("names several changed sections in table order", () => {
     // Arrange / Act
-    const summary = changeSummary(["traps", "identity.title", "legal_refs"]);
+    const summary = changeSummary(["answer_criteria", "identity.title", "legal_refs"]);
 
     // Assert
-    expect(summary).toBe("3 bagian berubah: Judul, Rujukan hukum, Pengurang Poin.");
+    expect(summary).toBe("3 bagian berubah: Judul, Rujukan hukum, Kriteria jawaban.");
+  });
+
+  // Edge: an older server may still report the retired traps section as changed.
+  it("does not count or name the retired traps section", () => {
+    // Arrange / Act
+    const summary = changeSummary(["traps", "category"]);
+
+    // Assert
+    expect(summary).toBe("1 bagian berubah: Kategori.");
+  });
+
+  it("says nothing changed when traps was the only reported change", () => {
+    // Arrange / Act
+    const summary = changeSummary(["traps"]);
+
+    // Assert
+    expect(summary).toBe("Tidak ada bagian yang berubah di antara kedua versi.");
   });
 
   // Negative: the case code is not a compare row, so it is not counted either.
@@ -193,7 +209,7 @@ describe("markedSectionLines", () => {
   // Edge: an empty section stays empty on both sides.
   it("returns empty lists for a section without content", () => {
     // Arrange / Act
-    const marked = markedSectionLines("traps", result(["traps"]));
+    const marked = markedSectionLines("answer_criteria", result(["answer_criteria"]));
 
     // Assert
     expect(marked).toEqual({ a: [], b: [] });

@@ -64,7 +64,6 @@ function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult 
       split_tag: "dev",
       legal_refs: [{ kind: "free_text", free_text: "Rujukan sintetis 1", links: [], display_text: "Rujukan sintetis 1" }],
       answer_criteria: { must_contain: ["unsur sintetis"], must_not_contain: [], expected_conclusion: "kesimpulan sintetis" },
-      traps: [{ description: "jebakan sintetis", expected_model_behavior: "menolak" }],
     },
     attempts: [attempt()],
     ...overrides,
@@ -326,12 +325,28 @@ describe("SessionDetailPage snapshot detail (PBI-11 AC7)", () => {
 
     const card = await openCase(user);
     expect(card.getByText("Snapshot versi 2")).toBeInTheDocument();
-    for (const label of ["Judul", "Pertanyaan", "Kategori", "ID kasus", "Tag dev/test", "Rujukan hukum", "Kriteria jawaban", "Pengurang Poin"]) {
+    for (const label of ["Judul", "Pertanyaan", "Kategori", "ID kasus", "Tag dev/test", "Rujukan hukum", "Kriteria jawaban"]) {
       expect(card.getByText(label)).toBeInTheDocument();
     }
     expect(card.getByText("Rujukan sintetis 1")).toBeInTheDocument();
     expect(card.getByText("Kesimpulan: kesimpulan sintetis")).toBeInTheDocument();
-    expect(card.getByText("1. jebakan sintetis (perilaku yang diharapkan: menolak)")).toBeInTheDocument();
+  });
+
+  // Edge: snapshots taken before traps were retired still hold them in their JSON.
+  it("opens a legacy snapshot that still holds traps without showing them", async () => {
+    const user = userEvent.setup();
+    const legacy = devCase();
+    (legacy.sections as Record<string, unknown>).traps = [
+      { description: "jebakan sintetis", expected_model_behavior: "menolak" },
+    ];
+    get.mockResolvedValue(session({ cases: [legacy] }));
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    expect(card.getByText("Snapshot versi 2")).toBeInTheDocument();
+    expect(card.getByText("Rujukan sintetis 1")).toBeInTheDocument();
+    expect(card.queryByText("Pengurang Poin")).not.toBeInTheDocument();
+    expect(card.queryByText(/jebakan sintetis/)).not.toBeInTheDocument();
   });
 });
 

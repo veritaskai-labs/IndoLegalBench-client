@@ -20,7 +20,6 @@ import {
   AnswerCriteriaSection,
   IdentitySection,
   SplitTagSection,
-  TrapsSection,
   type ErrorLookup,
 } from "./sections";
 
@@ -78,7 +77,7 @@ export function CaseEditorForm({
     trigger,
   } = useForm<CaseFormValues>({
     defaultValues: defaultValues ?? emptyCaseFormValues(),
-    // Aturan dari contract (gen:zod). Pengurang Poin dan kriteria tidak wajib, jadi draf tetap bisa disimpan.
+    // Aturan dari contract (gen:zod). Kriteria jawaban tidak wajib, jadi draf tetap bisa disimpan.
     resolver: caseFormResolver,
     mode: "onBlur",
     reValidateMode: "onBlur",
@@ -158,7 +157,6 @@ export function CaseEditorForm({
           preview={preview}
         />
         <AnswerCriteriaSection {...sectionProps} />
-        <TrapsSection {...sectionProps} control={control} rowHasError={rowHasError} />
         <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
       </fieldset>
 

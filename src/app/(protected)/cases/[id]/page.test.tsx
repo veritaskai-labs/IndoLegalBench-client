@@ -42,7 +42,6 @@ function approvedDevCase(): CaseRead {
     identity: { title: "Pemberitahuan PHK", question: "Wajib?", category: null },
     legal_refs: [],
     answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
-    traps: [],
     split_tag: "dev",
     status: "approved",
     completeness_pct: 100,
