@@ -78,6 +78,28 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
     expect(document.body).not.toHaveTextContent("Jawaban AI asli");
   });
 
+  // PO: on a row, Viewer reads the judge's explanation and the reasons behind the score.
+  it("shows Viewer the judge's explanation and the reasons when a case is opened", async () => {
+    const user = userEvent.setup();
+    resultsRead.mockResolvedValue(
+      gradingResponse({
+        cases: [
+          gradedCase({
+            case_code: "KC-001",
+            attempts: [gradedAttempt({ explanation: "Pasal 5 tidak disebut.", reasons: ["article_not_cited"] })],
+          }),
+        ],
+      }),
+    );
+
+    render(<SessionResultsReportPage />);
+    await user.click(await screen.findByRole("button", { name: /KC-001/ }));
+
+    const detail = screen.getByRole("region", { name: "Rincian KC-001" });
+    expect(detail).toHaveTextContent("Penjelasan penilai: Pasal 5 tidak disebut.");
+    expect(detail).toHaveTextContent("Alasan: Pasal tidak disebut");
+  });
+
   // Reading only: grading stays on the session detail page for Admin.
   it("offers no Nilai on a session that has not been graded", async () => {
     resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));

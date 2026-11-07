@@ -79,6 +79,54 @@ describe("SessionScoreTable (PBI-14 AC3, AC8)", () => {
     expect(attempts[0]).toHaveTextContent("Format LLM 0,75");
   });
 
+  // AC5, AC9: each attempt says where it came from, why it scored as it did, and what the judge said.
+  it("shows the source, the judge's explanation and the reasons of an attempt", async () => {
+    const user = userEvent.setup();
+    renderTable([
+      gradedCase({
+        attempts: [
+          gradedAttempt({
+            source: "manual",
+            explanation: "Kesimpulan tidak menyebut Pasal 5.",
+            reasons: ["criterion_unmet", "article_not_cited"],
+          }),
+        ],
+      }),
+    ]);
+
+    await user.click(screen.getByRole("button", { name: /KC-001/ }));
+
+    const attempt = within(screen.getByRole("region", { name: "Rincian KC-001" })).getByRole("listitem");
+    expect(attempt).toHaveTextContent("Manual");
+    expect(attempt).toHaveTextContent("Penjelasan penilai: Kesimpulan tidak menyebut Pasal 5.");
+    expect(attempt).toHaveTextContent("Alasan: Kriteria tidak terpenuhi, Pasal tidak disebut");
+  });
+
+  it("leaves out the explanation and reason lines when an attempt has none", async () => {
+    const user = userEvent.setup();
+    renderTable([gradedCase({ attempts: [gradedAttempt({ explanation: null, reasons: [] })] })]);
+
+    await user.click(screen.getByRole("button", { name: /KC-001/ }));
+
+    const attempt = within(screen.getByRole("region", { name: "Rincian KC-001" })).getByRole("listitem");
+    expect(attempt).toHaveTextContent("Otomatis");
+    expect(attempt).not.toHaveTextContent("Penjelasan penilai");
+    expect(attempt).not.toHaveTextContent("Alasan");
+  });
+
+  // Security: the explanation is LLM output, so markup in it is shown as text, never rendered.
+  it("shows markup in the judge's explanation as plain text", async () => {
+    const user = userEvent.setup();
+    const markup = '<img src="x" onerror="alert(1)">';
+    renderTable([gradedCase({ attempts: [gradedAttempt({ explanation: markup })] })]);
+
+    await user.click(screen.getByRole("button", { name: /KC-001/ }));
+
+    const detail = screen.getByRole("region", { name: "Rincian KC-001" });
+    expect(detail).toHaveTextContent(markup);
+    expect(detail.querySelector("img")).toBeNull();
+  });
+
   it("closes an open case on a second click", async () => {
     const user = userEvent.setup();
     renderTable(twoCases);

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { gradedAttempt, gradedCase } from "@/test/gradingFixtures";
 import {
+  ATTEMPT_SOURCE_LABEL,
   MASKED_CASE_LABEL,
+  reasonLabel,
   SCORE_GROUP_LABEL,
   SCORE_PATH_LABEL,
   scoreCells,
@@ -18,6 +20,31 @@ describe("labels (PBI-14 AC1, PBI-11 AC9)", () => {
   // server#114 bff8755 (SCRUM-225): the judge path reports quality and format separately.
   it("names the deterministic path and both judge aspects", () => {
     expect(SCORE_PATH_LABEL).toEqual({ deterministic: "Deterministik", quality: "Kualitas LLM", format: "Format LLM" });
+  });
+});
+
+// AC9: an attempt keeps showing whether it came from the automatic runner or manual entry.
+describe("ATTEMPT_SOURCE_LABEL (AC9)", () => {
+  it("names both attempt sources", () => {
+    expect(ATTEMPT_SOURCE_LABEL).toEqual({ automatic: "Otomatis", manual: "Manual" });
+  });
+});
+
+// AC5: standard reasons arrive as stable codes; the client maps them to text (server migration
+// 8ead8669ff79 seeds these four codes and leaves the list to the client).
+describe("reasonLabel (AC5)", () => {
+  it.each([
+    ["regulation_not_cited", "Peraturan tidak disebut"],
+    ["article_not_cited", "Pasal tidak disebut"],
+    ["chained_refs_incomplete", "Rujukan berangkai kurang"],
+    ["criterion_unmet", "Kriteria tidak terpenuhi"],
+  ])("names %s as %s", (code, label) => {
+    expect(reasonLabel(code)).toBe(label);
+  });
+
+  // Corner: a code from a newer server still shows, as it is, rather than disappearing.
+  it("shows a code it does not know as it is", () => {
+    expect(reasonLabel("unmet")).toBe("unmet");
   });
 });
 
@@ -59,7 +86,37 @@ describe("toAttemptRow (AC4, AC9)", () => {
       scored: true,
       scores: { deterministic: "1,00", quality: "0,80", format: "0,75" },
       note: null,
+      sourceLabel: "Otomatis",
+      explanation: null,
+      reasons: [],
     });
+  });
+
+  // AC5: the judge's explanation and the standard reasons, with the reasons named.
+  it("carries the judge's explanation and the named reasons", () => {
+    const row = toAttemptRow(
+      gradedAttempt({ explanation: "Pasal 5 tidak disebut.", reasons: ["criterion_unmet", "article_not_cited"] }),
+    );
+
+    expect(row.explanation).toBe("Pasal 5 tidak disebut.");
+    expect(row.reasons).toEqual(["Kriteria tidak terpenuhi", "Pasal tidak disebut"]);
+  });
+
+  it("names an attempt entered by hand as Manual", () => {
+    expect(toAttemptRow(gradedAttempt({ source: "manual" })).sourceLabel).toBe("Manual");
+  });
+
+  // Edge: an explanation of only spaces says nothing, so it is not shown.
+  it("treats a blank explanation as none", () => {
+    expect(toAttemptRow(gradedAttempt({ explanation: "   " })).explanation).toBeNull();
+  });
+
+  // Edge: both fields are optional in the contract (default None, default_factory=list).
+  it("treats a missing explanation or reason list as none", () => {
+    const row = toAttemptRow(gradedAttempt({ explanation: undefined, reasons: undefined }));
+
+    expect(row.explanation).toBeNull();
+    expect(row.reasons).toEqual([]);
   });
 
   // AC4: an empty answer, a refusal or a judge error is a technical disruption, not a wrong answer.
@@ -69,6 +126,16 @@ describe("toAttemptRow (AC4, AC9)", () => {
     expect(row.scored).toBe(false);
     expect(row.scores).toEqual({ deterministic: "–", quality: "–", format: "–" });
     expect(row.note).toBe("Tidak dinilai: gangguan teknis");
+  });
+
+  // AC4: a disrupted attempt was not graded, so a reason or explanation it carries would mislead.
+  it("drops the explanation and reasons of a disrupted attempt", () => {
+    const row = toAttemptRow(
+      gradedAttempt({ is_technical_disruption: true, explanation: "Penjelasan lama", reasons: ["criterion_unmet"] }),
+    );
+
+    expect(row.explanation).toBeNull();
+    expect(row.reasons).toEqual([]);
   });
 
   // Defensive: if a disrupted attempt still carried a score, it must not look graded.
