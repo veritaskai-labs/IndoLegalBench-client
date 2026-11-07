@@ -59,6 +59,18 @@ describe("toRunRow (AC7: hasil terbaru dan versi rubriknya)", () => {
     expect(row.isLatest).toBe(false);
   });
 
+  // Edge: the contract defaults is_latest to true, so a result without the field is the latest one.
+  it("treats a result without is_latest as the latest one", () => {
+    // Arrange
+    const source = gradingResponse({ is_latest: undefined });
+
+    // Act
+    const row = toRunRow(source);
+
+    // Assert
+    expect(row.isLatest).toBe(true);
+  });
+
   // Edge: a label the client cannot read as "v<number>" is shown as it came.
   it("shows the raw label when the rubric version is not v<number>", () => {
     // Arrange
