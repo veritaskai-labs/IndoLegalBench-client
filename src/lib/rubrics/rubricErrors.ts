@@ -44,6 +44,11 @@ export function regradeErrorMessage(error: unknown): string {
 /** GET /rubrics: apa pun penyebabnya, yang bisa dilakukan Admin sama, yaitu mencoba lagi. */
 export const loadErrorMessage: (error?: unknown) => string = () => "Gagal memuat daftar versi rubrik. Coba lagi.";
 
+/** Server menulis posisi dengan titik (aspects.0.name); input di form memakai kurung (aspects[0].name). */
+function formPath(serverField: string): string {
+  return serverField.replace(/\.(\d+)(?=\.|$)/g, "[$1]");
+}
+
 /**
  * Field dan pesan dari 422, untuk ditaruh di samping input yang ditolak server. Null bila tidak
  * ada yang bisa ditempatkan di samping input, dan pemanggil memakai createErrorMessage.
@@ -51,5 +56,5 @@ export const loadErrorMessage: (error?: unknown) => string = () => "Gagal memuat
 export function fieldErrorOf(error: unknown): { field: string; message: string } | null {
   if (!(error instanceof ApiError) || error.status !== 422 || error.field === null) return null;
   const message = serverReason(error);
-  return message === null ? null : { field: error.field, message };
+  return message === null ? null : { field: formPath(error.field), message };
 }
