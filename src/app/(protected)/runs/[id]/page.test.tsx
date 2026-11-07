@@ -88,7 +88,7 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     case_count: 1,
     repetitions: 3,
     status: "finished",
-    progress: { completed: 3, total: 3 },
+    progress: { completed: 3, total: 3, completed_cases: 1, total_cases: 1, percent_cases_complete: 100 },
     purpose: "trial",
     split_filter: "both",
     snapshot_created_at: "2026-11-03T02:05:00Z",
@@ -143,7 +143,7 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     expect(facts.getByText("Gemini")).toBeInTheDocument();
     expect(facts.getByText("Uji Coba")).toBeInTheDocument();
     expect(facts.getByText("Semua (Dev & Test)")).toBeInTheDocument();
-    expect(facts.getByText("3 dari 3")).toBeInTheDocument();
+    expect(facts.getByText("1 dari 1 kasus · 100%")).toBeInTheDocument();
     expect(facts.getByText("03 Nov 2026, 09.00 WIB · Uji Admin")).toBeInTheDocument();
     expect(facts.getByText("03 Nov 2026, 09.30 WIB")).toBeInTheDocument();
   });
@@ -196,7 +196,7 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
   // Edge: queued, the snapshot does not exist yet.
   it("explains a queued session without a snapshot or cases", async () => {
     get.mockResolvedValue(
-      session({ status: "queued", snapshot_created_at: null, started_at: null, finished_at: null, case_count: null, progress: { completed: 0, total: 0 }, cases: [] }),
+      session({ status: "queued", snapshot_created_at: null, started_at: null, finished_at: null, case_count: null, progress: { completed: 0, total: 0, completed_cases: 0, total_cases: 0, percent_cases_complete: 0 }, cases: [] }),
     );
     render(<SessionDetailPage />);
 
@@ -288,6 +288,9 @@ it("allows retry when an ended session progress request fails", async () => {
       remaining_budget_idr: "497000.00",
       started_at: "2026-11-03T02:05:00Z",
       updated_at: "2026-11-03T02:30:00Z",
+      completed_cases: 1,
+      total_cases: 1,
+      percent_cases_complete: 100,
     });
 
   render(<SessionDetailPage />);
@@ -305,7 +308,7 @@ it("allows retry when an ended session progress request fails", async () => {
       await screen.findByRole("region", {
         name: "Progres pengukuran",
       }),
-    ).getByText("3 dari 3"),
+    ).getByText("1 dari 1 kasus"),
   ).toBeInTheDocument();
 
   expect(progressRead).toHaveBeenCalledTimes(2);
@@ -625,11 +628,16 @@ describe("SessionDetailPage progress panel (PBI-12 AC5, AC6)", () => {
       remaining_budget_idr: "380000.00",
       started_at: "2026-11-04T03:00:00Z",
       updated_at: "2026-11-04T03:40:00Z",
+      completed_cases: 7,
+      total_cases: 20,
+      percent_cases_complete: 35,
     });
 
     render(<SessionDetailPage />);
 
-    expect(await screen.findByText("240 dari 300")).toBeInTheDocument();
+    const panel = within(await screen.findByRole("region", { name: "Progres pengukuran" }));
+    expect(panel.getByText("7 dari 20 kasus")).toBeInTheDocument();
+    expect(panel.getByText("35%")).toBeInTheDocument();
   });
 
   // The session itself loaded fine, so one failed progress read must not empty the page.

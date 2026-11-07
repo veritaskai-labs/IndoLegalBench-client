@@ -60,7 +60,7 @@ function session(overrides: Partial<ControlState> = {}): ControlState {
     id: "s-1",
     label: "Run November",
     status: "finished_with_failures",
-    progress: { completed: 240, total: 300 },
+    progress: { completed: 240, total: 300, completed_cases: 80, total_cases: 100, percent_cases_complete: 80 },
     archived_at: null,
     accepted_as_is_at: null,
     accepted_as_is_by: null,
