@@ -1,12 +1,11 @@
-import { toRunRows } from "@/lib/rubrics/gradingRun";
-import type { SessionGradingResponse } from "@/types/grading";
+import { toRunRows, type RunSource } from "@/lib/rubrics/gradingRun";
 
 /**
- * Hasil penilaian satu sesi dengan versi rubriknya (PBI-14 AC7); hanya yang terbaru bertanda.
- * Server belum membuka daftar run lama, jadi yang diberikan baru hasil terbaru; begitu daftarnya
- * ada, komponen ini menampilkan semuanya tanpa berubah. Teks tampil datang dari toRunRows.
+ * Riwayat penilaian satu sesi dengan versi rubrik tiap run (PBI-14 AC7). Nilai ulang menambah baris
+ * dan tidak menimpa, jadi hasil lama tetap terlihat; hanya yang terbaru bertanda. Teks tampil
+ * datang dari toRunRows, komponen ini hanya merender.
  */
-export function GradingHistoryList({ runs }: Readonly<{ runs: SessionGradingResponse[] }>) {
+export function GradingHistoryList({ runs }: Readonly<{ runs: RunSource[] }>) {
   const rows = toRunRows(runs);
 
   if (rows.length === 0) {

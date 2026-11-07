@@ -1,6 +1,15 @@
 import { formatWib } from "@/lib/datetime/formatWib";
 import type { SessionGradingResponse } from "@/types/grading";
 
+/**
+ * Yang dibutuhkan satu baris: hasil penuh (GET /results) maupun ringkasan riwayat
+ * (GET /grading-runs) memenuhinya, jadi daftar riwayat memakai pembuat baris yang sama.
+ */
+export type RunSource = Pick<
+  SessionGradingResponse,
+  "grading_run_id" | "kind" | "status" | "rubric_version" | "triggered_at" | "is_latest"
+>;
+
 /** Satu baris hasil penilaian sesi (PBI-14 AC7), siap tampil tanpa logika di komponen. */
 export interface RunRow {
   id: string;
@@ -28,7 +37,7 @@ function versionText(label: string): string {
   return match === null ? label : `Versi ${match[1]}`;
 }
 
-export function toRunRow(run: SessionGradingResponse): RunRow {
+export function toRunRow(run: RunSource): RunRow {
   return {
     id: run.grading_run_id,
     kindLabel: KIND_LABEL[run.kind],
@@ -40,12 +49,12 @@ export function toRunRow(run: SessionGradingResponse): RunRow {
 }
 
 /** Waktu yang tidak terbaca diurutkan paling akhir, supaya tidak merusak urutan yang lain. */
-function startedAt(run: SessionGradingResponse): number {
+function startedAt(run: RunSource): number {
   const time = new Date(run.triggered_at).getTime();
   return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
 }
 
-function newestFirst(a: SessionGradingResponse, b: SessionGradingResponse): number {
+function newestFirst(a: RunSource, b: RunSource): number {
   const first = startedAt(a);
   const second = startedAt(b);
   if (first === second) return 0;
@@ -53,6 +62,6 @@ function newestFirst(a: SessionGradingResponse, b: SessionGradingResponse): numb
 }
 
 /** Terbaru di atas. Salinan dan sort yang stabil: yang sama waktunya tetap dalam urutan masuk. */
-export function toRunRows(runs: SessionGradingResponse[]): RunRow[] {
+export function toRunRows(runs: RunSource[]): RunRow[] {
   return [...runs].sort(newestFirst).map(toRunRow);
 }

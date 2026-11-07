@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { gradingResponse } from "@/test/gradingFixtures";
+import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { toRunRow, toRunRows } from "./gradingRun";
 
 describe("toRunRow (AC7: hasil terbaru dan versi rubriknya)", () => {
@@ -93,6 +93,27 @@ describe("toRunRow (AC7: hasil terbaru dan versi rubriknya)", () => {
 
     // Assert
     expect(row.triggeredAt).toBe("bukan tanggal");
+  });
+});
+
+describe("toRunRow with a history summary (GET /grading-runs)", () => {
+  // The history rows have no cases, but show the same text as a full result.
+  it("builds the same row from a summary as from a full result", () => {
+    // Arrange
+    const summary = gradingRunSummary({ kind: "regrade", rubric_version: "v2", triggered_at: "2026-11-06T03:05:00Z" });
+
+    // Act
+    const row = toRunRow(summary);
+
+    // Assert
+    expect(row).toEqual({
+      id: "run-1",
+      kindLabel: "Nilai ulang",
+      statusLabel: "Selesai",
+      versionLabel: "Versi 2",
+      triggeredAt: "06 Nov 2026, 10.05 WIB",
+      isLatest: true,
+    });
   });
 });
 
