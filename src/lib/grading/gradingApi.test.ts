@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { gradingResponse } from "@/test/gradingFixtures";
+import { gradedSessionItem, gradingResponse } from "@/test/gradingFixtures";
 import { httpGradingGateway } from "./gradingApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
@@ -116,5 +116,28 @@ describe("httpGradingGateway.results (GET /measurements/{id}/results, PBI-14 AC8
     fetchMock.mockResolvedValue(fakeResponse(404, { code: "GRADING_NOT_FOUND" }));
 
     await expect(httpGradingGateway.results("s-1")).rejects.toMatchObject({ status: 404, code: "GRADING_NOT_FOUND" });
+  });
+});
+
+// PO decision: Viewer picks a graded session under Laporan instead of opening Eksekusi.
+describe("httpGradingGateway.sessions (GET /results/sessions, PBI-14 AC8)", () => {
+  it("reads the finished sessions that have a grading result", async () => {
+    const sessions = [gradedSessionItem(), gradedSessionItem({ session_id: "s-2", label: "Uji Coba Produk B" })];
+    fetchMock.mockResolvedValue(fakeResponse(200, sessions));
+
+    await expect(httpGradingGateway.sessions()).resolves.toEqual(sessions);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/results\/sessions$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  // Negative: only Admin and Viewer may list. A refusal is explained where the list would be,
+  // so the rest of the Laporan page stays.
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.sessions()).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
   });
 });

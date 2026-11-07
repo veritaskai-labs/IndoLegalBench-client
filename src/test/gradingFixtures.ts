@@ -1,4 +1,4 @@
-import type { AttemptGradeResult, CaseGradeResult, SessionGradingResponse } from "@/types/grading";
+import type { AttemptGradeResult, CaseGradeResult, GradedSessionListItem, SessionGradingResponse } from "@/types/grading";
 
 /**
  * Data contoh bersama untuk test penilaian (PBI-14), supaya bentuk kontrak #114 tidak disalin per file. Data sintetis.
@@ -50,6 +50,18 @@ export function gradingResponse(overrides: Partial<SessionGradingResponse> = {})
     },
     category_scores: [],
     cases: [gradedCase()],
+    ...overrides,
+  };
+}
+
+/** Satu baris GET /results/sessions (server#114 bff8755): sesi selesai yang sudah dinilai. */
+export function gradedSessionItem(overrides: Partial<GradedSessionListItem> = {}): GradedSessionListItem {
+  return {
+    session_id: "s-1",
+    label: "Uji Coba Produk A",
+    product_name: "Produk Uji A",
+    finished_at: "2026-11-07T03:00:00Z",
+    rubric_version: "v1",
     ...overrides,
   };
 }
