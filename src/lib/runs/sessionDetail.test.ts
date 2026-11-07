@@ -17,6 +17,8 @@ function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
     status: "succeeded",
     answer_text: "Jawaban mentah",
     model_version: "gemini-qa212",
+    started_at: null,
+    finished_at: null,
     ...overrides,
   };
 }
