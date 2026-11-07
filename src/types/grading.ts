@@ -13,3 +13,6 @@ export type GradedSessionListItem = components["schemas"]["GradedSessionListItem
 export type ScorePair = components["schemas"]["ScorePair"];
 /** Skor Dev, Test dan Gabungan yang terpisah (PBI-11 AC9). */
 export type ThreeScores = components["schemas"]["ThreeScores"];
+
+/** Satu baris GET /measurements/{id}/grading-runs (Admin): ringkasan satu run, tanpa rincian kasus (PBI-14 AC7). */
+export type GradingRunSummary = components["schemas"]["GradingRunSummary"];

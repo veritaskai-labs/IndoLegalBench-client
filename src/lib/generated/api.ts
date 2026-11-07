@@ -1046,6 +1046,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/{session_id}/grading-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Riwayat penilaian sesi pengukuran, terbaru di atas (Admin)
+         * @description Semua penilaian sesi ini, termasuk hasil lama sebelum nilai ulang (PBI-14 AC7).
+         */
+        get: operations["list_grading_runs_endpoint_measurements__session_id__grading_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements/{session_id}/results": {
         parameters: {
             query?: never;
@@ -1129,6 +1149,40 @@ export interface paths {
         };
         /** Progres sesi manual: X dari N jawaban terisi dan kartu per kasus */
         get: operations["read_manual_session_manual_measurements__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Simpan atau timpa jawaban manual */
+        put: operations["put_manual_answer_manual_measurements__session_id__answers_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}/answers/{snapshot_item_id}/{attempt_no}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Riwayat perubahan jawaban manual */
+        get: operations["get_manual_answer_history_manual_measurements__session_id__answers__snapshot_item_id___attempt_no__history_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2424,6 +2478,52 @@ export interface components {
          * @enum {string}
          */
         GraderPath: "deterministic" | "llm";
+        /**
+         * GradingRunSummary
+         * @description Satu baris riwayat penilaian sesi, tanpa rincian kasus (PBI-14 AC7).
+         */
+        GradingRunSummary: {
+            /**
+             * Grading Run Id
+             * Format: uuid
+             */
+            grading_run_id: string;
+            /**
+             * Rubric Version
+             * @description Versi rubrik yang digunakan (mis. 'v1')
+             */
+            rubric_version: string;
+            /**
+             * Kind
+             * @description initial untuk penilaian pertama, regrade untuk nilai ulang
+             * @enum {string}
+             */
+            kind: "initial" | "regrade";
+            /**
+             * Status
+             * @description completed bila sudah selesai dinilai
+             */
+            status: string;
+            /**
+             * Triggered By
+             * Format: uuid
+             * @description Admin yang memicu penilaian
+             */
+            triggered_by: string;
+            /**
+             * Triggered At
+             * Format: date-time
+             * @description Waktu pemicuan penilaian
+             */
+            triggered_at: string;
+            /**
+             * Is Latest
+             * @description True bila ini hasil penilaian terbaru sesi tersebut
+             */
+            is_latest: boolean;
+            /** @description Tiga skor terpisah: dev, test, dan gabungan */
+            scores: components["schemas"]["ThreeScores"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2797,6 +2897,128 @@ export interface components {
             /** Links */
             links: components["schemas"]["LegalRefLinkWrite"][];
         };
+        /** ManualAnswerHistoryEntry */
+        ManualAnswerHistoryEntry: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Attempt Id
+             * Format: uuid
+             */
+            attempt_id: string;
+            /** Answer Md */
+            answer_md: string | null;
+            /** Filled By */
+            filled_by: string | null;
+            /**
+             * Filled At
+             * Format: date-time
+             */
+            filled_at: string;
+            /** Obtained At */
+            obtained_at: string | null;
+            /** Platform Refused */
+            platform_refused: boolean;
+            /** Note */
+            note: string | null;
+            /**
+             * Overwritten By
+             * Format: uuid
+             */
+            overwritten_by: string;
+            /**
+             * Overwritten At
+             * Format: date-time
+             */
+            overwritten_at: string;
+        };
+        /** ManualAnswerResponse */
+        ManualAnswerResponse: {
+            /**
+             * Attempt Id
+             * Format: uuid
+             */
+            attempt_id: string;
+            /**
+             * Snapshot Item Id
+             * Format: uuid
+             */
+            snapshot_item_id: string;
+            /** Attempt No */
+            attempt_no: number;
+            source: components["schemas"]["AttemptSource"];
+            /** Answer Md */
+            answer_md: string | null;
+            /**
+             * Obtained At
+             * Format: date-time
+             */
+            obtained_at: string;
+            /** Platform Refused */
+            platform_refused: boolean;
+            /** Note */
+            note: string | null;
+            /**
+             * Filled By
+             * Format: uuid
+             */
+            filled_by: string;
+            /**
+             * Filled At
+             * Format: date-time
+             */
+            filled_at: string;
+            session_status: components["schemas"]["SessionStatus"];
+        };
+        /**
+         * ManualAnswerSaveRequest
+         * @description Simpan atau timpa satu jawaban manual (AC4 sampai AC7).
+         *
+         *     Batas atas attempt_no di sini hanya pagar global PBI-11. Apakah nomornya
+         *     masuk jumlah pengulangan sesi diperiksa saat penyimpanan, karena jumlah itu
+         *     milik sesi, bukan milik kontrak.
+         */
+        ManualAnswerSaveRequest: {
+            /**
+             * Snapshot Item Id
+             * Format: uuid
+             */
+            snapshot_item_id: string;
+            /**
+             * Attempt No
+             * @description Nomor percobaan, harus masuk jumlah pengulangan sesi
+             */
+            attempt_no: number;
+            /**
+             * Answer Md
+             * @description Jawaban markdown apa adanya, tanpa batas panjang (AC4)
+             */
+            answer_md?: string | null;
+            /**
+             * Obtained At
+             * @description Kapan jawaban diperoleh dari platform; kosong berarti sekarang (AC7)
+             */
+            obtained_at?: string | null;
+            /**
+             * Platform Refused
+             * @default false
+             */
+            platform_refused: boolean;
+            /**
+             * Note
+             * @description Wajib berisi teks bila platform_refused true (AC6)
+             */
+            note?: string | null;
+            /**
+             * Confirm
+             * @description Wajib true untuk menimpa jawaban yang sudah ada. Tanpa itu jawabannya 409 CONFIRMATION_REQUIRED (AC5).
+             * @default false
+             */
+            confirm: boolean;
+        };
         /**
          * ManualAttemptSlot
          * @description Satu kotak jawaban (Percobaan n) di kartu kasus sesi manual (PBI-22 AC4).
@@ -2816,9 +3038,23 @@ export interface components {
             filled: boolean;
             /**
              * Answered At Platform
-             * @description Kapan jawaban diperoleh dari platform (AC7)
+             * @description Kapan jawaban diperoleh dari platform, ISO 8601 UTC (AC7)
              */
             answered_at_platform: string | null;
+            source: components["schemas"]["AttemptSource"];
+            /** Answer Md */
+            answer_md?: string | null;
+            /**
+             * Platform Refused
+             * @default false
+             */
+            platform_refused: boolean;
+            /** Note */
+            note?: string | null;
+            /** Filled By */
+            filled_by?: string | null;
+            /** Filled At */
+            filled_at?: string | null;
         };
         /**
          * ManualCaseProgress
@@ -7516,6 +7752,55 @@ export interface operations {
             };
         };
     };
+    list_grading_runs_endpoint_measurements__session_id__grading_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradingRunSummary"][];
+                };
+            };
+            /** @description Hanya Admin yang dapat melihat riwayat penilaian (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_results_endpoint_measurements__session_id__results_get: {
         parameters: {
             query?: never;
@@ -7709,6 +7994,92 @@ export interface operations {
                 };
             };
             /** @description Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_manual_answer_manual_measurements__session_id__answers_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualAnswerSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualAnswerResponse"];
+                };
+            };
+            /** @description Konfirmasi overwrite diperlukan atau sesi sudah selesai. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Jawaban atau catatan penolakan kosong, atau percobaan tidak valid. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_manual_answer_history_manual_measurements__session_id__answers__snapshot_item_id___attempt_no__history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                snapshot_item_id: string;
+                attempt_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualAnswerHistoryEntry"][];
+                };
+            };
+            /** @description Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`) atau jawaban tidak ada (`MANUAL_ANSWER_NOT_FOUND`). */
             404: {
                 headers: {
                     [name: string]: unknown;
