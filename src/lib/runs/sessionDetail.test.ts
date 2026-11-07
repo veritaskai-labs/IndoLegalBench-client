@@ -165,4 +165,27 @@ describe("awaitingFirstAnswer (PBI-11 AC9 empty state)", () => {
   it("is false for a readable case that has no attempts yet", () => {
     expect(awaitingFirstAnswer([caseResult({ attempts: [] })])).toBe(false);
   });
+
+  // Every attempt already finished, only as a technical failure: nothing is coming, so do not say "wait".
+  it("is false when every attempt finished as a technical failure", () => {
+    const cases = [caseResult({ attempts: [attempt({ status: "technical_failure", answer_text: null })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(false);
+  });
+
+  it("is true when some attempts failed but another one is still pending", () => {
+    const cases = [
+      caseResult({
+        attempts: [attempt({ status: "technical_failure", answer_text: null }), attempt({ id: "55555555-5555-5555-5555-555555555555", repetition_no: 2, status: "pending", answer_text: null })],
+      }),
+    ];
+
+    expect(awaitingFirstAnswer(cases)).toBe(true);
+  });
+
+  it("is true when the only unanswered attempt is running", () => {
+    const cases = [caseResult({ attempts: [attempt({ status: "running", answer_text: null })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(true);
+  });
 });
