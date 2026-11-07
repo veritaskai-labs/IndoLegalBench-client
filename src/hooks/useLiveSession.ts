@@ -25,7 +25,6 @@ export type LiveSession = {
 export function useLiveSession(initial: SessionDetail): LiveSession {
   const [session, setSession] = useState(initial);
   const [stale, setStale] = useState(false);
-  const alive = useRef(true);
   const fetching = useRef(false);
   const sessionId = initial.id;
   const settled = isSettled(session.status);
@@ -35,24 +34,16 @@ export function useLiveSession(initial: SessionDetail): LiveSession {
 
     getSession(sessionId)
       .then((updated) => {
-        if (!alive.current) return;
         setSession(updated);
         setStale(false);
       })
       .catch(() => {
-        if (alive.current) setStale(true);
+        setStale(true);
       })
       .finally(() => {
         fetching.current = false;
       });
   }, [sessionId]);
-
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (settled) return;
