@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
-import { archiveSession, getProgress, getSession, listSessions, getAttemptCalls } from "./runsApi";
+import {
+  archiveSession,
+  getAttemptCalls,
+  getProgress,
+  getSession,
+  listSessions,
+  unarchiveSession,
+} from "./runsApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
 // and whether a 403 fires the /forbidden redirect listener, not just which helper was called.
@@ -50,6 +57,89 @@ describe("listSessions (GET /measurements)", () => {
 
     await expect(listSessions()).rejects.toBeInstanceOf(ApiError);
     expect(forbidden).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("listSessions with archived (GET /measurements?archived=true, PBI-11 AC10)", () => {
+  it("asks for the archived list when archived is true", async () => {
+    // Arrange
+    const rows = [{ id: "s-9", label: "Sesi Lama" }];
+    fetchMock.mockResolvedValue(fakeResponse(200, rows));
+
+    // Act
+    const result = await listSessions(true);
+
+    // Assert
+    expect(result).toEqual(rows);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\?archived=true$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  it("keeps the main list free of the archived parameter when archived is false", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(fakeResponse(200, []));
+
+    // Act
+    await listSessions(false);
+
+    // Assert
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements$/);
+  });
+
+  it("lets a 403 on the archived list send the user to /forbidden", async () => {
+    // Arrange
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    // Act
+    const result = listSessions(true);
+
+    // Assert
+    await expect(result).rejects.toBeInstanceOf(ApiError);
+    expect(forbidden).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("unarchiveSession (PATCH /measurements/{id}/unarchive, PBI-11 AC10)", () => {
+  it("patches the unarchive path with the id encoded and returns the receipt", async () => {
+    // Arrange
+    const receipt = { id: "a/b", status: "finished" };
+    fetchMock.mockResolvedValue(fakeResponse(200, receipt));
+
+    // Act
+    const result = await unarchiveSession("a/b");
+
+    // Assert
+    expect(result).toEqual(receipt);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/a%2Fb\/unarchive$/);
+    expect(init.method).toBe("PATCH");
+  });
+
+  // Developer AI restoring someone else's session: the dialog shows the message, no redirect.
+  it("hands a 403 NOT_YOUR_SESSION to the caller without a redirect", async () => {
+    // Arrange
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "NOT_YOUR_SESSION" }));
+
+    // Act
+    const result = unarchiveSession("s-1");
+
+    // Assert
+    await expect(result).rejects.toMatchObject({ status: 403, code: "NOT_YOUR_SESSION" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it("hands a 409 SESSION_NOT_ARCHIVED to the caller", async () => {
+    // Arrange
+    fetchMock.mockResolvedValue(fakeResponse(409, { code: "SESSION_NOT_ARCHIVED" }));
+
+    // Act
+    const result = unarchiveSession("s-1");
+
+    // Assert
+    await expect(result).rejects.toMatchObject({ status: 409, code: "SESSION_NOT_ARCHIVED" });
   });
 });
 
