@@ -53,6 +53,12 @@ export function formatProgress(session: Pick<SessionListItem, "status" | "progre
   return countOfTotal(completed, total);
 }
 
+/** Admin mengelola sesi siapa pun, Developer AI hanya sesi yang ia buat (D10). */
+function isAdminOrCreator(session: Pick<SessionListItem, "created_by">, me: Pick<Me, "id" | "role">): boolean {
+  if (me.role === "admin") return true;
+  return me.role === "developer_ai" && session.created_by === me.id;
+}
+
 /**
  * Tombol Arsipkan hanya untuk yang akan diterima server (D10): Admin semua sesi yang sudah
  * berakhir, Developer AI hanya sesinya sendiri. Server tetap yang menolak (403/409).
@@ -61,9 +67,7 @@ export function canArchive(
   session: Pick<SessionListItem, "status" | "created_by">,
   me: Pick<Me, "id" | "role">,
 ): boolean {
-  if (!hasEnded(session.status)) return false;
-  if (me.role === "admin") return true;
-  return me.role === "developer_ai" && session.created_by === me.id;
+  return hasEnded(session.status) && isAdminOrCreator(session, me);
 }
 
 const ARCHIVE_ERRORS: Record<string, string> = {
@@ -78,12 +82,6 @@ const ARCHIVE_ERRORS: Record<string, string> = {
 export function archiveErrorMessage(error: unknown): string {
   const known = error instanceof ApiError ? ARCHIVE_ERRORS[error.code] : undefined;
   return known ?? "Sesi gagal diarsipkan. Coba lagi.";
-}
-
-/** Admin mengelola sesi siapa pun, Developer AI hanya sesi yang ia buat (D10). */
-function isAdminOrCreator(session: Pick<SessionListItem, "created_by">, me: Pick<Me, "id" | "role">): boolean {
-  if (me.role === "admin") return true;
-  return me.role === "developer_ai" && session.created_by === me.id;
 }
 
 /**
