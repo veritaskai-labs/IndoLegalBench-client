@@ -39,3 +39,12 @@ export type MeasurementProgress = components["schemas"]["ProgressResponse"];
 export type CallAttemptLog = components["schemas"]["CallAttemptLog"];
 export type AttemptCalls = components["schemas"]["AttemptCalls"];
 
+/** Sesi pengukuran manual (PBI-22 SCRUM-230, SCRUM-235). */
+export type ManualStartRequest = components["schemas"]["ManualStartRequest"];
+export type ManualStartResponse = components["schemas"]["ManualStartResponse"];
+export type ManualSessionDetail = components["schemas"]["ManualSessionDetail"];
+export type ManualCaseProgress = components["schemas"]["ManualCaseProgress"];
+export type ManualAttemptSlot = components["schemas"]["ManualAttemptSlot"];
+export type ManualFinalizeResponse = components["schemas"]["ManualFinalizeResponse"];
+
+
