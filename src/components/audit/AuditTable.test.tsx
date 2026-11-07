@@ -211,13 +211,13 @@ describe("AuditTable", () => {
   it("falls back to the raw type when the server sends one it does not know", () => {
     render(
       <AuditTable
-        entries={[entry({ entity_type: "unknown_entity" as AuditEntry["entity_type"] })]}
+        entries={[entry({ entity_type: "grading_run" as AuditEntry["entity_type"] })]}
         onRowClick={vi.fn()}
       />,
     );
 
     expect(screen.getByRole("row", { name: /Author mengubah kasus/ })).toHaveTextContent(
-      "unknown_entity",
+      "grading_run",
     );
   });
 

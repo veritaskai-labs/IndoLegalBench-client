@@ -46,6 +46,12 @@ describe("SESSION_STATUS_LABEL (PBI-11 AC10, PBI-12 AC9, D4 status enum)", () =>
     // server#97 (SCRUM-214): Jeda lands on paused, Batalkan on cancelled.
     ["paused", "Dijeda"],
     ["cancelled", "Dibatalkan"],
+    // server#116 (PBI-22): manual session statuses, labelled as in server runs/models.py.
+    ["not_filled", "Belum terisi"],
+    ["partially_filled", "Terisi sebagian"],
+    ["complete", "Lengkap"],
+    ["graded", "Dinilai"],
+    ["finalized", "Selesai"],
   ])("names %s as %s", (status, label) => {
     expect(SESSION_STATUS_LABEL[status]).toBe(label);
   });
@@ -211,7 +217,8 @@ describe("caseCountText and unknownName", () => {
 // server has_ended: cancelled can still be resumed (server#102), so it has not ended. It does not
 // change on its own either, so the detail page stops polling it (#70 meant the same).
 describe("hasEnded and isSettled (PBI-12 AC8, SCRUM-219 polling)", () => {
-  it.each<SessionStatus>(["finished", "finished_with_failures", "failed"])("treats %s as ended and settled", (status) => {
+  // server#116 added finalized (a manual session Admin closed) to has_ended.
+  it.each<SessionStatus>(["finished", "finished_with_failures", "failed", "finalized"])("treats %s as ended and settled", (status) => {
     expect(hasEnded(status)).toBe(true);
     expect(isSettled(status)).toBe(true);
   });
