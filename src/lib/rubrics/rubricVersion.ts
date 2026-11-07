@@ -36,8 +36,13 @@ export function toVersionRow(version: RubricVersion): VersionRow {
   };
 }
 
+/** Label versi seperti yang dikirim dan dibaca server, mis. "v2" (rubric_version di POST /grade). */
+export function versionLabel(versionNo: number): string {
+  return `v${versionNo}`;
+}
+
 /** Nomor tertinggi di atas. Salinan, supaya urutan array milik pemanggil tidak berubah. */
-export function sortNewestFirst(versions: RubricVersion[]): RubricVersion[] {
+export function sortNewestFirst<T extends { version_no: number }>(versions: T[]): T[] {
   return [...versions].sort((a, b) => b.version_no - a.version_no);
 }
 
@@ -45,6 +50,6 @@ export function sortNewestFirst(versions: RubricVersion[]): RubricVersion[] {
  * Versi terbaru untuk Nilai ulang (AC7): nomor tertinggi, bukan yang aktif dan bukan urutan dari
  * server. Null selama v1 belum dibuat, saat belum ada rubrik untuk menilai ulang.
  */
-export function latestVersion(versions: RubricVersion[]): RubricVersion | null {
+export function latestVersion<T extends { version_no: number }>(versions: T[]): T | null {
   return sortNewestFirst(versions)[0] ?? null;
 }

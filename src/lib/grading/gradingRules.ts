@@ -20,7 +20,12 @@ export type GradeInput = {
  * menolak (403/409).
  */
 export function canGrade({ session, role, graded }: GradeInput): boolean {
-  return role === "admin" && session.archived_at === null && GRADABLE.has(session.status) && !graded;
+  return role === "admin" && isGradableSession(session) && !graded;
+}
+
+/** Sesi yang diterima server untuk dinilai, pertama kali maupun ulang: belum diarsipkan dan berstatus boleh. */
+export function isGradableSession(session: GradeInput["session"]): boolean {
+  return session.archived_at === null && GRADABLE.has(session.status);
 }
 
 /** Sama dengan list_graded_sessions di server#114: peran lain dijawab 403. */
