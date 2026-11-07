@@ -102,6 +102,9 @@ const SECTION_VIEW: Record<SectionKey, SectionView> = {
 /**
  * Nama bagian yang sudah dicabut dari kontrak (SCRUM-256) tetapi mungkin masih ada di daftar
  * `changed` untuk versi lama. Tidak ditampilkan, supaya tampilan tidak memunculkan jebakan lagi.
+ * Server SCRUM-256 menghitung `changed` dari 7 bagian saat dibaca, jadi filter ini hanya berguna
+ * selama server yang dipakai belum memuat perubahan itu. Hapus bersama `visibleChanged` setelah
+ * server SCRUM-256 ada di dev dan prod.
  */
 const RETIRED_SECTIONS: ReadonlySet<string> = new Set(["traps"]);
 
