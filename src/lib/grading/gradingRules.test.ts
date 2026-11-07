@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
-import { canGrade, gradeErrorMessage, isNotGraded, resultsErrorMessage } from "./gradingRules";
+import { canGrade, gradeErrorMessage, isNotGraded, resultsErrorMessage, sessionsErrorMessage } from "./gradingRules";
 
 /*
  * Test design for canGrade: Input Space Partitioning with Base Choice Coverage.
@@ -105,5 +105,21 @@ describe("resultsErrorMessage (AC8)", () => {
     ["a network error", new TypeError("Failed to fetch")],
   ])("falls back to a retry message for %s", (_name, error) => {
     expect(resultsErrorMessage(error)).toBe("Gagal memuat hasil penilaian. Coba lagi.");
+  });
+});
+
+describe("sessionsErrorMessage (AC8, Laporan list)", () => {
+  // server#114 list_graded_sessions: only Admin and Viewer may list graded sessions.
+  it("explains that only Admin and Viewer may see the list", () => {
+    expect(sessionsErrorMessage(new ApiError(403, "FORBIDDEN"))).toBe(
+      "Daftar hasil penilaian hanya dapat dilihat Admin dan Viewer.",
+    );
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(sessionsErrorMessage(error)).toBe("Gagal memuat daftar sesi yang dinilai. Coba lagi.");
   });
 });
