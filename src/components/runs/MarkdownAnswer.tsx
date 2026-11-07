@@ -31,11 +31,15 @@ const ELEMENTS: Components = {
   ),
   th: ({ children }) => <th className="border border-slate-200 bg-slate-50 px-2 py-1 font-semibold">{children}</th>,
   td: ({ children }) => <td className="border border-slate-200 px-2 py-1 align-top">{children}</td>,
-  a: ({ children, href }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
-      {children}
-    </a>
-  ),
+  // urlTransform mengosongkan tautan yang tidak aman; href kosong akan membuka halaman ini lagi.
+  a: ({ children, href }) =>
+    href ? (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-700 underline">
+        {children}
+      </a>
+    ) : (
+      <span>{children}</span>
+    ),
   // Gambar jarak jauh tidak dimuat: itu bisa jadi pelacak. Yang tampil hanya teks alternatifnya.
   img: ({ alt }) => <span className="text-slate-500">{alt}</span>,
 };
@@ -43,12 +47,13 @@ const ELEMENTS: Components = {
 /**
  * Jawaban mentah AI sebagai tampilan terformat (PBI-11 AC8). Teks di database tidak diubah.
  * Aman dari XSS karena react-markdown membangun elemen React dari pohon sintaks markdown, tanpa
- * dangerouslySetInnerHTML, dan HTML mentah dari AI dibuang (skipHtml), bukan disaring.
+ * dangerouslySetInnerHTML dan tanpa plugin rehype-raw: HTML mentah dari AI tampil sebagai teks
+ * apa adanya, tidak pernah menjadi elemen.
  */
 export function MarkdownAnswer({ source }: Readonly<{ source: string }>) {
   return (
     <div className="px-3 py-2 text-sm break-words text-slate-900">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={ELEMENTS} urlTransform={safeUrl} skipHtml>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={ELEMENTS} urlTransform={safeUrl}>
         {source}
       </ReactMarkdown>
     </div>
