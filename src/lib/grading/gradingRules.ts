@@ -47,6 +47,9 @@ const GRADE_ERRORS: Record<string, string> = {
   MEASUREMENT_NOT_FOUND: NOT_FOUND,
   // grade memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
   FORBIDDEN: "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman.",
+  // server#114 session_grade.py: 409 bila tidak ada versi rubrik aktif. Belum tercantum di responses
+  // OpenAPI /grade, jadi kodenya diambil dari server, bukan dari kontrak.
+  RUBRIC_NOT_ACTIVE: "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi.",
 };
 
 const RESULTS_ERRORS: Record<string, string> = {
