@@ -14,7 +14,10 @@ export function SessionScoreSummary({ scores }: Readonly<{ scores: ThreeScores }
       <caption className="sr-only">Skor sesi</caption>
       <thead>
         <tr className="text-left text-xs font-semibold text-slate-500">
-          <td />
+          {/* Judul kolom Dev/Test/Gabungan: hanya untuk pembaca layar, sudutnya tetap tampak kosong. */}
+          <th scope="col" className="py-2 pr-3">
+            <span className="sr-only">Kelompok</span>
+          </th>
           {SCORE_PATHS.map((path) => (
             <th key={path} scope="col" className="px-3 py-2 text-right">
               {SCORE_PATH_LABEL[path]}

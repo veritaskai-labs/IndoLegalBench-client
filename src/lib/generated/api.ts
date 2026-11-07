@@ -1026,26 +1026,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/measurements/results/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Daftar sesi selesai yang telah dinilai untuk Admin dan Viewer (SCRUM-226)
-         * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin dan Viewer.
-         */
-        get: operations["list_graded_sessions_endpoint_measurements_results_sessions_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/measurements/{session_id}/grade": {
         parameters: {
             query?: never;
@@ -1097,7 +1077,7 @@ export interface paths {
          * Daftar sesi selesai yang telah dinilai untuk Admin dan Viewer (SCRUM-226)
          * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin dan Viewer.
          */
-        get: operations["list_graded_sessions_alias_endpoint_results_sessions_get"];
+        get: operations["list_graded_sessions_endpoint_results_sessions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3688,7 +3668,7 @@ export interface components {
             deterministic?: string | null;
             /**
              * Quality
-             * @description Skor kualitas substansi hukum berdasarkan rubrik (skala 0.00-5.00)
+             * @description Skor kualitas substansi hukum berdasarkan kriteria rubrik (skala 0.00-1.00)
              */
             quality?: string | null;
             /**
@@ -7474,26 +7454,6 @@ export interface operations {
             };
         };
     };
-    list_graded_sessions_endpoint_measurements_results_sessions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GradedSessionListItem"][];
-                };
-            };
-        };
-    };
     trigger_grade_endpoint_measurements__session_id__grade_post: {
         parameters: {
             query?: never;
@@ -7605,7 +7565,7 @@ export interface operations {
             };
         };
     };
-    list_graded_sessions_alias_endpoint_results_sessions_get: {
+    list_graded_sessions_endpoint_results_sessions_get: {
         parameters: {
             query?: never;
             header?: never;

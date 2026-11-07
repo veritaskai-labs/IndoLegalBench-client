@@ -22,6 +22,16 @@ describe("SessionScoreSummary (PBI-14 AC1, AC3, PBI-11 AC9)", () => {
     expect(rowCells(table, "Gabungan")).toEqual(["0,75", "0,70", "0,63"]);
   });
 
+  // Accessibility (review on #77): the corner cell heads the Dev/Test/Gabungan column, so screen
+  // readers get a name for it while sighted users still see an empty corner.
+  it("names the group column for screen readers only", () => {
+    render(<SessionScoreSummary scores={gradingResponse().scores} />);
+    const headers = within(screen.getByRole("table", { name: "Skor sesi" })).getAllByRole("columnheader");
+
+    expect(headers.map((cell) => cell.textContent)).toEqual(["Kelompok", "Deterministik", "Kualitas LLM", "Format LLM"]);
+    expect(within(headers[0]).getByText("Kelompok")).toHaveClass("sr-only");
+  });
+
   // AC3: no percent and no "X dari N" anywhere.
   it("never shows a percent or an X dari N count", () => {
     render(<SessionScoreSummary scores={gradingResponse().scores} />);

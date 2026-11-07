@@ -118,7 +118,7 @@ function SessionDetailView({
       <SessionErrorSummary sessionId={session.id} failures={failedAttempts(session.cases)}
       />
 
-      {/* Nilai, hasil per kasus, dan Nilai ulang untuk Admin (PBI-14 AC6, AC7, AC8). */}
+      {/* Nilai dan hasil per kasus (PBI-14). Penilaian ulang ada di SCRUM-228. */}
       <SessionGradingSection session={session} role={role} />
 
       <section className="space-y-3">
