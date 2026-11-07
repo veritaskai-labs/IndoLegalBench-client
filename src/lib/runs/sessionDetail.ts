@@ -48,6 +48,5 @@ export function answerPlaceholder(attempt: AttemptResult, context: AnswerContext
   if (context.masked) return "Isi kasus test disembunyikan untuk Developer AI.";
   if (attempt.status === "pending" || attempt.status === "running") return "Belum ada jawaban.";
   if (attempt.status === "technical_failure") return "Gagal teknis, tidak ada jawaban.";
-  if (context.viewerRole === "developer_ai" && !context.sessionEnded) return "Jawaban tampil setelah sesi selesai.";
   return "Tidak ada jawaban tersimpan.";
 }
