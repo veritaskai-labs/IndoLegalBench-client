@@ -22,17 +22,6 @@ export function callCountText(completed: number, total: number): string {
 }
 
 /**
- * Nilai bar progres, 0 sampai 100. Server mengirim Decimal, yang bisa sampai sebagai
- * string ("80.0"), jadi dibaca seperti formatRupiah membacanya. Angka di luar rentang
- * hanya bisa datang dari agregasi yang rusak, dan bar tetap tidak melewati ujungnya.
- */
-export function progressBarPercent(value: string | number): number {
-  const percent = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(percent)) return 0;
-  return Math.min(100, Math.max(0, percent));
-}
-
-/**
  * "1.200 dari 1.500". Satu-satunya tempat angka ini diformat, dipakai panel progres
  * dan daftar sesi, supaya satu sesi terbaca sama di kedua halaman.
  */
