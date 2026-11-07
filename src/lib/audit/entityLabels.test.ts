@@ -12,6 +12,6 @@ describe("entityLabel", () => {
   });
 
   it("falls back to the raw type for an entity the client does not know yet", () => {
-    expect(entityLabel("judge_provider")).toBe("judge_provider");
+    expect(entityLabel("unknown_entity")).toBe("unknown_entity");
   });
 });
