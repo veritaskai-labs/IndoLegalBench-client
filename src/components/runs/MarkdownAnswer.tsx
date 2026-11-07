@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -50,7 +51,7 @@ const ELEMENTS: Components = {
  * dangerouslySetInnerHTML dan tanpa plugin rehype-raw: HTML mentah dari AI tampil sebagai teks
  * apa adanya, tidak pernah menjadi elemen.
  */
-export function MarkdownAnswer({ source }: Readonly<{ source: string }>) {
+function MarkdownAnswerBase({ source }: Readonly<{ source: string }>) {
   return (
     <div className="px-3 py-2 text-sm break-words text-slate-900">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={ELEMENTS} urlTransform={safeUrl}>
@@ -59,3 +60,9 @@ export function MarkdownAnswer({ source }: Readonly<{ source: string }>) {
     </div>
   );
 }
+
+/**
+ * Halaman sesi polling tiap 5 detik dan memberi objek baru ke setiap percobaan. Props di sini
+ * hanya `source`, jadi memo mencegah jawaban yang tidak berubah diparse ulang.
+ */
+export const MarkdownAnswer = memo(MarkdownAnswerBase);
