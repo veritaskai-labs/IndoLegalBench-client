@@ -1,4 +1,5 @@
 import { ATTEMPT_STATUS_LABEL } from "@/lib/runs/sessionDetail";
+import { nonBlankText } from "@/lib/text";
 import type { SplitTag } from "@/types/case";
 import type { AttemptGradeResult, AttemptSource, CaseGradeResult, ScorePair, ThreeScores } from "@/types/grading";
 import { formatScore } from "./scoreFormat";
@@ -102,7 +103,7 @@ export function toAttemptRow(attempt: AttemptGradeResult): AttemptRow {
     scores: disrupted ? { ...NO_SCORE } : scoreCells(attempt.score),
     note: disrupted ? NOT_GRADED_NOTE : null,
     sourceLabel: ATTEMPT_SOURCE_LABEL[attempt.source],
-    explanation: disrupted ? null : attempt.explanation?.trim() || null,
+    explanation: disrupted ? null : nonBlankText(attempt.explanation),
     reasons: disrupted ? [] : (attempt.reasons ?? []).map(reasonLabel),
   };
 }

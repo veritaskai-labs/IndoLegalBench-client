@@ -6,6 +6,7 @@ import { GradingResultsBody } from "@/components/grading/GradingResultsBody";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useSessionResults } from "@/hooks/useSessionResults";
 import { decodeRouteParam } from "@/lib/routeParams";
+import { nonBlankText } from "@/lib/text";
 
 const GENERAL_TITLE = "Hasil penilaian sesi";
 
@@ -20,8 +21,8 @@ export default function SessionResultsReportPage() {
   const results = useSessionResults(sessionId);
 
   const graded = results.status === "ready" ? results.data : null;
-  const title = graded?.session_label || GENERAL_TITLE;
-  const productName = graded?.product_name || null;
+  const title = nonBlankText(graded?.session_label) ?? GENERAL_TITLE;
+  const productName = nonBlankText(graded?.product_name);
 
   return (
     <div className="space-y-6">

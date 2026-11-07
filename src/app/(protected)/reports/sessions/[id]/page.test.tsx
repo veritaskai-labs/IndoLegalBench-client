@@ -69,6 +69,17 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
     expect(screen.queryByText(/^Produk:/)).not.toBeInTheDocument();
   });
 
+  // Edge: a label of only spaces names nothing, so it is treated like a missing one.
+  it("falls back to the general heading for a blank label", async () => {
+    resultsRead.mockResolvedValue(gradingResponse({ session_label: "   ", product_name: "  " }));
+
+    render(<SessionResultsReportPage />);
+
+    await screen.findByRole("table", { name: "Skor sesi" });
+    expect(screen.getByRole("heading", { level: 1, name: "Hasil penilaian sesi" })).toBeInTheDocument();
+    expect(screen.queryByText(/^Produk:/)).not.toBeInTheDocument();
+  });
+
   it("asks for the session id from the URL, decoded once", async () => {
     params.id = "a%2Fb";
     resultsRead.mockResolvedValue(gradingResponse());
