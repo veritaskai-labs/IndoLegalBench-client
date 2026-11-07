@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { GradedSessionListItem, SessionGradingResponse } from "@/types/grading";
+import type { GradedSessionListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
 
 /**
  * Pintu ke server untuk penilaian sesi (PBI-14). Hook dan komponen bergantung pada interface ini,
@@ -10,6 +10,8 @@ export interface GradingGateway {
   /** Tanpa versi: versi rubrik aktif. Dengan versi (mis. "v2"): nilai ulang dengan versi itu (AC7). */
   grade(sessionId: string, rubricVersion?: string): Promise<SessionGradingResponse>;
   results(sessionId: string): Promise<SessionGradingResponse>;
+  /** Riwayat penilaian sesi, terbaru di atas (Admin, AC7). Kosong bila sesi belum pernah dinilai. */
+  runs(sessionId: string): Promise<GradingRunSummary[]>;
   sessions(): Promise<GradedSessionListItem[]>;
 }
 
@@ -37,6 +39,10 @@ export const httpGradingGateway: GradingGateway = {
   /** GET /measurements/{id}/results (AC8): penilaian terbaru, sudah disamarkan server sesuai peran. */
   results: (sessionId) =>
     apiFetch<SessionGradingResponse>(sessionPath(sessionId, "results"), { silentForbidden: true }),
+
+  /** GET /measurements/{id}/grading-runs (Admin, AC7, server#122): semua run sesi sebagai ringkasan tanpa kasus. */
+  runs: (sessionId) =>
+    apiFetch<GradingRunSummary[]>(sessionPath(sessionId, "grading-runs"), { silentForbidden: true }),
 
   /**
    * GET /results/sessions (Admin, Viewer; keputusan PO): sesi selesai yang sudah dinilai, untuk

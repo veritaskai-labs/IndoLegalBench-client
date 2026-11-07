@@ -11,7 +11,7 @@ import { RegradeDialog } from "./RegradeDialog";
 const REGRADED = gradingResponse({ grading_run_id: "run-2", kind: "regrade", rubric_version: "v2" });
 
 function setup(grade = vi.fn().mockResolvedValue(REGRADED)) {
-  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn() };
+  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn() };
   const onRegraded = vi.fn();
   const onClose = vi.fn();
   render(

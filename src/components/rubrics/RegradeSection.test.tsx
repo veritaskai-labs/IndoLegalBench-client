@@ -32,7 +32,7 @@ function setup({
   session?: typeof SESSION;
 } = {}) {
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]), ...rubrics });
-  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn() };
+  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn() };
   const onChanged = vi.fn();
   render(
     <ToastProvider>
