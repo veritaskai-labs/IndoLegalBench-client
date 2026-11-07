@@ -21,6 +21,7 @@ describe("navForRole", () => {
       "Dasbor",
       "Suite dan kasus",
       "Antrean tinjauan",
+      "Pengukuran manual",
       "Laporan",
     ]);
   });
@@ -40,6 +41,7 @@ describe("navForRole", () => {
       "Suite dan kasus",
       "Penyedia",
       "Eksekusi",
+      "Pengukuran manual",
       "Laporan",
       "Anggota",
       "Pemantauan review",
@@ -93,5 +95,12 @@ describe("navForRole", () => {
     const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
     const withRuns = roles.filter((role) => hrefs(role).includes("/runs"));
     expect(withRuns).toEqual(["admin", "developer_ai"]);
+  });
+
+  // PBI-22 AC11: Admin and Contributor can view manual measurements.
+  it("offers manual measurements page to admin and contributor only", () => {
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
+    const withManual = roles.filter((role) => hrefs(role).includes("/manual-runs"));
+    expect(withManual).toEqual(["contributor", "admin"]);
   });
 });
