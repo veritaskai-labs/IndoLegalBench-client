@@ -54,6 +54,28 @@ describe("httpGradingGateway.grade (POST /measurements/{id}/grade, PBI-14 AC6)",
     expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
   });
 
+  // Re-grading (PBI-14 AC7): the Admin picks the version, sent as the label the server resolves ("v2").
+  it("sends the chosen rubric version as rubric_version when re-grading", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse({ kind: "regrade", rubric_version: "v2" })));
+
+    const result = await httpGradingGateway.grade("s-1", "v2");
+
+    expect(result).toMatchObject({ kind: "regrade", rubric_version: "v2" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grade$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ rubric_version: "v2" });
+  });
+
+  it.each([
+    [404, "RUBRIC_VERSION_NOT_FOUND"],
+    [409, "RUBRIC_NOT_ACTIVE"],
+  ])("hands a %i %s refusal for a chosen version to the caller", async (status, code) => {
+    fetchMock.mockResolvedValue(fakeResponse(status, { code }));
+
+    await expect(httpGradingGateway.grade("s-1", "v9")).rejects.toMatchObject({ status, code });
+  });
+
   it("encodes the session id in the path", async () => {
     fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
 
