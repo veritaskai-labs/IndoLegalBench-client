@@ -156,6 +156,35 @@ describe("fieldErrorOf (422 next to the input)", () => {
     expect(result).toEqual({ field: "aspects[0].weight", message: "Bobot harus berjumlah 100" });
   });
 
+  // The rubric rules of the server write the position with dots (aspects.0.name); the form's inputs use brackets.
+  it.each([
+    ["aspects.0.name", "aspects[0].name"],
+    ["aspects.12.weight", "aspects[12].weight"],
+    ["levels.1.score", "levels[1].score"],
+    ["levels.0.descriptors.1.aspect_name", "levels[0].descriptors[1].aspect_name"],
+  ])("writes the server position %s as %s", (serverField, formField) => {
+    // Arrange
+    const error = apiError(422, "Nama dimensi sudah dipakai di versi ini.", serverField);
+
+    // Act
+    const result = fieldErrorOf(error);
+
+    // Assert
+    expect(result).toEqual({ field: formField, message: "Nama dimensi sudah dipakai di versi ini." });
+  });
+
+  // Edge: fields without a position, and positions already in brackets, stay as they are.
+  it.each(["effective_date", "aspects", "levels", "aspects[0].weight"])("keeps %s unchanged", (field) => {
+    // Arrange
+    const error = apiError(422, "Pesan", field);
+
+    // Act
+    const result = fieldErrorOf(error);
+
+    // Assert
+    expect(result?.field).toBe(field);
+  });
+
   // Negative: without a field or a message there is nothing to place beside an input.
   it.each([
     ["a 422 without a field", apiError(422, "Pesan", null)],
