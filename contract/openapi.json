@@ -3471,14 +3471,14 @@
         "summary": "Mulai pengukuran: validasi ulang lalu sesi masuk antrean",
         "operationId": "start_measurements_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/StartRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -4014,6 +4014,376 @@
           },
           "404": {
             "description": "Sesi tidak ditemukan (`MEASUREMENT_NOT_FOUND`), atau percobaan bukan milik sesi ini (`ATTEMPT_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/measurements/{session_id}/grade": {
+      "post": {
+        "tags": [
+          "measurements"
+        ],
+        "summary": "Memicu penilaian manual untuk sesi pengukuran (Admin)",
+        "description": "Admin memicu penilaian manual untuk sesi otomatis atau manual (PBI-14 AC6, AC7).",
+        "operationId": "trigger_grade_endpoint_measurements__session_id__grade_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GradeSessionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionGradingResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Hanya Admin yang dapat memicu penilaian (`FORBIDDEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sesi diarsipkan (`SESSION_ARCHIVED`) atau sesi dalam antrean belum bisa dinilai (`SESSION_NOT_GRADABLE`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/measurements/{session_id}/results": {
+      "get": {
+        "tags": [
+          "measurements"
+        ],
+        "summary": "Hasil penilaian sesi pengukuran dengan perincian skor per kasus dan agregat",
+        "description": "Hasil sesi berjalan hanya untuk Admin. Sesi selesai untuk Admin dan Viewer. Developer AI mendapat kasus test tersamar (PBI-14 AC8, PBI-11 AC9).",
+        "operationId": "get_results_endpoint_measurements__session_id__results_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionGradingResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Hasil sesi yang masih berjalan hanya dapat dilihat Admin (`FORBIDDEN`), atau peran tidak berwenang (`FORBIDDEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`) atau hasil penilaian belum tersedia (`GRADING_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/sessions": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Daftar sesi selesai yang telah dinilai untuk Admin dan Viewer (SCRUM-226)",
+        "description": "Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin dan Viewer.",
+        "operationId": "list_graded_sessions_endpoint_results_sessions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GradedSessionListItem"
+                  },
+                  "type": "array",
+                  "title": "Response List Graded Sessions Endpoint Results Sessions Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/manual-measurements": {
+      "post": {
+        "tags": [
+          "manual-measurements"
+        ],
+        "summary": "Buat sesi manual: snapshot kasus saat itu juga, status Belum terisi",
+        "operationId": "create_manual_session_manual_measurements_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualStartResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Suite atau produk AI tidak ditemukan (`AI_PRODUCT_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Salah satu suite diarsipkan dan tidak bisa dipilih (`SUITE_ARCHIVED`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Isian tidak valid, produk otomatis atau nonaktif (`PRODUCT_NOT_MANUAL`, `PRODUCT_INACTIVE`), atau tidak ada kasus layak (`NO_ELIGIBLE_CASES`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/manual-measurements/{session_id}/finalize": {
+      "post": {
+        "tags": [
+          "manual-measurements"
+        ],
+        "summary": "Tandai sesi manual selesai: final, tidak dapat dibuka kembali",
+        "operationId": "finalize_manual_manual_measurements__session_id__finalize_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualFinalizeResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Masih ada jawaban kosong (`MANUAL_SESSION_INCOMPLETE`) atau sesi sudah selesai (`MANUAL_SESSION_FINALIZED`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/manual-measurements/{session_id}": {
+      "get": {
+        "tags": [
+          "manual-measurements"
+        ],
+        "summary": "Progres sesi manual: X dari N jawaban terisi dan kartu per kasus",
+        "operationId": "read_manual_session_manual_measurements__session_id__get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          },
+          {
+            "name": "unfilled",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Filter 'belum terisi': hanya kasus yang masih kosong",
+              "default": false,
+              "title": "Unfilled"
+            },
+            "description": "Filter 'belum terisi': hanya kasus yang masih kosong"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualSessionDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -4646,6 +5016,467 @@
           },
           "403": {
             "description": "Viewer tidak punya dashboard.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/rubrics": {
+      "get": {
+        "tags": [
+          "grading"
+        ],
+        "summary": "Daftar versi rubrik",
+        "description": "Semua versi, terbaru di atas. Prompt penilai hanya ada di detail.",
+        "operationId": "list_versions_admin_rubrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RubricVersionSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Versions Admin Rubrics Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "grading"
+        ],
+        "summary": "Buat versi rubrik baru dan jadikan aktif",
+        "description": "Versi baru bernomor berikutnya langsung aktif; versi lama tetap tersimpan (AC7, D7).",
+        "operationId": "create_version_admin_rubrics_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RubricVersionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricVersionRead"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Versi lain baru saja disimpan (`RUBRIC_VERSION_CONFLICT`); muat ulang.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Isi melanggar aturan rubrik (`RUBRIC_*`, dengan `field`), atau detail Pydantic untuk batas per field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/rubrics/{version_id}": {
+      "get": {
+        "tags": [
+          "grading"
+        ],
+        "summary": "Detail satu versi rubrik",
+        "operationId": "get_version_admin_rubrics__version_id__get",
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RubricVersionRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Versi rubrik tidak ada (`RUBRIC_VERSION_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/judge-providers": {
+      "get": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Daftar provider penilai",
+        "description": "Semua penilai termasuk yang nonaktif; yang aktif lebih dulu, lalu urut nama.",
+        "operationId": "list_judges_admin_judge_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JudgeProviderRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Judges Admin Judge Providers Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Daftarkan provider penilai",
+        "operationId": "create_judge_admin_judge_providers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JudgeProviderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeProviderRead"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Nama sudah dipakai (`JUDGE_PROVIDER_NAME_TAKEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/judge-providers/{judge_id}": {
+      "get": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Detail provider penilai",
+        "operationId": "get_judge_admin_judge_providers__judge_id__get",
+        "parameters": [
+          {
+            "name": "judge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Judge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeProviderRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Ganti kredensial, harga, atau anggaran penilai",
+        "description": "Hanya credential, harga, dan monthly_budget_idr. Nama, jenis, URL, dan model tidak bisa diganti karena dirujuk sesi lama; null eksplisit ditolak.",
+        "operationId": "update_judge_admin_judge_providers__judge_id__patch",
+        "parameters": [
+          {
+            "name": "judge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Judge Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JudgeProviderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeProviderRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/judge-providers/{judge_id}/deactivate": {
+      "post": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Nonaktifkan provider penilai",
+        "operationId": "deactivate_judge_admin_judge_providers__judge_id__deactivate_post",
+        "parameters": [
+          {
+            "name": "judge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Judge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeProviderRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/judge-providers/{judge_id}/activate": {
+      "post": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Aktifkan provider penilai",
+        "operationId": "activate_judge_admin_judge_providers__judge_id__activate_post",
+        "parameters": [
+          {
+            "name": "judge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Judge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JudgeProviderRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Penilai tidak ditemukan (`JUDGE_PROVIDER_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/judge-providers": {
+      "get": {
+        "tags": [
+          "judge-providers"
+        ],
+        "summary": "Daftar pilihan provider penilai aktif",
+        "description": "Untuk dropdown penilai di form pengukuran (Admin dan Developer AI). Hanya id, nama, jenis, dan model; tanpa URL, hint kredensial, harga, atau anggaran.",
+        "operationId": "list_judge_options_judge_providers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JudgeProviderOption"
+                  },
+                  "type": "array",
+                  "title": "Response List Judge Options Judge Providers Get"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak berwenang.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5734,7 +6565,7 @@
           "masked": {
             "type": "boolean",
             "title": "Masked",
-            "description": "true bila Developer AI membuka kasus selain dev atau sesi yang belum berakhir: hanya jenis kegagalan dan waktu"
+            "description": "true bila Developer AI membuka kasus selain dev (apa pun status sesinya): hanya jenis kegagalan dan waktu"
           },
           "calls": {
             "items": {
@@ -5754,6 +6585,96 @@
         ],
         "title": "AttemptCalls",
         "description": "Riwayat upaya satu percobaan, urut try_no (PBI-12 AC3)."
+      },
+      "AttemptGradeResult": {
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attempt Id",
+            "description": "ID percobaan"
+          },
+          "repetition_no": {
+            "type": "integer",
+            "title": "Repetition No",
+            "description": "Nomor pengulangan (1-5)"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttemptStatus",
+            "description": "Status percobaan"
+          },
+          "source": {
+            "$ref": "#/components/schemas/AttemptSource",
+            "description": "Asal percobaan: automatic atau manual (PBI-12)",
+            "default": "automatic"
+          },
+          "is_technical_disruption": {
+            "type": "boolean",
+            "title": "Is Technical Disruption",
+            "description": "True bila jawaban kosong, AI menolak, atau judge error (AC4)"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScorePair"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Skor percobaan desimal 2 digit. null bila gangguan teknis atau disamarkan"
+          },
+          "answer_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Text",
+            "description": "Jawaban mentah. null bila disamarkan untuk Developer AI pada kasus test"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation",
+            "description": "Penjelasan evaluasi penilai LLM (llm_judge_results.explanation)"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons",
+            "description": "Daftar kode alasan standar per jalur (grading_result_reasons)"
+          },
+          "criteria": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Criteria",
+            "description": "Hasil penilaian per kriteria (llm_criterion_results)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "repetition_no",
+          "status",
+          "is_technical_disruption"
+        ],
+        "title": "AttemptGradeResult",
+        "description": "Hasil penilaian satu percobaan."
       },
       "AttemptResult": {
         "properties": {
@@ -5780,7 +6701,7 @@
               }
             ],
             "title": "Answer Text",
-            "description": "Jawaban mentah. null bila belum ada, gagal teknis, disamarkan, atau sesi belum berakhir untuk Developer AI"
+            "description": "Jawaban mentah. null bila belum ada, gagal teknis, atau disamarkan. Developer AI menerima jawaban kasus dev segera setelah percobaannya selesai, tanpa menunggu sesi berakhir"
           },
           "model_version": {
             "anyOf": [
@@ -5833,6 +6754,14 @@
         "title": "AttemptResult",
         "description": "Satu percobaan: jawaban mentah apa adanya dari produk (PBI-11 AC8)."
       },
+      "AttemptSource": {
+        "type": "string",
+        "enum": [
+          "automatic",
+          "manual"
+        ],
+        "title": "AttemptSource"
+      },
       "AttemptStatus": {
         "type": "string",
         "enum": [
@@ -5853,7 +6782,9 @@
           "ai_product",
           "user",
           "call_log",
-          "measurement_session"
+          "measurement_session",
+          "rubric_version",
+          "judge_provider"
         ],
         "title": "AuditEntityType",
         "description": "Jenis objek yang dicatat, sesuai katalog event D6a."
@@ -6247,6 +7178,94 @@
         "title": "CaseFilter",
         "description": "Pilihan kasus yang ikut diukur (PBI-11 AC2). both berarti dev dan test."
       },
+      "CaseGradeResult": {
+        "properties": {
+          "snapshot_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Snapshot Item Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "case_code": {
+            "type": "string",
+            "title": "Case Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "split_tag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitTag"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question",
+            "description": "null bila disamarkan untuk Developer AI pada kasus test"
+          },
+          "masked": {
+            "type": "boolean",
+            "title": "Masked",
+            "description": "true untuk kasus test yang dilihat Developer AI",
+            "default": false
+          },
+          "scores": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScorePair"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rata-rata skor percobaan kasus. null bila disamarkan untuk Developer AI pada kasus test"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptGradeResult"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot_item_id",
+          "case_id",
+          "case_code",
+          "title"
+        ],
+        "title": "CaseGradeResult",
+        "description": "Hasil penilaian satu kasus per baris tabel (AC8)."
+      },
       "CaseIdentity": {
         "properties": {
           "title": {
@@ -6570,6 +7589,32 @@
         ],
         "title": "CaseWrite",
         "description": "Body for create and update. The server sets status; clients cannot send it."
+      },
+      "CategoryScore": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Nama kategori, atau 'Lain-lain' bila kosong"
+          },
+          "case_count": {
+            "type": "integer",
+            "title": "Case Count",
+            "description": "Jumlah kasus dalam kategori ini"
+          },
+          "scores": {
+            "$ref": "#/components/schemas/ScorePair",
+            "description": "Rata-rata skor kategori"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "case_count",
+          "scores"
+        ],
+        "title": "CategoryScore",
+        "description": "Pecahan skor per kategori kasus (PBI-14 AC10)."
       },
       "CommentDiscussion": {
         "properties": {
@@ -6943,6 +7988,87 @@
         ],
         "title": "ExportFormat"
       },
+      "GradeSessionRequest": {
+        "properties": {
+          "rubric_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Version",
+            "description": "Versi rubrik yang dipilih Admin. Bila kosong, memakai versi aktif (default 'v1')."
+          }
+        },
+        "type": "object",
+        "title": "GradeSessionRequest",
+        "description": "Pemicu penilaian manual oleh Admin (PBI-14 AC6, AC7)."
+      },
+      "GradedSessionListItem": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id",
+            "description": "ID sesi pengukuran"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Label sesi pengukuran"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name",
+            "description": "Nama produk AI yang diuji"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At",
+            "description": "Waktu sesi selesai (null bila belum tercatat)"
+          },
+          "rubric_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rubric Version",
+            "description": "Versi rubrik yang digunakan pada penilaian terbaru (mis. 'v1')"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "label",
+          "product_name"
+        ],
+        "title": "GradedSessionListItem",
+        "description": "Ringkasan sesi pengukuran selesai yang telah dinilai untuk Admin dan Viewer (PBI-14, SCRUM-226, SCRUM-227)."
+      },
+      "GraderPath": {
+        "type": "string",
+        "enum": [
+          "deterministic",
+          "llm"
+        ],
+        "title": "GraderPath",
+        "description": "Jalur penilaian satu dimensi rubrik (D6): deterministik atau LLM judge."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -7014,6 +8140,276 @@
         "description": "GET /reviews/in-review: satu kasus yang round terakhirnya belum diputuskan (AC3).\n\nTermasuk versi baru dari kasus yang sudah disetujui; status kasusnya tetap\napproved selama versi itu direview (temuan Pra-UAT F-02). version_no di atas 1\nberarti ada versi lama yang disetujui dan masih berlaku."
       },
       "JsonValue": {},
+      "JudgeProviderCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Name"
+          },
+          "provider_type": {
+            "$ref": "#/components/schemas/ProviderType"
+          },
+          "base_url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Base Url"
+          },
+          "model_name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Model Name"
+          },
+          "credential": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Credential",
+            "description": "Hanya ditulis, spasi di ujung dibuang; respons memuat hint 4 karakter"
+          },
+          "price_input_usd_per_mtok": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)"
+              }
+            ],
+            "title": "Price Input Usd Per Mtok"
+          },
+          "price_output_usd_per_mtok": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)"
+              }
+            ],
+            "title": "Price Output Usd Per Mtok"
+          },
+          "monthly_budget_idr": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              }
+            ],
+            "title": "Monthly Budget Idr",
+            "description": "Anggaran bulanan penilai, terpisah dari produk (klien No. 63 A)"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "provider_type",
+          "base_url",
+          "model_name",
+          "credential",
+          "price_input_usd_per_mtok",
+          "price_output_usd_per_mtok",
+          "monthly_budget_idr"
+        ],
+        "title": "JudgeProviderCreate",
+        "description": "Pendaftaran penilai oleh Admin. Isian di luar D6 ditolak, tidak dibuang diam-diam."
+      },
+      "JudgeProviderOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "provider_type": {
+            "$ref": "#/components/schemas/ProviderType"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "provider_type",
+          "model_name"
+        ],
+        "title": "JudgeProviderOption",
+        "description": "Satu pilihan penilai di form pengukuran (SCRUM-211). Tanpa URL, hint, dan harga."
+      },
+      "JudgeProviderRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "provider_type": {
+            "$ref": "#/components/schemas/ProviderType"
+          },
+          "base_url": {
+            "type": "string",
+            "title": "Base Url"
+          },
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "credential_hint": {
+            "type": "string",
+            "title": "Credential Hint"
+          },
+          "has_credential": {
+            "type": "boolean",
+            "title": "Has Credential"
+          },
+          "price_input_usd_per_mtok": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price Input Usd Per Mtok"
+          },
+          "price_output_usd_per_mtok": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price Output Usd Per Mtok"
+          },
+          "monthly_budget_idr": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Monthly Budget Idr"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "provider_type",
+          "base_url",
+          "model_name",
+          "credential_hint",
+          "has_credential",
+          "price_input_usd_per_mtok",
+          "price_output_usd_per_mtok",
+          "monthly_budget_idr",
+          "is_active",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JudgeProviderRead",
+        "description": "Satu penilai untuk Admin. Kredensial tidak ada di sini, hanya hint."
+      },
+      "JudgeProviderUpdate": {
+        "properties": {
+          "credential": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential",
+            "description": "Hanya ditulis, spasi di ujung dibuang; respons memuat hint 4 karakter"
+          },
+          "price_input_usd_per_mtok": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Input Usd Per Mtok"
+          },
+          "price_output_usd_per_mtok": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Output Usd Per Mtok"
+          },
+          "monthly_budget_idr": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,16}|(?=[\\d.]{1,19}0*$)\\d{0,16}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Budget Idr"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "JudgeProviderUpdate",
+        "description": "PATCH dibatasi kredensial, harga, dan anggaran (keputusan PO K5, 7 Nov).\n\nNama, jenis, URL, dan model dirujuk sesi lama, jadi tidak bisa diganti; aktif atau\nnonaktif lewat endpoint sendiri. Kolomnya NOT NULL, jadi null eksplisit ditolak."
+      },
       "LastTestStatus": {
         "type": "string",
         "enum": [
@@ -7511,6 +8907,408 @@
         ],
         "title": "LegalRefWrite",
         "description": "One citation as the editor sends it. Links are in chain order."
+      },
+      "ManualAttemptSlot": {
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attempt Id"
+          },
+          "repetition_no": {
+            "type": "integer",
+            "title": "Repetition No"
+          },
+          "filled": {
+            "type": "boolean",
+            "title": "Filled",
+            "description": "Teks jawaban atau 'Platform menolak menjawab' tersimpan"
+          },
+          "answered_at_platform": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At Platform",
+            "description": "Kapan jawaban diperoleh dari platform (AC7)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "repetition_no",
+          "filled",
+          "answered_at_platform"
+        ],
+        "title": "ManualAttemptSlot",
+        "description": "Satu kotak jawaban (Percobaan n) di kartu kasus sesi manual (PBI-22 AC4)."
+      },
+      "ManualCaseProgress": {
+        "properties": {
+          "snapshot_item_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Snapshot Item Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "case_code": {
+            "type": "string",
+            "title": "Case Code"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "split_tag": {
+            "type": "string",
+            "title": "Split Tag"
+          },
+          "filled": {
+            "type": "boolean",
+            "title": "Filled",
+            "description": "Semua percobaan kasus ini sudah terisi (AC8)"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/ManualAttemptSlot"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot_item_id",
+          "case_id",
+          "case_code",
+          "title",
+          "question",
+          "split_tag",
+          "filled",
+          "attempts"
+        ],
+        "title": "ManualCaseProgress",
+        "description": "Satu kartu kasus: pertanyaan untuk disalin (AC3) dan slot per percobaan (AC4)."
+      },
+      "ManualFinalizeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus",
+            "description": "Selalu finalized: final, tidak dapat dibuka kembali"
+          },
+          "finalized_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Finalized At"
+          },
+          "finalized_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Finalized By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "finalized_at",
+          "finalized_by"
+        ],
+        "title": "ManualFinalizeResponse",
+        "description": "Jawaban Tandai selesai sesi manual (PBI-22 AC8, D9 finalized_at/finalized_by)."
+      },
+      "ManualSessionDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/MeasurementPurpose"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "vendor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Name"
+          },
+          "site_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Url"
+          },
+          "manual_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Params",
+            "description": "Paket produk manual saat sesi dibuat (PBI-23)"
+          },
+          "case_filter": {
+            "$ref": "#/components/schemas/CaseFilter"
+          },
+          "repetitions": {
+            "type": "integer",
+            "title": "Repetitions",
+            "description": "Percobaan per kasus (AC12, penanda PBI-15)"
+          },
+          "filled_answers": {
+            "type": "integer",
+            "title": "Filled Answers",
+            "description": "X pada 'X dari N jawaban terisi', seluruh sesi"
+          },
+          "total_answers": {
+            "type": "integer",
+            "title": "Total Answers",
+            "description": "N: kasus x percobaan"
+          },
+          "answer_date_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Date From"
+          },
+          "answer_date_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Date To"
+          },
+          "date_range_warning": {
+            "type": "boolean",
+            "title": "Date Range Warning",
+            "description": "Rentang tanggal jawaban melebihi batas hari (AC13; batas TBA, bawaan mati)"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finalized_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalized At"
+          },
+          "finalized_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finalized By"
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/ManualCaseProgress"
+            },
+            "type": "array",
+            "title": "Cases",
+            "description": "Kartu kasus urut kode; disaring bila unfilled=true"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "purpose",
+          "status",
+          "product_name",
+          "vendor_name",
+          "site_url",
+          "manual_params",
+          "case_filter",
+          "repetitions",
+          "filled_answers",
+          "total_answers",
+          "answer_date_from",
+          "answer_date_to",
+          "date_range_warning",
+          "created_by",
+          "created_at",
+          "finalized_at",
+          "finalized_by",
+          "cases"
+        ],
+        "title": "ManualSessionDetail",
+        "description": "Halaman sesi manual (PBI-22 AC8, AC11-AC13). Tanpa biaya dan anggaran (AC10)."
+      },
+      "ManualStartRequest": {
+        "properties": {
+          "suite_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Suite Ids",
+            "description": "Suite yang dipilih, minimal satu. Id ganda digabung."
+          },
+          "case_filter": {
+            "$ref": "#/components/schemas/CaseFilter",
+            "description": "Kasus yang ikut: dev, test, atau both",
+            "default": "both"
+          },
+          "repeat_count": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Repeat Count",
+            "description": "Percobaan per kasus, standar 1, maksimum 5, ditentukan saat sesi dibuat",
+            "default": 1
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Product Id",
+            "description": "Satu produk AI manual yang dicatat tim legal"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "description": "Nama sesi, wajib, maksimal 200"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/MeasurementPurpose",
+            "description": "official = Pengukuran Resmi, trial = Uji Coba"
+          },
+          "judge_provider_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judge Provider Id",
+            "description": "Provider penilai (LLM judge) dari GET /judge-providers. Boleh kosong; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suite_ids",
+          "product_id",
+          "label",
+          "purpose"
+        ],
+        "title": "ManualStartRequest",
+        "description": "Body POST /manual-measurements (PBI-22 AC1, SCRUM-230).\n\nIsian sesi otomatis diwarisi (suite, filter, label, tujuan, penilai), supaya aturan\nvalidasinya satu. Bedanya: produk harus manual, dan percobaan standar 1, bukan 3."
+      },
+      "ManualStartResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus",
+            "description": "Selalu not_filled: tanpa antrean (PBI-22 AC10)"
+          },
+          "case_count": {
+            "type": "integer",
+            "title": "Case Count",
+            "description": "Kasus yang dibekukan di snapshot"
+          },
+          "repetitions": {
+            "type": "integer",
+            "title": "Repetitions",
+            "description": "Percobaan per kasus"
+          },
+          "total_answers": {
+            "type": "integer",
+            "title": "Total Answers",
+            "description": "N pada progres 'X dari N jawaban terisi'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "status",
+          "case_count",
+          "repetitions",
+          "total_answers"
+        ],
+        "title": "ManualStartResponse",
+        "description": "Jawaban 201 POST /manual-measurements: sesi siap diisi (D8 Belum terisi)."
       },
       "MeResponse": {
         "properties": {
@@ -8326,6 +10124,550 @@
         "title": "RoundStatus",
         "description": "awaiting_assignment sampai dua reviewer aktif terpasang (SCRUM-144)."
       },
+      "RubricAspectIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Name"
+          },
+          "grader_path": {
+            "$ref": "#/components/schemas/GraderPath"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,6}0*$)\\d{0,3}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          },
+          "definition": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Definition"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "grader_path",
+          "definition"
+        ],
+        "title": "RubricAspectIn",
+        "description": "Satu dimensi rubrik. Bobot boleh kosong untuk rubrik holistik (K1)."
+      },
+      "RubricAspectRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "grader_path": {
+            "$ref": "#/components/schemas/GraderPath"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          },
+          "definition": {
+            "type": "string",
+            "title": "Definition"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "grader_path",
+          "weight",
+          "definition",
+          "sort_order"
+        ],
+        "title": "RubricAspectRead"
+      },
+      "RubricDescriptorIn": {
+        "properties": {
+          "aspect_name": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Aspect Name"
+          },
+          "descriptor": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Descriptor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "aspect_name",
+          "descriptor"
+        ],
+        "title": "RubricDescriptorIn",
+        "description": "Deskriptor satu level untuk satu dimensi, dirujuk lewat nama dimensinya."
+      },
+      "RubricDescriptorRead": {
+        "properties": {
+          "aspect_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Aspect Id"
+          },
+          "aspect_name": {
+            "type": "string",
+            "title": "Aspect Name"
+          },
+          "descriptor": {
+            "type": "string",
+            "title": "Descriptor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "aspect_id",
+          "aspect_name",
+          "descriptor"
+        ],
+        "title": "RubricDescriptorRead"
+      },
+      "RubricLevelIn": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Label"
+          },
+          "is_passing": {
+            "type": "boolean",
+            "title": "Is Passing"
+          },
+          "descriptors": {
+            "items": {
+              "$ref": "#/components/schemas/RubricDescriptorIn"
+            },
+            "type": "array",
+            "title": "Descriptors"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "score",
+          "label",
+          "is_passing"
+        ],
+        "title": "RubricLevelIn",
+        "description": "Satu level skor 0–5 dengan penanda lulus (jawaban klien No. 48: lulus 4–5)."
+      },
+      "RubricLevelRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "is_passing": {
+            "type": "boolean",
+            "title": "Is Passing"
+          },
+          "descriptors": {
+            "items": {
+              "$ref": "#/components/schemas/RubricDescriptorRead"
+            },
+            "type": "array",
+            "title": "Descriptors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "score",
+          "label",
+          "is_passing",
+          "descriptors"
+        ],
+        "title": "RubricLevelRead"
+      },
+      "RubricVersionCreate": {
+        "properties": {
+          "effective_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Effective Date"
+          },
+          "judge_prompt_quality": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Judge Prompt Quality"
+          },
+          "judge_prompt_format": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Judge Prompt Format"
+          },
+          "approved_by_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By Name"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "aspects": {
+            "items": {
+              "$ref": "#/components/schemas/RubricAspectIn"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Aspects"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/RubricLevelIn"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Levels"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "effective_date",
+          "judge_prompt_quality",
+          "judge_prompt_format",
+          "aspects",
+          "levels"
+        ],
+        "title": "RubricVersionCreate",
+        "description": "Isi lengkap versi rubrik baru. Prompt penilai ikut versi (K4), hanya untuk Admin."
+      },
+      "RubricVersionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version_no": {
+            "type": "integer",
+            "title": "Version No"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Effective Date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "approved_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By Name"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "aspect_count": {
+            "type": "integer",
+            "title": "Aspect Count"
+          },
+          "level_count": {
+            "type": "integer",
+            "title": "Level Count"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "judge_prompt_quality": {
+            "type": "string",
+            "title": "Judge Prompt Quality"
+          },
+          "judge_prompt_format": {
+            "type": "string",
+            "title": "Judge Prompt Format"
+          },
+          "aspects": {
+            "items": {
+              "$ref": "#/components/schemas/RubricAspectRead"
+            },
+            "type": "array",
+            "title": "Aspects"
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/RubricLevelRead"
+            },
+            "type": "array",
+            "title": "Levels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_no",
+          "effective_date",
+          "is_active",
+          "created_by",
+          "created_by_name",
+          "created_at",
+          "approved_by_name",
+          "approved_at",
+          "aspect_count",
+          "level_count",
+          "locked_at",
+          "judge_prompt_quality",
+          "judge_prompt_format",
+          "aspects",
+          "levels"
+        ],
+        "title": "RubricVersionRead",
+        "description": "Isi lengkap satu versi. Berisi prompt penilai, jadi hanya untuk Admin (K4, K7)."
+      },
+      "RubricVersionSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version_no": {
+            "type": "integer",
+            "title": "Version No"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Effective Date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Created By"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "approved_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By Name"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "aspect_count": {
+            "type": "integer",
+            "title": "Aspect Count"
+          },
+          "level_count": {
+            "type": "integer",
+            "title": "Level Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_no",
+          "effective_date",
+          "is_active",
+          "created_by",
+          "created_by_name",
+          "created_at",
+          "approved_by_name",
+          "approved_at",
+          "aspect_count",
+          "level_count"
+        ],
+        "title": "RubricVersionSummary",
+        "description": "Satu baris daftar versi (SCRUM-228): nomor, tanggal, pembuat, penyetuju."
+      },
+      "ScorePair": {
+        "properties": {
+          "deterministic": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deterministic",
+            "description": "Skor jalur deterministik (proporsi sitasi 0.00-1.00)"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality",
+            "description": "Skor kualitas substansi hukum berdasarkan kriteria rubrik (skala 0.00-1.00)"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format",
+            "description": "Skor kepatuhan format dan struktur jawaban (skala 0.00-1.00)"
+          }
+        },
+        "type": "object",
+        "title": "ScorePair",
+        "description": "Skor deterministik, kualitas rubrik, dan format penilai LLM (PBI-14, SCRUM-225)."
+      },
       "SessionAcceptRequest": {
         "properties": {
           "reason": {
@@ -8808,6 +11150,114 @@
         "title": "SessionDetail",
         "description": "Detail sesi: kolom daftar ditambah hasil per kasus (PBI-11 AC8)."
       },
+      "SessionGradingResponse": {
+        "properties": {
+          "grading_run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Grading Run Id"
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          },
+          "session_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Label",
+            "description": "Label sesi pengukuran yang diuji"
+          },
+          "product_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Name",
+            "description": "Nama produk AI yang diuji"
+          },
+          "rubric_version": {
+            "type": "string",
+            "title": "Rubric Version",
+            "description": "Versi rubrik yang digunakan (mis. 'v1')"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "regrade"
+            ],
+            "title": "Kind",
+            "description": "initial untuk penilaian pertama, regrade untuk nilai ulang"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "completed bila sudah selesai dinilai"
+          },
+          "triggered_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Triggered By",
+            "description": "Admin yang memicu penilaian"
+          },
+          "triggered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Triggered At",
+            "description": "Waktu pemicuan penilaian"
+          },
+          "is_latest": {
+            "type": "boolean",
+            "title": "Is Latest",
+            "description": "True bila merupakan hasil penilaian terbaru untuk sesi ini",
+            "default": true
+          },
+          "scores": {
+            "$ref": "#/components/schemas/ThreeScores",
+            "description": "Tiga skor terpisah: dev, test, dan gabungan"
+          },
+          "category_scores": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryScore"
+            },
+            "type": "array",
+            "title": "Category Scores",
+            "description": "Pecahan skor per kategori kasus"
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/CaseGradeResult"
+            },
+            "type": "array",
+            "title": "Cases",
+            "description": "Daftar kasus beserta hasil penilaian per percobaan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grading_run_id",
+          "session_id",
+          "rubric_version",
+          "kind",
+          "status",
+          "triggered_by",
+          "triggered_at",
+          "scores"
+        ],
+        "title": "SessionGradingResponse",
+        "description": "Hasil penilaian sesi pengukuran (PBI-14 AC3, AC6, AC7, AC8)."
+      },
       "SessionListItem": {
         "properties": {
           "id": {
@@ -9027,10 +11477,15 @@
           "cancelled",
           "finished",
           "finished_with_failures",
-          "failed"
+          "failed",
+          "not_filled",
+          "partially_filled",
+          "complete",
+          "graded",
+          "finalized"
         ],
         "title": "SessionStatus",
-        "description": "Status sesi per D4. Perpindahan yang sah ada di session_transitions (SCRUM-214).\n\npaused mencakup Jeda dari pengguna dan sesi yang dihentikan sistem (restart, deploy,\nanggaran habis); D4 tidak memisahkan Dihentikan dari Dijeda."
+        "description": "Status sesi per D4 (otomatis) dan D8 (manual). Perpindahan sah di session_transitions.\n\npaused mencakup Jeda dari pengguna dan sesi yang dihentikan sistem (restart, deploy,\nanggaran habis); D4 tidak memisahkan Dihentikan dari Dijeda.\n\nLima status terakhir milik sesi manual (PBI-22 SCRUM-230, D9 menaruhnya di kolom yang\nsama): Belum terisi, Terisi sebagian, Lengkap, Dinilai, Selesai."
       },
       "SessionUnarchiveResponse": {
         "properties": {
@@ -9132,7 +11587,7 @@
               }
             ],
             "title": "Judge Provider Id",
-            "description": "Provider penilai (LLM judge) yang dipilih; kosong sampai PBI-14"
+            "description": "Provider penilai (LLM judge) dari GET /judge-providers. Boleh kosong; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE"
           }
         },
         "type": "object",
@@ -9428,6 +11883,30 @@
         ],
         "title": "TagConfirmationBody",
         "description": "409 TAG_CHANGE_NEEDS_CONFIRMATION: tampilkan peringatan lalu kirim ulang dengan confirm."
+      },
+      "ThreeScores": {
+        "properties": {
+          "dev": {
+            "$ref": "#/components/schemas/ScorePair",
+            "description": "Skor kasus dev"
+          },
+          "test": {
+            "$ref": "#/components/schemas/ScorePair",
+            "description": "Skor kasus test (agregat)"
+          },
+          "combined": {
+            "$ref": "#/components/schemas/ScorePair",
+            "description": "Skor gabungan seluruh kasus"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dev",
+          "test",
+          "combined"
+        ],
+        "title": "ThreeScores",
+        "description": "Tiga skor terpisah yang diminta PBI-11 AC9: dev, test, dan gabungan."
       },
       "UnreadCount": {
         "properties": {
