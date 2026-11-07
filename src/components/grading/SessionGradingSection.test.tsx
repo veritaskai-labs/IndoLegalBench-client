@@ -5,7 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
+import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import { gradingResponse } from "@/test/gradingFixtures";
+import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
 import { SessionGradingSection } from "./SessionGradingSection";
@@ -18,24 +20,29 @@ function renderSection({
   role = "admin",
   status = "finished",
   archivedAt = null,
+  // Without versions loaded the re-grade section shows nothing, so tests about grading are not disturbed.
+  listVersions = () => new Promise(() => {}),
 }: {
   results: GradingGateway["results"];
   grade?: GradingGateway["grade"];
   role?: Role | null;
   status?: SessionStatus;
   archivedAt?: string | null;
+  listVersions?: RubricsGateway["listVersions"];
 }) {
   const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(results), sessions: vi.fn() };
+  const rubricsGateway = makeFakeGateway({ listVersions: vi.fn(listVersions) });
   render(
     <ToastProvider>
       <SessionGradingSection
         session={{ id: "s-1", label: "Run November", status, archived_at: archivedAt }}
         role={role}
         gateway={gateway}
+        rubricsGateway={rubricsGateway}
       />
     </ToastProvider>,
   );
-  return { gateway, section: screen.getByRole("region", { name: "Hasil penilaian" }) };
+  return { gateway, rubricsGateway, section: screen.getByRole("region", { name: "Hasil penilaian" }) };
 }
 
 describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
@@ -160,5 +167,62 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(gateway.results).toHaveBeenCalledTimes(1);
+  });
+
+  // Re-grade (PBI-14 AC7): the result is shown once, and the re-grade button sits under it.
+  describe("re-grade with the latest rubric", () => {
+    const V1 = makeRubricSummary({ id: "id-1", version_no: 1, is_active: false });
+    const V2 = makeRubricSummary({ id: "id-2", version_no: 2 });
+    const BUTTON = "Nilai ulang dengan versi terbaru";
+
+    it("offers Admin the re-grade of a graded session when a newer rubric version exists", async () => {
+      const { section } = renderSection({
+        results: () => Promise.resolve(gradingResponse({ rubric_version: "v1" })),
+        listVersions: () => Promise.resolve([V1, V2]),
+      });
+
+      expect(await within(section).findByRole("button", { name: BUTTON })).toBeEnabled();
+    });
+
+    it("re-grades with the newest version, reloads the result and shows the new version as latest", async () => {
+      const user = userEvent.setup();
+      const results = vi
+        .fn<GradingGateway["results"]>()
+        .mockResolvedValueOnce(gradingResponse({ rubric_version: "v1" }))
+        .mockResolvedValueOnce(gradingResponse({ rubric_version: "v2", kind: "regrade" }));
+      const { section, gateway } = renderSection({ results, listVersions: () => Promise.resolve([V1, V2]) });
+
+      await user.click(await within(section).findByRole("button", { name: BUTTON }));
+      await user.click(
+        within(screen.getByRole("dialog", { name: "Nilai ulang dengan versi terbaru?" })).getByRole("button", { name: "Nilai ulang" }),
+      );
+
+      await waitFor(() => expect(gateway.grade).toHaveBeenCalledWith("s-1", "v2"));
+      await waitFor(() => expect(section).toHaveTextContent("Versi rubrik v2"));
+      expect(results).toHaveBeenCalledTimes(2);
+      expect(screen.getByText("Penilaian ulang selesai dengan Versi 2.")).toBeInTheDocument();
+    });
+
+    // Only Admin may re-grade, and other roles must not call the Admin only rubric list.
+    it.each<Role | null>(["developer_ai", "viewer", null])("shows %s the result without the re-grade button", async (role) => {
+      const { section, rubricsGateway } = renderSection({
+        results: () => Promise.resolve(gradingResponse()),
+        role,
+        listVersions: () => Promise.resolve([V1, V2]),
+      });
+
+      await within(section).findByRole("table", { name: "Skor sesi" });
+      expect(within(section).queryByRole("button", { name: BUTTON })).not.toBeInTheDocument();
+      expect(rubricsGateway.listVersions).not.toHaveBeenCalled();
+    });
+
+    // A session without a result has the Nilai button; re-grading would only repeat it.
+    it("does not show the re-grade button before the first grading", async () => {
+      const { section, rubricsGateway } = renderSection({ results: NOT_GRADED, listVersions: () => Promise.resolve([V1, V2]) });
+
+      await within(section).findByText("Sesi ini belum dinilai.");
+      expect(within(section).queryByRole("button", { name: BUTTON })).not.toBeInTheDocument();
+      expect(rubricsGateway.listVersions).not.toHaveBeenCalled();
+    });
   });
 });
