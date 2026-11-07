@@ -9,11 +9,8 @@ import type { SessionCaseResult } from "@/types/measurement";
  * Kasus test yang disamarkan untuk Developer AI hanya menampilkan status percobaan; isinya
  * sudah dikosongkan oleh server, bukan disembunyikan di sini.
  */
-export function SessionCaseCard({
-  item,
-  context,
-}: Readonly<{ item: SessionCaseResult; context: Omit<AnswerContext, "masked"> }>) {
-  const answerContext: AnswerContext = { ...context, masked: item.masked };
+export function SessionCaseCard({ item }: Readonly<{ item: SessionCaseResult }>) {
+  const answerContext: AnswerContext = { masked: item.masked };
 
   return (
     <details className="rounded-lg border border-slate-200 bg-white">

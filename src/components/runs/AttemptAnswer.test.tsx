@@ -7,7 +7,7 @@ import type { AttemptResult } from "@/types/measurement";
 
 import { AttemptAnswer } from "./AttemptAnswer";
 
-const CONTEXT: AnswerContext = { masked: false, sessionEnded: true, viewerRole: "admin" };
+const CONTEXT: AnswerContext = { masked: false };
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
   return {
@@ -167,7 +167,7 @@ describe("AttemptAnswer (PBI-11 AC8)", () => {
     const item = attempt({ answer_text: null });
 
     // Act
-    render(<AttemptAnswer attempt={item} context={{ ...CONTEXT, masked: true, viewerRole: "developer_ai" }} />);
+    render(<AttemptAnswer attempt={item} context={{ masked: true }} />);
 
     // Assert
     expect(screen.getByText("Isi kasus test disembunyikan untuk Developer AI.")).toBeInTheDocument();

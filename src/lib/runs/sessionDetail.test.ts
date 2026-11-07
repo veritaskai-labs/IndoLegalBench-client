@@ -85,7 +85,7 @@ describe("attemptSummary", () => {
 });
 
 describe("answerPlaceholder (why answer_text is null, server#91 session_detail)", () => {
-  const open = { masked: false, sessionEnded: true, viewerRole: "admin" as const };
+  const open = { masked: false };
 
   it("returns null when there is an answer to show", () => {
     expect(answerPlaceholder(attempt(), open)).toBeNull();
@@ -100,13 +100,13 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     "explains a masked test case first, even for a %s attempt",
     (status) => {
       expect(
-        answerPlaceholder(attempt({ status, answer_text: null }), { ...open, masked: true, viewerRole: "developer_ai" }),
+        answerPlaceholder(attempt({ status, answer_text: null }), { masked: true }),
       ).toBe("Isi kasus test disembunyikan untuk Developer AI.");
     },
   );
 
   it.each<AttemptStatus>(["pending", "running"])("says a %s attempt has no answer yet", (status) => {
-    expect(answerPlaceholder(attempt({ status, answer_text: null }), { ...open, sessionEnded: false })).toBe("Belum ada jawaban.");
+    expect(answerPlaceholder(attempt({ status, answer_text: null }), open)).toBe("Belum ada jawaban.");
   });
 
   it("says a technical failure left no answer", () => {
@@ -115,17 +115,9 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     );
   });
 
-  // SCRUM-261: Developer AI gets dev answers while the session runs, so nobody is told to wait for the end.
-  it.each([false, true])("gives Developer AI the neutral message when text is missing (session ended: %s)", (sessionEnded) => {
-    expect(
-      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded, viewerRole: "developer_ai" }),
-    ).toBe("Tidak ada jawaban tersimpan.");
-  });
-
-  it("still shows the answer of a dev case to Developer AI while the session runs", () => {
-    expect(
-      answerPlaceholder(attempt({ answer_text: "Jawaban dev" }), { masked: false, sessionEnded: false, viewerRole: "developer_ai" }),
-    ).toBeNull();
+  // SCRUM-261: Developer AI gets dev answers while the session runs, so no role is told to wait for the end.
+  it("gives the neutral message when a succeeded attempt has no text, for any viewer", () => {
+    expect(answerPlaceholder(attempt({ answer_text: null }), open)).toBe("Tidak ada jawaban tersimpan.");
   });
 
   // Negative: a succeeded attempt without text for Admin should not happen; say so instead of a blank.

@@ -17,7 +17,7 @@ import { formatWib } from "@/lib/datetime/formatWib";
 import { decodeRouteParam } from "@/lib/routeParams";
 import { getSession } from "@/lib/runs/runsApi";
 import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
-import { formatProgress, hasEnded, isSettled, unknownName } from "@/lib/runs/sessionRules";
+import { formatProgress, isSettled, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
@@ -112,8 +112,6 @@ function SessionDetailView({
       value: session.snapshot_created_at ? formatWib(session.snapshot_created_at) : "Dibuat saat sesi mulai",
     },
   ];
-  // Developer AI melihat jawaban hanya setelah sesi berakhir (server#91 session_detail).
-  const context = { sessionEnded: hasEnded(session.status), viewerRole: role };
 
   return (
     <div className="space-y-6">
@@ -157,7 +155,7 @@ function SessionDetailView({
         {session.cases.length === 0 ? (
           <p className="text-sm text-slate-500">Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.</p>
         ) : (
-          session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} context={context} />)
+          session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} />)
         )}
       </section>
     </div>

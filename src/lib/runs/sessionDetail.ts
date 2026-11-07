@@ -1,4 +1,3 @@
-import type { Role } from "@/types";
 import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose } from "@/types/measurement";
 
 /** Status satu percobaan (D2 attempts). Record atas enum kontrak: status baru membuat tsc gagal di sini. */
@@ -35,8 +34,8 @@ export function attemptSummary(attempts: readonly AttemptResult[]): string {
   return failed > 0 ? `${base} · ${failed} gagal teknis` : base;
 }
 
-/** viewerRole null: pengguna belum diketahui (/me belum dijawab); tidak ada aturan khusus peran. */
-export type AnswerContext = { masked: boolean; sessionEnded: boolean; viewerRole: Role | null };
+/** Hanya masked yang menentukan teks pengganti; Developer AI dan Admin membaca jawaban dev dengan cara yang sama. */
+export type AnswerContext = { masked: boolean };
 
 /**
  * Server (#91 session_detail) mengirim answer_text null karena beberapa alasan tanpa menyebut
