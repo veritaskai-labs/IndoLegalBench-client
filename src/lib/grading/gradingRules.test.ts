@@ -82,6 +82,9 @@ describe("gradeErrorMessage", () => {
     [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
     // gradeSession is silentForbidden, so a 403 (role changed while the page was open) lands here.
     [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman."],
+    // Re-grading with a chosen version (AC7): the version can be gone or none can be active.
+    [new ApiError(404, "RUBRIC_VERSION_NOT_FOUND"), "Versi rubrik yang dipilih tidak ditemukan. Muat ulang halaman."],
+    [new ApiError(409, "RUBRIC_NOT_ACTIVE"), "Belum ada versi rubrik yang aktif. Buat versi rubrik dulu di halaman Rubrik."],
   ])("explains %s", (error, message) => {
     expect(gradeErrorMessage(error)).toBe(message);
   });
