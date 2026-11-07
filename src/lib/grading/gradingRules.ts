@@ -56,3 +56,12 @@ export function gradeErrorMessage(error: unknown): string {
 export function resultsErrorMessage(error: unknown): string {
   return messageFor(RESULTS_ERRORS, error, "Gagal memuat hasil penilaian. Coba lagi.");
 }
+
+const SESSIONS_ERRORS: Record<string, string> = {
+  // server#114 list_graded_sessions: hanya Admin dan Viewer.
+  FORBIDDEN: "Daftar hasil penilaian hanya dapat dilihat Admin dan Viewer.",
+};
+
+export function sessionsErrorMessage(error: unknown): string {
+  return messageFor(SESSIONS_ERRORS, error, "Gagal memuat daftar sesi yang dinilai. Coba lagi.");
+}
