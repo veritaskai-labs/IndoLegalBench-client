@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateManualSessionForm } from "./CreateManualSessionForm";
@@ -160,6 +160,10 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(suite1Check);
     expect(suite1Check).toBeChecked();
 
+    // Untoggle single
+    await user.click(suite1Check);
+    expect(suite1Check).not.toBeChecked();
+
     // Select all
     const selectAllBtn = screen.getByText("Pilih Semua");
     await user.click(selectAllBtn);
@@ -293,5 +297,68 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Produk AI manual tidak ditemukan.");
     });
     expect(submitBtn).toBeEnabled();
+  });
+
+  it("extracts last digit when typing multiple characters into repeat count (AC1)", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const repeatInput = screen.getByLabelText(/Jumlah Pengulangan/i);
+    // User types "12" directly into the box with existing 1 -> extracts 2
+    await user.type(repeatInput, "2");
+    expect(repeatInput).toHaveValue(2);
+
+    // User types "9" -> "29", last digit 9 is > 5 so stays 29 then clamped to 5
+    await user.type(repeatInput, "9");
+    expect(repeatInput).toHaveValue(5);
+
+    // User types "0" -> "50", last digit 0 is < 1 so stays 50 then clamped to 5
+    await user.type(repeatInput, "0");
+    expect(repeatInput).toHaveValue(5);
+  });
+
+  it("renders loading, error, and empty states for suites list", () => {
+    // Loading state
+    useSuitesMock.mockReturnValueOnce({
+      status: "loading",
+      suites: [],
+      reload: vi.fn(),
+    });
+    const { unmount: unmountLoading } = renderForm();
+    expect(screen.getByText("Memuat suite kasus…")).toBeInTheDocument();
+    unmountLoading();
+
+    // Error state
+    useSuitesMock.mockReturnValueOnce({
+      status: "error",
+      suites: [],
+      reload: vi.fn(),
+    });
+    const { unmount: unmountError } = renderForm();
+    expect(screen.getByText("Gagal memuat daftar suite.")).toBeInTheDocument();
+    unmountError();
+
+    // Empty state
+    useSuitesMock.mockReturnValueOnce({
+      status: "ready",
+      suites: [],
+      reload: vi.fn(),
+    });
+    const { unmount: unmountEmpty } = renderForm();
+    expect(screen.getByText("Belum ada suite aktif yang tersedia.")).toBeInTheDocument();
+    unmountEmpty();
+  });
+
+  it("prevents form submission when required fields are missing", () => {
+    renderForm();
+
+    const form = screen.getByRole("button", { name: "Buat Sesi Pengukuran" }).closest("form");
+    expect(form).not.toBeNull();
+
+    if (form) {
+      fireEvent.submit(form);
+    }
+
+    expect(mockCreateManualSession).not.toHaveBeenCalled();
   });
 });
