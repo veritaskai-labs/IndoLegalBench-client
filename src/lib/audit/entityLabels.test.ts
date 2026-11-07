@@ -11,6 +11,10 @@ describe("entityLabel", () => {
     expect(entityLabel("measurement_session")).toBe("Sesi pengukuran");
   });
 
+  it("names the rubric version entity that the server audits since #112", () => {
+    expect(entityLabel("rubric_version")).toBe("Versi rubrik");
+  });
+
   it("falls back to the raw type for an entity the client does not know yet", () => {
     expect(entityLabel("judge_provider")).toBe("judge_provider");
   });
