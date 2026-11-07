@@ -51,10 +51,15 @@ export function answerPlaceholder(attempt: AttemptResult, context: AnswerContext
 }
 
 /**
- * Belum ada satu pun jawaban yang bisa dibaca (PBI-11 AC9, state empty). Kasus yang disamarkan
- * tidak dihitung: isinya tidak akan pernah tampil, jadi menunggunya menyesatkan.
+ * Belum ada satu pun jawaban yang bisa dibaca dan masih ada percobaan yang akan menjawab (PBI-11
+ * AC9, state empty). Kasus yang disamarkan tidak dihitung: isinya tidak akan pernah tampil. Kalau
+ * semua percobaan sudah berakhir tanpa jawaban (mis. gagal teknis), tidak ada yang ditunggu.
  */
 export function awaitingFirstAnswer(cases: readonly SessionCaseResult[]): boolean {
   const attempts = cases.filter((item) => !item.masked).flatMap((item) => item.attempts);
-  return attempts.length > 0 && attempts.every((attempt) => attempt.answer_text === null);
+  return (
+    attempts.length > 0 &&
+    attempts.every((attempt) => attempt.answer_text === null) &&
+    attempts.some((attempt) => attempt.status === "pending" || attempt.status === "running")
+  );
 }
