@@ -6,10 +6,10 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import { gradingResponse } from "@/test/gradingFixtures";
+import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
-import type { SessionGradingResponse } from "@/types/grading";
+import type { GradingRunSummary, SessionGradingResponse } from "@/types/grading";
 import { RegradeSection } from "./RegradeSection";
 
 const v1 = makeRubricSummary({ id: "id-1", version_no: 1, is_active: false });
@@ -24,15 +24,17 @@ function setup({
   role = "admin",
   latest = gradingResponse(),
   session = SESSION,
+  runs = vi.fn().mockResolvedValue([gradingRunSummary()]),
 }: {
   rubrics?: Partial<RubricsGateway>;
   grade?: GradingGateway["grade"];
   role?: Role | null;
   latest?: SessionGradingResponse | null;
   session?: typeof SESSION;
+  runs?: GradingGateway["runs"];
 } = {}) {
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]), ...rubrics });
-  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn() };
+  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs };
   const onChanged = vi.fn();
   render(
     <ToastProvider>
@@ -59,7 +61,7 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
   });
 
-  it("opens the dialog for the newest version and shows the result that stays", async () => {
+  it("opens the dialog for the newest version and says the old result stays", async () => {
     // Arrange
     const { user } = setup();
 
@@ -69,17 +71,18 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     // Assert
     const dialog = within(screen.getByRole("dialog", { name: "Nilai ulang dengan versi terbaru?" }));
     expect(dialog.getByText(/akan dinilai ulang dengan Versi 2/)).toBeInTheDocument();
-    expect(dialog.getByRole("list", { name: "Riwayat penilaian" })).toBeInTheDocument();
+    expect(dialog.getByText(/Hasil lama tetap tersimpan/)).toBeInTheDocument();
   });
 
   // Negative: other roles never see it, and nothing is requested (a 403 would redirect them away).
   it.each(["developer_ai", "viewer", "contributor", null] as const)("renders nothing and requests nothing for role %s", (role) => {
     // Arrange / Act
-    const { rubricsGateway } = setup({ role });
+    const { rubricsGateway, gradingGateway } = setup({ role });
 
     // Assert
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(rubricsGateway.listVersions).not.toHaveBeenCalled();
+    expect(gradingGateway.runs).not.toHaveBeenCalled();
   });
 
   // Edge: the reason the button is off is written next to it.
@@ -126,6 +129,63 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
   });
 
+  // AC7: every earlier result stays visible with its rubric version, only the newest carries the marker.
+  it("lists every grading run with its rubric version and marks only the latest", async () => {
+    // Arrange
+    const history = [
+      gradingRunSummary({ grading_run_id: "run-2", kind: "regrade", rubric_version: "v2", triggered_at: "2026-11-07T05:00:00Z" }),
+      gradingRunSummary({ grading_run_id: "run-1", is_latest: false, triggered_at: "2026-11-07T03:00:00Z" }),
+    ];
+    setup({ runs: vi.fn().mockResolvedValue(history) });
+
+    // Act
+    const list = await screen.findByRole("list", { name: "Riwayat penilaian" });
+
+    // Assert
+    const [newer, older] = within(list).getAllByRole("listitem");
+    expect(newer).toHaveTextContent("Nilai ulang");
+    expect(newer).toHaveTextContent("Versi 2");
+    expect(within(newer).getByText("Terbaru")).toBeInTheDocument();
+    expect(older).toHaveTextContent("Nilai pertama");
+    expect(older).toHaveTextContent("Versi 1");
+    expect(within(older).queryByText("Terbaru")).not.toBeInTheDocument();
+  });
+
+  // State: nothing is shown while the history loads, so the button does not flash on and off.
+  it("shows nothing while the history is loading", () => {
+    // Arrange / Act
+    setup({ runs: vi.fn().mockReturnValue(new Promise(() => undefined)) });
+
+    // Assert
+    expect(screen.queryByRole("button", { name: BUTTON })).not.toBeInTheDocument();
+  });
+
+  // State: error with a retry. A failed history must not leave the button silently off.
+  it("shows an error with a retry when the history cannot be loaded", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const runs = vi.fn().mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR")).mockResolvedValueOnce([gradingRunSummary()]);
+    setup({ runs });
+    const alert = await screen.findByRole("alert");
+
+    // Act
+    await user.click(within(alert).getByRole("button", { name: "Coba lagi" }));
+
+    // Assert
+    expect(alert).toHaveTextContent("Gagal memuat riwayat penilaian. Coba lagi.");
+    expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
+    expect(runs).toHaveBeenCalledTimes(2);
+  });
+
+  // Edge: a history with no runs yet is not an error.
+  it("says there is no result yet when the history is empty", async () => {
+    // Arrange / Act
+    setup({ runs: vi.fn().mockResolvedValue([]) });
+
+    // Assert
+    expect(await screen.findByText("Belum ada hasil penilaian untuk sesi ini.")).toBeInTheDocument();
+  });
+
   // Positive: after the re-grade the dialog closes, the page reloads the result and the Admin is told.
   it("closes the dialog, asks the page to reload and says the re-grade finished", async () => {
     // Arrange
@@ -139,6 +199,7 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(gradingGateway.grade).toHaveBeenCalledWith("s-1", "v2");
     expect(onChanged).toHaveBeenCalledTimes(1);
+    expect(gradingGateway.runs).toHaveBeenCalledTimes(2);
     expect(await screen.findByText("Penilaian ulang selesai dengan Versi 2.")).toBeInTheDocument();
   });
 
@@ -161,7 +222,7 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
   it("asks the page to reload when the dialog is closed after an error", async () => {
     // Arrange
     const refusal = new ApiError(409, "SESSION_NOT_GRADABLE");
-    const { user, onChanged } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
+    const { user, onChanged, gradingGateway } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
     await user.click(await screen.findByRole("button", { name: BUTTON }));
     const dialog = within(screen.getByRole("dialog"));
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
@@ -172,6 +233,7 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
 
     // Assert
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+    expect(gradingGateway.runs).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

@@ -18,7 +18,6 @@ function setup(grade = vi.fn().mockResolvedValue(REGRADED)) {
     <RegradeDialog
       session={{ id: "s-1" }}
       version={makeRubricSummary({ id: "id-2", version_no: 2 })}
-      latest={gradingResponse()}
       gateway={gateway}
       onRegraded={onRegraded}
       onClose={onClose}
@@ -40,16 +39,6 @@ describe("RegradeDialog (AC7)", () => {
         "Sesi ini akan dinilai ulang dengan Versi 2. Hasil lama tetap tersimpan dan tetap memakai rubrik lamanya. Hasil baru ditandai Terbaru.",
       ),
     ).toBeInTheDocument();
-  });
-
-  it("shows the current result with its rubric version so the Admin sees what is kept", () => {
-    // Arrange / Act
-    const { dialog } = setup();
-
-    // Assert
-    const history = dialog.getByRole("list", { name: "Riwayat penilaian" });
-    expect(within(history).getByText("Nilai pertama")).toBeInTheDocument();
-    expect(within(history).getByText("Versi 1")).toBeInTheDocument();
   });
 
   it("re-grades with the label of the shown version and tells the page", async () => {
