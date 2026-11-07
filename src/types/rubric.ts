@@ -1,3 +1,8 @@
+import type { components } from "@/lib/generated/api";
+
+/** Satu baris GET /admin/rubrics (SCRUM-222): tanpa prompt penilai, aspek, dan level. */
+export type RubricVersionSummary = components["schemas"]["RubricVersionSummary"];
+
 /**
  * Draf kontrak rubrik berversi dan nilai ulang (PBI-14, SCRUM-228).
  *

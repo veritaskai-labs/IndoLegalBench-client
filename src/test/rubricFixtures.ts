@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import type { GradingRun, RubricVersion } from "@/types/rubric";
+import type { GradingRun, RubricVersion, RubricVersionSummary } from "@/types/rubric";
 
 export function makeRubricVersion(overrides: Partial<RubricVersion> = {}): RubricVersion {
   return {
@@ -18,6 +18,24 @@ export function makeRubricVersion(overrides: Partial<RubricVersion> = {}): Rubri
     created_at: "2026-10-27T03:00:00Z",
     aspects: [],
     levels: [],
+    ...overrides,
+  };
+}
+
+/** Satu baris GET /admin/rubrics seperti dikirim server (bentuk generate, bukan draf tulis tangan). */
+export function makeRubricSummary(overrides: Partial<RubricVersionSummary> = {}): RubricVersionSummary {
+  return {
+    id: "v-1",
+    version_no: 1,
+    effective_date: "2026-10-27",
+    is_active: true,
+    created_by: "u-1",
+    created_by_name: "Aileen",
+    created_at: "2026-10-27T03:00:00Z",
+    approved_by_name: "Steven & Deanne",
+    approved_at: "2026-10-27",
+    aspect_count: 3,
+    level_count: 6,
     ...overrides,
   };
 }
