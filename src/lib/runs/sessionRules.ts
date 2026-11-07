@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me } from "@/types";
 import type { SessionListItem, SessionStatus, StopReason } from "@/types/measurement";
-import { countOfTotal } from "@/lib/runs/sessionProgress";
+import { casesDoneSummary } from "@/lib/runs/sessionProgress";
 
 /**
  * Label status sesi (PBI-11 AC10). Record atas enum kontrak, bukan switch dengan default:
@@ -65,11 +65,15 @@ export function shouldPollSessions(sessions: readonly Pick<SessionListItem, "sta
   return sessions.some((session) => SELF_CHANGING.has(session.status));
 }
 
-/** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
+/**
+ * "7 dari 20 kasus · 35%" (SCRUM-266): kolom Progres daftar sesi dan ringkasan detail sesi.
+ * Angka kasus dan persennya dihitung server (SCRUM-265). Sesi antre belum punya snapshot,
+ * jadi belum ada kasus untuk dihitung.
+ */
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
-  const { completed, total } = session.progress;
-  if (session.status === "queued" && total === 0) return "Menunggu antrean";
-  return countOfTotal(completed, total);
+  const { completed_cases, total_cases, percent_cases_complete } = session.progress;
+  if (session.status === "queued" && total_cases === 0) return "Menunggu antrean";
+  return casesDoneSummary(completed_cases, total_cases, percent_cases_complete);
 }
 
 /** Admin mengelola sesi siapa pun, Developer AI hanya sesi yang ia buat (D10). */

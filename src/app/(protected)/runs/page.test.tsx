@@ -420,7 +420,7 @@ describe("RunsPage Arsip tab (AC10)", () => {
     const cells = within(await row("Sesi Lama"));
     expect(list).toHaveBeenCalledWith(true);
     expect(cells.getByText("Claude")).toBeInTheDocument();
-    expect(cells.getByText("60 dari 60")).toBeInTheDocument();
+    expect(cells.getByText("20 dari 20 kasus · 100%")).toBeInTheDocument();
     for (const name of ["Label", "Dibuat", "Pembuat", "Produk", "Kasus", "Pengulangan", "Status", "Progres"]) {
       expect(screen.getByRole("columnheader", { name })).toBeInTheDocument();
     }
