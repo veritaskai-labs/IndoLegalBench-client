@@ -9,7 +9,7 @@ import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
-import type { GradingRunSummary, SessionGradingResponse } from "@/types/grading";
+import type { SessionGradingResponse } from "@/types/grading";
 import { RegradeSection } from "./RegradeSection";
 
 const v1 = makeRubricSummary({ id: "id-1", version_no: 1, is_active: false });

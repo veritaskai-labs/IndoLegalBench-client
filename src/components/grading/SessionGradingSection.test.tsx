@@ -30,7 +30,12 @@ function renderSection({
   archivedAt?: string | null;
   listVersions?: RubricsGateway["listVersions"];
 }) {
-  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(results), sessions: vi.fn(), runs: vi.fn() };
+  const gateway: GradingGateway = {
+    grade: vi.fn(grade),
+    results: vi.fn(results),
+    sessions: vi.fn(),
+    runs: vi.fn(() => Promise.resolve([])),
+  };
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn(listVersions) });
   render(
     <ToastProvider>
