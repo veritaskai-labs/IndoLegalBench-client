@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { RegradeSection } from "@/components/rubrics/RegradeSection";
+import { SessionGradingSection } from "@/components/grading/SessionGradingSection";
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionControls } from "@/components/runs/SessionControls";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
@@ -120,6 +121,9 @@ function SessionDetailView({
       {/* Komponen ini menghilang sendiri kalau tidak ada panggilan yang gagal (AC4). */}
       <SessionErrorSummary sessionId={session.id} failures={failedAttempts(session.cases)}
       />
+
+      {/* Nilai dan hasil per kasus (PBI-14). Penilaian ulang ada di SCRUM-228. */}
+      <SessionGradingSection session={session} role={role} />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>

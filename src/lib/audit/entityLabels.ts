@@ -9,6 +9,8 @@ export const ENTITY_LABEL: Record<AuditEntityType, string> = {
   user: "Pengguna",
   call_log: "Log panggilan",
   measurement_session: "Sesi pengukuran",
+  rubric_version: "Versi rubrik",
+  judge_provider: "Provider penilai",
 };
 
 export function entityLabel(type: string): string {
