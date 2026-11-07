@@ -86,3 +86,13 @@ const SESSIONS_ERRORS: Record<string, string> = {
 export function sessionsErrorMessage(error: unknown): string {
   return messageFor(SESSIONS_ERRORS, error, "Gagal memuat daftar sesi yang dinilai. Coba lagi.");
 }
+
+const RUNS_ERRORS: Record<string, string> = {
+  // server#122: riwayat penilaian hanya untuk Admin.
+  FORBIDDEN: "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman.",
+  MEASUREMENT_NOT_FOUND: NOT_FOUND,
+};
+
+export function runsErrorMessage(error: unknown): string {
+  return messageFor(RUNS_ERRORS, error, "Gagal memuat riwayat penilaian. Coba lagi.");
+}
