@@ -33,6 +33,42 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Hasil penilaian sesi" })).toBeInTheDocument();
   });
 
+  // server#114 bff8755 sends the session label and product, so Viewer knows which session this is.
+  it("names the session and its product once the result has loaded", async () => {
+    resultsRead.mockResolvedValue(gradingResponse({ session_label: "Uji Coba Produk A", product_name: "Produk Uji A" }));
+
+    render(<SessionResultsReportPage />);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Produk A" })).toBeInTheDocument();
+    expect(screen.getByText("Produk: Produk Uji A")).toBeInTheDocument();
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(breadcrumb).getByText("Uji Coba Produk A")).toHaveAttribute("aria-current", "page");
+  });
+
+  // While loading, the breadcrumb shows a placeholder instead of a label it does not know yet.
+  it("keeps the general heading while the result loads", () => {
+    resultsRead.mockReturnValue(new Promise(() => {}));
+
+    render(<SessionResultsReportPage />);
+
+    expect(screen.getByRole("heading", { level: 1, name: "Hasil penilaian sesi" })).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("…")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  // Edge: both fields are nullable in the contract; the page falls back to its general heading.
+  it("falls back to the general heading when the server sends no label or product", async () => {
+    resultsRead.mockResolvedValue(gradingResponse({ session_label: null, product_name: null }));
+
+    render(<SessionResultsReportPage />);
+
+    await screen.findByRole("table", { name: "Skor sesi" });
+    expect(screen.getByRole("heading", { level: 1, name: "Hasil penilaian sesi" })).toBeInTheDocument();
+    expect(screen.queryByText(/^Produk:/)).not.toBeInTheDocument();
+  });
+
   it("asks for the session id from the URL, decoded once", async () => {
     params.id = "a%2Fb";
     resultsRead.mockResolvedValue(gradingResponse());
