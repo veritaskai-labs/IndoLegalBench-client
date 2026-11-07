@@ -9,6 +9,7 @@ import {
   gradeErrorMessage,
   isNotGraded,
   resultsErrorMessage,
+  runsErrorMessage,
   sessionsErrorMessage,
 } from "./gradingRules";
 
@@ -150,5 +151,23 @@ describe("canSeeGradedSessions (AC8, PO decision: Viewer reads results under Lap
 
   it("offers nothing while the role is still loading", () => {
     expect(canSeeGradedSessions(null)).toBe(false);
+  });
+});
+
+describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", () => {
+  it.each([
+    // The history is Admin only (server#122); a role change while the page is open lands here.
+    [new ApiError(403, "FORBIDDEN"), "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman."],
+    [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
+  ])("explains %s", (error, message) => {
+    expect(runsErrorMessage(error)).toBe(message);
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+    ["a non-error value", "boom"],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(runsErrorMessage(error)).toBe("Gagal memuat riwayat penilaian. Coba lagi.");
   });
 });
