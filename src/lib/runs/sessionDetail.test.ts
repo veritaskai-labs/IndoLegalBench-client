@@ -115,18 +115,17 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     );
   });
 
-  // server#91 093db8f: Developer AI sees progress but no answers until the session ends.
-  it("tells Developer AI that answers appear once the session has ended", () => {
+  // SCRUM-261: Developer AI gets dev answers while the session runs, so nobody is told to wait for the end.
+  it.each([false, true])("gives Developer AI the neutral message when text is missing (session ended: %s)", (sessionEnded) => {
     expect(
-      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded: false, viewerRole: "developer_ai" }),
-    ).toBe("Jawaban tampil setelah sesi selesai.");
+      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded, viewerRole: "developer_ai" }),
+    ).toBe("Tidak ada jawaban tersimpan.");
   });
 
-  // Once the session has ended, Developer AI gets the answers, so a null one is not "wait for the end".
-  it("does not tell Developer AI to wait once the session has ended", () => {
+  it("still shows the answer of a dev case to Developer AI while the session runs", () => {
     expect(
-      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded: true, viewerRole: "developer_ai" }),
-    ).toBe("Tidak ada jawaban tersimpan.");
+      answerPlaceholder(attempt({ answer_text: "Jawaban dev" }), { masked: false, sessionEnded: false, viewerRole: "developer_ai" }),
+    ).toBeNull();
   });
 
   // Negative: a succeeded attempt without text for Admin should not happen; say so instead of a blank.

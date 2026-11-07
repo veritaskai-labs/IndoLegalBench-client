@@ -424,16 +424,23 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
   });
 
-  // server#91: Developer AI sees progress but no answer until the session ends.
-  it("tells Developer AI that answers appear once a running session ends", async () => {
+  // SCRUM-261/262 (AC9): Developer AI reads dev answers while the session still runs.
+  it("shows Developer AI the answer of a dev case while the session is still running", async () => {
     const user = userEvent.setup();
     signedInAs("developer_ai");
-    get.mockResolvedValue(session({ status: "running", finished_at: null, cases: [devCase({ attempts: [attempt({ answer_text: null })] })] }));
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ attempts: [attempt({ answer_text: "Jawaban dev saat berjalan" }), attempt({ repetition_no: 2, status: "running", answer_text: null })] })],
+      }),
+    );
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
-    expect(card.getByText("Jawaban tampil setelah sesi selesai.")).toBeInTheDocument();
-    expect(card.getByText("Berhasil")).toBeInTheDocument();
+    expect(card.getByText("Jawaban dev saat berjalan")).toBeInTheDocument();
+    expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
+    expect(card.queryByText("Jawaban tampil setelah sesi selesai.")).not.toBeInTheDocument();
   });
 
   // AC9 / D10 section C: a test case opened by Developer AI is masked by the server.
