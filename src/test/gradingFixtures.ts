@@ -1,13 +1,16 @@
 import type { AttemptGradeResult, CaseGradeResult, SessionGradingResponse } from "@/types/grading";
 
-/** Data contoh bersama untuk test penilaian (PBI-14), supaya bentuk kontrak #114 tidak disalin per file. Data sintetis. */
+/**
+ * Data contoh bersama untuk test penilaian (PBI-14), supaya bentuk kontrak #114 tidak disalin per file. Data sintetis.
+ * Skor sengaja 0–1 untuk ketiga jalur: tetap sah apa pun skala kualitas yang akhirnya dipakai server.
+ */
 export function gradedAttempt(overrides: Partial<AttemptGradeResult> = {}): AttemptGradeResult {
   return {
     attempt_id: "a-1",
     repetition_no: 1,
     status: "succeeded",
     is_technical_disruption: false,
-    score: { deterministic: "1.00", judge: "4.00" },
+    score: { deterministic: "1.00", quality: "0.80", format: "0.75" },
     answer_text: "Jawaban contoh",
     ...overrides,
   };
@@ -23,7 +26,7 @@ export function gradedCase(overrides: Partial<CaseGradeResult> = {}): CaseGradeR
     category: null,
     question: "Pertanyaan contoh",
     masked: false,
-    scores: { deterministic: "1.00", judge: "4.00" },
+    scores: { deterministic: "1.00", quality: "0.80", format: "0.75" },
     attempts: [gradedAttempt()],
     ...overrides,
   };
@@ -40,9 +43,9 @@ export function gradingResponse(overrides: Partial<SessionGradingResponse> = {})
     triggered_at: "2026-11-07T03:00:00Z",
     is_latest: true,
     scores: {
-      dev: { deterministic: "1.00", judge: "4.00" },
-      test: { deterministic: "0.50", judge: "3.25" },
-      combined: { deterministic: "0.75", judge: "3.63" },
+      dev: { deterministic: "1.00", quality: "0.80", format: "0.75" },
+      test: { deterministic: "0.50", quality: "0.60", format: "0.50" },
+      combined: { deterministic: "0.75", quality: "0.70", format: "0.63" },
     },
     category_scores: [],
     cases: [gradedCase()],

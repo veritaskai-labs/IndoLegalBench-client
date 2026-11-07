@@ -15,35 +15,49 @@ describe("labels (PBI-14 AC1, PBI-11 AC9)", () => {
     expect(SCORE_GROUP_LABEL).toEqual({ dev: "Dev", test: "Test", combined: "Gabungan" });
   });
 
-  it("names the two grading paths", () => {
-    expect(SCORE_PATH_LABEL).toEqual({ deterministic: "Deterministik", judge: "Penilai LLM" });
+  // server#114 bff8755 (SCRUM-225): the judge path reports quality and format separately.
+  it("names the deterministic path and both judge aspects", () => {
+    expect(SCORE_PATH_LABEL).toEqual({ deterministic: "Deterministik", quality: "Kualitas LLM", format: "Format LLM" });
   });
 });
 
 describe("scoreCells (AC1, AC3)", () => {
-  // AC1: the two paths are shown side by side and never merged into one number.
-  it("formats each path on its own and adds no combined value", () => {
-    expect(scoreCells({ deterministic: "1", judge: "3.5" })).toEqual({ deterministic: "1,00", judge: "3,50" });
+  // AC1: the scores are shown side by side and never merged into one number.
+  it("formats each score on its own and adds no combined value", () => {
+    expect(scoreCells({ deterministic: "1", quality: "0.5", format: "0.25" })).toEqual({
+      deterministic: "1,00",
+      quality: "0,50",
+      format: "0,25",
+    });
   });
 
   it.each([null, undefined])("shows dashes when there is no score pair (%s)", (pair) => {
-    expect(scoreCells(pair)).toEqual({ deterministic: "–", judge: "–" });
+    expect(scoreCells(pair)).toEqual({ deterministic: "–", quality: "–", format: "–" });
   });
 
-  // Edge: one path may have no score yet while the other has one.
-  it("shows a dash only for the path without a score", () => {
-    expect(scoreCells({ deterministic: "0.50", judge: null })).toEqual({ deterministic: "0,50", judge: "–" });
+  // Edge: one score may be missing while the others are there.
+  it("shows a dash only for the score that is null", () => {
+    expect(scoreCells({ deterministic: "0.50", quality: null, format: "0.75" })).toEqual({
+      deterministic: "0,50",
+      quality: "–",
+      format: "0,75",
+    });
+  });
+
+  // Edge: every field of ScorePair is optional in the contract, so a key may be absent altogether.
+  it("shows a dash for a score the server left out", () => {
+    expect(scoreCells({ deterministic: "0.50" })).toEqual({ deterministic: "0,50", quality: "–", format: "–" });
   });
 });
 
 describe("toAttemptRow (AC4, AC9)", () => {
-  it("shows a scored attempt with its repetition, status and both scores", () => {
+  it("shows a scored attempt with its repetition, status and every score", () => {
     expect(toAttemptRow(gradedAttempt({ attempt_id: "a-2", repetition_no: 2 }))).toEqual({
       id: "a-2",
       label: "Percobaan 2",
       statusLabel: "Berhasil",
       scored: true,
-      scores: { deterministic: "1,00", judge: "4,00" },
+      scores: { deterministic: "1,00", quality: "0,80", format: "0,75" },
       note: null,
     });
   });
@@ -53,7 +67,7 @@ describe("toAttemptRow (AC4, AC9)", () => {
     const row = toAttemptRow(gradedAttempt({ is_technical_disruption: true, score: null }));
 
     expect(row.scored).toBe(false);
-    expect(row.scores).toEqual({ deterministic: "–", judge: "–" });
+    expect(row.scores).toEqual({ deterministic: "–", quality: "–", format: "–" });
     expect(row.note).toBe("Tidak dinilai: gangguan teknis");
   });
 
@@ -61,7 +75,7 @@ describe("toAttemptRow (AC4, AC9)", () => {
   it("hides a score that arrives on a disrupted attempt", () => {
     const row = toAttemptRow(gradedAttempt({ is_technical_disruption: true }));
 
-    expect(row.scores).toEqual({ deterministic: "–", judge: "–" });
+    expect(row.scores).toEqual({ deterministic: "–", quality: "–", format: "–" });
   });
 
   it("names a failed provider call with the attempt status the session page already uses", () => {
@@ -72,8 +86,8 @@ describe("toAttemptRow (AC4, AC9)", () => {
 });
 
 describe("toCaseRow (AC3, AC8)", () => {
-  it("shows a case with its code, title, split and both average scores", () => {
-    const row = toCaseRow(gradedCase({ scores: { deterministic: "0.67", judge: "3.75" } }));
+  it("shows a case with its code, title, split and every average score", () => {
+    const row = toCaseRow(gradedCase({ scores: { deterministic: "0.67", quality: "0.60", format: "0.50" } }));
 
     expect(row).toMatchObject({
       id: "item-1",
@@ -81,7 +95,7 @@ describe("toCaseRow (AC3, AC8)", () => {
       title: "Kasus contoh A",
       splitTag: "dev",
       masked: false,
-      scores: { deterministic: "0,67", judge: "3,75" },
+      scores: { deterministic: "0,67", quality: "0,60", format: "0,50" },
     });
   });
 
@@ -104,7 +118,7 @@ describe("toCaseRow (AC3, AC8)", () => {
   });
 
   it("shows dashes for a case that has no score yet", () => {
-    expect(toCaseRow(gradedCase({ scores: null })).scores).toEqual({ deterministic: "–", judge: "–" });
+    expect(toCaseRow(gradedCase({ scores: null })).scores).toEqual({ deterministic: "–", quality: "–", format: "–" });
   });
 
   // AC8, server#114: a test case seen by Developer AI shows only the aggregate, so the row names
@@ -117,7 +131,7 @@ describe("toCaseRow (AC3, AC8)", () => {
       title: MASKED_CASE_LABEL,
       splitTag: "test",
       masked: true,
-      scores: { deterministic: "–", judge: "–" },
+      scores: { deterministic: "–", quality: "–", format: "–" },
       attempts: [],
     });
   });
@@ -130,13 +144,15 @@ describe("toCaseRow (AC3, AC8)", () => {
       case_code: "KC-777",
       title: "Judul asli kasus test",
       question: "Pertanyaan asli kasus test",
-      scores: { deterministic: "0.90", judge: "4.80" },
-      attempts: [gradedAttempt({ answer_text: "Jawaban asli kasus test", score: { deterministic: "0.90", judge: "4.80" } })],
+      scores: { deterministic: "0.91", quality: "0.92", format: "0.93" },
+      attempts: [
+        gradedAttempt({ answer_text: "Jawaban asli kasus test", score: { deterministic: "0.91", quality: "0.92", format: "0.93" } }),
+      ],
     });
 
     const shown = JSON.stringify(toCaseRow(leaked));
 
-    for (const secret of ["KC-777", "Judul asli", "Pertanyaan asli", "Jawaban asli", "0,90", "4,80"]) {
+    for (const secret of ["KC-777", "Judul asli", "Pertanyaan asli", "Jawaban asli", "0,91", "0,92", "0,93"]) {
       expect(shown).not.toContain(secret);
     }
   });

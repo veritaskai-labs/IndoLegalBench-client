@@ -16,23 +16,35 @@ const twoCases = [
     snapshot_item_id: "item-1",
     case_code: "KC-001",
     title: "Kasus contoh A",
-    scores: { deterministic: "0.67", judge: "3.75" },
+    scores: { deterministic: "0.67", quality: "0.60", format: "0.50" },
     attempts: [
-      gradedAttempt({ attempt_id: "a-2", repetition_no: 2, score: { deterministic: "0.33", judge: "3.50" } }),
-      gradedAttempt({ attempt_id: "a-1", repetition_no: 1, score: { deterministic: "1.00", judge: "4.00" } }),
+      gradedAttempt({ attempt_id: "a-2", repetition_no: 2, score: { deterministic: "0.33", quality: "0.40", format: "0.25" } }),
+      gradedAttempt({ attempt_id: "a-1", repetition_no: 1, score: { deterministic: "1.00", quality: "0.80", format: "0.75" } }),
     ],
   }),
   gradedCase({ snapshot_item_id: "item-2", case_code: "KC-002", title: "Kasus contoh B", split_tag: "test" }),
 ];
 
 describe("SessionScoreTable (PBI-14 AC3, AC8)", () => {
-  it("shows one row per case with both average scores", () => {
+  // server#114 bff8755: the deterministic path, then the judge's quality and format scores.
+  it("has a column for the deterministic path and for each judge aspect", () => {
+    const table = renderTable(twoCases);
+
+    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+      "Kasus",
+      "Split",
+      "Deterministik",
+      "Kualitas LLM",
+      "Format LLM",
+    ]);
+  });
+
+  it("shows one row per case with every average score", () => {
     const table = renderTable(twoCases);
 
     const row = within(table).getByRole("row", { name: /KC-001/ });
     expect(row).toHaveTextContent("Kasus contoh A");
-    expect(row).toHaveTextContent("0,67");
-    expect(row).toHaveTextContent("3,75");
+    expect(within(row).getAllByRole("cell").slice(2).map((cell) => cell.textContent)).toEqual(["0,67", "0,60", "0,50"]);
     expect(within(table).getByRole("row", { name: /KC-002/ })).toHaveTextContent("Kasus contoh B");
   });
 
@@ -54,6 +66,7 @@ describe("SessionScoreTable (PBI-14 AC3, AC8)", () => {
 
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     const detail = screen.getByRole("region", { name: "Rincian KC-001" });
+    expect(detail.closest("td")).toHaveAttribute("colspan", "5");
     expect(detail).toHaveTextContent("Versi rubrik: v1");
     const attempts = within(detail).getAllByRole("listitem");
     expect(attempts.map((item) => item.textContent)).toEqual([
@@ -62,7 +75,8 @@ describe("SessionScoreTable (PBI-14 AC3, AC8)", () => {
     ]);
     expect(attempts[0]).toHaveTextContent("Berhasil");
     expect(attempts[0]).toHaveTextContent("Deterministik 1,00");
-    expect(attempts[0]).toHaveTextContent("Penilai LLM 4,00");
+    expect(attempts[0]).toHaveTextContent("Kualitas LLM 0,80");
+    expect(attempts[0]).toHaveTextContent("Format LLM 0,75");
   });
 
   it("closes an open case on a second click", async () => {
@@ -122,7 +136,7 @@ describe("SessionScoreTable (PBI-14 AC3, AC8)", () => {
         split_tag: "test",
         case_code: "KC-777",
         title: "Judul asli kasus test",
-        scores: { deterministic: "0.90", judge: "4.80" },
+        scores: { deterministic: "0.91", quality: "0.92", format: "0.93" },
       }),
     ]);
 
@@ -130,12 +144,13 @@ describe("SessionScoreTable (PBI-14 AC3, AC8)", () => {
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
     expect(table).not.toHaveTextContent("KC-777");
     expect(table).not.toHaveTextContent("Judul asli");
-    expect(table).not.toHaveTextContent("4,80");
+    expect(table).not.toHaveTextContent("0,92");
   });
 
   it("says so when no case has been graded", () => {
     const table = renderTable([]);
 
     expect(table).toHaveTextContent("Belum ada kasus yang dinilai.");
+    expect(within(table).getByText("Belum ada kasus yang dinilai.").closest("td")).toHaveAttribute("colspan", "5");
   });
 });

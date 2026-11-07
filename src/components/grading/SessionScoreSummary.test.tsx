@@ -10,15 +10,16 @@ function rowCells(table: HTMLElement, group: string): string[] {
 }
 
 describe("SessionScoreSummary (PBI-14 AC1, AC3, PBI-11 AC9)", () => {
-  it("shows Dev, Test and Gabungan, each with both paths side by side", () => {
+  it("shows Dev, Test and Gabungan, each with every score side by side", () => {
     render(<SessionScoreSummary scores={gradingResponse().scores} />);
     const table = screen.getByRole("table", { name: "Skor sesi" });
 
     expect(within(table).getByRole("columnheader", { name: "Deterministik" })).toBeInTheDocument();
-    expect(within(table).getByRole("columnheader", { name: "Penilai LLM" })).toBeInTheDocument();
-    expect(rowCells(table, "Dev")).toEqual(["1,00", "4,00"]);
-    expect(rowCells(table, "Test")).toEqual(["0,50", "3,25"]);
-    expect(rowCells(table, "Gabungan")).toEqual(["0,75", "3,63"]);
+    expect(within(table).getByRole("columnheader", { name: "Kualitas LLM" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Format LLM" })).toBeInTheDocument();
+    expect(rowCells(table, "Dev")).toEqual(["1,00", "0,80", "0,75"]);
+    expect(rowCells(table, "Test")).toEqual(["0,50", "0,60", "0,50"]);
+    expect(rowCells(table, "Gabungan")).toEqual(["0,75", "0,70", "0,63"]);
   });
 
   // AC3: no percent and no "X dari N" anywhere.
@@ -31,9 +32,9 @@ describe("SessionScoreSummary (PBI-14 AC1, AC3, PBI-11 AC9)", () => {
 
   // Edge: a group with no graded case yet (e.g. a session with only dev cases has no test score).
   it("shows dashes for a group without a score", () => {
-    const scores = { ...gradingResponse().scores, test: { deterministic: null, judge: null } };
+    const scores = { ...gradingResponse().scores, test: { deterministic: null, quality: null, format: null } };
     render(<SessionScoreSummary scores={scores} />);
 
-    expect(rowCells(screen.getByRole("table", { name: "Skor sesi" }), "Test")).toEqual(["–", "–"]);
+    expect(rowCells(screen.getByRole("table", { name: "Skor sesi" }), "Test")).toEqual(["–", "–", "–"]);
   });
 });
