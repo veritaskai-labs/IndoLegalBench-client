@@ -22,7 +22,7 @@ function draft(overrides: Partial<RubricDraft> = {}): RubricDraft {
   };
 }
 
-describe("toCreateRequest (POST /rubrics, AC7)", () => {
+describe("toCreateRequest (POST /admin/rubrics, AC7)", () => {
   // Positive: the whole draft becomes the server's snake_case body.
   it("maps a complete draft to the request body", () => {
     // Arrange
@@ -39,34 +39,26 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
       approved_by_name: "Steven & Deanne",
       approved_at: "2026-10-27",
       aspects: [
-        {
-          name: "Kesimpulan",
-          grader_path: "llm",
-          weight: 60,
-          definition: "Ketepatan hasil akhir",
-          sort_order: 1,
-          level_descriptors: [
-            { score: 5, text: "Benar" },
-            { score: 4, text: "Cukup" },
-          ],
-        },
-        {
-          name: "Dasar Hukum",
-          grader_path: "deterministic",
-          weight: 40,
-          definition: "Ketepatan rujukan",
-          sort_order: 2,
-          level_descriptors: [{ score: 5, text: "Akurat" }],
-        },
+        { name: "Kesimpulan", grader_path: "llm", weight: 60, definition: "Ketepatan hasil akhir" },
+        { name: "Dasar Hukum", grader_path: "deterministic", weight: 40, definition: "Ketepatan rujukan" },
       ],
       levels: [
-        { score: 5, label: "Sempurna", is_passing: true },
-        { score: 4, label: "Baik", is_passing: true },
+        {
+          score: 5,
+          label: "Sempurna",
+          is_passing: true,
+          descriptors: [
+            { aspect_name: "Kesimpulan", descriptor: "Benar" },
+            { aspect_name: "Dasar Hukum", descriptor: "Akurat" },
+          ],
+        },
+        { score: 4, label: "Baik", is_passing: true, descriptors: [{ aspect_name: "Kesimpulan", descriptor: "Cukup" }] },
       ],
     });
   });
 
-  it("numbers aspects from 1 in the order they were written", () => {
+  // The server numbers the aspects from the order of the array, so the client sends no sort_order.
+  it("keeps aspects in the order they were written and sends no sort_order", () => {
     // Arrange
     const source = createRubricV1Draft();
 
@@ -74,11 +66,8 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
     const request = toCreateRequest(source);
 
     // Assert
-    expect(request.aspects.map((a) => [a.name, a.sort_order])).toEqual([
-      ["Kesimpulan", 1],
-      ["Dasar Hukum", 2],
-      ["Argumentasi", 3],
-    ]);
+    expect(request.aspects.map((a) => a.name)).toEqual(["Kesimpulan", "Dasar Hukum", "Argumentasi"]);
+    expect(request.aspects[0]).not.toHaveProperty("sort_order");
   });
 
   // Edge: holistic rubric, the client gave no weights (all empty is valid on the server).
@@ -133,26 +122,54 @@ describe("toCreateRequest (POST /rubrics, AC7)", () => {
     // Arrange
     const source = draft({
       aspects: [{ id: "a-1", name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 5: "Ada", 4: "", 3: "   " } }],
+      levels: [
+        { score: 5, label: "Lima", isPassing: true },
+        { score: 4, label: "Empat", isPassing: true },
+        { score: 3, label: "Tiga", isPassing: false },
+      ],
     });
 
     // Act
     const request = toCreateRequest(source);
 
     // Assert
-    expect(request.aspects[0].level_descriptors).toEqual([{ score: 5, text: "Ada" }]);
+    expect(request.levels.map((l) => l.descriptors)).toEqual([[{ aspect_name: "A", descriptor: "Ada" }], [], []]);
   });
 
-  it("orders descriptors from the highest score to the lowest", () => {
+  // Edge: a level nobody described still goes out, with an empty descriptor list.
+  it("sends a level without any descriptor as an empty list", () => {
+    // Arrange
+    const source = draft({ levels: [{ score: 0, label: "Fatal", isPassing: false }] });
+
+    // Act
+    const request = toCreateRequest(source);
+
+    // Assert
+    expect(request.levels).toEqual([{ score: 0, label: "Fatal", is_passing: false, descriptors: [] }]);
+  });
+
+  it("puts each descriptor on its own level and lists them in aspect order", () => {
     // Arrange
     const source = draft({
-      aspects: [{ id: "a-1", name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 0: "Nol", 5: "Lima", 3: "Tiga" } }],
+      aspects: [
+        { id: "a-1", name: "A", graderPath: "llm", weight: "", definition: "d", descriptors: { 0: "A nol", 5: "A lima" } },
+        { id: "a-2", name: "B", graderPath: "llm", weight: "", definition: "d", descriptors: { 5: "B lima" } },
+      ],
+      levels: [
+        { score: 5, label: "Lima", isPassing: true },
+        { score: 0, label: "Nol", isPassing: false },
+      ],
     });
 
     // Act
     const request = toCreateRequest(source);
 
     // Assert
-    expect(request.aspects[0].level_descriptors.map((d) => d.score)).toEqual([5, 3, 0]);
+    expect(request.levels[0].descriptors).toEqual([
+      { aspect_name: "A", descriptor: "A lima" },
+      { aspect_name: "B", descriptor: "B lima" },
+    ]);
+    expect(request.levels[1].descriptors).toEqual([{ aspect_name: "A", descriptor: "A nol" }]);
   });
 
   // Negative: the server judges the content (422), so blank required text is sent as typed.
