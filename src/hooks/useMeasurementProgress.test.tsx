@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiFetch } from "@/lib/apiClient";
+import { ApiError, apiFetch } from "@/lib/apiClient";
 import { PROGRESS_POLL_MS, useMeasurementProgress } from "./useMeasurementProgress";
 
 vi.mock("@/lib/apiClient", async (importOriginal) => ({
@@ -118,4 +118,38 @@ it("reloads progress after a failed first request even when polling is off", asy
   expect(apiFetchMock).toHaveBeenCalledTimes(2);
 });
 
+  // Waiting for the next poll cannot bring back a session that does not exist.
+  it("says the session is missing on 404 instead of the generic message", async () => {
+    apiFetchMock.mockRejectedValue(new ApiError(404, "MEASUREMENT_NOT_FOUND"));
+
+    const { result } = renderHook(() => useMeasurementProgress("s-1", { poll: false }));
+
+    await waitFor(() => expect(result.current).toMatchObject({ status: "error", message: "Sesi tidak ditemukan." }));
+  });
+
+  // Same as before the refactor: polling keeps going while the first read is still failing.
+  it("recovers by itself when polling is on and the first read failed", async () => {
+    apiFetchMock.mockRejectedValueOnce(new Error("boom")).mockResolvedValue(progress(10));
+    const { result } = renderHook(() => useMeasurementProgress("s-1", { poll: true }));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    await act(() => vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS));
+
+    await waitFor(() => expect(result.current).toMatchObject({ status: "ready", data: progress(10) }));
+  });
+
+  // Switching sessions must never show the numbers of the previous one.
+  it("drops a late reply for the previous session", async () => {
+    let resolveOld: (value: unknown) => void = () => {};
+    apiFetchMock.mockReturnValueOnce(new Promise((resolve) => (resolveOld = resolve))).mockResolvedValueOnce(progress(5));
+    const { result, rerender } = renderHook(({ id }) => useMeasurementProgress(id, { poll: false }), {
+      initialProps: { id: "s-1" },
+    });
+
+    rerender({ id: "s-2" });
+    await waitFor(() => expect(result.current).toMatchObject({ data: progress(5) }));
+    await act(async () => resolveOld(progress(240)));
+
+    expect(result.current).toMatchObject({ data: progress(5) });
+  });
 });
