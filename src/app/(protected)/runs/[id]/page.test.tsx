@@ -361,16 +361,46 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     expect(within(items[0]).getByText("Jawaban pertama")).toBeInTheDocument();
   });
 
-  // The raw answer is shown as text: a provider's markup must never become HTML.
-  it("shows markup in a raw answer as plain text", async () => {
+  // The formatted view drops raw html; the raw view shows it as literal text. It never becomes an element.
+  it("never turns markup in a raw answer into html, and still shows it as text in the raw view", async () => {
     const user = userEvent.setup();
     const payload = '<img src=x onerror="alert(1)"> **tebal**';
     get.mockResolvedValue(session({ cases: [devCase({ attempts: [attempt({ answer_text: payload })] })] }));
     const { container } = render(<SessionDetailPage />);
 
     const card = await openCase(user);
-    expect(card.getByText(payload)).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
+    expect(card.getByText("tebal").tagName).toBe("STRONG");
+
+    await user.click(card.getByRole("button", { name: "Teks mentah" }));
+    expect(card.getByTestId("raw-answer").textContent).toBe(payload);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("renders the raw answer as markdown and shows the WIB timestamps of each attempt", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(
+      session({
+        cases: [
+          devCase({
+            attempts: [
+              attempt({ answer_text: "## Kesimpulan\n\n- poin satu", started_at: "2026-11-03T03:00:00Z", finished_at: "2026-11-03T03:01:30Z" }),
+              attempt({ repetition_no: 2, answer_text: "Jawaban kedua", started_at: null, finished_at: null }),
+            ],
+          }),
+        ],
+      }),
+    );
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    const [first, second] = card.getAllByRole("listitem", { name: /^Percobaan/ });
+    expect(within(first).getByRole("heading", { level: 2, name: "Kesimpulan" })).toBeInTheDocument();
+    expect(within(first).getByRole("listitem")).toHaveTextContent("poin satu");
+    expect(within(first).getByText("1 mnt 30 dtk")).toBeInTheDocument();
+    expect(within(first).getAllByText(/WIB$/)).toHaveLength(2);
+    expect(within(second).getByText("Belum dimulai")).toBeInTheDocument();
+    expect(within(second).getByText("Belum selesai")).toBeInTheDocument();
   });
 
   it("explains an attempt without an answer instead of leaving it blank", async () => {
