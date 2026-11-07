@@ -1,4 +1,4 @@
-import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose } from "@/types/measurement";
+import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose, SessionCaseResult } from "@/types/measurement";
 
 /** Status satu percobaan (D2 attempts). Record atas enum kontrak: status baru membuat tsc gagal di sini. */
 export const ATTEMPT_STATUS_LABEL: Record<AttemptStatus, string> = {
@@ -48,4 +48,10 @@ export function answerPlaceholder(attempt: AttemptResult, context: AnswerContext
   if (attempt.status === "pending" || attempt.status === "running") return "Belum ada jawaban.";
   if (attempt.status === "technical_failure") return "Gagal teknis, tidak ada jawaban.";
   return "Tidak ada jawaban tersimpan.";
+}
+
+// Kerangka untuk commit red.
+export function awaitingFirstAnswer(cases: readonly SessionCaseResult[]): boolean {
+  void cases;
+  return false;
 }

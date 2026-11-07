@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose } from "@/types/measurement";
+import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose, SessionCaseResult } from "@/types/measurement";
 import {
   answerPlaceholder,
   ATTEMPT_STATUS_LABEL,
   attemptSummary,
+  awaitingFirstAnswer,
   CASE_FILTER_LABEL,
   MEASUREMENT_PURPOSE_LABEL,
   sortedAttempts,
@@ -123,5 +124,45 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
   // Negative: a succeeded attempt without text for Admin should not happen; say so instead of a blank.
   it("falls back to a neutral message for a succeeded attempt without stored text", () => {
     expect(answerPlaceholder(attempt({ answer_text: null }), open)).toBe("Tidak ada jawaban tersimpan.");
+  });
+});
+
+function caseResult(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult {
+  return { snapshot_item_id: "item-1", masked: false, attempts: [attempt({ answer_text: null, status: "pending" })], ...overrides } as SessionCaseResult;
+}
+
+describe("awaitingFirstAnswer (PBI-11 AC9 empty state)", () => {
+  it("is true when no readable case has an answer yet", () => {
+    const cases = [caseResult(), caseResult({ snapshot_item_id: "item-2", attempts: [attempt({ status: "running", answer_text: null })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(true);
+  });
+
+  it("is false as soon as one attempt of a readable case has text", () => {
+    const cases = [caseResult(), caseResult({ snapshot_item_id: "item-2", attempts: [attempt({ answer_text: "Jawaban pertama" })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(false);
+  });
+
+  // An empty string is a real answer from the provider.
+  it("is false when an attempt answered with an empty string", () => {
+    expect(awaitingFirstAnswer([caseResult({ attempts: [attempt({ answer_text: "" })] })])).toBe(false);
+  });
+
+  // Test cases are masked for Developer AI and will never show an answer, so waiting would be a lie.
+  it("is false when every case is masked", () => {
+    expect(awaitingFirstAnswer([caseResult({ masked: true }), caseResult({ snapshot_item_id: "item-2", masked: true })])).toBe(false);
+  });
+
+  it("ignores masked cases when a readable case is still waiting", () => {
+    expect(awaitingFirstAnswer([caseResult({ masked: true }), caseResult({ snapshot_item_id: "item-2" })])).toBe(true);
+  });
+
+  it("is false when there are no cases", () => {
+    expect(awaitingFirstAnswer([])).toBe(false);
+  });
+
+  it("is false for a readable case that has no attempts yet", () => {
+    expect(awaitingFirstAnswer([caseResult({ attempts: [] })])).toBe(false);
   });
 });
