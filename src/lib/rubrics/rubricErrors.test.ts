@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
-import { createErrorMessage, fieldErrorOf, loadErrorMessage, regradeErrorMessage } from "./rubricErrors";
+import { createErrorMessage, fieldErrorOf, loadErrorMessage } from "./rubricErrors";
 
 function apiError(status: number, serverMessage: string | null = null, field: string | null = null) {
   return new ApiError(status, "SOME_CODE", serverMessage, field);
 }
 
-describe("createErrorMessage (POST /rubrics)", () => {
+describe("createErrorMessage (POST /admin/rubrics)", () => {
   // Positive: the server says exactly which rule failed, so the Admin reads that.
   it("shows the server message on a 422", () => {
     // Arrange
@@ -70,64 +70,6 @@ describe("createErrorMessage (POST /rubrics)", () => {
       expect(message).toBe("Versi rubrik gagal disimpan. Coba lagi.");
     },
   );
-});
-
-describe("regradeErrorMessage (POST /measurements/{id}/grade)", () => {
-  it("explains a role change on a 403", () => {
-    // Arrange
-    const error = apiError(403);
-
-    // Act
-    const message = regradeErrorMessage(error);
-
-    // Assert
-    expect(message).toBe("Peran Anda tidak lagi boleh menilai ulang sesi. Muat ulang halaman.");
-  });
-
-  it("says the session is gone on a 404", () => {
-    // Arrange
-    const error = apiError(404);
-
-    // Act
-    const message = regradeErrorMessage(error);
-
-    // Assert
-    expect(message).toBe("Sesi tidak ditemukan. Muat ulang daftar sesi.");
-  });
-
-  // Positive: why the session cannot be graded right now comes from the server.
-  it.each([409, 422])("shows the server reason on a %i", (status) => {
-    // Arrange
-    const error = apiError(status, "Sesi masih berjalan");
-
-    // Act
-    const message = regradeErrorMessage(error);
-
-    // Assert
-    expect(message).toBe("Sesi masih berjalan");
-  });
-
-  it.each([
-    [409, "Sesi belum bisa dinilai ulang saat ini. Coba lagi setelah sesi selesai."],
-    [422, "Versi rubrik yang dipilih tidak bisa dipakai. Muat ulang daftar versi."],
-  ])("falls back to a plain message on a %i without a server reason", (status, expected) => {
-    // Arrange
-    const error = apiError(status);
-
-    // Act
-    const message = regradeErrorMessage(error);
-
-    // Assert
-    expect(message).toBe(expected);
-  });
-
-  it.each([[apiError(500)], [new TypeError("Failed to fetch")], [undefined]])("gives the generic message for %j", (error) => {
-    // Arrange / Act
-    const message = regradeErrorMessage(error);
-
-    // Assert
-    expect(message).toBe("Penilaian ulang gagal dimulai. Coba lagi.");
-  });
 });
 
 describe("loadErrorMessage", () => {
