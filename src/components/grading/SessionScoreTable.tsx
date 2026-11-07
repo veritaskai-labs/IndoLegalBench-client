@@ -119,9 +119,9 @@ function CaseCell({
 }
 
 /**
- * Rincian satu kasus: versi rubrik hasil ini dan skor tiap percobaan. Penjelasan penilai, alasan
- * standar dan hasil per kriteria (AC5), juga label sumber Otomatis/Manual (AC9), menunggu field-nya
- * ada di AttemptGradeResult server#114; client tidak mengarang bentuknya.
+ * Rincian satu kasus: versi rubrik hasil ini, lalu tiap percobaan dengan sumbernya (AC9), skornya,
+ * penjelasan penilai dan alasan standarnya (AC5). Hasil per kriteria menunggu server#114 memberi
+ * `criteria` bentuk yang bertipe; sekarang masih dict bebas, jadi client tidak menebak kuncinya.
  */
 function CaseDetail({ id, row, rubricVersion }: Readonly<{ id: string; row: CaseRow; rubricVersion: string }>) {
   return (
@@ -140,19 +140,33 @@ function CaseDetail({ id, row, rubricVersion }: Readonly<{ id: string; row: Case
   );
 }
 
+/** Penjelasan berasal dari LLM: tampil sebagai teks biasa lewat JSX, tidak pernah sebagai HTML. */
 function AttemptLine({ attempt }: Readonly<{ attempt: AttemptRow }>) {
   return (
-    <li className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-      <span className="font-medium text-slate-900">{attempt.label}</span>
-      <span className="text-slate-600">{attempt.statusLabel}</span>
-      {attempt.scored ? (
-        SCORE_PATHS.map((path) => (
-          <span key={path} className="tabular-nums text-slate-900">
-            {SCORE_PATH_LABEL[path]} {attempt.scores[path]}
-          </span>
-        ))
-      ) : (
-        <span className="text-amber-800">{attempt.note}</span>
+    <li className="space-y-1 text-sm">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-medium text-slate-900">{attempt.label}</span>
+        <span className="text-slate-600">{attempt.statusLabel}</span>
+        <span className="rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-700">{attempt.sourceLabel}</span>
+        {attempt.scored ? (
+          SCORE_PATHS.map((path) => (
+            <span key={path} className="tabular-nums text-slate-900">
+              {SCORE_PATH_LABEL[path]} {attempt.scores[path]}
+            </span>
+          ))
+        ) : (
+          <span className="text-amber-800">{attempt.note}</span>
+        )}
+      </div>
+      {attempt.explanation && (
+        <p className="text-slate-700">
+          <span className="font-medium">Penjelasan penilai:</span> {attempt.explanation}
+        </p>
+      )}
+      {attempt.reasons.length > 0 && (
+        <p className="text-slate-600">
+          <span className="font-medium">Alasan:</span> {attempt.reasons.join(", ")}
+        </p>
       )}
     </li>
   );

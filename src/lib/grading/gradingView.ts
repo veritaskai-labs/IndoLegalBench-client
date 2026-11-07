@@ -1,6 +1,6 @@
 import { ATTEMPT_STATUS_LABEL } from "@/lib/runs/sessionDetail";
 import type { SplitTag } from "@/types/case";
-import type { AttemptGradeResult, CaseGradeResult, ScorePair, ThreeScores } from "@/types/grading";
+import type { AttemptGradeResult, AttemptSource, CaseGradeResult, ScorePair, ThreeScores } from "@/types/grading";
 import { formatScore } from "./scoreFormat";
 
 /** Record atas kunci kontrak: kelompok atau jalur baru dari server membuat tsc gagal di sini. */
@@ -25,6 +25,29 @@ export type ScorePath = keyof ScorePair;
 /** Tabel mengulang daftar ini, jadi jalur baru cukup ditambah di SCORE_PATH_LABEL. */
 export const SCORE_PATHS = Object.keys(SCORE_PATH_LABEL) as ScorePath[];
 
+/** Asal percobaan (AC9): dari pengukuran otomatis atau diisi tangan di sesi manual. */
+export const ATTEMPT_SOURCE_LABEL: Record<AttemptSource, string> = {
+  automatic: "Otomatis",
+  manual: "Manual",
+};
+
+/**
+ * Kode alasan standar (AC5). Server mengirim kode yang stabil dan client yang memberi teks; empat
+ * kode ini yang di-seed migrasi server 8ead8669ff79. Bukan Record atas enum karena kontrak
+ * mengirimnya sebagai string bebas.
+ */
+const REASON_LABEL: Readonly<Record<string, string>> = {
+  regulation_not_cited: "Peraturan tidak disebut",
+  article_not_cited: "Pasal tidak disebut",
+  chained_refs_incomplete: "Rujukan berangkai kurang",
+  criterion_unmet: "Kriteria tidak terpenuhi",
+};
+
+/** Kode yang belum dikenal tetap tampil apa adanya, supaya alasan dari server baru tidak hilang. */
+export function reasonLabel(code: string): string {
+  return Object.hasOwn(REASON_LABEL, code) ? REASON_LABEL[code] : code;
+}
+
 export const MASKED_CASE_LABEL = "Kasus test disamarkan";
 
 const NOT_GRADED_NOTE = "Tidak dinilai: gangguan teknis";
@@ -39,6 +62,11 @@ export interface AttemptRow {
   scored: boolean;
   scores: ScoreCells;
   note: string | null;
+  sourceLabel: string;
+  /** Penjelasan penilai LLM (AC5); null bila tidak ada atau percobaan tidak dinilai. */
+  explanation: string | null;
+  /** Alasan standar yang sudah berupa teks (AC5). */
+  reasons: string[];
 }
 
 /** Satu baris tabel hasil, siap tampil tanpa logika di komponen. */
@@ -61,8 +89,8 @@ export function scoreCells(pair: ScorePair | null | undefined): ScoreCells {
 
 /**
  * Gangguan teknis (jawaban kosong, AI menolak, penilai gagal) tidak dinilai dan tidak menurunkan
- * skor (AC4). Skor yang tetap terbawa pada percobaan seperti itu tidak ditampilkan, supaya tidak
- * terlihat seolah dinilai.
+ * skor (AC4). Skor, penjelasan dan alasan yang tetap terbawa pada percobaan seperti itu tidak
+ * ditampilkan, supaya tidak terlihat seolah dinilai.
  */
 export function toAttemptRow(attempt: AttemptGradeResult): AttemptRow {
   const disrupted = attempt.is_technical_disruption;
@@ -73,6 +101,9 @@ export function toAttemptRow(attempt: AttemptGradeResult): AttemptRow {
     scored: !disrupted,
     scores: disrupted ? { ...NO_SCORE } : scoreCells(attempt.score),
     note: disrupted ? NOT_GRADED_NOTE : null,
+    sourceLabel: ATTEMPT_SOURCE_LABEL[attempt.source],
+    explanation: disrupted ? null : attempt.explanation?.trim() || null,
+    reasons: disrupted ? [] : (attempt.reasons ?? []).map(reasonLabel),
   };
 }
 
