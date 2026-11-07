@@ -25,7 +25,7 @@ function renderSection({
   status?: SessionStatus;
   archivedAt?: string | null;
 }) {
-  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(results) };
+  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(results), sessions: vi.fn() };
   render(
     <ToastProvider>
       <SessionGradingSection

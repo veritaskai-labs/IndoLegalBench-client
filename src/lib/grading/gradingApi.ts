@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { SessionGradingResponse } from "@/types/grading";
+import type { GradedSessionListItem, SessionGradingResponse } from "@/types/grading";
 
 /**
  * Pintu ke server untuk penilaian sesi (PBI-14). Hook dan komponen bergantung pada interface ini,
@@ -9,6 +9,7 @@ import type { SessionGradingResponse } from "@/types/grading";
 export interface GradingGateway {
   grade(sessionId: string): Promise<SessionGradingResponse>;
   results(sessionId: string): Promise<SessionGradingResponse>;
+  sessions(): Promise<GradedSessionListItem[]>;
 }
 
 function sessionPath(sessionId: string, action: string): string {
@@ -16,9 +17,9 @@ function sessionPath(sessionId: string, action: string): string {
 }
 
 /**
- * Keduanya silentForbidden: 403 di sini dijelaskan di bagian hasil penilaian, bukan dengan pindah ke
- * /forbidden. Developer AI tetap boleh melihat sisa halaman sesi walau hasil sesi yang masih berjalan
- * hanya untuk Admin (server#114).
+ * Semuanya silentForbidden: 403 di sini dijelaskan di tempat hasil atau daftar itu tampil, bukan
+ * dengan pindah ke /forbidden. Developer AI tetap boleh melihat sisa halaman sesi walau hasil sesi
+ * yang masih berjalan hanya untuk Admin (server#114).
  */
 export const httpGradingGateway: GradingGateway = {
   /** POST /measurements/{id}/grade (Admin, AC6). Tanpa body: server memakai versi rubrik aktif. */
@@ -28,4 +29,11 @@ export const httpGradingGateway: GradingGateway = {
   /** GET /measurements/{id}/results (AC8): penilaian terbaru, sudah disamarkan server sesuai peran. */
   results: (sessionId) =>
     apiFetch<SessionGradingResponse>(sessionPath(sessionId, "results"), { silentForbidden: true }),
+
+  /**
+   * GET /results/sessions (Admin, Viewer; keputusan PO): sesi selesai yang sudah dinilai, untuk
+   * dipilih di Laporan. Server juga punya /measurements/results/sessions dengan isi yang sama; yang
+   * dipakai jalur ini, sesuai usulan di review server#114.
+   */
+  sessions: () => apiFetch<GradedSessionListItem[]>("/results/sessions", { silentForbidden: true }),
 };
