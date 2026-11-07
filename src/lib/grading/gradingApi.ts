@@ -7,7 +7,8 @@ import type { GradedSessionListItem, SessionGradingResponse } from "@/types/grad
  * tanpa menyentuh tampilan. Polanya sama dengan RubricsGateway di SCRUM-228.
  */
 export interface GradingGateway {
-  grade(sessionId: string): Promise<SessionGradingResponse>;
+  /** Tanpa versi: versi rubrik aktif. Dengan versi (mis. "v2"): nilai ulang dengan versi itu (AC7). */
+  grade(sessionId: string, rubricVersion?: string): Promise<SessionGradingResponse>;
   results(sessionId: string): Promise<SessionGradingResponse>;
   sessions(): Promise<GradedSessionListItem[]>;
 }
@@ -22,9 +23,16 @@ function sessionPath(sessionId: string, action: string): string {
  * yang masih berjalan hanya untuk Admin (server#114).
  */
 export const httpGradingGateway: GradingGateway = {
-  /** POST /measurements/{id}/grade (Admin, AC6). Tanpa body: server memakai versi rubrik aktif. */
-  grade: (sessionId) =>
-    apiFetch<SessionGradingResponse>(sessionPath(sessionId, "grade"), { method: "POST", silentForbidden: true }),
+  /**
+   * POST /measurements/{id}/grade (Admin, AC6, AC7). Tanpa versi tidak ada body: server memakai
+   * versi rubrik aktif. Dengan versi, body { rubric_version }: hasil lama tetap tersimpan.
+   */
+  grade: (sessionId, rubricVersion) =>
+    apiFetch<SessionGradingResponse>(sessionPath(sessionId, "grade"), {
+      method: "POST",
+      ...(rubricVersion === undefined ? {} : { body: JSON.stringify({ rubric_version: rubricVersion }) }),
+      silentForbidden: true,
+    }),
 
   /** GET /measurements/{id}/results (AC8): penilaian terbaru, sudah disamarkan server sesuai peran. */
   results: (sessionId) =>
