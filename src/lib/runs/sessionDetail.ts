@@ -50,8 +50,11 @@ export function answerPlaceholder(attempt: AttemptResult, context: AnswerContext
   return "Tidak ada jawaban tersimpan.";
 }
 
-// Kerangka untuk commit red.
+/**
+ * Belum ada satu pun jawaban yang bisa dibaca (PBI-11 AC9, state empty). Kasus yang disamarkan
+ * tidak dihitung: isinya tidak akan pernah tampil, jadi menunggunya menyesatkan.
+ */
 export function awaitingFirstAnswer(cases: readonly SessionCaseResult[]): boolean {
-  void cases;
-  return false;
+  const attempts = cases.filter((item) => !item.masked).flatMap((item) => item.attempts);
+  return attempts.length > 0 && attempts.every((attempt) => attempt.answer_text === null);
 }
