@@ -10,6 +10,7 @@ import {
   formatProgress,
   hasEnded,
   isSettled,
+  shouldPollSessions,
   SESSION_STATUS_LABEL,
   sessionStatusLabel,
   unarchiveErrorMessage,
@@ -231,5 +232,32 @@ describe("hasEnded and isSettled (PBI-12 AC8, SCRUM-219 polling)", () => {
   // Same as #70: only ended (and now cancelled) sessions stop polling; paused keeps it.
   it.each<SessionStatus>(["queued", "running", "paused"])("keeps %s unsettled", (status) => {
     expect(isSettled(status)).toBe(false);
+  });
+});
+
+describe("shouldPollSessions (SCRUM-266, list progress column)", () => {
+  // Only a queued or running session changes by itself; the list follows it about every 5 seconds.
+  it.each<SessionStatus>(["queued", "running"])("polls while a session is %s", (status) => {
+    expect(shouldPollSessions([session({ status: "finished" }), session({ id: "s-2", status })])).toBe(true);
+  });
+
+  // paused and cancelled wait for a person; manual sessions change when someone fills them in.
+  it.each<SessionStatus>([
+    "paused",
+    "cancelled",
+    "finished",
+    "finished_with_failures",
+    "failed",
+    "not_filled",
+    "partially_filled",
+    "complete",
+    "graded",
+    "finalized",
+  ])("does not poll for a list that only has %s sessions", (status) => {
+    expect(shouldPollSessions([session({ status })])).toBe(false);
+  });
+
+  it("does not poll an empty list", () => {
+    expect(shouldPollSessions([])).toBe(false);
   });
 });
