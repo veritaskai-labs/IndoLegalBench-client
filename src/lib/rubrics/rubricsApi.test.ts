@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import type { CreateRubricVersionRequest, GradingRun, RubricVersion } from "@/types/rubric";
+import type { CreateRubricVersionRequest, RubricVersion } from "@/types/rubric";
 import { httpRubricsGateway } from "./rubricsApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
@@ -34,10 +34,9 @@ afterEach(() => {
 });
 
 const version = { id: "v-1", version_no: 1 } as RubricVersion;
-const run = { id: "r-1", kind: "regrade", status: "queued", rubric_version_id: "v-2", rubric_version_no: 2 } as GradingRun;
 const createBody = { effective_date: "2026-11-06", aspects: [], levels: [] } as unknown as CreateRubricVersionRequest;
 
-describe("listVersions (GET /rubrics)", () => {
+describe("listVersions (GET /admin/rubrics)", () => {
   it("returns the versions the server lists", async () => {
     // Arrange
     fetchMock.mockResolvedValue(fakeResponse(200, [version]));
@@ -48,7 +47,7 @@ describe("listVersions (GET /rubrics)", () => {
     // Assert
     expect(result).toEqual([version]);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/rubrics$/);
+    expect(url).toMatch(/\/admin\/rubrics$/);
     expect(init.method ?? "GET").toBe("GET");
   });
 
@@ -90,7 +89,7 @@ describe("listVersions (GET /rubrics)", () => {
   });
 });
 
-describe("createVersion (POST /rubrics)", () => {
+describe("createVersion (POST /admin/rubrics)", () => {
   it("posts the request body and returns the new version", async () => {
     // Arrange
     fetchMock.mockResolvedValue(fakeResponse(201, version));
@@ -101,7 +100,7 @@ describe("createVersion (POST /rubrics)", () => {
     // Assert
     expect(result).toEqual(version);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/rubrics$/);
+    expect(url).toMatch(/\/admin\/rubrics$/);
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual(createBody);
   });
@@ -137,107 +136,13 @@ describe("createVersion (POST /rubrics)", () => {
   });
 });
 
-describe("regrade (POST /measurements/{id}/grade, AC7)", () => {
-  it("asks the server to grade the session with the chosen version", async () => {
+// The re-grade call moved to the grading gateway; this one only owns the rubric versions.
+describe("RubricsGateway surface", () => {
+  it("only exposes the rubric version calls", () => {
     // Arrange
-    fetchMock.mockResolvedValue(fakeResponse(202, run));
+    const members = Object.keys(httpRubricsGateway).sort();
 
-    // Act
-    const result = await httpRubricsGateway.regrade("s-1", { rubric_version_id: "v-2" });
-
-    // Assert
-    expect(result).toEqual(run);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/measurements\/s-1\/grade$/);
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ rubric_version_id: "v-2" });
-  });
-
-  it("encodes the session id in the path", async () => {
-    // Arrange
-    fetchMock.mockResolvedValue(fakeResponse(202, run));
-
-    // Act
-    await httpRubricsGateway.regrade("a/b", { rubric_version_id: "v-2" });
-
-    // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grade$/);
-  });
-
-  it("keeps the user on the page on 403", async () => {
-    // Arrange
-    const forbidden = listenForbidden();
-    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
-
-    // Act
-    const call = httpRubricsGateway.regrade("s-1", { rubric_version_id: "v-2" });
-
-    // Assert
-    await expect(call).rejects.toMatchObject({ status: 403 });
-    expect(forbidden).not.toHaveBeenCalled();
-  });
-
-  // Negative: the session cannot be graded now (still running, wrong state): the server says why.
-  it.each([404, 409, 422])("hands a %i to the caller with the server code", async (status) => {
-    // Arrange
-    fetchMock.mockResolvedValue(fakeResponse(status, { code: "SOME_CODE", message: "Alasan dari server" }));
-
-    // Act
-    const call = httpRubricsGateway.regrade("s-1", { rubric_version_id: "v-2" });
-
-    // Assert
-    await expect(call).rejects.toMatchObject({ status, code: "SOME_CODE", serverMessage: "Alasan dari server" });
-  });
-});
-
-describe("listGradingRuns (GET /measurements/{id}/grading-runs, AC7 riwayat)", () => {
-  it("returns the grading history of the session", async () => {
-    // Arrange
-    fetchMock.mockResolvedValue(fakeResponse(200, [run]));
-
-    // Act
-    const result = await httpRubricsGateway.listGradingRuns("s-1");
-
-    // Assert
-    expect(result).toEqual([run]);
-    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/s-1\/grading-runs$/);
-  });
-
-  it("returns an empty list for a session that was never graded", async () => {
-    // Arrange
-    fetchMock.mockResolvedValue(fakeResponse(200, []));
-
-    // Act
-    const result = await httpRubricsGateway.listGradingRuns("s-1");
-
-    // Assert
-    expect(result).toEqual([]);
-  });
-
-  it("encodes the session id in the path", async () => {
-    // Arrange
-    fetchMock.mockResolvedValue(fakeResponse(200, []));
-
-    // Act
-    await httpRubricsGateway.listGradingRuns("a/b");
-
-    // Assert
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grading-runs$/);
-  });
-
-  // Negative: a session the caller may not see (Developer AI on a running session) is a 403 the page explains.
-  it("hands a 403 to the caller without redirecting", async () => {
-    // Arrange
-    const forbidden = listenForbidden();
-    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
-
-    // Act
-    const call = httpRubricsGateway.listGradingRuns("s-1");
-
-    // Assert
-    await expect(call).rejects.toMatchObject({ status: 403 });
-    expect(forbidden).not.toHaveBeenCalled();
+    // Act / Assert
+    expect(members).toEqual(["createVersion", "listVersions"]);
   });
 });
