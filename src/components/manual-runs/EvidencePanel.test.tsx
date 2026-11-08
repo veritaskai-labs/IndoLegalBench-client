@@ -28,7 +28,7 @@ function fake(items: EvidenceRead[]) {
 
 function setup(
   gateway: ReturnType<typeof fake>,
-  props: { evidenceCount?: number | null; slotFilled?: boolean; canEdit?: boolean } = {},
+  props: { evidenceCount?: number | null; slotFilled?: boolean; canEdit?: boolean; expand?: boolean } = {},
 ) {
   render(
     <EvidencePanel
@@ -41,6 +41,9 @@ function setup(
       canEdit={props.canEdit ?? true}
     />,
   );
+  // The list is loaded only after the section is opened; most tests want it open.
+  const toggle = screen.queryByRole("button", { name: /^Lihat bukti/ });
+  if ((props.expand ?? true) && toggle) fireEvent.click(toggle);
 }
 
 beforeEach(() => {
@@ -84,6 +87,65 @@ describe("EvidencePanel visibility (AC7)", () => {
     // Assert
     expect(screen.queryByText(/Simpan jawaban terlebih dahulu/)).not.toBeInTheDocument();
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
+  });
+});
+
+describe("EvidencePanel lazy loading (no N+1 on page load)", () => {
+  // Negative: a collapsed panel makes no request, however many answers are on the page.
+  it("does not fetch the list before the section is opened", () => {
+    // Arrange
+    const gateway = fake([link("e-1"), link("e-2")]);
+
+    // Act
+    setup(gateway, { evidenceCount: 2, expand: false });
+
+    // Assert
+    expect(gateway.listEvidence).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Lihat bukti (2 dari 3)" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // Positive: the closed header uses evidence_count from the slot, with no request.
+  it("shows the count from the slot when evidence_count is 0", () => {
+    // Arrange
+    const gateway = fake([]);
+
+    // Act
+    setup(gateway, { evidenceCount: 0, expand: false });
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Lihat bukti (0 dari 3)" })).toBeInTheDocument();
+    expect(gateway.listEvidence).not.toHaveBeenCalled();
+  });
+
+  // Positive: opening the section fetches exactly once and shows the items.
+  it("fetches the list once after the section is opened", async () => {
+    // Arrange
+    const gateway = fake([link("e-1"), link("e-2")]);
+    setup(gateway, { evidenceCount: 2, expand: false });
+
+    // Act
+    await userEvent.click(screen.getByRole("button", { name: "Lihat bukti (2 dari 3)" }));
+
+    // Assert
+    expect(await screen.findByText("https://contoh.id/e-1")).toBeInTheDocument();
+    expect(gateway.listEvidence).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Sembunyikan bukti" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  // Edge: closing and opening again does not trigger a second request while the panel stays mounted.
+  it("does not fetch again when the section is closed and reopened", async () => {
+    // Arrange
+    const gateway = fake([link("e-1")]);
+    setup(gateway, { evidenceCount: 1 });
+    await screen.findByText("https://contoh.id/e-1");
+
+    // Act
+    await userEvent.click(screen.getByRole("button", { name: "Sembunyikan bukti" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Lihat bukti/ }));
+
+    // Assert
+    expect(await screen.findByText("https://contoh.id/e-1")).toBeInTheDocument();
+    expect(gateway.listEvidence).toHaveBeenCalledTimes(1);
   });
 });
 
