@@ -15,6 +15,79 @@ function fieldClass(invalid: boolean): string {
   return `${FIELD} ${invalid ? "border-red-400" : "border-slate-300"}`;
 }
 
+type FieldProps = Readonly<{
+  attemptNo: number;
+  error: string | undefined;
+  disabled: boolean;
+}>;
+
+/** Catatan wajib saat platform menolak menjawab (AC6). */
+function RefusalNote({ attemptNo, error, disabled, value, onChange }: FieldProps & Readonly<{ value: string; onChange: (value: string) => void }>) {
+  const errorId = useId();
+  return (
+    <div className="space-y-1">
+      <textarea
+        aria-label={`Catatan penolakan Percobaan ${attemptNo}`}
+        aria-invalid={error !== undefined}
+        aria-describedby={error ? errorId : undefined}
+        readOnly={disabled}
+        rows={3}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={fieldClass(error !== undefined)}
+      />
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Kotak jawaban markdown dengan tab Tulis dan Pratinjau (AC4). */
+function AnswerBox({ attemptNo, error, disabled, value, onChange }: FieldProps & Readonly<{ value: string; onChange: (value: string) => void }>) {
+  const [view, setView] = useState<View>("write");
+  const errorId = useId();
+  return (
+    <div className="space-y-1">
+      <div className="flex gap-2">
+        <button type="button" className={view === "write" ? TAB_ON : TAB_OFF} aria-pressed={view === "write"} onClick={() => setView("write")}>
+          Tulis
+        </button>
+        <button type="button" className={view === "preview" ? TAB_ON : TAB_OFF} aria-pressed={view === "preview"} onClick={() => setView("preview")}>
+          Pratinjau
+        </button>
+      </div>
+      {view === "write" ? (
+        <textarea
+          aria-label={`Jawaban Percobaan ${attemptNo}`}
+          aria-invalid={error !== undefined}
+          aria-describedby={error ? errorId : undefined}
+          readOnly={disabled}
+          rows={8}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={`${fieldClass(error !== undefined)} font-mono`}
+        />
+      ) : (
+        <div className="min-h-24 rounded-md border border-slate-200 bg-white">
+          {value.trim() === "" ? (
+            <p className="px-3 py-2 text-sm text-slate-500">Belum ada isi untuk dipratinjau.</p>
+          ) : (
+            <MarkdownAnswer source={value} />
+          )}
+        </div>
+      )}
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /**
  * Isian satu percobaan (AC4, AC6, AC7): kotak markdown tanpa batas karakter dengan pratinjau,
  * opsi "Platform menolak menjawab" dengan catatan, dan tanggal-jam jawaban diperoleh. Komponen ini
@@ -33,9 +106,6 @@ export function AnswerFields({
   disabled: boolean;
   onChange: <K extends keyof AnswerDraft>(key: K, value: AnswerDraft[K]) => void;
 }>) {
-  const [view, setView] = useState<View>("write");
-  const answerErrorId = useId();
-  const noteErrorId = useId();
   const timeErrorId = useId();
 
   return (
@@ -51,59 +121,9 @@ export function AnswerFields({
       </label>
 
       {draft.platformRefused ? (
-        <div className="space-y-1">
-          <textarea
-            aria-label={`Catatan penolakan Percobaan ${attemptNo}`}
-            aria-invalid={errors.note !== undefined}
-            aria-describedby={errors.note ? noteErrorId : undefined}
-            readOnly={disabled}
-            rows={3}
-            value={draft.note}
-            onChange={(event) => onChange("note", event.target.value)}
-            className={fieldClass(errors.note !== undefined)}
-          />
-          {errors.note && (
-            <p id={noteErrorId} role="alert" className="text-xs text-red-700">
-              {errors.note}
-            </p>
-          )}
-        </div>
+        <RefusalNote attemptNo={attemptNo} error={errors.note} disabled={disabled} value={draft.note} onChange={(value) => onChange("note", value)} />
       ) : (
-        <div className="space-y-1">
-          <div className="flex gap-2">
-            <button type="button" className={view === "write" ? TAB_ON : TAB_OFF} aria-pressed={view === "write"} onClick={() => setView("write")}>
-              Tulis
-            </button>
-            <button type="button" className={view === "preview" ? TAB_ON : TAB_OFF} aria-pressed={view === "preview"} onClick={() => setView("preview")}>
-              Pratinjau
-            </button>
-          </div>
-          {view === "write" ? (
-            <textarea
-              aria-label={`Jawaban Percobaan ${attemptNo}`}
-              aria-invalid={errors.answer !== undefined}
-              aria-describedby={errors.answer ? answerErrorId : undefined}
-              readOnly={disabled}
-              rows={8}
-              value={draft.answerMd}
-              onChange={(event) => onChange("answerMd", event.target.value)}
-              className={`${fieldClass(errors.answer !== undefined)} font-mono`}
-            />
-          ) : (
-            <div className="min-h-24 rounded-md border border-slate-200 bg-white">
-              {draft.answerMd.trim() === "" ? (
-                <p className="px-3 py-2 text-sm text-slate-500">Belum ada isi untuk dipratinjau.</p>
-              ) : (
-                <MarkdownAnswer source={draft.answerMd} />
-              )}
-            </div>
-          )}
-          {errors.answer && (
-            <p id={answerErrorId} role="alert" className="text-xs text-red-700">
-              {errors.answer}
-            </p>
-          )}
-        </div>
+        <AnswerBox attemptNo={attemptNo} error={errors.answer} disabled={disabled} value={draft.answerMd} onChange={(value) => onChange("answerMd", value)} />
       )}
 
       <div className="space-y-1">

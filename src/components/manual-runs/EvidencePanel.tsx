@@ -30,6 +30,32 @@ type Props = Readonly<{
 const BUTTON = "rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const ACCEPT = "image/png,image/jpeg,application/pdf";
 
+/** Isi satu bukti: berkas dengan tombol Unduh, tautan yang aman, atau teks bila tautannya tidak aman. */
+function EvidenceLabel({
+  item,
+  busy,
+  onDownload,
+}: Readonly<{ item: EvidenceRead; busy: boolean; onDownload: () => void }>) {
+  if (item.kind === "file") {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-slate-900">{item.file_name}</span>
+        <span className="text-xs text-slate-500">{formatFileSize(item.size_bytes)}</span>
+        <button type="button" className={BUTTON} disabled={busy} onClick={onDownload} aria-label={`Unduh ${item.file_name}`}>
+          Unduh
+        </button>
+      </div>
+    );
+  }
+  const href = safeEvidenceHref(item.url);
+  if (href === null) return <span className="break-all text-slate-700">{item.url}</span>;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="break-all text-blue-700 underline">
+      {href}
+    </a>
+  );
+}
+
 function EvidenceItem({
   item,
   position,
@@ -45,24 +71,9 @@ function EvidenceItem({
   onDownload: () => void;
   onDelete: () => void;
 }>) {
-  const href = safeEvidenceHref(item.url);
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
-      {item.kind === "file" ? (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900">{item.file_name}</span>
-          <span className="text-xs text-slate-500">{formatFileSize(item.size_bytes)}</span>
-          <button type="button" className={BUTTON} disabled={busy} onClick={onDownload} aria-label={`Unduh ${item.file_name}`}>
-            Unduh
-          </button>
-        </div>
-      ) : href === null ? (
-        <span className="break-all text-slate-700">{item.url}</span>
-      ) : (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="break-all text-blue-700 underline">
-          {href}
-        </a>
-      )}
+      <EvidenceLabel item={item} busy={busy} onDownload={onDownload} />
       {canEdit && (
         <button type="button" className={BUTTON} disabled={busy} onClick={onDelete} aria-label={`Hapus bukti ${position}`}>
           Hapus
@@ -72,7 +83,13 @@ function EvidenceItem({
   );
 }
 
-function EvidenceList({ gateway, sessionId, snapshotItemId, attemptNo, canEdit }: Omit<Props, "evidenceCount" | "slotFilled">) {
+function EvidenceList({
+  gateway,
+  sessionId,
+  snapshotItemId,
+  attemptNo,
+  canEdit,
+}: Readonly<Omit<Props, "evidenceCount" | "slotFilled">>) {
   const evidence = useManualEvidence(gateway, sessionId, snapshotItemId, attemptNo);
   const [linkText, setLinkText] = useState("");
   const [pendingDelete, setPendingDelete] = useState<EvidenceRead | null>(null);
