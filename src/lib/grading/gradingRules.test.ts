@@ -9,6 +9,7 @@ import {
   gradeErrorMessage,
   isNotGraded,
   resultsErrorMessage,
+  runsErrorMessage,
   sessionsErrorMessage,
 } from "./gradingRules";
 
@@ -82,6 +83,8 @@ describe("gradeErrorMessage", () => {
     [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
     // gradeSession is silentForbidden, so a 403 (role changed while the page was open) lands here.
     [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman."],
+    // Re-grading with a chosen version (AC7): the chosen version can be gone.
+    [new ApiError(404, "RUBRIC_VERSION_NOT_FOUND"), "Versi rubrik yang dipilih tidak ditemukan. Muat ulang halaman."],
     // server#114 (session_grade.py) answers 409 when no rubric version is active. Retrying can't fix
     // that, so the message says what has to happen first (review on #77).
     [new ApiError(409, "RUBRIC_NOT_ACTIVE"), "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi."],
@@ -148,5 +151,23 @@ describe("canSeeGradedSessions (AC8, PO decision: Viewer reads results under Lap
 
   it("offers nothing while the role is still loading", () => {
     expect(canSeeGradedSessions(null)).toBe(false);
+  });
+});
+
+describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", () => {
+  it.each([
+    // The history is Admin only (server#122); a role change while the page is open lands here.
+    [new ApiError(403, "FORBIDDEN"), "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman."],
+    [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
+  ])("explains %s", (error, message) => {
+    expect(runsErrorMessage(error)).toBe(message);
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+    ["a non-error value", "boom"],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(runsErrorMessage(error)).toBe("Gagal memuat riwayat penilaian. Coba lagi.");
   });
 });

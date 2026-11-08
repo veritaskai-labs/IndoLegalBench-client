@@ -40,6 +40,7 @@ describe("navForRole", () => {
       "Suite dan kasus",
       "Penyedia",
       "Eksekusi",
+      "Rubrik",
       "Laporan",
       "Anggota",
       "Pemantauan review",
@@ -93,5 +94,17 @@ describe("navForRole", () => {
     const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
     const withRuns = roles.filter((role) => hrefs(role).includes("/runs"));
     expect(withRuns).toEqual(["admin", "developer_ai"]);
+  });
+
+  // PBI-14 AC7: the rubric versions are typed and kept by the Admin.
+  it("offers the rubric page to the admin only", () => {
+    // Arrange
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
+
+    // Act
+    const withRubrics = roles.filter((role) => hrefs(role).includes("/admin/rubrics"));
+
+    // Assert
+    expect(withRubrics).toEqual(["admin"]);
   });
 });

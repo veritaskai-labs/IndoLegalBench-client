@@ -20,7 +20,12 @@ export type GradeInput = {
  * menolak (403/409).
  */
 export function canGrade({ session, role, graded }: GradeInput): boolean {
-  return role === "admin" && session.archived_at === null && GRADABLE.has(session.status) && !graded;
+  return role === "admin" && isGradableSession(session) && !graded;
+}
+
+/** Sesi yang diterima server untuk dinilai, pertama kali maupun ulang: belum diarsipkan dan berstatus boleh. */
+export function isGradableSession(session: GradeInput["session"]): boolean {
+  return session.archived_at === null && GRADABLE.has(session.status);
 }
 
 /** Sama dengan list_graded_sessions di server#114: peran lain dijawab 403. */
@@ -45,6 +50,8 @@ const GRADE_ERRORS: Record<string, string> = {
   SESSION_NOT_GRADABLE: "Sesi ini belum bisa dinilai. Hanya sesi yang berjalan atau sudah selesai yang bisa dinilai.",
   SESSION_ARCHIVED: "Sesi yang sudah diarsipkan tidak bisa dinilai.",
   MEASUREMENT_NOT_FOUND: NOT_FOUND,
+  // Nilai ulang dengan versi pilihan (AC7), server#112: versi yang dipilih tidak ada.
+  RUBRIC_VERSION_NOT_FOUND: "Versi rubrik yang dipilih tidak ditemukan. Muat ulang halaman.",
   // grade memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
   FORBIDDEN: "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman.",
   // server#114 session_grade.py: 409 bila tidak ada versi rubrik aktif. Belum tercantum di responses
@@ -78,4 +85,14 @@ const SESSIONS_ERRORS: Record<string, string> = {
 
 export function sessionsErrorMessage(error: unknown): string {
   return messageFor(SESSIONS_ERRORS, error, "Gagal memuat daftar sesi yang dinilai. Coba lagi.");
+}
+
+const RUNS_ERRORS: Record<string, string> = {
+  // server#122: riwayat penilaian hanya untuk Admin.
+  FORBIDDEN: "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman.",
+  MEASUREMENT_NOT_FOUND: NOT_FOUND,
+};
+
+export function runsErrorMessage(error: unknown): string {
+  return messageFor(RUNS_ERRORS, error, "Gagal memuat riwayat penilaian. Coba lagi.");
 }

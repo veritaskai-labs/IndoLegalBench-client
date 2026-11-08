@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { gradedSessionItem, gradingResponse } from "@/test/gradingFixtures";
+import { gradedSessionItem, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { httpGradingGateway } from "./gradingApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
@@ -52,6 +52,28 @@ describe("httpGradingGateway.grade (POST /measurements/{id}/grade, PBI-14 AC6)",
     await httpGradingGateway.grade("s-1");
 
     expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+
+  // Re-grading (PBI-14 AC7): the Admin picks the version, sent as the label the server resolves ("v2").
+  it("sends the chosen rubric version as rubric_version when re-grading", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse({ kind: "regrade", rubric_version: "v2" })));
+
+    const result = await httpGradingGateway.grade("s-1", "v2");
+
+    expect(result).toMatchObject({ kind: "regrade", rubric_version: "v2" });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grade$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ rubric_version: "v2" });
+  });
+
+  it.each([
+    [404, "RUBRIC_VERSION_NOT_FOUND"],
+    [409, "RUBRIC_NOT_ACTIVE"],
+  ])("hands a %i %s refusal for a chosen version to the caller", async (status, code) => {
+    fetchMock.mockResolvedValue(fakeResponse(status, { code }));
+
+    await expect(httpGradingGateway.grade("s-1", "v9")).rejects.toMatchObject({ status, code });
   });
 
   it("encodes the session id in the path", async () => {
@@ -139,5 +161,50 @@ describe("httpGradingGateway.sessions (GET /results/sessions, PBI-14 AC8)", () =
 
     await expect(httpGradingGateway.sessions()).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
     expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe("httpGradingGateway.runs (GET /measurements/{id}/grading-runs, PBI-14 AC7)", () => {
+  it("gets the grading history of the session, newest first as the server sends it", async () => {
+    const history = [
+      gradingRunSummary({ grading_run_id: "run-2", kind: "regrade", rubric_version: "v2" }),
+      gradingRunSummary({ grading_run_id: "run-1", is_latest: false }),
+    ];
+    fetchMock.mockResolvedValue(fakeResponse(200, history));
+
+    await expect(httpGradingGateway.runs("s-1")).resolves.toEqual(history);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grading-runs$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  // A session that was never graded has an empty history, which is not an error.
+  it("returns an empty list for a session that was never graded", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, []));
+
+    await expect(httpGradingGateway.runs("s-1")).resolves.toEqual([]);
+  });
+
+  it("encodes the session id in the path", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, []));
+
+    await httpGradingGateway.runs("a/b");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grading-runs$/);
+  });
+
+  // Negative: a role changed while the page was open. The section explains it; no redirect.
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.runs("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it("hands a 404 MEASUREMENT_NOT_FOUND to the caller", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(404, { code: "MEASUREMENT_NOT_FOUND" }));
+
+    await expect(httpGradingGateway.runs("s-1")).rejects.toMatchObject({ status: 404, code: "MEASUREMENT_NOT_FOUND" });
   });
 });

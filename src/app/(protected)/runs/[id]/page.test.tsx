@@ -27,7 +27,7 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   retrySession: vi.fn(),
 }));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
-vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn() } }));
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
