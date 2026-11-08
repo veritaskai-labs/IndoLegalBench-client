@@ -54,4 +54,10 @@ export type ManualCaseProgress = components["schemas"]["ManualCaseProgress"];
 export type ManualAttemptSlot = components["schemas"]["ManualAttemptSlot"];
 export type ManualFinalizeResponse = components["schemas"]["ManualFinalizeResponse"];
 
-
+/** PUT /manual-measurements/{id}/answers: simpan atau timpa satu jawaban (AC4-AC7, server SCRUM-231). */
+export type ManualAnswerSaveRequest = components["schemas"]["ManualAnswerSaveRequest"];
+export type ManualAnswerResponse = components["schemas"]["ManualAnswerResponse"];
+export type ManualAnswerHistoryEntry = components["schemas"]["ManualAnswerHistoryEntry"];
+/** Satu bukti jawaban: berkas PNG/JPG/PDF atau tautan, maksimal 3 per jawaban (AC7, server SCRUM-233). */
+export type EvidenceRead = components["schemas"]["EvidenceRead"];
+export type EvidenceKind = components["schemas"]["EvidenceKind"];
