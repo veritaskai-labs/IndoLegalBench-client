@@ -85,6 +85,8 @@ describe("useDashboard", () => {
     await tick(DASHBOARD_POLL_MS);
 
     expect(getMock).toHaveBeenCalledTimes(2);
+    expect(getMock).toHaveBeenNthCalledWith(1);
+    expect(getMock).toHaveBeenNthCalledWith(2, { activity: "passive" });
     expect(result.current.status).toBe("ready");
   });
 
@@ -110,6 +112,8 @@ describe("useDashboard", () => {
     await flush();
 
     expect(result.current.status).toBe("ready");
+    expect(getMock).toHaveBeenNthCalledWith(1);
+    expect(getMock).toHaveBeenNthCalledWith(2);
   });
 
   // Corner: satu penyegaran gagal tidak boleh menghapus angka yang sudah terlihat.
@@ -164,5 +168,6 @@ describe("useDashboard", () => {
     await flush();
 
     expect(getMock).toHaveBeenCalledTimes(2);
+    expect(getMock).toHaveBeenNthCalledWith(2, { activity: "passive" });
   });
 });
