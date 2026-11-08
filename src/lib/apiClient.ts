@@ -149,13 +149,29 @@ export type ApiFetchInit = RequestInit & {
   activity?: "passive";
 };
 
+function requestHeaders(init: HeadersInit | undefined, activity: "passive" | undefined): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (init instanceof Headers) {
+    init.forEach((value, key) => {
+      headers[key] = value;
+    });
+  } else if (Array.isArray(init)) {
+    for (const [key, value] of init) headers[key] = value;
+  } else if (init) {
+    for (const [key, value] of Object.entries(init)) {
+      if (typeof value === "string") headers[key] = value;
+    }
+  }
+  if (activity === "passive") headers[ACTIVITY_HEADER] = PASSIVE_ACTIVITY;
+  return headers;
+}
+
 /** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
 export async function apiFetch<T>(
   path: string,
   { silentForbidden = false, activity, ...init }: ApiFetchInit = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...init.headers };
-  if (activity === "passive") headers[ACTIVITY_HEADER] = PASSIVE_ACTIVITY;
+  const headers = requestHeaders(init.headers, activity);
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: "include",

@@ -30,12 +30,15 @@ export function useDashboard(enabled: boolean): UseDashboard {
     if (!enabled) return;
     let cancelled = false;
 
-    const read = () => {
+    // The first read, and Reload, are the user opening the page. The interval
+    // and the visibility refetch are polls and must not extend the session.
+    const read = (passive: boolean) => {
       // Tab yang tersembunyi tidak dilihat siapa pun; penyegarannya ditunda
       // sampai kembali terlihat, lalu dibaca ulang saat itu juga.
       if (document.visibilityState === "hidden") return;
 
-      getDashboard()
+      const load = passive ? getDashboard({ activity: "passive" }) : getDashboard();
+      load
         .then((summary) => {
           if (cancelled) return;
           shown.current = true;
@@ -47,14 +50,15 @@ export function useDashboard(enabled: boolean): UseDashboard {
         });
     };
 
-    read();
-    const timer = setInterval(read, DASHBOARD_POLL_MS);
-    document.addEventListener("visibilitychange", read);
+    read(false);
+    const timer = setInterval(() => read(true), DASHBOARD_POLL_MS);
+    const onVisible = () => read(true);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", read);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [enabled, nonce]);
 
