@@ -8,7 +8,7 @@ import { gradingResponse } from "@/test/gradingFixtures";
 import { GradeSessionDialog } from "./GradeSessionDialog";
 
 function renderDialog(grade: GradingGateway["grade"]) {
-  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(), sessions: vi.fn() };
+  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(), sessions: vi.fn(), runs: vi.fn() };
   const onGraded = vi.fn();
   const onClose = vi.fn();
   render(
