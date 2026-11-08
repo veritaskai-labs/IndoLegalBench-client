@@ -97,30 +97,65 @@ export default function ManualSessionDetailPage() {
           )}
         </div>
 
-        {detail.status === "loading" ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-8">
-            <LoadingState />
-          </div>
-        ) : detail.status === "error" ? (
-          <ErrorState
-            variant="card"
-            message={detail.message}
-            onRetry={detail.reload}
-          />
-        ) : session.cases.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
-            {unfilledOnly
-              ? "Semua kasus pada sesi ini telah selesai diisi."
-              : "Belum ada kasus pada sesi ini."}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {session.cases.map((caseItem) => (
-              <ManualCaseCard key={caseItem.snapshot_item_id} caseItem={caseItem} />
-            ))}
-          </div>
-        )}
+        <CasesContent
+          detailStatus={detail.status}
+          detailMessage={detail.status === "error" ? detail.message : undefined}
+          onRetry={detail.reload}
+          cases={session.cases}
+          unfilledOnly={unfilledOnly}
+        />
       </section>
+    </div>
+  );
+}
+
+function CasesContent({
+  detailStatus,
+  detailMessage,
+  onRetry,
+  cases,
+  unfilledOnly,
+}: Readonly<{
+  detailStatus: "loading" | "error" | "ready";
+  detailMessage?: string;
+  onRetry: () => void;
+  cases: ManualSessionDetail["cases"];
+  unfilledOnly: boolean;
+}>) {
+  if (detailStatus === "loading") {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-8">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (detailStatus === "error") {
+    return (
+      <ErrorState
+        variant="card"
+        message={detailMessage}
+        onRetry={onRetry}
+      />
+    );
+  }
+
+  if (cases.length === 0) {
+    const emptyText = unfilledOnly
+      ? "Semua kasus pada sesi ini telah selesai diisi."
+      : "Belum ada kasus pada sesi ini.";
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {cases.map((caseItem) => (
+        <ManualCaseCard key={caseItem.snapshot_item_id} caseItem={caseItem} />
+      ))}
     </div>
   );
 }
