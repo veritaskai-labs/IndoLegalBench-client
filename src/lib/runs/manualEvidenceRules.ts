@@ -39,3 +39,17 @@ export function validateEvidence(input: EvidenceInput, currentCount: number): st
   const rule = KIND_RULES[input.kind] as (value: EvidenceInput) => string | null;
   return rule(input);
 }
+
+/** Tautan bukti hanya bisa diklik bila http atau https; ini pagar kedua di belakang pemeriksaan server. */
+export function safeEvidenceHref(url: string | null): string | null {
+  if (url === null || !URL.canParse(url)) return null;
+  return /^https?:$/.test(new URL(url).protocol) ? url : null;
+}
+
+/** Ukuran berkas bukti yang mudah dibaca, misalnya "1,5 KB". Tautan (tanpa ukuran) jadi teks kosong. */
+export function formatFileSize(bytes: number | null): string {
+  if (bytes === null || !Number.isFinite(bytes) || bytes < 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  const [value, unit] = bytes < 1024 * 1024 ? [bytes / 1024, "KB"] : [bytes / (1024 * 1024), "MB"];
+  return `${String(Math.round(value * 10) / 10).replace(".", ",")} ${unit}`;
+}
