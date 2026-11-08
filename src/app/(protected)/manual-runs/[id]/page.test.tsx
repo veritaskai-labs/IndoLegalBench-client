@@ -242,7 +242,9 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
     // Header and title still mounted (page does not blank)
     expect(screen.getByRole("heading", { name: "Pengukuran LegalHero Batch 1" })).toBeInTheDocument();
     expect(screen.getByLabelText("Hanya yang belum terisi")).toBeInTheDocument();
-    expect(screen.getByText("Memuat…")).toBeInTheDocument();
+    // Case cards stay on screen while refetching instead of flashing a spinner
+    expect(screen.queryByText("Memuat…")).not.toBeInTheDocument();
+    expect(screen.getByText("Kasus Penipuan Bisnis")).toBeInTheDocument();
   });
 
   it("renders empty state message when cases list is empty", () => {

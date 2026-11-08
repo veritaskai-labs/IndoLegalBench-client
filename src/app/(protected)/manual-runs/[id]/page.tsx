@@ -6,10 +6,16 @@ import { useParams, useRouter } from "next/navigation";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { CopyGuide } from "@/components/manual-runs/CopyGuide";
 import { ManualCaseCard } from "@/components/manual-runs/ManualCaseCard";
 import { ManualSessionHeader } from "@/components/manual-runs/ManualSessionHeader";
 import { useAuth } from "@/hooks/useAuth";
+import { useDirtyRegistry } from "@/hooks/useDirtyRegistry";
 import { useManualSessionDetail } from "@/hooks/useManualSessionDetail";
+import { useRetainedResource } from "@/hooks/useRetainedResource";
+import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
+import { canEditAnswers } from "@/lib/runs/manualAnswerRules";
+import { manualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import { decodeRouteParam } from "@/lib/routeParams";
 
 import type { ManualSessionDetail } from "@/types/measurement";
@@ -25,7 +31,11 @@ export default function ManualSessionDetailPage() {
   const router = useRouter();
 
   const [unfilledOnly, setUnfilledOnly] = useState(false);
-  const detail = useManualSessionDetail(sessionId, unfilledOnly);
+  // Data terakhir tetap tampil selama dimuat ulang (setelah simpan atau ganti filter), supaya
+  // kartu dan teks yang sedang diketik tidak hilang.
+  const detail = useRetainedResource(useManualSessionDetail(sessionId, unfilledOnly));
+  const dirty = useDirtyRegistry();
+  useUnsavedChangesWarning(dirty.anyDirty);
 
   const [cachedSession, setCachedSession] = useState<ManualSessionDetail | null>(null);
   if (detail.status === "ready" && detail.data !== cachedSession) {
@@ -67,6 +77,7 @@ export default function ManualSessionDetailPage() {
 
   const session = detail.status === "ready" ? detail.data : cachedSession;
   if (!session) return null;
+  const canEdit = canEditAnswers(role, session.status);
 
   return (
     <div className="space-y-6">
@@ -84,6 +95,8 @@ export default function ManualSessionDetailPage() {
         onToggleUnfilled={setUnfilledOnly}
         onSessionUpdated={detail.reload}
       />
+
+      <CopyGuide />
 
       <section aria-label="Daftar kasus snapshot" className="space-y-4">
         <div className="flex items-center justify-between">
@@ -103,6 +116,11 @@ export default function ManualSessionDetailPage() {
           onRetry={detail.reload}
           cases={session.cases}
           unfilledOnly={unfilledOnly}
+          sessionId={sessionId}
+          canEdit={canEdit}
+          currentUserId={auth.user.id}
+          onSaved={detail.reload}
+          onDirtyChange={dirty.report}
         />
       </section>
     </div>
@@ -115,12 +133,22 @@ function CasesContent({
   onRetry,
   cases,
   unfilledOnly,
+  sessionId,
+  canEdit,
+  currentUserId,
+  onSaved,
+  onDirtyChange,
 }: Readonly<{
   detailStatus: "loading" | "error" | "ready";
   detailMessage?: string;
   onRetry: () => void;
   cases: ManualSessionDetail["cases"];
   unfilledOnly: boolean;
+  sessionId: string;
+  canEdit: boolean;
+  currentUserId: string;
+  onSaved: () => void;
+  onDirtyChange: (attemptId: string, dirty: boolean) => void;
 }>) {
   if (detailStatus === "loading") {
     return (
@@ -154,7 +182,16 @@ function CasesContent({
   return (
     <div className="space-y-4">
       {cases.map((caseItem) => (
-        <ManualCaseCard key={caseItem.snapshot_item_id} caseItem={caseItem} />
+        <ManualCaseCard
+          key={caseItem.snapshot_item_id}
+          caseItem={caseItem}
+          sessionId={sessionId}
+          gateway={manualAnswerGateway}
+          canEdit={canEdit}
+          currentUserId={currentUserId}
+          onSaved={onSaved}
+          onDirtyChange={onDirtyChange}
+        />
       ))}
     </div>
   );
