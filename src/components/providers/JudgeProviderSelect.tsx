@@ -1,7 +1,9 @@
 "use client";
 
 import { useId } from "react";
+import Link from "next/link";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { useAuth } from "@/hooks/useAuth";
 import { useJudgeOptions, type JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 
 type Props = {
@@ -15,7 +17,7 @@ type Props = {
 const BOX =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
 
-/** Pemilih penilai (LLM judge) dari daftar yang sudah terdaftar (PBI-14 AC1). */
+/** Pemilih penilai (LLM judge) dari provider otomatis yang aktif di halaman Provider (PBI-14 AC1). */
 export function JudgeProviderSelect({
   value,
   onChange,
@@ -24,6 +26,8 @@ export function JudgeProviderSelect({
 }: Readonly<Props>) {
   const id = useId();
   const judges = useJudgeOptions(api);
+  const auth = useAuth();
+  const isAdmin = auth.status === "authenticated" && auth.user.role === "admin";
 
   function control() {
     if (judges.status === "error") {
@@ -46,8 +50,21 @@ export function JudgeProviderSelect({
     if (judges.options.length === 0) {
       return (
         <p className="mt-1 text-sm text-slate-500">
-          Belum ada provider penilai yang aktif. Minta Admin menambahkannya
-          dulu.
+          Belum ada provider yang aktif.{" "}
+          {isAdmin ? (
+            <>
+              Tambahkan di{" "}
+              <Link
+                href="/admin/providers"
+                className="text-indigo-600 underline"
+              >
+                halaman Provider
+              </Link>
+              .
+            </>
+          ) : (
+            "Minta Admin menambahkannya di halaman Provider."
+          )}
         </p>
       );
     }
