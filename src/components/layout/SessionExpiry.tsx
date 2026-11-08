@@ -18,12 +18,28 @@ const WARNING_TEXT = "Sesi Anda akan berakhir dalam 60 detik karena tidak ada ak
 
 function openAsModal(dialog: HTMLDialogElement | null) {
   if (!dialog) return;
+  // Escape closes a modal dialog before React's onCancel runs. closedby=none
+  // turns that dismiss off, and the native cancel listener covers browsers
+  // that ignore the attribute. The cancel event does not bubble.
+  dialog.setAttribute("closedby", "none");
+  const blockDismiss = (event: Event) => {
+    event.preventDefault();
+  };
+  const blockEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") event.preventDefault();
+  };
+  dialog.addEventListener("cancel", blockDismiss);
+  dialog.addEventListener("keydown", blockEscape);
   try {
     if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal();
     else dialog.setAttribute("open", "");
   } catch {
     dialog.setAttribute("open", "");
   }
+  return () => {
+    dialog.removeEventListener("cancel", blockDismiss);
+    dialog.removeEventListener("keydown", blockEscape);
+  };
 }
 
 /**
@@ -122,9 +138,6 @@ export function SessionExpiry() {
   return (
     <dialog
       ref={openAsModal}
-      onCancel={(event) => {
-        event.preventDefault();
-      }}
       aria-labelledby="session-expiry-title"
       className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
     >
