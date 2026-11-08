@@ -3,6 +3,8 @@ import {
   EVIDENCE_LIMIT_MESSAGE,
   MAX_EVIDENCE_PER_ANSWER,
   canAddEvidence,
+  formatFileSize,
+  safeEvidenceHref,
   validateEvidence,
 } from "./manualEvidenceRules";
 
@@ -181,5 +183,67 @@ describe("validateEvidence limit", () => {
 
     // Assert
     expect(error).toBeNull();
+  });
+});
+
+describe("safeEvidenceHref (a stored link becomes clickable only when it is http or https)", () => {
+  // Positive.
+  it.each(["https://justisio.com/chat/1", "http://contoh.id/a?b=1"])("keeps %s", (url) => {
+    // Arrange
+    // (url comes from the table)
+
+    // Act
+    const href = safeEvidenceHref(url);
+
+    // Assert
+    expect(href).toBe(url);
+  });
+
+  // Negative: defence in depth, the server already refuses these.
+  it.each(["javascript:alert(1)", "data:text/html,x", "ftp://contoh.id", "bukan tautan", "", null])(
+    "returns null for %j",
+    (url) => {
+      // Arrange
+      // (url comes from the table)
+
+      // Act
+      const href = safeEvidenceHref(url);
+
+      // Assert
+      expect(href).toBeNull();
+    },
+  );
+});
+
+describe("formatFileSize", () => {
+  // Positive: sizes in readable units, Indonesian decimal comma.
+  it.each([
+    [0, "0 B"],
+    [512, "512 B"],
+    [1024, "1 KB"],
+    [1536, "1,5 KB"],
+    [1048576, "1 MB"],
+    [10 * 1048576, "10 MB"],
+  ])("shows %i bytes as %s", (bytes, expected) => {
+    // Arrange
+    // (bytes come from the table)
+
+    // Act
+    const text = formatFileSize(bytes);
+
+    // Assert
+    expect(text).toBe(expected);
+  });
+
+  // Edge: a link has no size, and a bad value is not shown as NaN.
+  it.each([null, -5, Number.NaN])("returns an empty string for %j", (bytes) => {
+    // Arrange
+    // (bytes come from the table)
+
+    // Act
+    const text = formatFileSize(bytes);
+
+    // Assert
+    expect(text).toBe("");
   });
 });
