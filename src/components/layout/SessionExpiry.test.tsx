@@ -271,6 +271,24 @@ describe("SessionExpiry", () => {
     expect(screen.getByText("protected content")).toBeInTheDocument();
   });
 
+  // The cancel event does not bubble, so a React onCancel on the dialog never
+  // sees Escape in a browser. The listener on the element itself has to cancel it.
+  it("cancels the native dialog dismiss so Escape cannot close it", async () => {
+    seed(IDLE);
+    vi.setSystemTime(new Date(WARNING));
+    await act(async () => {
+      render(<Harness />);
+    });
+
+    const dialog = screen.getByRole("dialog");
+    const cancel = new Event("cancel", { bubbles: false, cancelable: true });
+    dialog.dispatchEvent(cancel);
+
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(dialog.getAttribute("closedby")).toBe("none");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("continues only while the server session is still inside the deadline", async () => {
     seed(IDLE);
     vi.setSystemTime(new Date(WARNING));
