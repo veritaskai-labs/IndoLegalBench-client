@@ -1,6 +1,5 @@
 import { apiFetch, ApiError } from "@/lib/apiClient";
 import { isManualStatus } from "@/lib/runs/sessionRules";
-import { listSessions } from "@/lib/runs/runsApi";
 import type {
   ManualFinalizeResponse,
   ManualSessionDetail,
@@ -52,19 +51,12 @@ export function finalizeManualSession(
 
 /**
  * Daftar sesi pengukuran manual untuk Admin dan Kontributor (AC8, AC11).
- * Mencoba GET /manual-measurements terlebih dahulu; bila belum tersedia,
- * mengambil dari daftar sesi umum yang difilter status manual.
+ * Memanggil GET /manual-measurements langsung tanpa fallback agar tidak memicu 403
+ * bagi peran Kontributor yang tidak berhak mengakses daftar sesi otomatis (/measurements).
  */
 export async function listManualSessions(): Promise<SessionListItem[]> {
-  try {
-    const items = await apiFetch<SessionListItem[]>(BASE, {
-      silentForbidden: true,
-    });
-    return items.filter((item) => isManualStatus(item.status));
-  } catch {
-    const all = await listSessions();
-    return all.filter((item) => isManualStatus(item.status));
-  }
+  const items = await apiFetch<SessionListItem[]>(BASE);
+  return items.filter((item) => isManualStatus(item.status));
 }
 
 const ERROR_MESSAGES: Record<string, string> = {

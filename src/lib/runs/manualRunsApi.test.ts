@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import * as apiClient from "@/lib/apiClient";
-import * as runsApi from "@/lib/runs/runsApi";
 import {
   createManualSession,
   getManualSession,
@@ -119,31 +118,23 @@ describe("manualRunsApi", () => {
   });
 
   describe("listManualSessions", () => {
-    it("filters manual sessions from GET /manual-measurements when available", async () => {
+    it("fetches and filters manual sessions from GET /manual-measurements", async () => {
       const sessions: Partial<SessionListItem>[] = [
         { id: "1", status: "not_filled", repetitions: 1 },
         { id: "2", status: "partially_filled", repetitions: 1 },
       ];
 
-      vi.spyOn(apiClient, "apiFetch").mockResolvedValue(sessions);
+      const fetchSpy = vi.spyOn(apiClient, "apiFetch").mockResolvedValue(sessions);
 
       const result = await listManualSessions();
+      expect(fetchSpy).toHaveBeenCalledWith("/manual-measurements");
       expect(result).toHaveLength(2);
     });
 
-    it("falls back to listSessions when /manual-measurements errors, keeping only manual items", async () => {
+    it("propagates error when GET /manual-measurements fails without fallback", async () => {
       vi.spyOn(apiClient, "apiFetch").mockRejectedValue(new Error("404 Not Found"));
-      const allSessions: Partial<SessionListItem>[] = [
-        { id: "1", status: "queued", repetitions: 3 },
-        { id: "2", status: "running", repetitions: 3 },
-        { id: "3", status: "not_filled", repetitions: 1 },
-        { id: "4", status: "complete", repetitions: 1 },
-      ];
-      vi.spyOn(runsApi, "listSessions").mockResolvedValue(allSessions as SessionListItem[]);
 
-      const result = await listManualSessions();
-      expect(result).toHaveLength(2);
-      expect(result.map((s) => s.id)).toEqual(["3", "4"]);
+      await expect(listManualSessions()).rejects.toThrow("404 Not Found");
     });
   });
 

@@ -310,7 +310,8 @@ export function CreateManualSessionForm() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="repeat-count-input" className="block text-sm font-medium text-slate-700">
-              Jumlah Pengulangan (1–5) <span className="text-red-500">*</span>
+              Jumlah Pengulangan ({MANUAL_SESSION_MIN_REPETITIONS}–{MANUAL_SESSION_MAX_REPETITIONS}){" "}
+              <span className="text-red-500">*</span>
             </label>
             <input
               id="repeat-count-input"
