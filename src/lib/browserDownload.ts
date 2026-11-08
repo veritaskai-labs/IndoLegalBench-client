@@ -12,6 +12,7 @@ export function saveBlob(blob: Blob, fileName: string): void {
     link.click();
   } finally {
     link.remove();
-    URL.revokeObjectURL(url);
+    // Ditunda satu tick: sebagian browser (Safari) membatalkan unduhan bila URL dicabut sinkron.
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }
