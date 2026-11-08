@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose } from "@/types/measurement";
+import type { AttemptResult, AttemptStatus, CaseFilter, MeasurementPurpose, SessionCaseResult } from "@/types/measurement";
 import {
   answerPlaceholder,
   ATTEMPT_STATUS_LABEL,
   attemptSummary,
+  awaitingFirstAnswer,
   CASE_FILTER_LABEL,
   MEASUREMENT_PURPOSE_LABEL,
   sortedAttempts,
@@ -12,10 +13,13 @@ import {
 
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
   return {
+    id: "44444444-4444-4444-4444-444444444444",
     repetition_no: 1,
     status: "succeeded",
     answer_text: "Jawaban mentah",
     model_version: "gemini-qa212",
+    started_at: null,
+    finished_at: null,
     ...overrides,
   };
 }
@@ -82,7 +86,7 @@ describe("attemptSummary", () => {
 });
 
 describe("answerPlaceholder (why answer_text is null, server#91 session_detail)", () => {
-  const open = { masked: false, sessionEnded: true, viewerRole: "admin" as const };
+  const open = { masked: false };
 
   it("returns null when there is an answer to show", () => {
     expect(answerPlaceholder(attempt(), open)).toBeNull();
@@ -97,13 +101,13 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     "explains a masked test case first, even for a %s attempt",
     (status) => {
       expect(
-        answerPlaceholder(attempt({ status, answer_text: null }), { ...open, masked: true, viewerRole: "developer_ai" }),
+        answerPlaceholder(attempt({ status, answer_text: null }), { masked: true }),
       ).toBe("Isi kasus test disembunyikan untuk Developer AI.");
     },
   );
 
   it.each<AttemptStatus>(["pending", "running"])("says a %s attempt has no answer yet", (status) => {
-    expect(answerPlaceholder(attempt({ status, answer_text: null }), { ...open, sessionEnded: false })).toBe("Belum ada jawaban.");
+    expect(answerPlaceholder(attempt({ status, answer_text: null }), open)).toBe("Belum ada jawaban.");
   });
 
   it("says a technical failure left no answer", () => {
@@ -112,22 +116,76 @@ describe("answerPlaceholder (why answer_text is null, server#91 session_detail)"
     );
   });
 
-  // server#91 093db8f: Developer AI sees progress but no answers until the session ends.
-  it("tells Developer AI that answers appear once the session has ended", () => {
-    expect(
-      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded: false, viewerRole: "developer_ai" }),
-    ).toBe("Jawaban tampil setelah sesi selesai.");
-  });
-
-  // Once the session has ended, Developer AI gets the answers, so a null one is not "wait for the end".
-  it("does not tell Developer AI to wait once the session has ended", () => {
-    expect(
-      answerPlaceholder(attempt({ answer_text: null }), { masked: false, sessionEnded: true, viewerRole: "developer_ai" }),
-    ).toBe("Tidak ada jawaban tersimpan.");
+  // SCRUM-261: Developer AI gets dev answers while the session runs, so no role is told to wait for the end.
+  it("gives the neutral message when a succeeded attempt has no text, for any viewer", () => {
+    expect(answerPlaceholder(attempt({ answer_text: null }), open)).toBe("Tidak ada jawaban tersimpan.");
   });
 
   // Negative: a succeeded attempt without text for Admin should not happen; say so instead of a blank.
   it("falls back to a neutral message for a succeeded attempt without stored text", () => {
     expect(answerPlaceholder(attempt({ answer_text: null }), open)).toBe("Tidak ada jawaban tersimpan.");
+  });
+});
+
+function caseResult(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult {
+  return { snapshot_item_id: "item-1", masked: false, attempts: [attempt({ answer_text: null, status: "pending" })], ...overrides } as SessionCaseResult;
+}
+
+describe("awaitingFirstAnswer (PBI-11 AC9 empty state)", () => {
+  it("is true when no readable case has an answer yet", () => {
+    const cases = [caseResult(), caseResult({ snapshot_item_id: "item-2", attempts: [attempt({ status: "running", answer_text: null })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(true);
+  });
+
+  it("is false as soon as one attempt of a readable case has text", () => {
+    const cases = [caseResult(), caseResult({ snapshot_item_id: "item-2", attempts: [attempt({ answer_text: "Jawaban pertama" })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(false);
+  });
+
+  // An empty string is a real answer from the provider.
+  it("is false when an attempt answered with an empty string", () => {
+    expect(awaitingFirstAnswer([caseResult({ attempts: [attempt({ answer_text: "" })] })])).toBe(false);
+  });
+
+  // Test cases are masked for Developer AI and will never show an answer, so waiting would be a lie.
+  it("is false when every case is masked", () => {
+    expect(awaitingFirstAnswer([caseResult({ masked: true }), caseResult({ snapshot_item_id: "item-2", masked: true })])).toBe(false);
+  });
+
+  it("ignores masked cases when a readable case is still waiting", () => {
+    expect(awaitingFirstAnswer([caseResult({ masked: true }), caseResult({ snapshot_item_id: "item-2" })])).toBe(true);
+  });
+
+  it("is false when there are no cases", () => {
+    expect(awaitingFirstAnswer([])).toBe(false);
+  });
+
+  it("is false for a readable case that has no attempts yet", () => {
+    expect(awaitingFirstAnswer([caseResult({ attempts: [] })])).toBe(false);
+  });
+
+  // Every attempt already finished, only as a technical failure: nothing is coming, so do not say "wait".
+  it("is false when every attempt finished as a technical failure", () => {
+    const cases = [caseResult({ attempts: [attempt({ status: "technical_failure", answer_text: null })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(false);
+  });
+
+  it("is true when some attempts failed but another one is still pending", () => {
+    const cases = [
+      caseResult({
+        attempts: [attempt({ status: "technical_failure", answer_text: null }), attempt({ id: "55555555-5555-5555-5555-555555555555", repetition_no: 2, status: "pending", answer_text: null })],
+      }),
+    ];
+
+    expect(awaitingFirstAnswer(cases)).toBe(true);
+  });
+
+  it("is true when the only unanswered attempt is running", () => {
+    const cases = [caseResult({ attempts: [attempt({ status: "running", answer_text: null })] })];
+
+    expect(awaitingFirstAnswer(cases)).toBe(true);
   });
 });

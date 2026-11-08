@@ -1,25 +1,44 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
-import { getSession } from "@/lib/runs/runsApi";
+import { httpGradingGateway } from "@/lib/grading/gradingApi";
+import { getProgress, getSession } from "@/lib/runs/runsApi";
+import { gradingResponse } from "@/test/gradingFixtures";
+import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
 import SessionDetailPage from "./page";
+
 
 // The page reads the id from the URL; useParams hands it over still encoded.
 const params = vi.hoisted(() => ({ id: "s-1" }));
 vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // runsApi has its own request tests (stubbed fetch); here only the page's reaction matters.
-vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn() }));
+vi.mock("@/lib/runs/runsApi", () => ({ getSession: vi.fn(), getProgress: vi.fn() }));
+vi.mock("@/lib/runs/sessionControlApi", () => ({
+  acceptAsIs: vi.fn(),
+  clearAcceptAsIs: vi.fn(),
+  pauseSession: vi.fn(),
+  cancelSession: vi.fn(),
+  resumeSession: vi.fn(),
+  retrySession: vi.fn(),
+}));
+// The grading section has its own tests with a fake gateway; here the page uses the default one.
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
+// The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
+vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 // The role decides which answer placeholder Developer AI sees.
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const get = vi.mocked(getSession);
+const progressRead = vi.mocked(getProgress);
+const gradeRequest = vi.mocked(httpGradingGateway.grade);
+const resultsRead = vi.mocked(httpGradingGateway.results);
 
 function signedInAs(role: Role) {
   useAuthMock.mockReturnValue({
@@ -28,10 +47,10 @@ function signedInAs(role: Role) {
   });
 }
 
-// Placeholder text only: students do not write legal case content (L1).
 function attempt(overrides: Partial<AttemptResult> = {}): AttemptResult {
-  return { repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", ...overrides };
+  return { id: "44444444-4444-4444-4444-444444444444", repetition_no: 1, status: "succeeded", answer_text: "Jawaban mentah percobaan 1", model_version: "model-qa-1", started_at: null, finished_at: null, ...overrides };
 }
+
 
 function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult {
   return {
@@ -51,7 +70,6 @@ function devCase(overrides: Partial<SessionCaseResult> = {}): SessionCaseResult 
       split_tag: "dev",
       legal_refs: [{ kind: "free_text", free_text: "Rujukan sintetis 1", links: [], display_text: "Rujukan sintetis 1" }],
       answer_criteria: { must_contain: ["unsur sintetis"], must_not_contain: [], expected_conclusion: "kesimpulan sintetis" },
-      traps: [{ description: "jebakan sintetis", expected_model_behavior: "menolak" }],
     },
     attempts: [attempt()],
     ...overrides,
@@ -77,8 +95,18 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     started_at: "2026-11-03T02:05:00Z",
     finished_at: "2026-11-03T02:30:00Z",
     archived_at: null,
+    stopped_at: null,
+    stop_reason: null,
+    accepted_as_is_at: null,
+    accepted_as_is_by: null,
+    accepted_as_is_reason: null,
+    report_eligible: true,
+    resumed_after_long_pause: false,
+    model_version_unverified: false,
+    resume_error_code: null,
     cases: [devCase()],
     ...overrides,
+
   };
 }
 
@@ -98,6 +126,10 @@ beforeEach(() => {
   get.mockReset();
   params.id = "s-1";
   signedInAs("admin");
+  progressRead.mockReturnValue(new Promise(() => {}));
+  gradeRequest.mockReset();
+  resultsRead.mockReset();
+  resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
 });
 
 describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
@@ -142,6 +174,18 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     expect(get).toHaveBeenCalledWith("a/b");
   });
 
+  // PBI-12 AC9: a budget or restart stop reads Dihentikan, a user pause Dijeda.
+  it.each([
+    ["budget", "Dihentikan"],
+    ["user", "Dijeda"],
+  ] as const)("names a paused session by why it stopped (%s)", async (reason, label) => {
+    get.mockResolvedValue(session({ status: "paused", stop_reason: reason, stopped_at: "2026-11-03T02:20:00Z" }));
+    render(<SessionDetailPage />);
+
+    const facts = within(await screen.findByRole("region", { name: "Ringkasan sesi" }));
+    expect(facts.getByText("Status").nextElementSibling).toHaveTextContent(label);
+  });
+
   it("says when a session has been archived", async () => {
     get.mockResolvedValue(session({ archived_at: "2026-11-03T03:00:00Z" }));
     render(<SessionDetailPage />);
@@ -161,6 +205,112 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     expect(facts.getByText("Menunggu antrean")).toBeInTheDocument();
     expect(screen.getByText("Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.")).toBeInTheDocument();
   });
+
+it("updates the session status and failures without reloading the page", async () => {
+  const running = session({
+    status: "running",
+    finished_at: null,
+    cases: [devCase({ attempts: [attempt()] })],
+  });
+
+  const finished = session({
+    status: "finished_with_failures",
+    cases: [
+      devCase({
+        attempts: [
+          attempt(),
+          attempt({
+            repetition_no: 2,
+            status: "technical_failure",
+            answer_text: null,
+          }),
+        ],
+      }),
+    ],
+  });
+
+  get.mockResolvedValueOnce(running).mockResolvedValue(finished);
+  vi.useFakeTimers();
+
+  try {
+    render(<SessionDetailPage />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(
+      within(screen.getByRole("region", { name: "Ringkasan sesi" }))
+        .getByText("Berjalan"),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(
+      within(screen.getByRole("region", { name: "Ringkasan sesi" }))
+        .getByText("Selesai dengan kegagalan"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("1 panggilan gagal karena masalah teknis"),
+    ).toBeInTheDocument();
+
+    const callsAfterFinish = get.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15000);
+    });
+
+    expect(get).toHaveBeenCalledTimes(callsAfterFinish);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+
+it("allows retry when an ended session progress request fails", async () => {
+  const user = userEvent.setup();
+
+  get.mockResolvedValue(session({ status: "finished" }));
+
+  progressRead
+    .mockRejectedValueOnce(new Error("network error"))
+    .mockResolvedValueOnce({
+      completed_calls: 3,
+      total_calls: 3,
+      percent_complete: "100.0",
+      failed_calls: 0,
+      percent_failed: "0.0",
+      remaining_seconds: 0,
+      running_cost_idr: "3000.00",
+      remaining_budget_idr: "497000.00",
+      started_at: "2026-11-03T02:05:00Z",
+      updated_at: "2026-11-03T02:30:00Z",
+    });
+
+  render(<SessionDetailPage />);
+
+  expect(
+    await screen.findByText(/gagal memuat progres/i),
+  ).toBeInTheDocument();
+
+  await user.click(
+    screen.getByRole("button", { name: "Coba lagi" }),
+  );
+
+  expect(
+    within(
+      await screen.findByRole("region", {
+        name: "Progres pengukuran",
+      }),
+    ).getByText("3 dari 3"),
+  ).toBeInTheDocument();
+
+  expect(progressRead).toHaveBeenCalledTimes(2);
+});
+
 });
 
 describe("SessionDetailPage snapshot detail (PBI-11 AC7)", () => {
@@ -184,12 +334,28 @@ describe("SessionDetailPage snapshot detail (PBI-11 AC7)", () => {
 
     const card = await openCase(user);
     expect(card.getByText("Snapshot versi 2")).toBeInTheDocument();
-    for (const label of ["Judul", "Pertanyaan", "Kategori", "ID kasus", "Tag dev/test", "Rujukan hukum", "Kriteria jawaban", "Pengurang Poin"]) {
+    for (const label of ["Judul", "Pertanyaan", "Kategori", "ID kasus", "Tag dev/test", "Rujukan hukum", "Kriteria jawaban"]) {
       expect(card.getByText(label)).toBeInTheDocument();
     }
     expect(card.getByText("Rujukan sintetis 1")).toBeInTheDocument();
     expect(card.getByText("Kesimpulan: kesimpulan sintetis")).toBeInTheDocument();
-    expect(card.getByText("1. jebakan sintetis (perilaku yang diharapkan: menolak)")).toBeInTheDocument();
+  });
+
+  // Edge: snapshots taken before traps were retired still hold them in their JSON.
+  it("opens a legacy snapshot that still holds traps without showing them", async () => {
+    const user = userEvent.setup();
+    const legacy = devCase();
+    (legacy.sections as Record<string, unknown>).traps = [
+      { description: "jebakan sintetis", expected_model_behavior: "menolak" },
+    ];
+    get.mockResolvedValue(session({ cases: [legacy] }));
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    expect(card.getByText("Snapshot versi 2")).toBeInTheDocument();
+    expect(card.getByText("Rujukan sintetis 1")).toBeInTheDocument();
+    expect(card.queryByText("Pengurang Poin")).not.toBeInTheDocument();
+    expect(card.queryByText(/jebakan sintetis/)).not.toBeInTheDocument();
   });
 });
 
@@ -219,16 +385,46 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     expect(within(items[0]).getByText("Jawaban pertama")).toBeInTheDocument();
   });
 
-  // The raw answer is shown as text: a provider's markup must never become HTML.
-  it("shows markup in a raw answer as plain text", async () => {
+  // The formatted view drops raw html; the raw view shows it as literal text. It never becomes an element.
+  it("never turns markup in a raw answer into html, and still shows it as text in the raw view", async () => {
     const user = userEvent.setup();
     const payload = '<img src=x onerror="alert(1)"> **tebal**';
     get.mockResolvedValue(session({ cases: [devCase({ attempts: [attempt({ answer_text: payload })] })] }));
     const { container } = render(<SessionDetailPage />);
 
     const card = await openCase(user);
-    expect(card.getByText(payload)).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
+    expect(card.getByText("tebal").tagName).toBe("STRONG");
+
+    await user.click(card.getByRole("button", { name: "Teks mentah" }));
+    expect(card.getByTestId("raw-answer").textContent).toBe(payload);
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("renders the raw answer as markdown and shows the WIB timestamps of each attempt", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(
+      session({
+        cases: [
+          devCase({
+            attempts: [
+              attempt({ answer_text: "## Kesimpulan\n\n- poin satu", started_at: "2026-11-03T03:00:00Z", finished_at: "2026-11-03T03:01:30Z" }),
+              attempt({ repetition_no: 2, answer_text: "Jawaban kedua", started_at: null, finished_at: null }),
+            ],
+          }),
+        ],
+      }),
+    );
+    render(<SessionDetailPage />);
+
+    const card = await openCase(user);
+    const [first, second] = card.getAllByRole("listitem", { name: /^Percobaan/ });
+    expect(within(first).getByRole("heading", { level: 2, name: "Kesimpulan" })).toBeInTheDocument();
+    expect(within(first).getByRole("listitem")).toHaveTextContent("poin satu");
+    expect(within(first).getByText("1 mnt 30 dtk")).toBeInTheDocument();
+    expect(within(first).getAllByText(/WIB$/)).toHaveLength(2);
+    expect(within(second).getByText("Belum dimulai")).toBeInTheDocument();
+    expect(within(second).getByText("Belum selesai")).toBeInTheDocument();
   });
 
   it("explains an attempt without an answer instead of leaving it blank", async () => {
@@ -252,16 +448,23 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
   });
 
-  // server#91: Developer AI sees progress but no answer until the session ends.
-  it("tells Developer AI that answers appear once a running session ends", async () => {
+  // SCRUM-261/262 (AC9): Developer AI reads dev answers while the session still runs.
+  it("shows Developer AI the answer of a dev case while the session is still running", async () => {
     const user = userEvent.setup();
     signedInAs("developer_ai");
-    get.mockResolvedValue(session({ status: "running", finished_at: null, cases: [devCase({ attempts: [attempt({ answer_text: null })] })] }));
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ attempts: [attempt({ answer_text: "Jawaban dev saat berjalan" }), attempt({ repetition_no: 2, status: "running", answer_text: null })] })],
+      }),
+    );
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
-    expect(card.getByText("Jawaban tampil setelah sesi selesai.")).toBeInTheDocument();
-    expect(card.getByText("Berhasil")).toBeInTheDocument();
+    expect(card.getByText("Jawaban dev saat berjalan")).toBeInTheDocument();
+    expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
+    expect(card.queryByText("Jawaban tampil setelah sesi selesai.")).not.toBeInTheDocument();
   });
 
   // AC9 / D10 section C: a test case opened by Developer AI is masked by the server.
@@ -333,5 +536,315 @@ describe("SessionDetailPage load states", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
     expect(get).toHaveBeenCalledTimes(2);
+  });
+});
+
+// PBI-12 AC9: the controls sit on the detail page and the page reloads after a change.
+describe("SessionDetailPage controls (PBI-12 AC9)", () => {
+  it("lets Admin accept a session with failures and loads it again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "finished_with_failures" }));
+    vi.mocked(acceptAsIs).mockResolvedValue({
+      id: "s-1",
+      accepted_as_is_at: "2026-11-05T03:00:00Z",
+      accepted_as_is_by: "u-1",
+      accepted_as_is_reason: "Alasan sintetis",
+    });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Terima apa adanya" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Terima sesi apa adanya?" }));
+    await user.type(dialog.getByRole("textbox", { name: "Alasan" }), "Alasan sintetis");
+    await user.click(dialog.getByRole("button", { name: "Terima apa adanya" }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows the accepted mark on the page", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        accepted_as_is_at: "2026-11-05T03:00:00Z",
+        accepted_as_is_by: "u-1",
+        accepted_as_is_reason: "Alasan sintetis",
+      }),
+    );
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByRole("region", { name: "Diterima apa adanya" })).toBeInTheDocument();
+  });
+
+  // PBI-12 AC7: Jeda sits on the detail page too, and the page loads the session again after it.
+  it("lets Admin pause a running session and loads it again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "running", finished_at: null }));
+    vi.mocked(pauseSession).mockResolvedValue({
+      id: "s-1",
+      status: "paused",
+      stopped_at: "2026-11-05T03:00:00Z",
+      stop_reason: "user",
+    });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Jeda" }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  // PBI-12 AC3: the page hands the signed-in user to the controls and reloads after a retry.
+  it("lets Admin retry the failed attempts and loads the session again", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        cases: [devCase({ attempts: [attempt(), attempt({ id: "attempt-2", repetition_no: 2, status: "technical_failure", answer_text: null })] })],
+      }),
+    );
+    vi.mocked(retrySession).mockResolvedValue({ id: "s-1", status: "running", retried_attempt_ids: ["attempt-2"] });
+    render(<SessionDetailPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Coba ulang yang gagal" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Coba ulang yang gagal?" })).getByRole("button", { name: "Coba ulang" }));
+
+    expect(retrySession).toHaveBeenCalledWith("s-1", { allFailed: true });
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+});
+describe("SessionDetailPage progress panel (PBI-12 AC5, AC6)", () => {
+  it("shows the live numbers of a running session", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(session({ status: "running" }));
+    progressRead.mockResolvedValue({
+      completed_calls: 240,
+      total_calls: 300,
+      percent_complete: "80.0",
+      failed_calls: 12,
+      percent_failed: "5.0",
+      remaining_seconds: 300,
+      running_cost_idr: "120000.00",
+      remaining_budget_idr: "380000.00",
+      started_at: "2026-11-04T03:00:00Z",
+      updated_at: "2026-11-04T03:40:00Z",
+    });
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByText("240 dari 300")).toBeInTheDocument();
+  });
+
+  // The session itself loaded fine, so one failed progress read must not empty the page.
+  it("keeps the session on screen when the progress read fails", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(session({ status: "running" }));
+    progressRead.mockRejectedValue(new Error("boom"));
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByText(/gagal memuat progres/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
+    });
+});
+describe("SessionDetailPage error summary (PBI-12 AC4)", () => {
+  it("shows the error summary when a call failed technically", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(
+      session({
+        status: "finished_with_failures",
+        cases: [
+          devCase({
+            attempts: [attempt(), attempt({ repetition_no: 2, status: "technical_failure", answer_text: null })],
+          }),
+        ],
+      }),
+    );
+
+    render(<SessionDetailPage />);
+
+    const ringkasan = await screen.findByRole("region", { name: "Ringkasan kegagalan" });
+    expect(within(ringkasan).getByText("1 panggilan gagal karena masalah teknis")).toBeInTheDocument();
+    expect(within(ringkasan).getByRole("button", { name: "Lihat detail teknis" })).toBeInTheDocument();
+  });
+
+  // Sesi yang mulus tidak perlu kotak merah sama sekali.
+  it("says nothing about failures when every call succeeded", async () => {
+    signedInAs("admin");
+    get.mockResolvedValue(session());
+
+    render(<SessionDetailPage />);
+
+    await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
+    expect(screen.queryByRole("region", { name: "Ringkasan kegagalan" })).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
+  // Scores are read after the progress and before the raw answers they are based on.
+  it("shows the results section after the progress and before the cases", async () => {
+    get.mockResolvedValue(session());
+
+    render(<SessionDetailPage />);
+
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    const progress = screen.getByRole("heading", { name: "Progres" });
+    const cases = screen.getByRole("heading", { name: "Kasus dan jawaban mentah" });
+    expect(progress.compareDocumentPosition(results) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(results.compareDocumentPosition(cases) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(resultsRead).toHaveBeenCalledWith("s-1");
+  });
+
+  it("lets Admin grade a finished session from the page", async () => {
+    const user = userEvent.setup();
+    get.mockResolvedValue(session({ status: "finished" }));
+    gradeRequest.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    await user.click(await within(results).findByRole("button", { name: "Nilai" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Nilai sesi ini?" })).getByRole("button", { name: "Nilai" }));
+
+    expect(gradeRequest).toHaveBeenCalledWith("s-1");
+  });
+
+  it("shows the scores of a graded session", async () => {
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    expect(await within(results).findByRole("table", { name: "Skor per kasus" })).toBeInTheDocument();
+  });
+
+  // The page passes the signed-in role on; Developer AI never gets the action.
+  it("offers Developer AI no Nilai", async () => {
+    signedInAs("developer_ai");
+    get.mockResolvedValue(session({ status: "finished" }));
+
+    render(<SessionDetailPage />);
+
+    const results = await screen.findByRole("region", { name: "Hasil penilaian" });
+    expect(await within(results).findByText("Sesi ini belum dinilai.")).toBeInTheDocument();
+    expect(within(results).queryByRole("button", { name: "Nilai" })).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionDetailPage live answers (PBI-11 AC9, SCRUM-262)", () => {
+  const EMPTY_NOTE = /Belum ada jawaban\. Jawaban kasus dev tampil di sini/;
+  const STALE_NOTE = "Pembaruan otomatis gagal. Menampilkan data terakhir yang berhasil dimuat.";
+
+  function running(attempts: AttemptResult[]) {
+    return session({ status: "running", finished_at: null, cases: [devCase({ attempts })] });
+  }
+
+  async function renderAndTick(ms = 0) {
+    render(<SessionDetailPage />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    signedInAs("developer_ai");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("shows a new dev answer after the next refresh, without reloading the page", async () => {
+    const waiting = running([attempt({ status: "running", answer_text: null })]);
+    const answered = running([attempt({ answer_text: "Jawaban baru dari polling" })]);
+    get.mockResolvedValueOnce(waiting).mockResolvedValue(answered);
+
+    await renderAndTick();
+    expect(screen.queryByText("Jawaban baru dari polling")).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.getByText("Jawaban baru dari polling")).toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
+  it("tells the user nothing is answered yet while a running session has no answer", async () => {
+    get.mockResolvedValue(running([attempt({ status: "pending", answer_text: null })]));
+
+    await renderAndTick();
+
+    expect(screen.getByText(EMPTY_NOTE)).toBeInTheDocument();
+  });
+
+  it("drops the empty note once an answer arrives", async () => {
+    get
+      .mockResolvedValueOnce(running([attempt({ status: "pending", answer_text: null })]))
+      .mockResolvedValue(running([attempt({ answer_text: "Sudah ada" })]));
+
+    await renderAndTick();
+    expect(screen.getByText(EMPTY_NOTE)).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.queryByText(EMPTY_NOTE)).not.toBeInTheDocument();
+  });
+
+  it("does not show the empty note when every case is a masked test case", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ split_tag: "test", masked: true, sections: null, attempts: [attempt({ answer_text: null })] })],
+      }),
+    );
+
+    await renderAndTick();
+
+    expect(screen.queryByText(EMPTY_NOTE)).not.toBeInTheDocument();
+  });
+
+  it("does not show the empty note for a session that has ended", async () => {
+    get.mockResolvedValue(session({ status: "finished", cases: [devCase({ attempts: [attempt({ answer_text: null, status: "technical_failure" })] })] }));
+
+    await renderAndTick();
+
+    expect(screen.queryByText(EMPTY_NOTE)).not.toBeInTheDocument();
+  });
+
+  it("keeps the last data and warns when a refresh fails, then clears the warning", async () => {
+    const first = running([attempt({ answer_text: "Jawaban lama" })]);
+    get
+      .mockResolvedValueOnce(first)
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValue(running([attempt({ answer_text: "Jawaban pulih" })]));
+
+    await renderAndTick();
+    expect(screen.queryByText(STALE_NOTE)).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(screen.getByText(STALE_NOTE)).toBeInTheDocument();
+    expect(screen.getByText("Jawaban lama")).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    expect(screen.queryByText(STALE_NOTE)).not.toBeInTheDocument();
+    expect(screen.getByText("Jawaban pulih")).toBeInTheDocument();
+  });
+
+  it("never shows content of a masked test case to Developer AI while the session runs", async () => {
+    get.mockResolvedValue(
+      session({
+        status: "running",
+        finished_at: null,
+        cases: [devCase({ case_code: "KASUS-TEST", title: "Kasus test", split_tag: "test", masked: true, question: null, sections: null, attempts: [attempt({ answer_text: null })] })],
+      }),
+    );
+
+    await renderAndTick(5000);
+
+    expect(screen.getAllByText("Isi kasus test disembunyikan untuk Developer AI.").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Jawaban mentah percobaan 1")).not.toBeInTheDocument();
   });
 });

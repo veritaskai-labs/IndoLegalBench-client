@@ -4,13 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
-import { archiveSession, listSessions } from "@/lib/runs/runsApi";
+import { archiveSession, listSessions, unarchiveSession } from "@/lib/runs/runsApi";
 import type { Role } from "@/types";
-import type { SessionArchiveResponse, SessionListItem } from "@/types/measurement";
+import type { SessionArchiveResponse, SessionListItem, SessionUnarchiveResponse } from "@/types/measurement";
 import RunsPage from "./page";
 
 // runsApi has its own request tests (stubbed fetch); here only the page's reaction matters.
-vi.mock("@/lib/runs/runsApi", () => ({ listSessions: vi.fn(), archiveSession: vi.fn() }));
+vi.mock("@/lib/runs/runsApi", () => ({ listSessions: vi.fn(), archiveSession: vi.fn(), unarchiveSession: vi.fn() }));
 
 const useAuthMock = vi.hoisted(() => vi.fn());
 // The page reads the role and the user id to decide who sees Arsipkan (D10).
@@ -18,6 +18,7 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const list = vi.mocked(listSessions);
 const archive = vi.mocked(archiveSession);
+const unarchive = vi.mocked(unarchiveSession);
 
 function signedInAs(role: Role, id = "admin-1") {
   useAuthMock.mockReturnValue({
@@ -60,6 +61,7 @@ async function row(label: string) {
 beforeEach(() => {
   list.mockReset();
   archive.mockReset();
+  unarchive.mockReset();
   signedInAs("admin");
 });
 
@@ -375,5 +377,278 @@ describe("RunsPage archive flow (AC10: hidden from the list, data kept)", () => 
 
     await waitFor(() => expect(screen.queryByRole("cell", { name: "Uji Coba DeepSeek" })).not.toBeInTheDocument());
     expect(archive).toHaveBeenCalledTimes(2);
+  });
+});
+
+// PBI-11 AC10, feedback UAT Sprint 3: the Arsip tab lists archived sessions and restores them.
+describe("RunsPage Arsip tab (AC10)", () => {
+  const restored: SessionUnarchiveResponse = { id: "s-1", status: "finished" };
+
+  /** Main list and archive list answer differently, like the server does for ?archived=true. */
+  function serve(main: SessionListItem[], archivedRows: SessionListItem[]) {
+    list.mockImplementation(async (archivedFlag) => (archivedFlag ? archivedRows : main));
+  }
+
+  async function openArchiveTab(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("tab", { name: "Arsip" }));
+  }
+
+  it("shows the Sesi tab selected first and the Arsip tab next to it", async () => {
+    // Arrange
+    serve([session()], []);
+
+    // Act
+    renderPage();
+
+    // Assert
+    expect(screen.getByRole("tab", { name: "Sesi" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Arsip" })).toHaveAttribute("aria-selected", "false");
+    expect(await row("Uji Coba DeepSeek")).toBeInTheDocument();
+    expect(list).not.toHaveBeenCalledWith(true);
+  });
+
+  it("lists archived sessions with the same columns as the main list", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    serve([session()], [session({ id: "s-9", label: "Sesi Lama", product_name: "Claude" })]);
+    renderPage();
+
+    // Act
+    await openArchiveTab(user);
+
+    // Assert
+    const cells = within(await row("Sesi Lama"));
+    expect(list).toHaveBeenCalledWith(true);
+    expect(cells.getByText("Claude")).toBeInTheDocument();
+    expect(cells.getByText("60 dari 60")).toBeInTheDocument();
+    for (const name of ["Label", "Dibuat", "Pembuat", "Produk", "Kasus", "Pengulangan", "Status", "Progres"]) {
+      expect(screen.getByRole("columnheader", { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("cell", { name: "Uji Coba DeepSeek" })).not.toBeInTheDocument();
+  });
+
+  it("shows an empty state when nothing is archived", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    serve([session()], []);
+    renderPage();
+
+    // Act
+    await openArchiveTab(user);
+
+    // Assert
+    expect(await screen.findByText("Belum ada sesi terarsip")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("shows an error with a retry that loads the archive again", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    list.mockImplementation(async (archivedFlag) => {
+      if (!archivedFlag) return [session()];
+      if (list.mock.calls.filter(([flag]) => flag).length === 1) throw new TypeError("Failed to fetch");
+      return [session({ id: "s-9", label: "Sesi Lama" })];
+    });
+    renderPage();
+    await openArchiveTab(user);
+    expect(await screen.findByText("Gagal memuat sesi pengukuran. Coba lagi.")).toBeInTheDocument();
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Coba lagi" }));
+
+    // Assert
+    expect(await row("Sesi Lama")).toBeInTheDocument();
+  });
+
+  it("shows a session right after it was archived without reloading the page", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    let isArchived = false;
+    // Like the server: the session is in exactly one of the two lists.
+    list.mockImplementation(async (archivedFlag) =>
+      archivedFlag === isArchived ? [session({ label: "Baru diarsipkan" })] : [],
+    );
+    archive.mockImplementation(async () => {
+      isArchived = true;
+      return archived;
+    });
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Arsipkan Baru diarsipkan" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Arsipkan sesi?" })).getByRole("button", { name: "Arsipkan" }));
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "Baru diarsipkan" })).not.toBeInTheDocument());
+
+    // Act
+    await openArchiveTab(user);
+
+    // Assert
+    expect(await row("Baru diarsipkan")).toBeInTheDocument();
+  });
+
+  it("offers Kembalikan to Admin on every archived session", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    serve([], [session({ id: "a", label: "Milik Dev", created_by: "dev-1" }), session({ id: "b", label: "Milik Admin", created_by: "admin-1" })]);
+    renderPage();
+
+    // Act
+    await openArchiveTab(user);
+    await row("Milik Dev");
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Kembalikan Milik Dev" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kembalikan Milik Admin" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Arsipkan/ })).not.toBeInTheDocument();
+  });
+
+  it("offers Kembalikan to Developer AI only on the sessions it started", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    signedInAs("developer_ai", "dev-1");
+    serve([], [session({ id: "a", label: "Milik sendiri", created_by: "dev-1" }), session({ id: "b", label: "Milik Admin", created_by: "admin-1" })]);
+    renderPage();
+
+    // Act
+    await openArchiveTab(user);
+    await row("Milik sendiri");
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Kembalikan Milik sendiri" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Kembalikan Milik Admin" })).not.toBeInTheDocument();
+  });
+
+  it("offers no Kembalikan while the signed-in user is unknown", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({ status: "loading" });
+    serve([], [session()]);
+    renderPage();
+
+    // Act
+    await openArchiveTab(user);
+    await row("Uji Coba DeepSeek");
+
+    // Assert
+    expect(screen.queryByRole("button", { name: /Kembalikan/ })).not.toBeInTheDocument();
+  });
+
+  it("asks first, then moves the session back to the main list without reloading the page", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const stillArchived = [session({ id: "x", label: "Tetap arsip" }), session({ id: "s-1", label: "Dikembalikan" })];
+    let isRestored = false;
+    list.mockImplementation(async (archivedFlag) => {
+      if (archivedFlag) return stillArchived.filter((item) => !isRestored || item.id !== "s-1");
+      return isRestored ? [session({ id: "s-1", label: "Dikembalikan" })] : [];
+    });
+    unarchive.mockImplementation(async () => {
+      isRestored = true;
+      return restored;
+    });
+    renderPage();
+    await openArchiveTab(user);
+
+    // Act
+    await user.click(await screen.findByRole("button", { name: "Kembalikan Dikembalikan" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Kembalikan sesi?" }));
+    expect(unarchive).not.toHaveBeenCalled();
+    await user.click(dialog.getByRole("button", { name: "Kembalikan" }));
+
+    // Assert
+    expect(unarchive).toHaveBeenCalledWith("s-1");
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "Dikembalikan" })).not.toBeInTheDocument());
+    expect(screen.getByRole("cell", { name: "Tetap arsip" })).toBeInTheDocument();
+    expect(screen.getByText("Sesi “Dikembalikan” dikembalikan")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Sesi" }));
+    expect(await row("Dikembalikan")).toBeInTheDocument();
+  });
+
+  // The page hid it locally after Arsipkan; restoring must not leave it hidden in the main list.
+  it("shows a session in the main list again after it was archived and restored in the same visit", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    let isArchived = false;
+    list.mockImplementation(async (archivedFlag) => {
+      const item = session({ label: "Bolak-balik" });
+      return archivedFlag === isArchived ? [item] : [];
+    });
+    archive.mockImplementation(async () => {
+      isArchived = true;
+      return archived;
+    });
+    unarchive.mockImplementation(async () => {
+      isArchived = false;
+      return restored;
+    });
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "Arsipkan Bolak-balik" }));
+    await user.click(within(screen.getByRole("dialog", { name: "Arsipkan sesi?" })).getByRole("button", { name: "Arsipkan" }));
+    await waitFor(() => expect(screen.queryByRole("cell", { name: "Bolak-balik" })).not.toBeInTheDocument());
+    await openArchiveTab(user);
+    await user.click(await screen.findByRole("button", { name: "Kembalikan Bolak-balik" }));
+
+    // Act
+    await user.click(within(screen.getByRole("dialog", { name: "Kembalikan sesi?" })).getByRole("button", { name: "Kembalikan" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await user.click(screen.getByRole("tab", { name: "Sesi" }));
+
+    // Assert
+    expect(await row("Bolak-balik")).toBeInTheDocument();
+  });
+
+  it("sends nothing when the user cancels", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    serve([], [session()]);
+    renderPage();
+    await openArchiveTab(user);
+    await user.click(await screen.findByRole("button", { name: "Kembalikan Uji Coba DeepSeek" }));
+
+    // Act
+    await user.click(within(screen.getByRole("dialog", { name: "Kembalikan sesi?" })).getByRole("button", { name: "Batal" }));
+
+    // Assert
+    expect(unarchive).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Uji Coba DeepSeek" })).toBeInTheDocument();
+  });
+
+  it("shows why the server refused, then reloads the archive when the dialog is closed", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    signedInAs("developer_ai", "dev-1");
+    list.mockImplementation(async (archivedFlag) => {
+      if (!archivedFlag) return [];
+      return list.mock.calls.filter(([flag]) => flag).length === 1 ? [session({ created_by: "dev-1" })] : [];
+    });
+    unarchive.mockRejectedValue(new ApiError(409, "SESSION_NOT_ARCHIVED"));
+    renderPage();
+    await openArchiveTab(user);
+    await user.click(await screen.findByRole("button", { name: "Kembalikan Uji Coba DeepSeek" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Kembalikan sesi?" }));
+
+    // Act
+    await user.click(dialog.getByRole("button", { name: "Kembalikan" }));
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Sesi ini sudah dikembalikan. Muat ulang daftar.");
+    expect(screen.getByRole("cell", { name: "Uji Coba DeepSeek" })).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Tutup" }));
+
+    // Assert
+    expect(await screen.findByText("Belum ada sesi terarsip")).toBeInTheDocument();
+  });
+
+  it("keeps the table inside a horizontal scroll box on the Arsip tab", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    serve([], [session()]);
+    renderPage();
+
+    // Act
+    await openArchiveTab(user);
+    await row("Uji Coba DeepSeek");
+
+    // Assert
+    expect(screen.getByRole("table").parentElement).toHaveClass("overflow-x-auto", "relative");
   });
 });

@@ -13,11 +13,6 @@ type LegalRefWrite = components["schemas"]["LegalRefWrite"];
 type LegalRefRead = CaseRead["legal_refs"][number];
 type LegalRefLinkRead = LegalRefRead["links"][number];
 
-export type TrapFormValues = {
-  description: string;
-  expected_model_behavior: string;
-};
-
 /** Nama field sama dengan path API, jadi error server `legal_refs[0].links[0].pasal` bisa langsung ditempel ke form. */
 export type CaseFormValues = {
   case_code: string;
@@ -29,7 +24,6 @@ export type CaseFormValues = {
     must_not_contain: string;
     expected_conclusion: string;
   };
-  traps: TrapFormValues[];
   split_tag: SplitTag | "";
 };
 
@@ -46,11 +40,7 @@ export type CaseWritePayload = Omit<CaseWrite, "split_tag" | "legal_refs"> & {
   legal_refs: LegalRefPayload[];
 };
 
-export function emptyTrap(): TrapFormValues {
-  return { description: "", expected_model_behavior: "" };
-}
-
-/** Nilai awal form buat kasus. Tanpa baris pengurang poin: baris kosong akan ditolak server. */
+/** Nilai awal form buat kasus. */
 export function emptyCaseFormValues(): CaseFormValues {
   return {
     case_code: "",
@@ -61,7 +51,6 @@ export function emptyCaseFormValues(): CaseFormValues {
       must_not_contain: "",
       expected_conclusion: "",
     },
-    traps: [],
     split_tag: "",
   };
 }
@@ -129,10 +118,6 @@ export function toCaseWritePayload(values: CaseFormValues): CaseWritePayload {
       must_not_contain: phraseLines(values.answer_criteria.must_not_contain),
       expected_conclusion: optionalText(values.answer_criteria.expected_conclusion),
     },
-    traps: values.traps.map((trap) => ({
-      description: trap.description,
-      expected_model_behavior: optionalText(trap.expected_model_behavior),
-    })),
     split_tag: values.split_tag === "" ? null : values.split_tag,
   };
 }
@@ -179,7 +164,7 @@ function fromLegalRefRead(ref: LegalRefRead): LegalRefFormValues {
   };
 }
 
-/** Kebalikan toCaseWritePayload: isi form edit dari kasus tersimpan. Field milik server tidak ikut. */
+/** Kebalikan toCaseWritePayload: isi form edit dari kasus tersimpan. Field milik server tidak ikut, begitu juga traps lama yang mungkin masih ada di respons. */
 export function fromCaseRead(saved: CaseRead): CaseFormValues {
   const criteria = saved.answer_criteria;
   return {
@@ -195,10 +180,6 @@ export function fromCaseRead(saved: CaseRead): CaseFormValues {
       must_not_contain: (criteria.must_not_contain ?? []).join("\n"),
       expected_conclusion: textOrEmpty(criteria.expected_conclusion),
     },
-    traps: saved.traps.map((trap) => ({
-      description: trap.description,
-      expected_model_behavior: textOrEmpty(trap.expected_model_behavior),
-    })),
     split_tag: saved.split_tag,
   };
 }

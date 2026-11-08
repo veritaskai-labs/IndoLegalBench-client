@@ -116,7 +116,6 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
       must_not_contain: [],
       expected_conclusion: null,
     },
-    traps: [],
     split_tag: "dev",
     status: "draft",
     completeness_pct: 83,
@@ -141,7 +140,6 @@ function completeness(
         message: "Butuh minimal satu kriteria jawaban.",
       },
     ],
-    trap_count: 0,
     legal_ref_count: 1,
     ...overrides,
   };
@@ -527,9 +525,6 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
     expect(
       within(indicator).getByText("Butuh minimal satu kriteria jawaban."),
     ).toBeInTheDocument();
-    expect(
-      within(indicator).queryByText(/Jebakan belum ada/),
-    ).not.toBeInTheDocument();
     expect(completenessMock).toHaveBeenCalledWith(CASE_ID);
   });
 
@@ -557,7 +552,6 @@ describe("EditCasePage completeness (SCRUM-109)", () => {
         is_complete: true,
         ready_for_review: true,
         missing: [],
-        trap_count: 1,
       }),
     );
     expect(await screen.findByText("Siap diajukan review")).toBeInTheDocument();
@@ -1144,7 +1138,6 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
       is_complete: true,
       ready_for_review: true,
       missing: [],
-      trap_count: 1,
     });
 
   // Version 1 was written by the signed-in user (id u1), so the author is the creator.

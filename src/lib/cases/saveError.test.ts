@@ -94,8 +94,6 @@ describe("mapSaveError", () => {
     ["legal_refs[0].kind", "legal_refs.0.kind"],
     ["legal_refs[0].free_text", "legal_refs.0.free_text"],
     ["legal_refs[0].links", "legal_refs.0.links"],
-    ["traps[0].description", "traps.0.description"],
-    ["traps[3].expected_model_behavior", "traps.3.expected_model_behavior"],
     ["answer_criteria.expected_conclusion", "answer_criteria.expected_conclusion"],
     ["legal_refs", "legal_refs"],
   ])("maps server field %s to form path %s", (serverField, formPath) => {
@@ -145,6 +143,10 @@ describe("mapSaveError", () => {
     "legal_refs[0].links[1]",
     "legal_refs[0].links[x].pasal",
     "traps[0].unknown",
+    // traps is no longer a form field, so a server error on it has no field to land on
+    "traps",
+    "traps[0].description",
+    "traps[3].expected_model_behavior",
     "legal_refs[x].links[0].pasal",
     // Sprint 1 field names that the form no longer has
     "legal_refs[0].pasal",
@@ -158,11 +160,18 @@ describe("mapSaveError", () => {
   });
 
   it("uses Indonesian copy when a known field comes without a server message", () => {
-    expect(mapSaveError(new ApiError(422, "FIELD_REQUIRED", null, "traps[0].description"))).toEqual({
+    expect(mapSaveError(new ApiError(422, "FIELD_REQUIRED", null, "identity.title"))).toEqual({
       kind: "field",
-      path: "traps.0.description",
+      path: "identity.title",
       message: "Isian tidak valid.",
       detail: null,
+    });
+  });
+
+  it("shows the generic message when a legacy traps error comes without a server message", () => {
+    expect(mapSaveError(new ApiError(422, "VALIDATION_ERROR", null, "traps"))).toEqual({
+      kind: "form",
+      message: GENERIC_SAVE_ERROR,
     });
   });
 

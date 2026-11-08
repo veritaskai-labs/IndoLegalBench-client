@@ -1,7 +1,7 @@
 import { SECTION_KEYS, sectionLabel, sectionLines } from "@/lib/cases/versionSections";
 import type { VersionSections } from "@/types/caseVersion";
 
-/** Dua baris bisa sama persis (mis. dua pengurang poin sama), jadi kuncinya teks ditambah urutan kemunculan teks itu. */
+/** Dua baris bisa sama persis (mis. dua kriteria jawaban sama), jadi kuncinya teks ditambah urutan kemunculan teks itu. */
 function keyedLines(lines: string[]): { id: string; line: string }[] {
   const seen = new Map<string, number>();
   return lines.map((line) => {

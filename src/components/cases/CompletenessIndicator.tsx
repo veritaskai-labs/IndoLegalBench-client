@@ -44,7 +44,7 @@ export function CompletenessIndicator(props: Props) {
     );
   }
 
-  // Pengurang Poin opsional (AC4 revisi, SCRUM-130); daftar kekurangan tampil apa adanya dari server.
+  // Daftar kekurangan tampil apa adanya dari server.
   const { pct, missing, ready_for_review } = props.completeness;
 
   return (

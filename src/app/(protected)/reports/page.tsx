@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 
-import { PlaceholderPage } from "@/components/PlaceholderPage";
+import { ReportsOverview } from "@/components/reports/ReportsOverview";
 
 export const metadata: Metadata = {
   title: "Laporan | IndoLegalBench",
 };
 
+/** Server component tipis supaya metadata tetap ada; isinya bergantung pada peran, jadi di client. */
 export default function ReportsPage() {
-  return <PlaceholderPage title="Halaman Laporan" description="Fitur laporan perbandingan belum tersedia dan akan hadir pada sprint berikutnya." />;
+  return <ReportsOverview />;
 }

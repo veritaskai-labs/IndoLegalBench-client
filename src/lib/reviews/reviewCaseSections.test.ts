@@ -26,12 +26,11 @@ describe("reviewCopyToSections", () => {
   });
 
   // Positive: the structured parts are passed on as they are, the shared formatter reads them.
-  it("passes the legal references, answer criteria and traps on unchanged", () => {
+  it("passes the legal references and answer criteria on unchanged", () => {
     // Arrange
     const legalRefs = [structuredRef("UU No. 13 Tahun 2003, Pasal 151")];
     const criteria = { must_contain: ["harus_menyebut"], must_not_contain: [], expected_conclusion: null };
-    const traps = [{ description: "Menyitasi aturan yang sudah dicabut" }];
-    const copy = makeReviewCopy({ legal_refs: legalRefs, answer_criteria: criteria, traps });
+    const copy = makeReviewCopy({ legal_refs: legalRefs, answer_criteria: criteria });
 
     // Act
     const sections = reviewCopyToSections(copy);
@@ -39,7 +38,20 @@ describe("reviewCopyToSections", () => {
     // Assert
     expect(sections.legal_refs).toBe(legalRefs);
     expect(sections.answer_criteria).toBe(criteria);
-    expect(sections.traps).toBe(traps);
+  });
+
+  // AC2 SCRUM-257: traps on an old copy are not passed on to the shared formatter.
+  it("does not pass traps on, even when the copy still carries them", () => {
+    // Arrange
+    const copy = makeReviewCopy({
+      traps: [{ description: "Menyitasi aturan yang sudah dicabut" }],
+    } as Parameters<typeof makeReviewCopy>[0]);
+
+    // Act
+    const sections = reviewCopyToSections(copy);
+
+    // Assert
+    expect(Object.keys(sections)).not.toContain("traps");
   });
 
   // Edge: the category is optional on a case.

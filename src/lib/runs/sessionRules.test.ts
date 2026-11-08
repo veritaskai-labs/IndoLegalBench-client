@@ -5,9 +5,14 @@ import type { SessionListItem, SessionStatus } from "@/types/measurement";
 import {
   archiveErrorMessage,
   canArchive,
+  canUnarchive,
   caseCountText,
   formatProgress,
+  hasEnded,
+  isSettled,
   SESSION_STATUS_LABEL,
+  sessionStatusLabel,
+  unarchiveErrorMessage,
   unknownName,
 } from "./sessionRules";
 
@@ -31,21 +36,60 @@ function session(overrides: Partial<SessionListItem> = {}): SessionListItem {
   };
 }
 
-describe("SESSION_STATUS_LABEL (PBI-11 AC10, D2 status enum)", () => {
+describe("SESSION_STATUS_LABEL (PBI-11 AC10, PBI-12 AC9, D4 status enum)", () => {
   it.each<[SessionStatus, string]>([
     ["queued", "Menunggu"],
     ["running", "Berjalan"],
     ["finished", "Selesai"],
     ["finished_with_failures", "Selesai dengan kegagalan"],
     ["failed", "Gagal"],
+    // server#97 (SCRUM-214): Jeda lands on paused, Batalkan on cancelled.
+    ["paused", "Dijeda"],
+    ["cancelled", "Dibatalkan"],
+    // server#116 (PBI-22): manual session statuses, labelled as in server runs/models.py.
+    ["not_filled", "Belum terisi"],
+    ["partially_filled", "Terisi sebagian"],
+    ["complete", "Lengkap"],
+    ["graded", "Dinilai"],
+    ["finalized", "Selesai"],
   ])("names %s as %s", (status, label) => {
     expect(SESSION_STATUS_LABEL[status]).toBe(label);
+  });
+});
+
+// server#97: paused covers Jeda and a system stop; stop_reason tells them apart (Rafa, group chat).
+describe("sessionStatusLabel (PBI-12 AC9: Dijeda vs Dihentikan)", () => {
+  it("names a session the user paused Dijeda", () => {
+    expect(sessionStatusLabel("paused", "user")).toBe("Dijeda");
+  });
+
+  // server#102: error on a paused session means the model version changed after a resume.
+  it.each(["budget", "restart", "error"] as const)("names a session the system stopped (%s) Dihentikan", (reason) => {
+    expect(sessionStatusLabel("paused", reason)).toBe("Dihentikan");
+  });
+
+  // Edge: a session paused before stop_reason existed, or a list row that does not carry it.
+  it.each([null, undefined])("falls back to Dijeda when the reason is %s", (reason) => {
+    expect(sessionStatusLabel("paused", reason)).toBe("Dijeda");
+  });
+
+  // Negative: the reason only refines paused; a failed session with reason error stays Gagal.
+  it("keeps every other status on its own label", () => {
+    expect(sessionStatusLabel("failed", "error")).toBe("Gagal");
+    expect(sessionStatusLabel("running", null)).toBe("Berjalan");
   });
 });
 
 describe("formatProgress", () => {
   it("shows finished attempts out of all attempts", () => {
     expect(formatProgress(session({ status: "running", progress: { completed: 12, total: 60 } }))).toBe("12 dari 60");
+  });
+
+  // The list and the panel show the same numbers, so they group thousands the same way.
+  it("groups thousands like the progress panel", () => {
+    expect(formatProgress(session({ status: "running", progress: { completed: 1200, total: 1500 } }))).toBe(
+      "1.200 dari 1.500",
+    );
   });
 
   it("shows a finished session as complete", () => {
@@ -71,7 +115,8 @@ describe("canArchive (AC10, D10: Developer AI only own sessions)", () => {
     },
   );
 
-  it.each<SessionStatus>(["queued", "running"])("never offers it for a %s session, even to Admin", (status) => {
+  // paused and cancelled can still be resumed (D4), so they have not ended either.
+  it.each<SessionStatus>(["queued", "running", "paused", "cancelled"])("never offers it for a %s session, even to Admin", (status) => {
     expect(canArchive(session({ status }), ADMIN)).toBe(false);
   });
 
@@ -110,6 +155,49 @@ describe("archiveErrorMessage", () => {
   });
 });
 
+describe("canUnarchive (AC10, D10: Developer AI only own sessions)", () => {
+  // An archived session has ended by definition and the server ignores its status, so does the rule.
+  it.each<SessionStatus>(["finished", "finished_with_failures", "failed"])(
+    "lets Admin restore a %s session of someone else",
+    (status) => {
+      expect(canUnarchive(session({ status, created_by: "someone-else" }), ADMIN)).toBe(true);
+    },
+  );
+
+  it("lets Developer AI restore a session it started", () => {
+    expect(canUnarchive(session({ created_by: "dev-1" }), DEV_AI)).toBe(true);
+  });
+
+  it("hides it from Developer AI on a session someone else started", () => {
+    expect(canUnarchive(session({ created_by: "admin-1" }), DEV_AI)).toBe(false);
+  });
+
+  it.each(["contributor", "viewer"] as const)("hides it from %s, who cannot open the page anyway", (role) => {
+    expect(canUnarchive(session({ created_by: "u-1" }), { id: "u-1", role })).toBe(false);
+  });
+});
+
+describe("unarchiveErrorMessage", () => {
+  it.each([
+    [new ApiError(409, "SESSION_NOT_ARCHIVED"), "Sesi ini sudah dikembalikan. Muat ulang daftar."],
+    [new ApiError(403, "NOT_YOUR_SESSION"), "Developer AI hanya bisa mengembalikan sesi yang ia buat."],
+    [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang daftar."],
+    // unarchiveSession is silentForbidden, so a plain 403 (role changed while the page was open)
+    // lands here; "Coba lagi" would only retry something that keeps failing.
+    [new ApiError(403, "FORBIDDEN"), "Peran Anda tidak lagi boleh mengembalikan sesi. Muat ulang halaman."],
+  ])("explains %s", (error, message) => {
+    expect(unarchiveErrorMessage(error)).toBe(message);
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+    ["a non-error value", "boom"],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(unarchiveErrorMessage(error)).toBe("Sesi gagal dikembalikan. Coba lagi.");
+  });
+});
+
 describe("caseCountText and unknownName", () => {
   // case_count is null while queued: the snapshot does not exist yet.
   it("shows a dash before the snapshot exists, and the count after", () => {
@@ -123,5 +211,25 @@ describe("caseCountText and unknownName", () => {
     expect(unknownName(null)).toBe("Tidak diketahui");
     expect(unknownName("")).toBe("Tidak diketahui");
     expect(unknownName("DeepSeek")).toBe("DeepSeek");
+  });
+});
+
+// server has_ended: cancelled can still be resumed (server#102), so it has not ended. It does not
+// change on its own either, so the detail page stops polling it (#70 meant the same).
+describe("hasEnded and isSettled (PBI-12 AC8, SCRUM-219 polling)", () => {
+  // server#116 added finalized (a manual session Admin closed) to has_ended.
+  it.each<SessionStatus>(["finished", "finished_with_failures", "failed", "finalized"])("treats %s as ended and settled", (status) => {
+    expect(hasEnded(status)).toBe(true);
+    expect(isSettled(status)).toBe(true);
+  });
+
+  it("treats cancelled as settled but not ended", () => {
+    expect(hasEnded("cancelled")).toBe(false);
+    expect(isSettled("cancelled")).toBe(true);
+  });
+
+  // Same as #70: only ended (and now cancelled) sessions stop polling; paused keeps it.
+  it.each<SessionStatus>(["queued", "running", "paused"])("keeps %s unsettled", (status) => {
+    expect(isSettled(status)).toBe(false);
   });
 });
