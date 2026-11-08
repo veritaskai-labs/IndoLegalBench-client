@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSaveRequest,
+  canEditAnswers,
   draftFromSlot,
   emptyDraft,
   isDirty,
@@ -346,5 +347,55 @@ describe("isDirty (unsaved changes warning)", () => {
 
     // Assert
     expect(dirty).toBe(false);
+  });
+});
+
+describe("canEditAnswers (who may fill, AC8)", () => {
+  // Positive: Admin and Contributor fill while the session is open.
+  it.each(["admin", "contributor"] as const)("allows %s on an open session", (role) => {
+    // Arrange
+    const status = "partially_filled";
+
+    // Act
+    const allowed = canEditAnswers(role, status);
+
+    // Assert
+    expect(allowed).toBe(true);
+  });
+
+  // Negative: Viewer and Developer AI cannot fill, whatever the status.
+  it.each(["viewer", "developer_ai", null] as const)("refuses %s", (role) => {
+    // Arrange
+    const status = "not_filled";
+
+    // Act
+    const allowed = canEditAnswers(role, status);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: a finalized session can never be reopened, so nobody edits it.
+  it.each(["admin", "contributor"] as const)("refuses %s once the session is finalized", (role) => {
+    // Arrange
+    const status = "finalized";
+
+    // Act
+    const allowed = canEditAnswers(role, status);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: a complete or graded session can still be corrected until it is finalized.
+  it.each(["complete", "graded"] as const)("allows an admin on a %s session", (status) => {
+    // Arrange
+    const role = "admin";
+
+    // Act
+    const allowed = canEditAnswers(role, status);
+
+    // Assert
+    expect(allowed).toBe(true);
   });
 });
