@@ -368,4 +368,23 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
     expect(screen.getByText("Kasus Penipuan Bisnis")).toBeInTheDocument();
     expect(screen.getAllByRole("textbox", { name: "Jawaban Percobaan 1" })[1]).toHaveValue("ketikan saya");
   });
+
+  // Edge: the unfilled filter leaves no case, which means everything is filled (AC8).
+  it("says every case is filled when the unfilled filter leaves nothing", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    signedInAs("admin");
+    useManualSessionDetailMock.mockReturnValue({
+      status: "ready",
+      data: mockSession({ cases: [] }),
+      reload: vi.fn(),
+    });
+    render(<ManualSessionDetailPage />);
+
+    // Act
+    await user.click(screen.getByLabelText("Hanya yang belum terisi"));
+
+    // Assert
+    expect(screen.getByText("Semua kasus pada sesi ini telah selesai diisi.")).toBeInTheDocument();
+  });
 });
