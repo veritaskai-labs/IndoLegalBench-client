@@ -260,3 +260,69 @@ describe("remove and download", () => {
     expect(saveBlob).not.toHaveBeenCalled();
   });
 });
+
+describe("add result (the panel clears its field only when the item was added)", () => {
+  // Positive.
+  it("returns true when the item was added", async () => {
+    // Arrange
+    const gateway = fake([]);
+    const { result } = await setup(gateway);
+
+    // Act
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.add(LINK);
+    });
+
+    // Assert
+    expect(added).toBe(true);
+  });
+
+  // Negative: refused on the client, refused by the server, and not ready yet all return false.
+  it("returns false when the client refuses the item", async () => {
+    // Arrange
+    const gateway = fake([item("e-1"), item("e-2"), item("e-3")]);
+    const { result } = await setup(gateway);
+
+    // Act
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.add(LINK);
+    });
+
+    // Assert
+    expect(added).toBe(false);
+  });
+
+  it("returns false when the server refuses the item", async () => {
+    // Arrange
+    const gateway = fake([]);
+    gateway.addEvidence.mockRejectedValue(new ApiError(409, "EVIDENCE_LIMIT_REACHED"));
+    const { result } = await setup(gateway);
+
+    // Act
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.add(LINK);
+    });
+
+    // Assert
+    expect(added).toBe(false);
+  });
+
+  it("returns false while the list is still loading", async () => {
+    // Arrange
+    const gateway = fake([]);
+    gateway.listEvidence.mockReturnValue(new Promise(() => undefined));
+    const { result } = renderHook(() => useManualEvidence(gateway as unknown as ManualAnswerGateway, "sesi-1", "snap-1", 2));
+
+    // Act
+    let added: boolean | undefined;
+    await act(async () => {
+      added = await result.current.add(LINK);
+    });
+
+    // Assert
+    expect(added).toBe(false);
+  });
+});
