@@ -70,6 +70,7 @@ describe("measurementApi", () => {
         product_id: "prod-1",
         label: "Uji Evaluasi Sesi 1",
         purpose: "trial",
+        judge_provider_id: "judge-1",
       };
 
       const mockResponse: StartMeasurementResponse = {

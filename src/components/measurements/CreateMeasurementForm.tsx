@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { JudgeProviderSelect } from "@/components/providers/JudgeProviderSelect";
 import { ProductSelect } from "@/components/providers/ProductSelect";
 import { MeasurementSummaryCard } from "./MeasurementSummaryCard";
 import { useSuites } from "@/hooks/useSuites";
@@ -49,6 +50,7 @@ export function CreateMeasurementForm() {
   const [productId, setProductId] = useState("");
 
   // Step 4: Pengulangan & Penilai LLM
+  const [judgeProviderId, setJudgeProviderId] = useState("");
   const [repeatCount, setRepeatCount] = useState<number | "">(3);
   const hasValidRepeat =
     typeof repeatCount === "number" && repeatCount >= 1 && repeatCount <= 5;
@@ -132,7 +134,15 @@ export function CreateMeasurementForm() {
 
   async function handleStart() {
     /* v8 ignore next */
-    if (!label.trim() || selectedSuiteIds.length === 0 || !productId || !purpose || !hasValidRepeat) return;
+    if (
+      !label.trim() ||
+      selectedSuiteIds.length === 0 ||
+      !productId ||
+      !purpose ||
+      !judgeProviderId ||
+      !hasValidRepeat
+    )
+      return;
 
     setIsStarting(true);
     setStartError(null);
@@ -145,7 +155,7 @@ export function CreateMeasurementForm() {
         product_id: productId,
         label: label.trim(),
         purpose,
-        judge_provider_id: null,
+        judge_provider_id: judgeProviderId,
       };
 
       const res = await startMeasurement(payload);
@@ -172,6 +182,7 @@ export function CreateMeasurementForm() {
     selectedSuiteIds.length > 0 &&
     Boolean(productId) &&
     Boolean(purpose) &&
+    Boolean(judgeProviderId) &&
     hasValidRepeat &&
     summary !== null &&
     budgetExceeded === null &&
@@ -470,24 +481,11 @@ export function CreateMeasurementForm() {
             )}
           </div>
 
-          <div>
-            <label htmlFor="judge-provider-select" className="block text-sm font-medium text-slate-700">
-              Provider Penilai (LLM Judge)
-            </label>
-            <select
-              id="judge-provider-select"
-              disabled
-              value="default"
-              className="mt-1 w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
-            >
-              <option value="default">
-                DeepSeek V4-Flash (Default)
-              </option>
-            </select>
-            <p className="mt-1 text-xs text-slate-500">
-              Provider penilai khusus akan dikonfigurasi pada PBI-14. Saat ini otomatis menggunakan penilai default sistem.
-            </p>
-          </div>
+          <JudgeProviderSelect
+            value={judgeProviderId}
+            onChange={setJudgeProviderId}
+            disabled={isStarting}
+          />
         </div>
       </section>
 
