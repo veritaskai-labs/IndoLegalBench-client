@@ -275,12 +275,14 @@ describe("ManualAnswerBox history button (AC5)", () => {
 });
 
 describe("ManualAnswerBox evidence (AC7)", () => {
-  // Positive: a saved answer shows its evidence panel.
-  it("shows the evidence of a saved answer", async () => {
+  // Positive: a saved answer shows its evidence panel, and the list is loaded only once it is opened.
+  it("shows the evidence of a saved answer after the section is opened", async () => {
     // Arrange
     const { listEvidence } = setup({ slot: slot({ filled: true, answer_md: "Isi", answered_at_platform: "2026-11-07T01:00:00Z" }) });
+    expect(listEvidence).not.toHaveBeenCalled();
 
     // Act
+    await userEvent.click(screen.getByRole("button", { name: "Lihat bukti (0 dari 3)" }));
     const heading = await screen.findByRole("heading", { name: "Bukti (0 dari 3)" });
 
     // Assert

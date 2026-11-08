@@ -188,16 +188,37 @@ function EvidenceList({
 /**
  * Bukti opsional satu jawaban (AC7): maksimal 3 berkas PNG/JPG/PDF atau tautan. Bukti menempel pada
  * jawaban yang sudah tersimpan, jadi slot kosong hanya menjelaskan itu. Peran yang tidak boleh
- * melihat bukti (evidence_count null) tidak melihat apa pun dan tidak memicu pemuatan.
+ * melihat bukti (evidence_count null) tidak melihat apa pun dan tidak memicu pemuatan. Daftar baru
+ * diambil saat bagian dibuka; jumlahnya sudah ada di slot (evidence_count), jadi membuka halaman
+ * tidak mengirim satu permintaan per jawaban.
  */
 export function EvidencePanel({ evidenceCount, slotFilled, canEdit, ...rest }: Props) {
+  const [open, setOpen] = useState(false);
+  // Setelah dibuka sekali, daftar tetap terpasang (hanya disembunyikan) supaya tidak dimuat ulang
+  // dan tautan yang sedang diketik tidak hilang.
+  const [opened, setOpened] = useState(false);
   if (evidenceCount === null) return null;
   if (!slotFilled) {
     return canEdit ? <p className="text-xs text-slate-500">Simpan jawaban terlebih dahulu untuk menambah bukti.</p> : null;
   }
   return (
     <section aria-label="Bukti jawaban" className="space-y-3 border-t border-slate-100 pt-3">
-      <EvidenceList {...rest} canEdit={canEdit} />
+      <button
+        type="button"
+        className={BUTTON}
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((value) => !value);
+          setOpened(true);
+        }}
+      >
+        {open ? "Sembunyikan bukti" : `Lihat bukti (${evidenceCount} dari ${MAX_EVIDENCE_PER_ANSWER})`}
+      </button>
+      {opened && (
+        <div hidden={!open}>
+          <EvidenceList {...rest} canEdit={canEdit} />
+        </div>
+      )}
     </section>
   );
 }
