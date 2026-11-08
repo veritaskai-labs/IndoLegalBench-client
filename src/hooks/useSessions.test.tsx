@@ -123,6 +123,22 @@ describe("useSessions polling (SCRUM-266, AC6)", () => {
     expect(list).toHaveBeenCalledTimes(1);
   });
 
+  // AC4: the 5 second refresh must not move last_activity_at. Opening the page and Reload still do.
+  it("sends passive only on the repeating poll, not on the first load or reload", async () => {
+    list.mockResolvedValue([row("s-1", "running", 7)]);
+    const { result } = renderHook(() => useSessions());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(list).toHaveBeenNthCalledWith(1, false);
+
+    await act(() => vi.advanceTimersByTimeAsync(SESSIONS_POLL_MS));
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    expect(list).toHaveBeenNthCalledWith(2, false, { activity: "passive" });
+
+    act(() => result.current.reload());
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(3));
+    expect(list).toHaveBeenNthCalledWith(3, false);
+  });
+
   it("does not poll a list with no active session", async () => {
     list.mockResolvedValue([row("s-1", "finished", 20)]);
     renderHook(() => useSessions());

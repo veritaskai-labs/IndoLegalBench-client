@@ -43,6 +43,22 @@ describe("useMeasurementProgress (PBI-12 AC5, AC6)", () => {
     expect(result.current).toMatchObject({ status: "ready", data: progress(240) });
   });
 
+  // AC4: the 5 second refresh must not move last_activity_at. The first read and Reload still do.
+  it("sends passive only on the repeating poll, not on the first load or reload", async () => {
+    apiFetchMock.mockResolvedValue(progress(1));
+    const { result } = renderHook(() => useMeasurementProgress("s-1", { poll: true }));
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(1));
+    expect(apiFetchMock).toHaveBeenNthCalledWith(1, "/measurements/s-1/progress");
+
+    await vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS);
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(2));
+    expect(apiFetchMock).toHaveBeenNthCalledWith(2, "/measurements/s-1/progress", { activity: "passive" });
+
+    act(() => result.current.reload());
+    await waitFor(() => expect(apiFetchMock).toHaveBeenCalledTimes(3));
+    expect(apiFetchMock).toHaveBeenNthCalledWith(3, "/measurements/s-1/progress");
+  });
+
   it("asks again about every 5 seconds, with no page reload", async () => {
     apiFetchMock.mockResolvedValue(progress(240));
     renderHook(() => useMeasurementProgress("s-1", { poll: true }));

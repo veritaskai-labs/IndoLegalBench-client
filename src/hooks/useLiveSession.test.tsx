@@ -46,7 +46,21 @@ describe("useLiveSession (PBI-11 AC9, refresh about every 5 seconds)", () => {
     expect(result.current.session.label).toBe("Sesi uji 2");
     await tick();
     expect(result.current.session.label).toBe("Sesi uji 3");
-    expect(get).toHaveBeenCalledWith("s-1");
+    expect(get).toHaveBeenNthCalledWith(1, "s-1", { activity: "passive" });
+  });
+
+  it("sends passive only on the interval, and reload stays a normal read", async () => {
+    get.mockResolvedValue(session("running", "Baru"));
+    const { result } = renderHook(() => useLiveSession(session("running")));
+
+    await tick();
+    expect(get).toHaveBeenNthCalledWith(1, "s-1", { activity: "passive" });
+
+    await act(async () => {
+      result.current.reload();
+    });
+
+    expect(get).toHaveBeenNthCalledWith(2, "s-1");
   });
 
   it.each<SessionStatus>(["finished", "finished_with_failures", "failed", "cancelled"])(

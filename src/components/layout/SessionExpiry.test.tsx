@@ -286,6 +286,8 @@ describe("SessionExpiry", () => {
 
     expect(cancel.defaultPrevented).toBe(true);
     expect(dialog.getAttribute("closedby")).toBe("none");
+    expect(dialog.getAttribute("aria-describedby")).toBe("session-expiry-reason");
+    expect(document.getElementById("session-expiry-reason")).toHaveTextContent(WARNING_TEXT);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 

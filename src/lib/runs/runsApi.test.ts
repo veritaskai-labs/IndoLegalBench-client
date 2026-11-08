@@ -288,3 +288,19 @@ describe("getAttemptCalls (PBI-12 AC4)", () => {
     expect(forbidden).not.toHaveBeenCalled();
   });
 });
+
+describe("measurement polls (SCRUM-254 AC4)", () => {
+  it.each([
+    ["list", () => listSessions(false, { activity: "passive" }), /\/measurements$/],
+    ["session", () => getSession("s-1", { activity: "passive" }), /\/measurements\/s-1$/],
+    ["progress", () => getProgress("s-1", { activity: "passive" }), /\/measurements\/s-1\/progress$/],
+  ] as const)("sends the passive header on a %s poll", async (_name, read, url) => {
+    fetchMock.mockResolvedValue(fakeResponse(200, []));
+
+    await read();
+
+    const [calledUrl, init] = fetchMock.mock.calls[0];
+    expect(calledUrl).toMatch(url);
+    expect(init.headers["X-Veritask-Activity"]).toBe("passive");
+  });
+});

@@ -18,7 +18,11 @@ function sessionPath(sessionId: string): string {
  * GET /measurements: sesi yang belum diarsipkan, terbaru di atas (PBI-11 AC10).
  * archived=true meminta sesi arsip dengan kolom yang sama (server SCRUM-263).
  */
-export function listSessions(archived = false): Promise<SessionListItem[]> {
+export function listSessions(
+  archived = false,
+  options?: { activity?: "passive" },
+): Promise<SessionListItem[]> {
+  void options;
   return apiFetch<SessionListItem[]>(archived ? `${BASE}?archived=true` : BASE);
 }
 
@@ -26,7 +30,11 @@ export function listSessions(archived = false): Promise<SessionListItem[]> {
  * GET /measurements/{id}: snapshot kasus dan jawaban mentah per percobaan (PBI-11 AC7, AC8).
  * 404 MEASUREMENT_NOT_FOUND diteruskan ke halaman; 403 tetap dialihkan ke /forbidden.
  */
-export function getSession(sessionId: string): Promise<SessionDetail> {
+export function getSession(
+  sessionId: string,
+  options?: { activity?: "passive" },
+): Promise<SessionDetail> {
+  void options;
   return apiFetch<SessionDetail>(sessionPath(sessionId));
 }
 
@@ -58,7 +66,11 @@ export function unarchiveSession(sessionId: string): Promise<SessionUnarchiveRes
  * di tempat; 403 tetap dialihkan ke /forbidden, karena peran yang berubah saat halaman
  * terbuka memang tidak boleh lagi memantau.
  */
-export function getProgress(sessionId: string): Promise<MeasurementProgress> {
+export function getProgress(
+  sessionId: string,
+  options?: { activity?: "passive" },
+): Promise<MeasurementProgress> {
+  void options;
   return apiFetch<MeasurementProgress>(`${sessionPath(sessionId)}/progress`);
 }
 
