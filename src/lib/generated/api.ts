@@ -2501,7 +2501,7 @@ export interface components {
             kind: "initial" | "regrade";
             /**
              * Status
-             * @description completed bila sudah selesai dinilai
+             * @description completed bila ada skor; failed bila tidak satu pun percobaan bisa dinilai
              */
             status: string;
             /**
@@ -3219,9 +3219,10 @@ export interface components {
             purpose: components["schemas"]["MeasurementPurpose"];
             /**
              * Judge Provider Id
-             * @description Provider penilai (LLM judge) dari GET /judge-providers. Boleh kosong; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
+             * Format: uuid
+             * @description Provider penilai (LLM judge) dari GET /judge-providers. Wajib; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
              */
-            judge_provider_id?: string | null;
+            judge_provider_id: string;
         };
         /**
          * ManualStartResponse
@@ -4186,7 +4187,7 @@ export interface components {
             kind: "initial" | "regrade";
             /**
              * Status
-             * @description completed bila sudah selesai dinilai
+             * @description completed bila ada skor; failed bila tidak satu pun percobaan bisa dinilai
              */
             status: string;
             /**
@@ -4441,9 +4442,10 @@ export interface components {
             purpose: components["schemas"]["MeasurementPurpose"];
             /**
              * Judge Provider Id
-             * @description Provider penilai (LLM judge) dari GET /judge-providers. Boleh kosong; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
+             * Format: uuid
+             * @description Provider penilai (LLM judge) dari GET /judge-providers. Wajib; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
              */
-            judge_provider_id?: string | null;
+            judge_provider_id: string;
         };
         /**
          * StartResponse

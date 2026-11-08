@@ -32,8 +32,10 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 vi.mock("@/hooks/useSuites", () => ({ useSuites: useSuitesMock }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }));
 vi.mock("@/lib/providers/providerApi", () => ({ listProductOptions: vi.fn() }));
+vi.mock("@/lib/providers/judgeApi", () => ({ listJudgeOptions: vi.fn() }));
 
 import { listProductOptions } from "@/lib/providers/providerApi";
+import { listJudgeOptions } from "@/lib/providers/judgeApi";
 
 const SUMMARY_URL = `${BASE_URL}/measurements/summary`;
 const START_URL = `${BASE_URL}/measurements`;
@@ -81,12 +83,16 @@ function bodyOf(call: Parameters<typeof fetch>) {
 
 type User = ReturnType<typeof userEvent.setup>;
 
+const JUDGE_ID = "8b47374e-0000-4000-8000-000000000001";
+
 async function fillForm(user: User, label = "Run Oktober AiYU") {
   await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), label);
   await user.click(screen.getByRole("button", { name: "Pengukuran Resmi" }));
   await user.click(screen.getByRole("checkbox", { name: "Suite Ketenagakerjaan" }));
   const product = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
   await user.selectOptions(product, "prod-aiyu");
+  const judge = await screen.findByRole("combobox", { name: /Provider Penilai/i });
+  await user.selectOptions(judge, JUDGE_ID);
 }
 
 async function reviewSummary(user: User) {
@@ -109,6 +115,14 @@ describe("CreateMeasurementForm against a server-shaped API", () => {
     useSuitesMock.mockReturnValue({ status: "ready", suites: SUITES, reload: vi.fn() });
     vi.mocked(listProductOptions).mockResolvedValue([
       { id: "prod-aiyu", name: "AiYU", measurement_type: "automatic" },
+    ]);
+    vi.mocked(listJudgeOptions).mockResolvedValue([
+      {
+        id: JUDGE_ID,
+        name: "DeepSeek V4-Flash",
+        provider_type: "openai_compatible",
+        model_name: "deepseek-v4-flash",
+      },
     ]);
   });
 
@@ -155,7 +169,7 @@ describe("CreateMeasurementForm against a server-shaped API", () => {
       product_id: "prod-aiyu",
       label: "Run Oktober AiYU",
       purpose: "official",
-      judge_provider_id: null,
+      judge_provider_id: JUDGE_ID,
     });
   });
 
