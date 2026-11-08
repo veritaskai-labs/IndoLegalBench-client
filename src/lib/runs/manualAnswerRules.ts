@@ -1,5 +1,6 @@
 import { isoToWibInput, nowWibInput, wibInputToIso } from "@/lib/datetime/wibInput";
-import type { ManualAnswerSaveRequest, ManualAttemptSlot } from "@/types/measurement";
+import type { Role } from "@/lib/auth";
+import type { ManualAnswerSaveRequest, ManualAttemptSlot, SessionStatus } from "@/types/measurement";
 
 /** Isian satu kotak jawaban. Waktu disimpan sebagai nilai kolom tanggal-jam dalam WIB. */
 export type AnswerDraft = {
@@ -80,4 +81,12 @@ export function isDirty(draft: AnswerDraft, baseline: AnswerDraft): boolean {
     draft.note !== baseline.note ||
     draft.obtainedAt !== baseline.obtainedAt
   );
+}
+
+/**
+ * Admin dan Kontributor mengisi; Viewer tidak. Sesi Selesai tidak bisa dibuka kembali (AC8),
+ * jadi kotaknya hanya terbaca. Server memeriksa lagi dengan 403 dan 409 MANUAL_SESSION_FINALIZED.
+ */
+export function canEditAnswers(role: Role | null, status: SessionStatus): boolean {
+  return (role === "admin" || role === "contributor") && status !== "finalized";
 }
