@@ -2,8 +2,20 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
+import type { Role } from "@/types";
 import type { JudgeProviderOption } from "@/types/provider";
 import { JudgeProviderSelect } from "./JudgeProviderSelect";
+
+const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
+
+vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
+
+function signIn(role: Role) {
+  useAuthMock.mockReturnValue({
+    status: "authenticated",
+    user: { id: "u1", name: "Uji", email: "uji@veritask.ai", role },
+  });
+}
 
 const DEEPSEEK: JudgeProviderOption = {
   id: "8b47374e-0000-4000-8000-000000000001",
@@ -35,6 +47,7 @@ function renderSelect(props: { value?: string; disabled?: boolean } = {}) {
 beforeEach(() => {
   api = { listJudgeOptions: vi.fn() };
   onChange = vi.fn();
+  signIn("admin");
 });
 
 describe("JudgeProviderSelect", () => {
@@ -101,7 +114,7 @@ describe("JudgeProviderSelect", () => {
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("explains that no active judge exists instead of showing an empty select", async () => {
+  it("tells an Admin to add a provider on the Provider page, with a link, when none is active", async () => {
     // Arrange
     api.listJudgeOptions.mockResolvedValue([]);
 
@@ -110,9 +123,27 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(
-      await screen.findByText(/Belum ada provider penilai yang aktif/),
+      await screen.findByText(/Belum ada provider yang aktif/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "halaman Provider" }),
+    ).toHaveAttribute("href", "/admin/providers");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("asks a Developer AI to have an Admin add one, without a link they cannot open", async () => {
+    // Arrange
+    signIn("developer_ai");
+    api.listJudgeOptions.mockResolvedValue([]);
+
+    // Act
+    renderSelect();
+
+    // Assert
+    expect(
+      await screen.findByText(/Minta Admin menambahkannya di halaman Provider/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("offers a retry when the list fails to load", async () => {

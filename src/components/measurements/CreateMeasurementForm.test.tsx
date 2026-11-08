@@ -515,7 +515,11 @@ describe("CreateMeasurementForm", () => {
     await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
     await screen.findByTestId("summary-card");
 
-    expect(await screen.findByText(/Belum ada provider penilai yang aktif/)).toBeInTheDocument();
+    expect(await screen.findByText(/Belum ada provider yang aktif/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "halaman Provider" })).toHaveAttribute(
+      "href",
+      "/admin/providers",
+    );
     expect(screen.getByRole("button", { name: "Mulai Pengukuran" })).toBeDisabled();
   });
 
