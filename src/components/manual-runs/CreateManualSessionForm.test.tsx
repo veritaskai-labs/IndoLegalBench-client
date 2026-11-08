@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateManualSessionForm } from "./CreateManualSessionForm";
 import type { Suite } from "@/types/suite";
+import type { JudgeProviderOption } from "@/types/provider";
 import { ToastProvider } from "@/components/ui/Toast";
 
 const { pushMock, showToastMock } = vi.hoisted(() => ({
@@ -56,15 +57,36 @@ vi.mock("@/components/providers/ProductSelect", () => ({
   ),
 }));
 
+vi.mock("@/lib/providers/judgeApi", () => ({
+  listJudgeOptions: vi.fn(),
+}));
+
 vi.mock("@/lib/runs/manualRunsApi", () => ({
   createManualSession: vi.fn(),
   manualErrorMessage: (err: unknown, fallback: string) =>
     err instanceof Error ? err.message : fallback,
 }));
 
+import { listJudgeOptions } from "@/lib/providers/judgeApi";
 import { createManualSession } from "@/lib/runs/manualRunsApi";
 
+const mockListJudgeOptions = vi.mocked(listJudgeOptions);
 const mockCreateManualSession = vi.mocked(createManualSession);
+
+const MOCK_JUDGES: JudgeProviderOption[] = [
+  {
+    id: "judge-1",
+    name: "Judge DeepSeek",
+    provider_type: "openai_compatible",
+    model_name: "deepseek-v4-flash",
+  },
+  {
+    id: "judge-2",
+    name: "Judge Claude",
+    provider_type: "anthropic_messages",
+    model_name: "claude-3-5-sonnet",
+  },
+];
 
 const MOCK_SUITES: Suite[] = [
   {
@@ -107,9 +129,15 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
       suites: MOCK_SUITES,
       reload: vi.fn(),
     });
+    mockListJudgeOptions.mockResolvedValue(MOCK_JUDGES);
   });
 
-  it("renders all form sections and disabled submit button initially", () => {
+  async function pilihPenilai(user: ReturnType<typeof userEvent.setup>) {
+    const judgeSelect = await screen.findByRole("combobox", { name: /Provider Penilai/i });
+    await user.selectOptions(judgeSelect, "judge-1");
+  }
+
+  it("renders all form sections and disabled submit button initially", async () => {
     renderForm();
 
     expect(screen.getByText("1. Informasi Sesi")).toBeInTheDocument();
@@ -138,9 +166,10 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     expect(screen.getByText(/3. Produk AI Manual/)).toBeInTheDocument();
     expect(screen.getByTestId("product-select")).toBeInTheDocument();
 
-    expect(screen.getByText("4. Jumlah Percobaan per Kasus")).toBeInTheDocument();
+    expect(screen.getByText("4. Pengulangan & Penilai LLM")).toBeInTheDocument();
     const repeatInput = screen.getByLabelText(/Jumlah Pengulangan/i);
     expect(repeatInput).toHaveValue(1);
+    expect(await screen.findByRole("combobox", { name: /Provider Penilai/i })).toBeInTheDocument();
 
     const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
     expect(submitBtn).toBeDisabled();
@@ -189,6 +218,7 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(screen.getByRole("button", { name: "Uji Coba" }));
     await user.click(screen.getByLabelText("Suite Hukum Pidana"));
     await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
+    await pilihPenilai(user);
 
     const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
     expect(submitBtn).toBeEnabled();
@@ -249,6 +279,7 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(screen.getByLabelText("Suite Hukum Pidana"));
     await user.click(screen.getByRole("button", { name: "Hanya Dev" }));
     await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
+    await pilihPenilai(user);
 
     const repeatInput = screen.getByLabelText(/Jumlah Pengulangan/i);
     await user.clear(repeatInput);
@@ -266,7 +297,7 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
       case_filter: "dev",
       product_id: "prod-manual-1",
       repeat_count: 2,
-      judge_provider_id: null,
+      judge_provider_id: "judge-1",
     });
 
     await waitFor(() => {
@@ -289,6 +320,7 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(screen.getByRole("button", { name: "Uji Coba" }));
     await user.click(screen.getByLabelText("Suite Hukum Pidana"));
     await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
+    await pilihPenilai(user);
 
     const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
     await user.click(submitBtn);

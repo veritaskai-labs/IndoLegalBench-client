@@ -31,7 +31,7 @@ describe("manualRunsApi", () => {
         case_filter: "both",
         product_id: "p-manual-1",
         repeat_count: 1,
-        judge_provider_id: null,
+        judge_provider_id: "judge-provider-uuid",
       };
 
       const expectedResponse: ManualStartResponse = {

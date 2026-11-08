@@ -2,6 +2,7 @@
 
 import { useId, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
+import { JudgeProviderSelect } from "@/components/providers/JudgeProviderSelect";
 import { ProductSelect } from "@/components/providers/ProductSelect";
 import { useSuites } from "@/hooks/useSuites";
 import { useToast } from "@/components/ui/Toast";
@@ -36,7 +37,8 @@ export function CreateManualSessionForm() {
   // Step 3: Produk AI Manual
   const [productId, setProductId] = useState("");
 
-  // Step 4: Percobaan per Kasus (AC1: standar 1, rentang 1-5)
+  // Step 4: Pengulangan & Penilai LLM
+  const [judgeProviderId, setJudgeProviderId] = useState("");
   const [repeatCount, setRepeatCount] = useState<number | "">(MANUAL_SESSION_DEFAULT_REPETITIONS);
 
   // Submission State
@@ -53,6 +55,7 @@ export function CreateManualSessionForm() {
     purpose !== "" &&
     selectedSuiteIds.length > 0 &&
     productId !== "" &&
+    judgeProviderId !== "" &&
     isValidRepeat;
 
   function handleSuiteToggle(suiteId: string) {
@@ -84,7 +87,7 @@ export function CreateManualSessionForm() {
       case_filter: caseFilter,
       product_id: productId,
       repeat_count: typeof repeatCount === "number" ? repeatCount : MANUAL_SESSION_DEFAULT_REPETITIONS,
-      judge_provider_id: null,
+      judge_provider_id: judgeProviderId,
     };
 
     try {
@@ -293,70 +296,78 @@ export function CreateManualSessionForm() {
         </div>
       </section>
 
-      {/* Bagian 4: Pengulangan */}
+      {/* Bagian 4: Pengulangan & Penilai LLM */}
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
         <header className="border-b border-slate-100 pb-3">
           <h2 className="text-base font-semibold text-slate-900">
-            4. Jumlah Percobaan per Kasus
+            4. Pengulangan & Penilai LLM
           </h2>
           <p className="text-xs text-slate-500">
-            Tentukan berapa kali pengisian jawaban manual dilakukan untuk setiap kasus.
+            Tentukan berapa kali pengisian jawaban manual dilakukan dan model penilai yang digunakan.
           </p>
         </header>
 
-        <div className="max-w-md">
-          <label htmlFor="repeat-count-input" className="block text-sm font-medium text-slate-700">
-            Jumlah Pengulangan (1–5) <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="repeat-count-input"
-            type="number"
-            min={MANUAL_SESSION_MIN_REPETITIONS}
-            max={MANUAL_SESSION_MAX_REPETITIONS}
-            value={repeatCount}
-            onChange={(e) => {
-              const raw = e.target.value;
-              if (raw === "") {
-                setRepeatCount("");
-                return;
-              }
-              let val = Number.parseInt(raw, 10);
-              if (raw.length > 1) {
-                const lastDigit = Number.parseInt(raw.slice(-1), 10);
-                if (
-                  !Number.isNaN(lastDigit) &&
-                  lastDigit >= MANUAL_SESSION_MIN_REPETITIONS &&
-                  lastDigit <= MANUAL_SESSION_MAX_REPETITIONS
-                ) {
-                  val = lastDigit;
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="repeat-count-input" className="block text-sm font-medium text-slate-700">
+              Jumlah Pengulangan (1–5) <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="repeat-count-input"
+              type="number"
+              min={MANUAL_SESSION_MIN_REPETITIONS}
+              max={MANUAL_SESSION_MAX_REPETITIONS}
+              value={repeatCount}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  setRepeatCount("");
+                  return;
                 }
-              }
-              setRepeatCount(
-                Number.isNaN(val)
-                  ? MANUAL_SESSION_DEFAULT_REPETITIONS
-                  : Math.min(
-                      MANUAL_SESSION_MAX_REPETITIONS,
-                      Math.max(MANUAL_SESSION_MIN_REPETITIONS, val),
-                    ),
-              );
-            }}
-            onBlur={() => {
-              if (
-                repeatCount === "" ||
-                typeof repeatCount !== "number" ||
-                Number.isNaN(repeatCount)
-              ) {
-                setRepeatCount(MANUAL_SESSION_DEFAULT_REPETITIONS);
-              }
-            }}
-            required
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
+                let val = Number.parseInt(raw, 10);
+                if (raw.length > 1) {
+                  const lastDigit = Number.parseInt(raw.slice(-1), 10);
+                  if (
+                    !Number.isNaN(lastDigit) &&
+                    lastDigit >= MANUAL_SESSION_MIN_REPETITIONS &&
+                    lastDigit <= MANUAL_SESSION_MAX_REPETITIONS
+                  ) {
+                    val = lastDigit;
+                  }
+                }
+                setRepeatCount(
+                  Number.isNaN(val)
+                    ? MANUAL_SESSION_DEFAULT_REPETITIONS
+                    : Math.min(
+                        MANUAL_SESSION_MAX_REPETITIONS,
+                        Math.max(MANUAL_SESSION_MIN_REPETITIONS, val),
+                      ),
+                );
+              }}
+              onBlur={() => {
+                if (
+                  repeatCount === "" ||
+                  typeof repeatCount !== "number" ||
+                  Number.isNaN(repeatCount)
+                ) {
+                  setRepeatCount(MANUAL_SESSION_DEFAULT_REPETITIONS);
+                }
+              }}
+              required
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Standar pengukuran manual adalah{" "}
+              <strong>{MANUAL_SESSION_DEFAULT_REPETITIONS} kali</strong> (rentang{" "}
+              {MANUAL_SESSION_MIN_REPETITIONS} sampai {MANUAL_SESSION_MAX_REPETITIONS}).
+            </p>
+          </div>
+
+          <JudgeProviderSelect
+            value={judgeProviderId}
+            onChange={setJudgeProviderId}
+            disabled={isSubmitting}
           />
-          <p className="mt-1 text-xs text-slate-500">
-            Standar pengukuran manual adalah{" "}
-            <strong>{MANUAL_SESSION_DEFAULT_REPETITIONS} kali</strong> (rentang{" "}
-            {MANUAL_SESSION_MIN_REPETITIONS} sampai {MANUAL_SESSION_MAX_REPETITIONS}).
-          </p>
         </div>
       </section>
 
