@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useManualAnswerDraft } from "@/hooks/useManualAnswerDraft";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { answerErrorMessage, type ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import type { ManualAnswerResponse, ManualAttemptSlot } from "@/types/measurement";
 import { AnswerFields } from "./AnswerFields";
+import { AnswerHistoryDialog } from "./AnswerHistoryDialog";
+import { EvidencePanel } from "./EvidencePanel";
 
 function statusLabel(slot: ManualAttemptSlot): string {
   if (!slot.filled) return "Belum diisi";
@@ -23,6 +25,7 @@ export function ManualAnswerBox({
   slot,
   gateway,
   canEdit,
+  currentUserId,
   onSaved,
   onDirtyChange,
 }: Readonly<{
@@ -31,6 +34,7 @@ export function ManualAnswerBox({
   slot: ManualAttemptSlot;
   gateway: ManualAnswerGateway;
   canEdit: boolean;
+  currentUserId: string | null;
   onSaved: (response: ManualAnswerResponse) => void;
   onDirtyChange: (attemptId: string, dirty: boolean) => void;
 }>) {
@@ -43,6 +47,7 @@ export function ManualAnswerBox({
     onSaved,
   });
 
+  const [historyOpen, setHistoryOpen] = useState(false);
   const attemptId = slot.attempt_id;
   useEffect(() => onDirtyChange(attemptId, answer.dirty), [attemptId, answer.dirty, onDirtyChange]);
   // Kotak yang hilang tidak lagi punya perubahan yang menunggu disimpan.
@@ -80,15 +85,47 @@ export function ManualAnswerBox({
         </p>
       )}
 
-      {canEdit && (
-        <button
-          type="button"
-          onClick={() => void answer.save()}
-          disabled={answer.saving}
-          className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {answer.saving ? "Menyimpan..." : "Simpan jawaban"}
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => void answer.save()}
+            disabled={answer.saving}
+            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            {answer.saving ? "Menyimpan..." : "Simpan jawaban"}
+          </button>
+        )}
+        {slot.filled && (
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Riwayat
+          </button>
+        )}
+      </div>
+
+      <EvidencePanel
+        gateway={gateway}
+        sessionId={sessionId}
+        snapshotItemId={snapshotItemId}
+        attemptNo={slot.repetition_no}
+        evidenceCount={slot.evidence_count}
+        slotFilled={slot.filled}
+        canEdit={canEdit}
+      />
+
+      {historyOpen && (
+        <AnswerHistoryDialog
+          gateway={gateway}
+          sessionId={sessionId}
+          snapshotItemId={snapshotItemId}
+          attemptNo={slot.repetition_no}
+          currentUserId={currentUserId}
+          onClose={() => setHistoryOpen(false)}
+        />
       )}
 
       {answer.confirming && (
