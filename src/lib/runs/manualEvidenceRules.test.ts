@@ -76,7 +76,6 @@ describe("validateEvidence for a file (AC7: PNG, JPG, PDF)", () => {
   it.each([
     ["animasi.gif", "image/gif"],
     ["dokumen.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-    ["tanpa-tipe", ""],
   ])("rejects %s", (name, type) => {
     // Arrange
     const input = { kind: "file", file: file(name, type) } as const;
@@ -86,6 +85,34 @@ describe("validateEvidence for a file (AC7: PNG, JPG, PDF)", () => {
 
     // Assert
     expect(error).toBe("Hanya berkas PNG, JPG, atau PDF yang boleh diunggah.");
+  });
+
+  // Edge: some OS and picker combinations report no type for a real PNG; the server checks the
+  // content (magic bytes), so the client lets an empty type or octet-stream through.
+  it.each([
+    ["layar.png", ""],
+    ["layar.jpg", "application/octet-stream"],
+  ])("lets %s with the generic type %j through to the server", (name, type) => {
+    // Arrange
+    const input = { kind: "file", file: file(name, type) } as const;
+
+    // Act
+    const error = validateEvidence(input, 0);
+
+    // Assert
+    expect(error).toBeNull();
+  });
+
+  // Negative: a generic type does not skip the empty-file check.
+  it("still rejects an empty file with no type", () => {
+    // Arrange
+    const input = { kind: "file", file: file("kosong.png", "", "") } as const;
+
+    // Act
+    const error = validateEvidence(input, 0);
+
+    // Assert
+    expect(error).toBe("Berkas kosong. Pilih tangkapan layar yang benar.");
   });
 
   // Edge: an empty file has nothing to show.
