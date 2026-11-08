@@ -4,6 +4,8 @@ export const MAX_EVIDENCE_PER_ANSWER = 3;
 export const EVIDENCE_LIMIT_MESSAGE = `Bukti sudah mencapai batas ${MAX_EVIDENCE_PER_ANSWER} per jawaban. Hapus satu bukti untuk menambah yang baru.`;
 
 const ALLOWED_FILE_TYPES: readonly string[] = ["image/png", "image/jpeg", "application/pdf"];
+/** Tipe kosong atau generik: server memeriksa isi berkas (magic bytes), jadi client tidak menolaknya. */
+const GENERIC_FILE_TYPES: readonly string[] = ["", "application/octet-stream"];
 
 export type EvidenceInput = { kind: "file"; file: File } | { kind: "link"; url: string };
 type EvidenceKind = EvidenceInput["kind"];
@@ -15,7 +17,7 @@ type EvidenceKind = EvidenceInput["kind"];
  */
 const KIND_RULES: { [K in EvidenceKind]: (input: Extract<EvidenceInput, { kind: K }>) => string | null } = {
   file: ({ file }) => {
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) return "Hanya berkas PNG, JPG, atau PDF yang boleh diunggah.";
+    if (!ALLOWED_FILE_TYPES.includes(file.type) && !GENERIC_FILE_TYPES.includes(file.type)) return "Hanya berkas PNG, JPG, atau PDF yang boleh diunggah.";
     if (file.size === 0) return "Berkas kosong. Pilih tangkapan layar yang benar.";
     return null;
   },
