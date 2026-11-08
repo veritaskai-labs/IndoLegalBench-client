@@ -3482,6 +3482,21 @@ export interface components {
              * @description Waktu angka ini terakhir diperbarui
              */
             updated_at: string;
+            /**
+             * Completed Cases
+             * @description Kasus yang semua pengulangannya sudah punya hasil akhir (SCRUM-265)
+             */
+            completed_cases: number;
+            /**
+             * Total Cases
+             * @description Kasus di sesi. 0 selama antre
+             */
+            total_cases: number;
+            /**
+             * Percent Cases Complete
+             * @description Persen kasus selesai, bulat ke bawah, 0 sampai 100. 0 bila belum ada kasus
+             */
+            percent_cases_complete: number;
         };
         /**
          * ProviderType
@@ -4267,6 +4282,21 @@ export interface components {
              * @description Semua percobaan sesi, kasus kali pengulangan. 0 selama antre
              */
             total: number;
+            /**
+             * Completed Cases
+             * @description Kasus yang semua pengulangannya sudah punya hasil akhir (SCRUM-265)
+             */
+            completed_cases: number;
+            /**
+             * Total Cases
+             * @description Kasus di sesi. 0 selama antre
+             */
+            total_cases: number;
+            /**
+             * Percent Cases Complete
+             * @description Persen kasus selesai, bulat ke bawah, 0 sampai 100. 0 bila belum ada kasus
+             */
+            percent_cases_complete: number;
         };
         /**
          * SessionResumeRequest
