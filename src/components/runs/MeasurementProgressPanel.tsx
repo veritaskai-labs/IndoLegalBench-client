@@ -8,7 +8,6 @@ import {
   remainingTimeText,
   startedAtText,
   wholePercent,
-  wholePercentText,
 } from "@/lib/runs/sessionProgress";
 import type { MeasurementProgress } from "@/types/measurement";
 
@@ -18,14 +17,15 @@ import type { MeasurementProgress } from "@/types/measurement";
  * soal jaringan. Tidak menampilkan jumlah coba ulang berjalan maupun penanda produk
  * bermasalah, sesuai AC5.
  *
- * Judul dan bar memakai kasus selesai (SCRUM-266, feedback UAT): "7 dari 20 kasus", 35%.
- * Jumlah panggilan tidak dibuang, hanya pindah ke daftar fakta; gagal tetap per panggilan.
+ * Judul dan bar memakai kasus selesai (SCRUM-266, feedback UAT): "Kasus selesai 7 dari 20 (35%)".
+ * Jumlah panggilan tidak dibuang, hanya pindah ke daftar fakta; gagal tetap per panggilan dengan
+ * penyebutnya sendiri (K3, keputusan PO Kak Aileen).
  */
 export function MeasurementProgressPanel({ progress }: Readonly<{ progress: MeasurementProgress }>) {
   const percent = wholePercent(progress.percent_cases_complete);
   const facts: { label: string; value: string }[] = [
     { label: "Panggilan selesai", value: callCountText(progress.completed_calls, progress.total_calls) },
-    { label: "Gagal", value: failedText(progress.failed_calls, progress.percent_failed) },
+    { label: "Panggilan gagal", value: failedText(progress.failed_calls, progress.completed_calls, progress.percent_failed) },
     { label: "Perkiraan sisa waktu", value: remainingTimeText(progress.remaining_seconds) },
     { label: "Biaya berjalan", value: formatRupiah(progress.running_cost_idr) },
     { label: "Sisa anggaran bulan ini", value: formatRupiahDown(progress.remaining_budget_idr) },
@@ -35,12 +35,12 @@ export function MeasurementProgressPanel({ progress }: Readonly<{ progress: Meas
 
   return (
     <section aria-label="Progres pengukuran" className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
-      {/* flex-wrap: on a phone the percentage moves under the count instead of being squeezed. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-lg font-semibold text-slate-900">
-          {casesDoneText(progress.completed_cases, progress.total_cases)}
+      {/* K3: each unit carries its label and denominator, since failures below are per call. */}
+      <div>
+        <p className="text-xs font-semibold text-slate-500">Kasus selesai</p>
+        <p className="mt-0.5 text-lg font-semibold text-slate-900">
+          {casesDoneText(progress.completed_cases, progress.total_cases, progress.percent_cases_complete)}
         </p>
-        <p className="text-sm font-medium text-slate-700">{wholePercentText(progress.percent_cases_complete)}</p>
       </div>
 
       <progress

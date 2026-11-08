@@ -36,10 +36,14 @@ export function percentText(value: string | number): string {
   return `${PERCENT.format(percent)}%`;
 }
 
-/** "12 gagal (5,0%)" (AC5). Persennya dari panggilan yang sudah selesai, dihitung server. */
-export function failedText(failed: number, percentFailed: string | number): string {
+/**
+ * "3 dari 60 (5,0%)" di bawah label Panggilan gagal (AC5, SCRUM-266 K3). Penyebutnya panggilan
+ * yang sudah selesai, karena persen dari server (percent_failed) juga dihitung atas itu; memakai
+ * total panggilan akan membuat jumlah dan persennya tidak cocok. Gagal tetap per panggilan (AC4).
+ */
+export function failedText(failed: number, completedCalls: number, percentFailed: string | number): string {
   if (failed === 0) return "Tidak ada kegagalan";
-  return `${COUNT.format(failed)} gagal (${percentText(percentFailed)})`;
+  return `${countOfTotal(failed, completedCalls)} (${percentText(percentFailed)})`;
 }
 
 /**
@@ -76,12 +80,12 @@ export function budgetExhausted(remainingBudgetIdr: string): boolean {
   return Number.isFinite(remaining) && remaining <= 0;
 }
 /**
- * "7 dari 20 kasus" (SCRUM-266). Kasus dihitung selesai oleh server (SCRUM-265): semua
- * pengulangannya sudah diproses. Total 0 di panel berarti snapshot belum ada.
+ * "7 dari 20 (35%)" di bawah label Kasus selesai (SCRUM-266 K3). Kasus dihitung selesai oleh server
+ * (SCRUM-265): semua pengulangannya sudah diproses. Total 0 berarti snapshot belum ada.
  */
-export function casesDoneText(completed: number, total: number): string {
+export function casesDoneText(completed: number, total: number, percent: number): string {
   if (total === 0) return "Belum ada kasus";
-  return `${countOfTotal(completed, total)} kasus`;
+  return `${countOfTotal(completed, total)} (${wholePercentText(percent)})`;
 }
 
 /**
