@@ -308,7 +308,7 @@ it("allows retry when an ended session progress request fails", async () => {
       await screen.findByRole("region", {
         name: "Progres pengukuran",
       }),
-    ).getByText("1 dari 1 kasus"),
+    ).getByText("1 dari 1 (100%)"),
   ).toBeInTheDocument();
 
   expect(progressRead).toHaveBeenCalledTimes(2);
@@ -636,8 +636,9 @@ describe("SessionDetailPage progress panel (PBI-12 AC5, AC6)", () => {
     render(<SessionDetailPage />);
 
     const panel = within(await screen.findByRole("region", { name: "Progres pengukuran" }));
-    expect(panel.getByText("7 dari 20 kasus")).toBeInTheDocument();
-    expect(panel.getByText("35%")).toBeInTheDocument();
+    expect(panel.getByText("Kasus selesai")).toBeInTheDocument();
+    expect(panel.getByText("7 dari 20 (35%)")).toBeInTheDocument();
+    expect(panel.getByText("12 dari 240 (5,0%)")).toBeInTheDocument();
   });
 
   // The session itself loaded fine, so one failed progress read must not empty the page.

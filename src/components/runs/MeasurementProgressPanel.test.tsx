@@ -24,11 +24,12 @@ function progress(overrides: Partial<MeasurementProgress> = {}): MeasurementProg
 }
 
 describe("MeasurementProgressPanel (PBI-12 AC5)", () => {
-  it("shows the cases done out of the total with a whole percentage (SCRUM-266)", () => {
+  // K3: two units in one panel, so each number carries its label and denominator.
+  it("labels the cases done with the denominator and a whole percentage (SCRUM-266 K3)", () => {
     render(<MeasurementProgressPanel progress={progress()} />);
 
-    expect(screen.getByText("7 dari 20 kasus")).toBeInTheDocument();
-    expect(screen.getByText("35%")).toBeInTheDocument();
+    expect(screen.getByText("Kasus selesai")).toBeInTheDocument();
+    expect(screen.getByText("7 dari 20 (35%)")).toBeInTheDocument();
   });
 
   it("draws the bar from the same case percentage so a screen reader reads it too", () => {
@@ -48,16 +49,14 @@ describe("MeasurementProgressPanel (PBI-12 AC5)", () => {
   it("shows 0% with an empty bar before any case is done", () => {
     render(<MeasurementProgressPanel progress={progress({ completed_cases: 0, percent_cases_complete: 0 })} />);
 
-    expect(screen.getByText("0 dari 20 kasus")).toBeInTheDocument();
-    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.getByText("0 dari 20 (0%)")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0");
   });
 
   it("shows 100% with a full bar once every case is done", () => {
     render(<MeasurementProgressPanel progress={progress({ completed_cases: 20, percent_cases_complete: 100 })} />);
 
-    expect(screen.getByText("20 dari 20 kasus")).toBeInTheDocument();
-    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("20 dari 20 (100%)")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "100");
   });
 
@@ -71,20 +70,22 @@ describe("MeasurementProgressPanel (PBI-12 AC5)", () => {
 
     expect(screen.getByText("Belum ada kasus")).toBeInTheDocument();
     expect(screen.getByText("Belum ada panggilan")).toBeInTheDocument();
-    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("value", "0");
   });
 
   it("keeps the bar inside 0-100 if the server sends a broken percentage", () => {
     render(<MeasurementProgressPanel progress={progress({ percent_cases_complete: 140 })} />);
 
     expect(screen.getByRole("progressbar")).toHaveAttribute("value", "100");
-    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("7 dari 20 (100%)")).toBeInTheDocument();
   });
 
-  it("shows the failures as a count and a percentage", () => {
+  // K3: failures stay per call (AC4 counts every attempt) and say out of how many completed calls.
+  it("labels the failed calls with their denominator and percentage", () => {
     render(<MeasurementProgressPanel progress={progress()} />);
 
-    expect(screen.getByText("12 gagal (5,0%)")).toBeInTheDocument();
+    expect(screen.getByText("Panggilan gagal")).toBeInTheDocument();
+    expect(screen.getByText("12 dari 240 (5,0%)")).toBeInTheDocument();
   });
 
   it("shows the estimated time left in words", () => {

@@ -44,17 +44,28 @@ describe("percentText (PBI-12 AC5)", () => {
   });
 });
 
-describe("failedText (PBI-12 AC5)", () => {
-  it("says the count and the percentage together", () => {
-    expect(failedText(12, "5.0")).toBe("12 gagal (5,0%)");
+describe("failedText (PBI-12 AC5, SCRUM-266 K3)", () => {
+  // K3: the failed count names its denominator. The server percentage is over completed calls,
+  // so the denominator is completed calls too, otherwise count and percentage would disagree.
+  it("says failed out of completed calls with the percentage", () => {
+    expect(failedText(3, 60, "5.0")).toBe("3 dari 60 (5,0%)");
   });
 
   it("says there are none instead of writing a zero", () => {
-    expect(failedText(0, "0.0")).toBe("Tidak ada kegagalan");
+    expect(failedText(0, 60, "0.0")).toBe("Tidak ada kegagalan");
+  });
+
+  // Before any call is done there is nothing to fail, so no "0 dari 0".
+  it("says there are none before any call is done", () => {
+    expect(failedText(0, 0, "0.0")).toBe("Tidak ada kegagalan");
+  });
+
+  it("shows every completed call failed as 100%", () => {
+    expect(failedText(60, 60, "100.0")).toBe("60 dari 60 (100,0%)");
   });
 
   it("groups thousands the same way the call count does", () => {
-    expect(failedText(1200, "80.0")).toBe("1.200 gagal (80,0%)");
+    expect(failedText(1200, 1500, "80.0")).toBe("1.200 dari 1.500 (80,0%)");
   });
 });
 
@@ -113,22 +124,28 @@ describe("budgetExhausted (PBI-12 AC5)", () => {
     expect(budgetExhausted("abc")).toBe(false);
   });
 });
-describe("casesDoneText (SCRUM-266)", () => {
-  it("reads the way the ticket spells it", () => {
-    expect(casesDoneText(7, 20)).toBe("7 dari 20 kasus");
+describe("casesDoneText (SCRUM-266 K3, under the label Kasus selesai)", () => {
+  it("reads the way K3 spells it: count, denominator and percentage", () => {
+    expect(casesDoneText(7, 20, 35)).toBe("7 dari 20 (35%)");
   });
 
-  it("shows the empty and the full end as plain counts", () => {
-    expect(casesDoneText(0, 20)).toBe("0 dari 20 kasus");
-    expect(casesDoneText(20, 20)).toBe("20 dari 20 kasus");
+  it("shows the empty and the full end", () => {
+    expect(casesDoneText(0, 20, 0)).toBe("0 dari 20 (0%)");
+    expect(casesDoneText(20, 20, 100)).toBe("20 dari 20 (100%)");
   });
 
   it("groups thousands the Indonesian way", () => {
-    expect(casesDoneText(1200, 1500)).toBe("1.200 dari 1.500 kasus");
+    expect(casesDoneText(1200, 1500, 80)).toBe("1.200 dari 1.500 (80%)");
+  });
+
+  // Floor and clamp come from wholePercent, so 100% only means every case is done.
+  it("never prints past 100% or below 0%", () => {
+    expect(casesDoneText(20, 20, 140)).toBe("20 dari 20 (100%)");
+    expect(casesDoneText(0, 20, -3)).toBe("0 dari 20 (0%)");
   });
 
   it("says there are no cases yet instead of showing 0 dari 0", () => {
-    expect(casesDoneText(0, 0)).toBe("Belum ada kasus");
+    expect(casesDoneText(0, 0, 0)).toBe("Belum ada kasus");
   });
 });
 
