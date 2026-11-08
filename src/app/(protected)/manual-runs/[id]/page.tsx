@@ -12,9 +12,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useManualSessionDetail } from "@/hooks/useManualSessionDetail";
 import { decodeRouteParam } from "@/lib/routeParams";
 
+import type { ManualSessionDetail } from "@/types/measurement";
+
 /**
  * Halaman detail dan progres sesi pengukuran manual (PBI-22 AC3, AC4, AC8, AC11-AC13).
- * Menampilkan ringkasan status, progres pengisian, panduan penyalinan, serta kartu kasus.
+ * Menampilkan ringkasan status, progres pengisian, serta kartu kasus.
  */
 export default function ManualSessionDetailPage() {
   const params = useParams<{ id: string }>();
@@ -24,6 +26,11 @@ export default function ManualSessionDetailPage() {
 
   const [unfilledOnly, setUnfilledOnly] = useState(false);
   const detail = useManualSessionDetail(sessionId, unfilledOnly);
+
+  const [cachedSession, setCachedSession] = useState<ManualSessionDetail | null>(null);
+  if (detail.status === "ready" && detail.data !== cachedSession) {
+    setCachedSession(detail.data);
+  }
 
   const isAuthenticated = auth.status === "authenticated";
   const role = isAuthenticated ? auth.user.role : null;
@@ -38,9 +45,9 @@ export default function ManualSessionDetailPage() {
   if (!isAuthenticated) return <LoadingState />;
   if (!isAllowed) return null;
 
-  if (detail.status === "loading") return <LoadingState />;
+  if (detail.status === "loading" && !cachedSession) return <LoadingState />;
 
-  if (detail.status === "error") {
+  if (detail.status === "error" && !cachedSession) {
     return (
       <div className="space-y-4">
         <ErrorState
@@ -58,7 +65,8 @@ export default function ManualSessionDetailPage() {
     );
   }
 
-  const session = detail.data;
+  const session = detail.status === "ready" ? detail.data : cachedSession;
+  if (!session) return null;
 
   return (
     <div className="space-y-6">
@@ -89,7 +97,17 @@ export default function ManualSessionDetailPage() {
           )}
         </div>
 
-        {session.cases.length === 0 ? (
+        {detail.status === "loading" ? (
+          <div className="rounded-lg border border-slate-200 bg-white p-8">
+            <LoadingState />
+          </div>
+        ) : detail.status === "error" ? (
+          <ErrorState
+            variant="card"
+            message={detail.message}
+            onRetry={detail.reload}
+          />
+        ) : session.cases.length === 0 ? (
           <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
             {unfilledOnly
               ? "Semua kasus pada sesi ini telah selesai diisi."

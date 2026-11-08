@@ -8,6 +8,13 @@ export type StartMeasurementRequest = components["schemas"]["StartRequest"];
 export type StartMeasurementResponse = components["schemas"]["StartResponse"];
 
 export { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
+export {
+  SESSION_LABEL_MAX_LENGTH,
+  AUTOMATIC_SESSION_STANDARD_REPETITIONS,
+  MANUAL_SESSION_DEFAULT_REPETITIONS,
+  MANUAL_SESSION_MIN_REPETITIONS,
+  MANUAL_SESSION_MAX_REPETITIONS,
+} from "@/lib/runs/sessionRules";
 
 /** Satu baris GET /measurements (PBI-11 AC10, server SCRUM-210). */
 export type SessionListItem = components["schemas"]["SessionListItem"];

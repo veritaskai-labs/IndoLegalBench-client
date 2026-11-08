@@ -144,7 +144,7 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
     expect(screen.getByRole("link", { name: "Kembali ke Pengukuran Manual" })).toBeInTheDocument();
   });
 
-  it("renders detail view with header, guidance, and case cards for allowed users", async () => {
+  it("renders detail view with header and case cards for allowed users", async () => {
     const user = userEvent.setup();
     signedInAs("admin");
     const session = mockSession();
@@ -188,6 +188,35 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
 
     await user.click(filterCheckbox);
     expect(useManualSessionDetailMock).toHaveBeenCalledWith("session-123", true);
+  });
+
+  it("keeps shell and header mounted without blanking when toggling filter or refetching", async () => {
+    const user = userEvent.setup();
+    signedInAs("contributor");
+    const session = mockSession();
+    useManualSessionDetailMock.mockReturnValue({
+      status: "ready",
+      data: session,
+      reload: vi.fn(),
+    });
+
+    const { rerender } = render(<ManualSessionDetailPage />);
+    expect(screen.getByRole("heading", { name: "Pengukuran LegalHero Batch 1" })).toBeInTheDocument();
+
+    const filterCheckbox = screen.getByLabelText("Hanya yang belum terisi");
+    await user.click(filterCheckbox);
+
+    // Transition hook to loading state during refetch
+    useManualSessionDetailMock.mockReturnValue({
+      status: "loading",
+      reload: vi.fn(),
+    });
+    rerender(<ManualSessionDetailPage />);
+
+    // Header and title still mounted (page does not blank)
+    expect(screen.getByRole("heading", { name: "Pengukuran LegalHero Batch 1" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Hanya yang belum terisi")).toBeInTheDocument();
+    expect(screen.getByText("Memuat…")).toBeInTheDocument();
   });
 
   it("renders empty state message when cases list is empty", () => {

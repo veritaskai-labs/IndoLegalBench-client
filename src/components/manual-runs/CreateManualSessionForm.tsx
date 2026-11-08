@@ -7,7 +7,14 @@ import { useSuites } from "@/hooks/useSuites";
 import { useToast } from "@/components/ui/Toast";
 import { createManualSession, manualErrorMessage } from "@/lib/runs/manualRunsApi";
 import type { CaseFilter, MeasurementPurpose, ManualStartRequest } from "@/types/measurement";
-import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/types/measurement";
+import {
+  CASE_FILTER_LABEL,
+  MEASUREMENT_PURPOSE_LABEL,
+  SESSION_LABEL_MAX_LENGTH,
+  MANUAL_SESSION_DEFAULT_REPETITIONS,
+  MANUAL_SESSION_MIN_REPETITIONS,
+  MANUAL_SESSION_MAX_REPETITIONS,
+} from "@/types/measurement";
 
 const CASE_FILTERS: readonly CaseFilter[] = ["both", "dev", "test"];
 const PURPOSES: readonly MeasurementPurpose[] = ["official", "trial"];
@@ -30,16 +37,19 @@ export function CreateManualSessionForm() {
   const [productId, setProductId] = useState("");
 
   // Step 4: Percobaan per Kasus (AC1: standar 1, rentang 1-5)
-  const [repeatCount, setRepeatCount] = useState<number | "">(1);
+  const [repeatCount, setRepeatCount] = useState<number | "">(MANUAL_SESSION_DEFAULT_REPETITIONS);
 
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const isValidRepeat = typeof repeatCount === "number" && repeatCount >= 1 && repeatCount <= 5;
+  const isValidRepeat =
+    typeof repeatCount === "number" &&
+    repeatCount >= MANUAL_SESSION_MIN_REPETITIONS &&
+    repeatCount <= MANUAL_SESSION_MAX_REPETITIONS;
   const isFormValid =
     label.trim().length > 0 &&
-    label.trim().length <= 200 &&
+    label.trim().length <= SESSION_LABEL_MAX_LENGTH &&
     purpose !== "" &&
     selectedSuiteIds.length > 0 &&
     productId !== "" &&
@@ -73,7 +83,7 @@ export function CreateManualSessionForm() {
       suite_ids: selectedSuiteIds,
       case_filter: caseFilter,
       product_id: productId,
-      repeat_count: typeof repeatCount === "number" ? repeatCount : 1,
+      repeat_count: typeof repeatCount === "number" ? repeatCount : MANUAL_SESSION_DEFAULT_REPETITIONS,
       judge_provider_id: null,
     };
 
@@ -118,14 +128,14 @@ export function CreateManualSessionForm() {
               id={labelId}
               type="text"
               required
-              maxLength={200}
+              maxLength={SESSION_LABEL_MAX_LENGTH}
               placeholder="Contoh: Pengukuran LegalHero Batch 1"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
             />
             <p className="mt-1 text-xs text-slate-500">
-              Maksimal 200 karakter.
+              Maksimal {SESSION_LABEL_MAX_LENGTH} karakter.
             </p>
           </div>
 
@@ -301,8 +311,8 @@ export function CreateManualSessionForm() {
           <input
             id="repeat-count-input"
             type="number"
-            min={1}
-            max={5}
+            min={MANUAL_SESSION_MIN_REPETITIONS}
+            max={MANUAL_SESSION_MAX_REPETITIONS}
             value={repeatCount}
             onChange={(e) => {
               const raw = e.target.value;
@@ -313,11 +323,22 @@ export function CreateManualSessionForm() {
               let val = Number.parseInt(raw, 10);
               if (raw.length > 1) {
                 const lastDigit = Number.parseInt(raw.slice(-1), 10);
-                if (!Number.isNaN(lastDigit) && lastDigit >= 1 && lastDigit <= 5) {
+                if (
+                  !Number.isNaN(lastDigit) &&
+                  lastDigit >= MANUAL_SESSION_MIN_REPETITIONS &&
+                  lastDigit <= MANUAL_SESSION_MAX_REPETITIONS
+                ) {
                   val = lastDigit;
                 }
               }
-              setRepeatCount(Number.isNaN(val) ? 1 : Math.min(5, Math.max(1, val)));
+              setRepeatCount(
+                Number.isNaN(val)
+                  ? MANUAL_SESSION_DEFAULT_REPETITIONS
+                  : Math.min(
+                      MANUAL_SESSION_MAX_REPETITIONS,
+                      Math.max(MANUAL_SESSION_MIN_REPETITIONS, val),
+                    ),
+              );
             }}
             onBlur={() => {
               if (
@@ -325,14 +346,16 @@ export function CreateManualSessionForm() {
                 typeof repeatCount !== "number" ||
                 Number.isNaN(repeatCount)
               ) {
-                setRepeatCount(1);
+                setRepeatCount(MANUAL_SESSION_DEFAULT_REPETITIONS);
               }
             }}
             required
             className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600"
           />
           <p className="mt-1 text-xs text-slate-500">
-            Standar pengukuran manual adalah <strong>1 kali</strong> (rentang 1 sampai 5).
+            Standar pengukuran manual adalah{" "}
+            <strong>{MANUAL_SESSION_DEFAULT_REPETITIONS} kali</strong> (rentang{" "}
+            {MANUAL_SESSION_MIN_REPETITIONS} sampai {MANUAL_SESSION_MAX_REPETITIONS}).
           </p>
         </div>
       </section>

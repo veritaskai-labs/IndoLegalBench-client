@@ -5,7 +5,11 @@ import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { FinalizeSessionDialog } from "@/components/manual-runs/FinalizeSessionDialog";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { unknownName } from "@/lib/runs/sessionRules";
-import { CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/types/measurement";
+import {
+  AUTOMATIC_SESSION_STANDARD_REPETITIONS,
+  CASE_FILTER_LABEL,
+  MEASUREMENT_PURPOSE_LABEL,
+} from "@/types/measurement";
 import type { Role } from "@/types";
 import type { ManualSessionDetail } from "@/types/measurement";
 
@@ -30,7 +34,8 @@ export function ManualSessionHeader({
   const isFinalized = session.status === "finalized";
   // AC12: Otomatis standarnya 3 kali, manual standarnya 1 kali.
   // Bila jumlah percobaan berbeda dari sesi otomatis (3), tampilkan penanda.
-  const hasDifferentRepetitions = session.repetitions !== 3;
+  const hasDifferentRepetitions =
+    session.repetitions !== AUTOMATIC_SESSION_STANDARD_REPETITIONS;
 
   const percent =
     session.total_answers > 0
@@ -155,7 +160,7 @@ export function ManualSessionHeader({
               {/* AC12: Penanda bila pengulangan berbeda dari standar sesi otomatis */}
               {hasDifferentRepetitions && (
                 <span
-                  title="Jumlah percobaan berbeda dari standar pengukuran otomatis (3x)"
+                  title={`Jumlah percobaan berbeda dari standar pengukuran otomatis (${AUTOMATIC_SESSION_STANDARD_REPETITIONS}x)`}
                   className="rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800 border border-sky-200"
                 >
                   Jumlah percobaan berbeda
@@ -218,16 +223,12 @@ export function ManualSessionHeader({
               </button>
             )}
 
-            {/* Tombol Nilai untuk Admin (AC8, AC9) */}
+            {/* Tombol Nilai untuk Admin (AC8, AC9) - Disiapkan untuk integrasi penilaian pada SCRUM-236 */}
             {isAdmin && (
               <button
                 type="button"
-                disabled={!isAllFilled}
-                title={
-                  !isAllFilled
-                    ? "Penilaian baru dapat dilakukan setelah semua jawaban terisi."
-                    : "Nilai jawaban model menggunakan rubrik dan aturan penilaian."
-                }
+                disabled
+                title="Pengiriman penilaian sesi manual akan diintegrasikan pada subtask SCRUM-236."
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Kirim untuk Dinilai

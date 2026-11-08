@@ -167,7 +167,7 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(gradeBtn).toBeDisabled();
   });
 
-  it("enables 'Tandai Selesai' and 'Kirim untuk Dinilai' when all answers are filled (AC8, AC9)", () => {
+  it("enables 'Tandai Selesai' and keeps 'Kirim untuk Dinilai' disabled pending SCRUM-236 (AC8, AC9)", () => {
     const session = createMockDetail({
       status: "complete",
       filled_answers: 50,
@@ -187,7 +187,11 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(finalizeBtn).toBeEnabled();
 
     const gradeBtn = screen.getByRole("button", { name: /kirim untuk dinilai/i });
-    expect(gradeBtn).toBeEnabled();
+    expect(gradeBtn).toBeDisabled();
+    expect(gradeBtn).toHaveAttribute(
+      "title",
+      "Pengiriman penilaian sesi manual akan diintegrasikan pada subtask SCRUM-236.",
+    );
   });
 
   it("does NOT show 'Kirim untuk Dinilai' button for non-admin users (AC8, AC9)", () => {
