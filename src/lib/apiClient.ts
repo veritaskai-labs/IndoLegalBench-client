@@ -124,15 +124,21 @@ async function parseError(response: Response): Promise<ApiError> {
  */
 export type ApiFetchInit = RequestInit & { silentForbidden?: boolean };
 
-/** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
-export async function apiFetch<T>(
+/**
+ * Kirim permintaan dengan cookie sesi dan tangani galat server. Dipakai bersama oleh apiFetch (JSON)
+ * dan apiFetchBlob (berkas), supaya penanganan galat dan 403 hanya ada di satu tempat.
+ * Badan FormData (unggah multipart) tidak diberi Content-Type: browser yang memasang batas multipart-nya.
+ */
+async function request(
   path: string,
-  { silentForbidden = false, ...init }: ApiFetchInit = {},
-): Promise<T> {
+  { silentForbidden = false, ...init }: ApiFetchInit,
+): Promise<Response> {
+  const defaultHeaders: Record<string, string> =
+    init.body instanceof FormData ? {} : { "Content-Type": "application/json" };
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...init.headers },
+    headers: { ...defaultHeaders, ...init.headers },
   });
 
   if (!response.ok) {
@@ -144,6 +150,18 @@ export async function apiFetch<T>(
     if (err.status === 401) notifyUnauthorized(err.code === "SESSION_EXPIRED" ? "expired" : "no_session");
     throw err;
   }
+  return response;
+}
+
+/** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
+export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promise<T> {
+  const response = await request(path, init);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** Seperti apiFetch, tetapi hasilnya berkas (misalnya unduh bukti jawaban manual). */
+export async function apiFetchBlob(path: string, init: ApiFetchInit = {}): Promise<Blob> {
+  const response = await request(path, init);
+  return response.blob();
 }
