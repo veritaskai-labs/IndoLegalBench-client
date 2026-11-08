@@ -18,7 +18,8 @@ export const SESSIONS_POLL_MS = 5000;
 export function useSessions(archived = false) {
   return usePolledResource({
     requestKey: archived ? "measurement-sessions-archived" : "measurement-sessions",
-    load: () => listSessions(archived),
+    load: (passive) =>
+      passive ? listSessions(archived, { activity: "passive" }) : listSessions(archived),
     toMessage: () => "Gagal memuat sesi pengukuran. Coba lagi.",
     shouldPoll: (sessions) => !archived && sessions !== null && shouldPollSessions(sessions),
     intervalMs: SESSIONS_POLL_MS,

@@ -29,10 +29,11 @@ export function useLiveSession(initial: SessionDetail): LiveSession {
   const sessionId = initial.id;
   const settled = isSettled(session.status);
 
-  const reload = useCallback(() => {
+  const refresh = useCallback((passive: boolean) => {
     fetching.current = true;
 
-    getSession(sessionId)
+    const request = passive ? getSession(sessionId, { activity: "passive" }) : getSession(sessionId);
+    request
       .then((updated) => {
         setSession(updated);
         setStale(false);
@@ -45,13 +46,17 @@ export function useLiveSession(initial: SessionDetail): LiveSession {
       });
   }, [sessionId]);
 
+  const reload = useCallback(() => {
+    refresh(false);
+  }, [refresh]);
+
   useEffect(() => {
     if (settled) return;
     const timer = setInterval(() => {
-      if (!fetching.current) reload();
+      if (!fetching.current) refresh(true);
     }, SESSION_POLL_MS);
     return () => clearInterval(timer);
-  }, [settled, reload]);
+  }, [settled, refresh]);
 
   return { session, stale, reload };
 }

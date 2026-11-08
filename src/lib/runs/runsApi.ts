@@ -10,6 +10,12 @@ import type {
 
 const BASE = "/measurements";
 
+type PassiveRead = { activity?: "passive" };
+
+function passiveInit(options?: PassiveRead): { activity: "passive" } | undefined {
+  return options?.activity === "passive" ? { activity: "passive" } : undefined;
+}
+
 function sessionPath(sessionId: string): string {
   return `${BASE}/${encodeURIComponent(sessionId)}`;
 }
@@ -18,24 +24,20 @@ function sessionPath(sessionId: string): string {
  * GET /measurements: sesi yang belum diarsipkan, terbaru di atas (PBI-11 AC10).
  * archived=true meminta sesi arsip dengan kolom yang sama (server SCRUM-263).
  */
-export function listSessions(
-  archived = false,
-  options?: { activity?: "passive" },
-): Promise<SessionListItem[]> {
-  void options;
-  return apiFetch<SessionListItem[]>(archived ? `${BASE}?archived=true` : BASE);
+export function listSessions(archived = false, options?: PassiveRead): Promise<SessionListItem[]> {
+  const path = archived ? `${BASE}?archived=true` : BASE;
+  const init = passiveInit(options);
+  return init ? apiFetch<SessionListItem[]>(path, init) : apiFetch<SessionListItem[]>(path);
 }
 
 /**
  * GET /measurements/{id}: snapshot kasus dan jawaban mentah per percobaan (PBI-11 AC7, AC8).
  * 404 MEASUREMENT_NOT_FOUND diteruskan ke halaman; 403 tetap dialihkan ke /forbidden.
  */
-export function getSession(
-  sessionId: string,
-  options?: { activity?: "passive" },
-): Promise<SessionDetail> {
-  void options;
-  return apiFetch<SessionDetail>(sessionPath(sessionId));
+export function getSession(sessionId: string, options?: PassiveRead): Promise<SessionDetail> {
+  const path = sessionPath(sessionId);
+  const init = passiveInit(options);
+  return init ? apiFetch<SessionDetail>(path, init) : apiFetch<SessionDetail>(path);
 }
 
 /**
@@ -66,12 +68,10 @@ export function unarchiveSession(sessionId: string): Promise<SessionUnarchiveRes
  * di tempat; 403 tetap dialihkan ke /forbidden, karena peran yang berubah saat halaman
  * terbuka memang tidak boleh lagi memantau.
  */
-export function getProgress(
-  sessionId: string,
-  options?: { activity?: "passive" },
-): Promise<MeasurementProgress> {
-  void options;
-  return apiFetch<MeasurementProgress>(`${sessionPath(sessionId)}/progress`);
+export function getProgress(sessionId: string, options?: PassiveRead): Promise<MeasurementProgress> {
+  const path = `${sessionPath(sessionId)}/progress`;
+  const init = passiveInit(options);
+  return init ? apiFetch<MeasurementProgress>(path, init) : apiFetch<MeasurementProgress>(path);
 }
 
 /**

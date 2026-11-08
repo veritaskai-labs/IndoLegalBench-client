@@ -18,6 +18,7 @@ type Settled<T> = { key: string; state: AsyncResource<T> };
  *
  * shouldPoll menerima data terakhir (null selama loading atau error), jadi pemanggil bisa
  * berhenti polling dari isi datanya. load, toMessage, dan shouldPoll boleh fungsi baru tiap render.
+ * load(false) is the first read and Reload. load(true) is the interval and must not extend the session.
  */
 export function usePolledResource<T>({
   requestKey,
@@ -27,7 +28,7 @@ export function usePolledResource<T>({
   intervalMs,
 }: Readonly<{
   requestKey: string;
-  load: () => Promise<T>;
+  load: (passive: boolean) => Promise<T>;
   toMessage: (error: unknown) => string;
   shouldPoll: (data: T | null) => boolean;
   intervalMs: number;
@@ -41,9 +42,9 @@ export function usePolledResource<T>({
     latest.current = { load, toMessage };
   });
 
-  const read = useCallback(() => {
+  const read = useCallback((passive: boolean) => {
     latest.current
-      .load()
+      .load(passive)
       .then((data) => {
         if (current.current !== requestKey) return;
         withData.current = requestKey;
@@ -57,7 +58,7 @@ export function usePolledResource<T>({
 
   useEffect(() => {
     current.current = requestKey;
-    read();
+    read(false);
     return () => {
       current.current = "";
     };
@@ -68,9 +69,9 @@ export function usePolledResource<T>({
 
   useEffect(() => {
     if (!poll) return;
-    const timer = setInterval(read, intervalMs);
+    const timer = setInterval(() => read(true), intervalMs);
     return () => clearInterval(timer);
   }, [poll, read, intervalMs]);
 
-  return { ...state, reload: read };
+  return { ...state, reload: () => read(false) };
 }

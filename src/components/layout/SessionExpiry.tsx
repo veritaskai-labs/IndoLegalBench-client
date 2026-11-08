@@ -139,12 +139,15 @@ export function SessionExpiry() {
     <dialog
       ref={openAsModal}
       aria-labelledby="session-expiry-title"
+      aria-describedby="session-expiry-reason"
       className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
     >
       <h2 id="session-expiry-title" className="text-base font-medium">
         Sesi akan berakhir
       </h2>
-      <p className="mt-2 text-sm text-slate-600">{WARNING_TEXT}</p>
+      <p id="session-expiry-reason" className="mt-2 text-sm text-slate-600">
+        {WARNING_TEXT}
+      </p>
       <div className="mt-6 flex justify-end">
         <button
           type="button"
