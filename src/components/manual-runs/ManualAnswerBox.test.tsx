@@ -23,7 +23,9 @@ function slot(overrides: Partial<ManualAttemptSlot> = {}): ManualAttemptSlot {
 
 function setup(options: { slot?: ManualAttemptSlot; canEdit?: boolean; save?: ManualAnswerGateway["saveAnswer"] } = {}) {
   const saveAnswer = vi.fn<ManualAnswerGateway["saveAnswer"]>(options.save ?? (() => Promise.resolve(RESPONSE)));
-  const gateway = { saveAnswer } as unknown as ManualAnswerGateway;
+  const getHistory = vi.fn().mockResolvedValue([]);
+  const listEvidence = vi.fn().mockResolvedValue([]);
+  const gateway = { saveAnswer, getHistory, listEvidence } as unknown as ManualAnswerGateway;
   const onSaved = vi.fn();
   const onDirtyChange = vi.fn();
   const view = render(
@@ -33,11 +35,12 @@ function setup(options: { slot?: ManualAttemptSlot; canEdit?: boolean; save?: Ma
       slot={options.slot ?? slot()}
       gateway={gateway}
       canEdit={options.canEdit ?? true}
+      currentUserId="u-2"
       onSaved={onSaved}
       onDirtyChange={onDirtyChange}
     />,
   );
-  return { saveAnswer, onSaved, onDirtyChange, ...view };
+  return { saveAnswer, getHistory, listEvidence, onSaved, onDirtyChange, ...view };
 }
 
 function type(text: string) {
@@ -219,5 +222,91 @@ describe("ManualAnswerBox unsaved changes and permissions", () => {
     // Assert
     expect(screen.queryByRole("button", { name: "Simpan jawaban" })).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Jawaban Percobaan 1" })).toHaveAttribute("readonly");
+  });
+});
+
+describe("ManualAnswerBox history button (AC5)", () => {
+  const filled = () => slot({ filled: true, answer_md: "Isi", answered_at_platform: "2026-11-07T01:00:00Z" });
+
+  // Positive: every saved answer has a Riwayat button that opens the history of that attempt.
+  it("opens the history of this attempt", async () => {
+    // Arrange
+    const { getHistory } = setup({ slot: filled() });
+
+    // Act
+    await userEvent.click(screen.getByRole("button", { name: "Riwayat" }));
+
+    // Assert
+    expect(await screen.findByRole("dialog", { name: "Riwayat Percobaan 1" })).toBeInTheDocument();
+    expect(getHistory).toHaveBeenCalledWith("sesi-1", "snap-1", 1);
+  });
+
+  // Edge: everyone who can open the session sees it, also without edit permission.
+  it("shows the history button to someone who cannot edit", () => {
+    // Arrange / Act
+    setup({ slot: filled(), canEdit: false });
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Riwayat" })).toBeInTheDocument();
+  });
+
+  // Negative: an answer that was never saved has no history.
+  it("has no history button for an unfilled attempt", () => {
+    // Arrange / Act
+    setup();
+
+    // Assert
+    expect(screen.queryByRole("button", { name: "Riwayat" })).not.toBeInTheDocument();
+  });
+
+  // Positive: closing the history dialog removes it.
+  it("closes the history dialog", async () => {
+    // Arrange
+    setup({ slot: filled() });
+    await userEvent.click(screen.getByRole("button", { name: "Riwayat" }));
+    await screen.findByRole("dialog", { name: "Riwayat Percobaan 1" });
+
+    // Act
+    await userEvent.click(screen.getByRole("button", { name: "Tutup" }));
+
+    // Assert
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("ManualAnswerBox evidence (AC7)", () => {
+  // Positive: a saved answer shows its evidence panel.
+  it("shows the evidence of a saved answer", async () => {
+    // Arrange
+    const { listEvidence } = setup({ slot: slot({ filled: true, answer_md: "Isi", answered_at_platform: "2026-11-07T01:00:00Z" }) });
+
+    // Act
+    const heading = await screen.findByRole("heading", { name: "Bukti (0 dari 3)" });
+
+    // Assert
+    expect(heading).toBeInTheDocument();
+    expect(listEvidence).toHaveBeenCalledWith("sesi-1", "snap-1", 1);
+  });
+
+  // Edge: an unfilled attempt only explains that the answer has to be saved first.
+  it("asks to save the answer before adding evidence", () => {
+    // Arrange / Act
+    setup();
+
+    // Assert
+    expect(screen.getByText("Simpan jawaban terlebih dahulu untuk menambah bukti.")).toBeInTheDocument();
+  });
+
+  // Negative: a role that may not see evidence gets no panel (evidence_count null).
+  it("hides the evidence when the role may not see it", () => {
+    // Arrange
+    const hidden = slot({ filled: true, answer_md: "Isi", answered_at_platform: "2026-11-07T01:00:00Z", evidence_count: null });
+
+    // Act
+    const { listEvidence } = setup({ slot: hidden });
+
+    // Assert
+    expect(screen.queryByRole("region", { name: "Bukti jawaban" })).not.toBeInTheDocument();
+    expect(listEvidence).not.toHaveBeenCalled();
   });
 });
