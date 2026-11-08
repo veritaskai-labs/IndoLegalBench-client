@@ -10,6 +10,7 @@ import {
   formatProgress,
   hasEnded,
   isSettled,
+  shouldPollSessions,
   SESSION_STATUS_LABEL,
   sessionStatusLabel,
   unarchiveErrorMessage,
@@ -31,7 +32,7 @@ function session(overrides: Partial<SessionListItem> = {}): SessionListItem {
     case_count: 20,
     repetitions: 3,
     status: "finished",
-    progress: { completed: 60, total: 60 },
+    progress: { completed: 60, total: 60, completed_cases: 20, total_cases: 20, percent_cases_complete: 100 },
     ...overrides,
   };
 }
@@ -80,30 +81,42 @@ describe("sessionStatusLabel (PBI-12 AC9: Dijeda vs Dihentikan)", () => {
   });
 });
 
-describe("formatProgress", () => {
-  it("shows finished attempts out of all attempts", () => {
-    expect(formatProgress(session({ status: "running", progress: { completed: 12, total: 60 } }))).toBe("12 dari 60");
+describe("formatProgress (SCRUM-266: cases with a whole percentage)", () => {
+  function progress(completed_cases: number, total_cases: number, percent_cases_complete: number) {
+    return { completed: completed_cases * 3, total: total_cases * 3, completed_cases, total_cases, percent_cases_complete };
+  }
+
+  it("shows finished cases out of all cases with the percentage, the way the ticket spells it", () => {
+    expect(formatProgress(session({ status: "running", progress: progress(7, 20, 35) }))).toBe("7 dari 20 kasus · 35%");
   });
 
   // The list and the panel show the same numbers, so they group thousands the same way.
   it("groups thousands like the progress panel", () => {
-    expect(formatProgress(session({ status: "running", progress: { completed: 1200, total: 1500 } }))).toBe(
-      "1.200 dari 1.500",
+    expect(formatProgress(session({ status: "running", progress: progress(1200, 1500, 80) }))).toBe(
+      "1.200 dari 1.500 kasus · 80%",
     );
   });
 
+  it("shows a running session that has not finished a case yet as 0%", () => {
+    expect(formatProgress(session({ status: "running", progress: progress(0, 20, 0) }))).toBe("0 dari 20 kasus · 0%");
+  });
+
   it("shows a finished session as complete", () => {
-    expect(formatProgress(session())).toBe("60 dari 60");
+    expect(formatProgress(session())).toBe("20 dari 20 kasus · 100%");
   });
 
-  // The snapshot is made when the session starts, so a queued session has no attempts yet.
+  // The snapshot is made when the session starts, so a queued session has no cases yet.
   it("says a queued session is waiting instead of 0 dari 0", () => {
-    expect(formatProgress(session({ status: "queued", progress: { completed: 0, total: 0 } }))).toBe("Menunggu antrean");
+    expect(formatProgress(session({ status: "queued", progress: progress(0, 0, 0) }))).toBe("Menunggu antrean");
   });
 
-  // server#91 07648e5: a queued session can fail before it starts, still with no attempts.
-  it("keeps 0 dari 0 for a session that ended without attempts", () => {
-    expect(formatProgress(session({ status: "failed", progress: { completed: 0, total: 0 } }))).toBe("0 dari 0");
+  // server#91 07648e5: a queued session can fail before it starts, still with no cases.
+  it("keeps 0 dari 0 for a session that ended without cases", () => {
+    expect(formatProgress(session({ status: "failed", progress: progress(0, 0, 0) }))).toBe("0 dari 0 kasus · 0%");
+  });
+
+  it("never prints past 100% even if the server sends a broken number", () => {
+    expect(formatProgress(session({ status: "running", progress: progress(20, 20, 140) }))).toBe("20 dari 20 kasus · 100%");
   });
 });
 
@@ -231,5 +244,32 @@ describe("hasEnded and isSettled (PBI-12 AC8, SCRUM-219 polling)", () => {
   // Same as #70: only ended (and now cancelled) sessions stop polling; paused keeps it.
   it.each<SessionStatus>(["queued", "running", "paused"])("keeps %s unsettled", (status) => {
     expect(isSettled(status)).toBe(false);
+  });
+});
+
+describe("shouldPollSessions (SCRUM-266, list progress column)", () => {
+  // Only a queued or running session changes by itself; the list follows it about every 5 seconds.
+  it.each<SessionStatus>(["queued", "running"])("polls while a session is %s", (status) => {
+    expect(shouldPollSessions([session({ status: "finished" }), session({ id: "s-2", status })])).toBe(true);
+  });
+
+  // paused and cancelled wait for a person; manual sessions change when someone fills them in.
+  it.each<SessionStatus>([
+    "paused",
+    "cancelled",
+    "finished",
+    "finished_with_failures",
+    "failed",
+    "not_filled",
+    "partially_filled",
+    "complete",
+    "graded",
+    "finalized",
+  ])("does not poll for a list that only has %s sessions", (status) => {
+    expect(shouldPollSessions([session({ status })])).toBe(false);
+  });
+
+  it("does not poll an empty list", () => {
+    expect(shouldPollSessions([])).toBe(false);
   });
 });
