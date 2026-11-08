@@ -13,3 +13,4 @@ export type MeasurementType = components["schemas"]["MeasurementType"];
 export type ModelParams = components["schemas"]["ModelParams"];
 export type ProductPurpose = components["schemas"]["ProductPurpose"];
 export type AiProductOption = components["schemas"]["AiProductOption"];
+export type JudgeProviderOption = components["schemas"]["JudgeProviderOption"];
