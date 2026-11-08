@@ -22,9 +22,7 @@ const KIND_RULES: { [K in EvidenceKind]: (input: Extract<EvidenceInput, { kind: 
   link: ({ url }) => {
     const text = url.trim();
     if (text === "") return "Tautan bukti wajib diisi.";
-    return URL.canParse(text) && /^https?:$/.test(new URL(text).protocol)
-      ? null
-      : "Tautan bukti harus diawali http:// atau https://.";
+    return safeEvidenceHref(text) === null ? "Tautan bukti harus diawali http:// atau https://." : null;
   },
 };
 
