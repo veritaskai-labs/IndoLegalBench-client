@@ -10,10 +10,24 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 
 export const TOAST_DURATION_MS = 4000;
 
-type ToastContextValue = { showToast: (message: string) => void };
+export type ToastAction = {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+};
+
+type ToastState = {
+  message: ReactNode;
+  action?: ToastAction;
+};
+
+type ToastContextValue = {
+  showToast: (message: ReactNode, action?: ToastAction) => void;
+};
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
@@ -22,7 +36,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
  * tetap tampil saat halaman berpindah lewat router.push.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [message, setMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = useCallback(() => {
@@ -34,13 +48,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const close = useCallback(() => {
     clearTimer();
-    setMessage(null);
+    setToast(null);
   }, [clearTimer]);
 
   const showToast = useCallback(
-    (next: string) => {
+    (message: ReactNode, action?: ToastAction) => {
       clearTimer();
-      setMessage(next);
+      setToast({ message, action });
       timer.current = setTimeout(close, TOAST_DURATION_MS);
     },
     [clearTimer, close],
@@ -58,9 +72,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-label="Notifikasi"
         className="pointer-events-none fixed bottom-6 right-6 z-50"
       >
-        {message !== null && (
+        {toast !== null && (
           <div className="pointer-events-auto flex items-center gap-3 rounded-md bg-slate-900 px-4 py-3 text-sm text-white shadow-lg">
-            <span>{message}</span>
+            <span>{toast.message}</span>
+            {toast.action && (
+              toast.action.href ? (
+                <Link
+                  href={toast.action.href}
+                  onClick={close}
+                  className="font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 ml-1"
+                >
+                  {toast.action.label}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onClick?.();
+                    close();
+                  }}
+                  className="font-semibold text-indigo-400 hover:text-indigo-300 underline underline-offset-2 ml-1"
+                >
+                  {toast.action.label}
+                </button>
+              )
+            )}
             <button
               type="button"
               onClick={close}

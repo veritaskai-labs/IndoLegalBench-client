@@ -35,6 +35,30 @@ export function sessionStatusLabel(status: SessionStatus, stopReason?: StopReaso
   return SESSION_STATUS_LABEL[status];
 }
 
+/** Sesi manual per D8: Belum terisi, Terisi sebagian, Lengkap, Dinilai, Selesai (PBI-22). */
+export const MANUAL_STATUSES: ReadonlySet<SessionStatus> = new Set([
+  "not_filled",
+  "partially_filled",
+  "complete",
+  "graded",
+  "finalized",
+]);
+
+export function isManualStatus(status: SessionStatus): boolean {
+  return MANUAL_STATUSES.has(status);
+}
+
+/** Batas karakter nama/label sesi (OpenAPI ManualStartRequest/StartRequest: max 200). */
+export const SESSION_LABEL_MAX_LENGTH = 200;
+
+/** Standar pengulangan untuk sesi otomatis (PBI-11 / server SCRUM-210). */
+export const AUTOMATIC_SESSION_STANDARD_REPETITIONS = 3;
+
+/** Standar dan batas pengulangan untuk sesi pengukuran manual (PBI-22 AC1, AC12, OpenAPI ManualStartRequest). */
+export const MANUAL_SESSION_DEFAULT_REPETITIONS = 1;
+export const MANUAL_SESSION_MIN_REPETITIONS = 1;
+export const MANUAL_SESSION_MAX_REPETITIONS = 5;
+
 /** Sama dengan server (session_rules._ENDED / has_ended): hanya sesi yang sudah berakhir. */
 // cancelled belum berakhir: server#102 masih bisa melanjutkannya, dan server has_ended tidak memuatnya.
 // finalized (sesi manual yang sudah ditutup Admin) berakhir sejak server#116.

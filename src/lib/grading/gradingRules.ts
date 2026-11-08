@@ -57,6 +57,10 @@ const GRADE_ERRORS: Record<string, string> = {
   // server#114 session_grade.py: 409 bila tidak ada versi rubrik aktif. Belum tercantum di responses
   // OpenAPI /grade, jadi kodenya diambil dari server, bukan dari kontrak.
   RUBRIC_NOT_ACTIVE: "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi.",
+  // PBI-22 AC9: sesi manual belum lengkap
+  NOT_COMPLETE: "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai.",
+  MANUAL_SESSION_STATUS_INVALID: "Status sesi manual tidak valid untuk dinilai.",
+  ANSWERS_CHANGED_DURING_GRADING: "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi.",
 };
 
 const RESULTS_ERRORS: Record<string, string> = {

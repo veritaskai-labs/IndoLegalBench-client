@@ -64,6 +64,34 @@ describe("useSessions (PBI-11 AC10)", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(list).toHaveBeenCalledTimes(2);
   });
+
+  it("filters out manual sessions from the active sessions list", async () => {
+    // Arrange
+    const manualSession = row("m-1", "not_filled");
+    const autoSession = row("a-1", "running");
+    list.mockResolvedValue([manualSession, autoSession]);
+
+    // Act
+    const { result } = renderHook(() => useSessions());
+
+    // Assert
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({ status: "ready", data: [autoSession] });
+  });
+
+  it("filters out manual sessions from the archived sessions list", async () => {
+    // Arrange
+    const manualSession = row("m-1", "finalized");
+    const autoSession = row("a-1", "finished");
+    list.mockResolvedValue([manualSession, autoSession]);
+
+    // Act
+    const { result } = renderHook(() => useSessions(true));
+
+    // Assert
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current).toMatchObject({ status: "ready", data: [autoSession] });
+  });
 });
 
 describe("useSessions polling (SCRUM-266, AC6)", () => {
