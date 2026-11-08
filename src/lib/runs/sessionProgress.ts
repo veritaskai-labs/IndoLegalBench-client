@@ -22,17 +22,6 @@ export function callCountText(completed: number, total: number): string {
 }
 
 /**
- * Nilai bar progres, 0 sampai 100. Server mengirim Decimal, yang bisa sampai sebagai
- * string ("80.0"), jadi dibaca seperti formatRupiah membacanya. Angka di luar rentang
- * hanya bisa datang dari agregasi yang rusak, dan bar tetap tidak melewati ujungnya.
- */
-export function progressBarPercent(value: string | number): number {
-  const percent = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(percent)) return 0;
-  return Math.min(100, Math.max(0, percent));
-}
-
-/**
  * "1.200 dari 1.500". Satu-satunya tempat angka ini diformat, dipakai panel progres
  * dan daftar sesi, supaya satu sesi terbaca sama di kedua halaman.
  */
@@ -47,10 +36,14 @@ export function percentText(value: string | number): string {
   return `${PERCENT.format(percent)}%`;
 }
 
-/** "12 gagal (5,0%)" (AC5). Persennya dari panggilan yang sudah selesai, dihitung server. */
-export function failedText(failed: number, percentFailed: string | number): string {
+/**
+ * "3 dari 60 (5,0%)" di bawah label Panggilan gagal (AC5, SCRUM-266 K3). Penyebutnya panggilan
+ * yang sudah selesai, karena persen dari server (percent_failed) juga dihitung atas itu; memakai
+ * total panggilan akan membuat jumlah dan persennya tidak cocok. Gagal tetap per panggilan (AC4).
+ */
+export function failedText(failed: number, completedCalls: number, percentFailed: string | number): string {
   if (failed === 0) return "Tidak ada kegagalan";
-  return `${COUNT.format(failed)} gagal (${percentText(percentFailed)})`;
+  return `${countOfTotal(failed, completedCalls)} (${percentText(percentFailed)})`;
 }
 
 /**
@@ -85,4 +78,35 @@ export function startedAtText(iso: string | null): string {
 export function budgetExhausted(remainingBudgetIdr: string): boolean {
   const remaining = Number(remainingBudgetIdr);
   return Number.isFinite(remaining) && remaining <= 0;
+}
+/**
+ * "7 dari 20 (35%)" di bawah label Kasus selesai (SCRUM-266 K3). Kasus dihitung selesai oleh server
+ * (SCRUM-265): semua pengulangannya sudah diproses. Total 0 berarti snapshot belum ada.
+ */
+export function casesDoneText(completed: number, total: number, percent: number): string {
+  if (total === 0) return "Belum ada kasus";
+  return `${countOfTotal(completed, total)} (${wholePercentText(percent)})`;
+}
+
+/**
+ * Persen kasus selesai sebagai bilangan bulat 0 sampai 100, untuk teks dan bar. Server sudah
+ * membulatkan ke bawah dan membatasinya; di sini dijaga lagi supaya angka yang rusak tidak
+ * menggambar bar melewati ujungnya, dan 100 hanya tampil saat memang semua selesai.
+ */
+export function wholePercent(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(100, Math.max(0, Math.floor(value)));
+}
+
+/** "35%", tanpa desimal (SCRUM-266). */
+export function wholePercentText(value: number): string {
+  return `${wholePercent(value)}%`;
+}
+
+/**
+ * Kolom Progres daftar sesi (SCRUM-266): "7 dari 20 kasus · 35%". Tanpa teks "Belum ada"
+ * supaya setiap baris punya bentuk yang sama; sesi antre ditangani formatProgress.
+ */
+export function casesDoneSummary(completed: number, total: number, percent: number): string {
+  return `${countOfTotal(completed, total)} kasus · ${wholePercentText(percent)}`;
 }

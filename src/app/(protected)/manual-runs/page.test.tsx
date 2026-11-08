@@ -46,7 +46,7 @@ const MOCK_SESSIONS: SessionListItem[] = [
     case_count: 50,
     repetitions: 1,
     status: "partially_filled",
-    progress: { completed: 20, total: 50 },
+    progress: { completed: 20, total: 50, completed_cases: 20, total_cases: 50, percent_cases_complete: 40 },
   },
 ];
 

@@ -18,7 +18,7 @@ function renderDialog() {
   const onClose = vi.fn();
   render(
     <CancelSessionDialog
-      session={{ id: "s-1", label: "Run November", progress: { completed: 240, total: 300 } }}
+      session={{ id: "s-1", label: "Run November", progress: { completed: 240, total: 300, completed_cases: 80, total_cases: 100, percent_cases_complete: 80 } }}
       onCancelled={onCancelled}
       onClose={onClose}
     />,

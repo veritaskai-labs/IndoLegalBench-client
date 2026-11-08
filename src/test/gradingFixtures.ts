@@ -1,4 +1,10 @@
-import type { AttemptGradeResult, CaseGradeResult, GradedSessionListItem, SessionGradingResponse } from "@/types/grading";
+import type {
+  AttemptGradeResult,
+  CaseGradeResult,
+  GradedSessionListItem,
+  GradingRunSummary,
+  SessionGradingResponse,
+} from "@/types/grading";
 
 /**
  * Data contoh bersama untuk test penilaian (PBI-14), supaya bentuk kontrak #114 tidak disalin per file. Data sintetis.
@@ -50,6 +56,21 @@ export function gradingResponse(overrides: Partial<SessionGradingResponse> = {})
     },
     category_scores: [],
     cases: [gradedCase()],
+    ...overrides,
+  };
+}
+
+/** Satu baris GET /measurements/{id}/grading-runs (server#122): ringkasan satu run tanpa kasus. */
+export function gradingRunSummary(overrides: Partial<GradingRunSummary> = {}): GradingRunSummary {
+  return {
+    grading_run_id: "run-1",
+    rubric_version: "v1",
+    kind: "initial",
+    status: "completed",
+    triggered_by: "admin-1",
+    triggered_at: "2026-11-07T03:00:00Z",
+    is_latest: true,
+    scores: gradingResponse().scores,
     ...overrides,
   };
 }

@@ -15,7 +15,7 @@ function createMockSession(overrides: Partial<SessionListItem> = {}): SessionLis
     case_count: 50,
     repetitions: 1,
     status: "not_filled",
-    progress: { completed: 0, total: 50 },
+    progress: { completed: 0, total: 50, completed_cases: 0, total_cases: 50, percent_cases_complete: 0 },
     ...overrides,
   };
 }
@@ -27,19 +27,19 @@ describe("ManualSessionTable (PBI-22 AC8, AC10, AC11)", () => {
         id: "s-1",
         label: "Sesi 1",
         status: "not_filled",
-        progress: { completed: 0, total: 20 },
+        progress: { completed: 0, total: 20, completed_cases: 0, total_cases: 20, percent_cases_complete: 0 },
       }),
       createMockSession({
         id: "s-2",
         label: "Sesi 2",
         status: "partially_filled",
-        progress: { completed: 10, total: 20 },
+        progress: { completed: 10, total: 20, completed_cases: 10, total_cases: 20, percent_cases_complete: 50 },
       }),
       createMockSession({
         id: "s-3",
         label: "Sesi 3",
         status: "finalized",
-        progress: { completed: 20, total: 20 },
+        progress: { completed: 20, total: 20, completed_cases: 20, total_cases: 20, percent_cases_complete: 100 },
       }),
     ];
 

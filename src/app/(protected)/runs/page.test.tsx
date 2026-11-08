@@ -39,7 +39,7 @@ function session(overrides: Partial<SessionListItem> = {}): SessionListItem {
     case_count: 20,
     repetitions: 3,
     status: "finished",
-    progress: { completed: 60, total: 60 },
+    progress: { completed: 60, total: 60, completed_cases: 20, total_cases: 20, percent_cases_complete: 100 },
     ...overrides,
   };
 }
@@ -92,7 +92,7 @@ describe("RunsPage session list (PBI-11 AC10)", () => {
 
   // Positive: every column of one row.
   it("shows label, creation time in WIB, creator, product, cases, repetitions, status and progress", async () => {
-    list.mockResolvedValue([session({ status: "running", progress: { completed: 12, total: 60 } })]);
+    list.mockResolvedValue([session({ status: "running", progress: { completed: 21, total: 60, completed_cases: 7, total_cases: 20, percent_cases_complete: 35 } })]);
     renderPage();
     const cells = within(await row("Uji Coba DeepSeek"));
 
@@ -102,7 +102,7 @@ describe("RunsPage session list (PBI-11 AC10)", () => {
     expect(cells.getByRole("cell", { name: "20" })).toBeInTheDocument();
     expect(cells.getByRole("cell", { name: "3" })).toBeInTheDocument();
     expect(cells.getByText("Berjalan")).toBeInTheDocument();
-    expect(cells.getByText("12 dari 60")).toBeInTheDocument();
+    expect(cells.getByText("7 dari 20 kasus · 35%")).toBeInTheDocument();
   });
 
   // Edge: queued session, deleted account and product.
@@ -113,7 +113,7 @@ describe("RunsPage session list (PBI-11 AC10)", () => {
         case_count: null,
         created_by_name: null,
         product_name: null,
-        progress: { completed: 0, total: 0 },
+        progress: { completed: 0, total: 0, completed_cases: 0, total_cases: 0, percent_cases_complete: 0 },
       }),
     ]);
     renderPage();
@@ -420,7 +420,7 @@ describe("RunsPage Arsip tab (AC10)", () => {
     const cells = within(await row("Sesi Lama"));
     expect(list).toHaveBeenCalledWith(true);
     expect(cells.getByText("Claude")).toBeInTheDocument();
-    expect(cells.getByText("60 dari 60")).toBeInTheDocument();
+    expect(cells.getByText("20 dari 20 kasus · 100%")).toBeInTheDocument();
     for (const name of ["Label", "Dibuat", "Pembuat", "Produk", "Kasus", "Pengulangan", "Status", "Progres"]) {
       expect(screen.getByRole("columnheader", { name })).toBeInTheDocument();
     }

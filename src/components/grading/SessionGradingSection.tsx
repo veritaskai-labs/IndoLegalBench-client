@@ -2,10 +2,12 @@
 
 import { useId, useState } from "react";
 
+import { RegradeSection } from "@/components/rubrics/RegradeSection";
 import { useToast } from "@/components/ui/Toast";
 import { useSessionResults } from "@/hooks/useSessionResults";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { canGrade } from "@/lib/grading/gradingRules";
+import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { GradeSessionDialog } from "./GradeSessionDialog";
@@ -16,13 +18,15 @@ type GradingSession = Pick<SessionDetail, "id" | "label" | "status" | "archived_
 /**
  * Bagian "Hasil penilaian" di halaman detail sesi (PBI-14 AC6, AC8). Penyusun: memuat hasil lewat
  * gateway, memutuskan tombol Nilai lewat canGrade, lalu menyerahkan tampilan ke GradingResultsBody.
- * Setelah Nilai, hasil dimuat ulang dari server, jadi tabel selalu yang sudah disamarkan sesuai peran.
+ * Setelah Nilai atau Nilai ulang (PBI-14 AC7), hasil dimuat ulang dari server, jadi tabel selalu yang
+ * sudah disamarkan sesuai peran.
  */
 export function SessionGradingSection({
   session,
   role,
   gateway = httpGradingGateway,
-}: Readonly<{ session: GradingSession; role: Role | null; gateway?: GradingGateway }>) {
+  rubricsGateway = httpRubricsGateway,
+}: Readonly<{ session: GradingSession; role: Role | null; gateway?: GradingGateway; rubricsGateway?: RubricsGateway }>) {
   const headingId = useId();
   const { showToast } = useToast();
   const results = useSessionResults(session.id, gateway);
@@ -41,6 +45,17 @@ export function SessionGradingSection({
         results={results}
         gradeAction={gradable ? { label: "Nilai", onClick: () => setDialogOpen(true) } : undefined}
       />
+
+      {results.status === "ready" && results.data !== null && (
+        <RegradeSection
+          session={session}
+          role={role}
+          latest={results.data}
+          gradingGateway={gateway}
+          rubricsGateway={rubricsGateway}
+          onChanged={results.reload}
+        />
+      )}
 
       {dialogOpen && (
         <GradeSessionDialog

@@ -4,11 +4,14 @@ import { formatWib } from "@/lib/datetime/formatWib";
 import {
   budgetExhausted,
   callCountText,
+  casesDoneSummary,
+  casesDoneText,
   failedText,
   percentText,
-  progressBarPercent,
   remainingTimeText,
   startedAtText,
+  wholePercent,
+  wholePercentText,
 } from "./sessionProgress";
 
 describe("callCountText (PBI-12 AC5)", () => {
@@ -23,25 +26,6 @@ describe("callCountText (PBI-12 AC5)", () => {
 
   it("says nothing has run yet instead of showing 0 dari 0", () => {
     expect(callCountText(0, 0)).toBe("Belum ada panggilan");
-  });
-});
-
-describe("progressBarPercent (PBI-12 AC5)", () => {
-  it("reads the server percentage as a number", () => {
-    expect(progressBarPercent("80.0")).toBe(80);
-  });
-
-  it("accepts a plain number too, since Decimal may arrive either way", () => {
-    expect(progressBarPercent(12.5)).toBe(12.5);
-  });
-
-  it("clamps to 0 and 100, so a broken number cannot draw past the bar", () => {
-    expect(progressBarPercent("120.0")).toBe(100);
-    expect(progressBarPercent("-5.0")).toBe(0);
-  });
-
-  it("falls back to 0 when the value is not a number at all", () => {
-    expect(progressBarPercent("")).toBe(0);
   });
 });
 
@@ -60,17 +44,28 @@ describe("percentText (PBI-12 AC5)", () => {
   });
 });
 
-describe("failedText (PBI-12 AC5)", () => {
-  it("says the count and the percentage together", () => {
-    expect(failedText(12, "5.0")).toBe("12 gagal (5,0%)");
+describe("failedText (PBI-12 AC5, SCRUM-266 K3)", () => {
+  // K3: the failed count names its denominator. The server percentage is over completed calls,
+  // so the denominator is completed calls too, otherwise count and percentage would disagree.
+  it("says failed out of completed calls with the percentage", () => {
+    expect(failedText(3, 60, "5.0")).toBe("3 dari 60 (5,0%)");
   });
 
   it("says there are none instead of writing a zero", () => {
-    expect(failedText(0, "0.0")).toBe("Tidak ada kegagalan");
+    expect(failedText(0, 60, "0.0")).toBe("Tidak ada kegagalan");
+  });
+
+  // Before any call is done there is nothing to fail, so no "0 dari 0".
+  it("says there are none before any call is done", () => {
+    expect(failedText(0, 0, "0.0")).toBe("Tidak ada kegagalan");
+  });
+
+  it("shows every completed call failed as 100%", () => {
+    expect(failedText(60, 60, "100.0")).toBe("60 dari 60 (100,0%)");
   });
 
   it("groups thousands the same way the call count does", () => {
-    expect(failedText(1200, "80.0")).toBe("1.200 gagal (80,0%)");
+    expect(failedText(1200, 1500, "80.0")).toBe("1.200 dari 1.500 (80,0%)");
   });
 });
 
@@ -127,5 +122,79 @@ describe("budgetExhausted (PBI-12 AC5)", () => {
 
   it("stays quiet when the value is not a number, rather than warning wrongly", () => {
     expect(budgetExhausted("abc")).toBe(false);
+  });
+});
+describe("casesDoneText (SCRUM-266 K3, under the label Kasus selesai)", () => {
+  it("reads the way K3 spells it: count, denominator and percentage", () => {
+    expect(casesDoneText(7, 20, 35)).toBe("7 dari 20 (35%)");
+  });
+
+  it("shows the empty and the full end", () => {
+    expect(casesDoneText(0, 20, 0)).toBe("0 dari 20 (0%)");
+    expect(casesDoneText(20, 20, 100)).toBe("20 dari 20 (100%)");
+  });
+
+  it("groups thousands the Indonesian way", () => {
+    expect(casesDoneText(1200, 1500, 80)).toBe("1.200 dari 1.500 (80%)");
+  });
+
+  // Floor and clamp come from wholePercent, so 100% only means every case is done.
+  it("never prints past 100% or below 0%", () => {
+    expect(casesDoneText(20, 20, 140)).toBe("20 dari 20 (100%)");
+    expect(casesDoneText(0, 20, -3)).toBe("0 dari 20 (0%)");
+  });
+
+  it("says there are no cases yet instead of showing 0 dari 0", () => {
+    expect(casesDoneText(0, 0, 0)).toBe("Belum ada kasus");
+  });
+});
+
+describe("wholePercent (SCRUM-266)", () => {
+  it("passes a whole percentage from the server through", () => {
+    expect(wholePercent(35)).toBe(35);
+    expect(wholePercent(0)).toBe(0);
+    expect(wholePercent(100)).toBe(100);
+  });
+
+  // The server floors already; flooring again keeps 100 for a session that is really done.
+  it("floors a fraction instead of rounding it up to 100", () => {
+    expect(wholePercent(99.5)).toBe(99);
+  });
+
+  it("clamps to 0 and 100, so a broken number cannot draw past the bar", () => {
+    expect(wholePercent(120)).toBe(100);
+    expect(wholePercent(-5)).toBe(0);
+  });
+
+  it("treats a number that is not finite as nothing done", () => {
+    expect(wholePercent(Number.NaN)).toBe(0);
+    expect(wholePercent(Number.POSITIVE_INFINITY)).toBe(0);
+  });
+});
+
+describe("wholePercentText (SCRUM-266)", () => {
+  it("prints a whole percentage without decimals", () => {
+    expect(wholePercentText(35)).toBe("35%");
+  });
+
+  it("prints the clamped value, never past 100%", () => {
+    expect(wholePercentText(140)).toBe("100%");
+    expect(wholePercentText(-1)).toBe("0%");
+  });
+});
+
+describe("casesDoneSummary (SCRUM-266, session list column)", () => {
+  it("puts the case count and the percentage in one cell", () => {
+    expect(casesDoneSummary(7, 20, 35)).toBe("7 dari 20 kasus · 35%");
+  });
+
+  it("covers both ends", () => {
+    expect(casesDoneSummary(0, 20, 0)).toBe("0 dari 20 kasus · 0%");
+    expect(casesDoneSummary(20, 20, 100)).toBe("20 dari 20 kasus · 100%");
+  });
+
+  // A list row always reads as count plus percent, so the column lines up even with no cases.
+  it("keeps the count form when there are no cases", () => {
+    expect(casesDoneSummary(0, 0, 0)).toBe("0 dari 0 kasus · 0%");
   });
 });

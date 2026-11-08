@@ -8,7 +8,7 @@ import { useSessionResults } from "./useSessionResults";
 
 // The hook takes the gateway as a parameter (DIP), so the test hands it a fake instead of mocking modules.
 function fakeGateway(results: GradingGateway["results"]): GradingGateway {
-  return { grade: vi.fn(), results: vi.fn(results), sessions: vi.fn() };
+  return { grade: vi.fn(), results: vi.fn(results), sessions: vi.fn(), runs: vi.fn() };
 }
 
 describe("useSessionResults (PBI-14 AC8)", () => {
@@ -62,7 +62,7 @@ describe("useSessionResults (PBI-14 AC8)", () => {
       .fn<GradingGateway["results"]>()
       .mockRejectedValueOnce(new ApiError(404, "GRADING_NOT_FOUND"))
       .mockResolvedValueOnce(gradingResponse());
-    const gateway: GradingGateway = { grade: vi.fn(), results, sessions: vi.fn() };
+    const gateway: GradingGateway = { grade: vi.fn(), results, sessions: vi.fn(), runs: vi.fn() };
 
     const { result } = renderHook(() => useSessionResults("s-1", gateway));
     await waitFor(() => expect(result.current).toMatchObject({ status: "ready", data: null }));

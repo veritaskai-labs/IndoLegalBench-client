@@ -42,6 +42,7 @@ describe("navForRole", () => {
       "Penyedia",
       "Eksekusi",
       "Pengukuran manual",
+      "Rubrik",
       "Laporan",
       "Anggota",
       "Pemantauan review",
@@ -99,8 +100,25 @@ describe("navForRole", () => {
 
   // PBI-22 AC11: Admin and Contributor can view manual measurements.
   it("offers manual measurements page to admin and contributor only", () => {
+    // Arrange
     const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
+
+    // Act
     const withManual = roles.filter((role) => hrefs(role).includes("/manual-runs"));
+
+    // Assert
     expect(withManual).toEqual(["contributor", "admin"]);
+  });
+
+  // PBI-14 AC7: the rubric versions are typed and kept by the Admin.
+  it("offers the rubric page to the admin only", () => {
+    // Arrange
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
+
+    // Act
+    const withRubrics = roles.filter((role) => hrefs(role).includes("/admin/rubrics"));
+
+    // Assert
+    expect(withRubrics).toEqual(["admin"]);
   });
 });

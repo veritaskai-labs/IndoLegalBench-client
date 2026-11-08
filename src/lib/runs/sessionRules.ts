@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Me } from "@/types";
 import type { SessionListItem, SessionStatus, StopReason } from "@/types/measurement";
-import { countOfTotal } from "@/lib/runs/sessionProgress";
+import { casesDoneSummary } from "@/lib/runs/sessionProgress";
 
 /**
  * Label status sesi (PBI-11 AC10). Record atas enum kontrak, bukan switch dengan default:
@@ -77,11 +77,27 @@ export function isSettled(status: SessionStatus): boolean {
   return hasEnded(status) || status === "cancelled";
 }
 
-/** "X dari N". Sesi antre belum punya snapshot, jadi belum ada percobaan untuk dihitung. */
+/** Status yang berubah sendiri tanpa ada yang menekan tombol: worker sedang atau akan menjalankannya. */
+const SELF_CHANGING: ReadonlySet<SessionStatus> = new Set(["queued", "running"]);
+
+/**
+ * Daftar sesi perlu di-poll (SCRUM-266, AC6) selama ada sesi yang progresnya bisa berubah sendiri.
+ * Lebih sempit dari isSettled: sesi dijeda menunggu Lanjutkan, dan sesi manual berubah karena diisi
+ * seseorang, jadi daftar yang hanya berisi itu tidak perlu ditanya ulang tiap 5 detik.
+ */
+export function shouldPollSessions(sessions: readonly Pick<SessionListItem, "status">[]): boolean {
+  return sessions.some((session) => SELF_CHANGING.has(session.status));
+}
+
+/**
+ * "7 dari 20 kasus · 35%" (SCRUM-266): kolom Progres daftar sesi dan ringkasan detail sesi.
+ * Angka kasus dan persennya dihitung server (SCRUM-265). Sesi antre belum punya snapshot,
+ * jadi belum ada kasus untuk dihitung.
+ */
 export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
-  const { completed, total } = session.progress;
-  if (session.status === "queued" && total === 0) return "Menunggu antrean";
-  return countOfTotal(completed, total);
+  const { completed_cases, total_cases, percent_cases_complete } = session.progress;
+  if (session.status === "queued" && total_cases === 0) return "Menunggu antrean";
+  return casesDoneSummary(completed_cases, total_cases, percent_cases_complete);
 }
 
 /** Admin mengelola sesi siapa pun, Developer AI hanya sesi yang ia buat (D10). */
