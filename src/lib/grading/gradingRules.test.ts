@@ -88,6 +88,9 @@ describe("gradeErrorMessage", () => {
     // server#114 (session_grade.py) answers 409 when no rubric version is active. Retrying can't fix
     // that, so the message says what has to happen first (review on #77).
     [new ApiError(409, "RUBRIC_NOT_ACTIVE"), "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi."],
+    [new ApiError(409, "NOT_COMPLETE"), "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai."],
+    [new ApiError(409, "MANUAL_SESSION_STATUS_INVALID"), "Status sesi manual tidak valid untuk dinilai."],
+    [new ApiError(409, "ANSWERS_CHANGED_DURING_GRADING"), "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi."],
   ])("explains %s", (error, message) => {
     expect(gradeErrorMessage(error)).toBe(message);
   });

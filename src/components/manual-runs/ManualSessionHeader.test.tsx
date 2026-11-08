@@ -1,8 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualSessionHeader } from "./ManualSessionHeader";
 import type { ManualSessionDetail } from "@/types/measurement";
+
+const showToastMock = vi.fn();
+vi.mock("@/components/ui/Toast", () => ({
+  useToast: () => ({ showToast: showToastMock }),
+}));
 
 vi.mock("./FinalizeSessionDialog", () => ({
   FinalizeSessionDialog: ({
@@ -20,6 +25,30 @@ vi.mock("./FinalizeSessionDialog", () => ({
       </button>
       <button type="button" onClick={onClose}>
         Cancel Finalize
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/grading/GradeSessionDialog", () => ({
+  GradeSessionDialog: ({
+    onGraded,
+    onClose,
+  }: {
+    session: { id: string; label: string };
+    gateway?: unknown;
+    onGraded: (res: unknown) => void;
+    onClose: (afterError: boolean) => void;
+  }) => (
+    <div data-testid="grade-dialog">
+      <button type="button" onClick={() => onGraded({})}>
+        Confirm Grade
+      </button>
+      <button type="button" onClick={() => onClose(false)}>
+        Cancel Grade
+      </button>
+      <button type="button" onClick={() => onClose(true)}>
+        Error Close Grade
       </button>
     </div>
   ),
@@ -52,6 +81,9 @@ function createMockDetail(overrides: Partial<ManualSessionDetail> = {}): ManualS
 }
 
 describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
+  beforeEach(() => {
+    showToastMock.mockClear();
+  });
   it("renders metadata, product info, and progress 'X dari N jawaban terisi'", () => {
     const session = createMockDetail();
     render(
@@ -165,9 +197,13 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
 
     const gradeBtn = screen.getByRole("button", { name: /kirim untuk dinilai/i });
     expect(gradeBtn).toBeDisabled();
+    expect(gradeBtn).toHaveAttribute(
+      "title",
+      "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai.",
+    );
   });
 
-  it("enables 'Tandai Selesai' and keeps 'Kirim untuk Dinilai' disabled (AC8, AC9)", () => {
+  it("enables 'Tandai Selesai' and 'Kirim untuk Dinilai' when all answers are filled (AC8, AC9)", () => {
     const session = createMockDetail({
       status: "complete",
       filled_answers: 50,
@@ -187,11 +223,99 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(finalizeBtn).toBeEnabled();
 
     const gradeBtn = screen.getByRole("button", { name: /kirim untuk dinilai/i });
-    expect(gradeBtn).toBeDisabled();
+    expect(gradeBtn).toBeEnabled();
     expect(gradeBtn).toHaveAttribute(
       "title",
-      "Pengiriman penilaian sesi manual belum diintegrasikan.",
+      "Kirim sesi ini untuk dinilai.",
     );
+  });
+
+  it("opens GradeSessionDialog on 'Kirim untuk Dinilai' click and closes on cancel", async () => {
+    const user = userEvent.setup();
+    const session = createMockDetail({
+      status: "complete",
+      filled_answers: 50,
+      total_answers: 50,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    const gradeBtn = screen.getByRole("button", { name: /kirim untuk dinilai/i });
+    await user.click(gradeBtn);
+
+    expect(screen.getByTestId("grade-dialog")).toBeInTheDocument();
+
+    const cancelBtn = screen.getByRole("button", { name: "Cancel Grade" });
+    await user.click(cancelBtn);
+
+    expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
+  });
+
+  it("handles grade completion with toast and triggers onSessionUpdated", async () => {
+    const user = userEvent.setup();
+    const onSessionUpdated = vi.fn();
+    const session = createMockDetail({
+      status: "complete",
+      filled_answers: 50,
+      total_answers: 50,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={onSessionUpdated}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /kirim untuk dinilai/i }));
+    expect(screen.getByTestId("grade-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Confirm Grade" }));
+
+    expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      `Sesi “${session.label}” selesai dinilai.`,
+    );
+    expect(onSessionUpdated).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads session when GradeSessionDialog closes after an error", async () => {
+    const user = userEvent.setup();
+    const onSessionUpdated = vi.fn();
+    const session = createMockDetail({
+      status: "complete",
+      filled_answers: 50,
+      total_answers: 50,
+    });
+
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={onSessionUpdated}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /kirim untuk dinilai/i }));
+    expect(screen.getByTestId("grade-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Error Close Grade" }));
+
+    expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
+    expect(onSessionUpdated).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT show 'Kirim untuk Dinilai' button for non-admin users (AC8, AC9)", () => {

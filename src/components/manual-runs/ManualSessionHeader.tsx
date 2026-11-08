@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
+import { GradeSessionDialog } from "@/components/grading/GradeSessionDialog";
 import { FinalizeSessionDialog } from "@/components/manual-runs/FinalizeSessionDialog";
+import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
+import { useToast } from "@/components/ui/Toast";
 import { formatWib } from "@/lib/datetime/formatWib";
+import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { unknownName } from "@/lib/runs/sessionRules";
 import {
   AUTOMATIC_SESSION_STANDARD_REPETITIONS,
@@ -19,14 +22,18 @@ export function ManualSessionHeader({
   unfilledOnly,
   onToggleUnfilled,
   onSessionUpdated,
+  gradingGateway = httpGradingGateway,
 }: Readonly<{
   session: ManualSessionDetail;
   role: Role | null;
   unfilledOnly: boolean;
   onToggleUnfilled: (unfilled: boolean) => void;
   onSessionUpdated: () => void;
+  gradingGateway?: GradingGateway;
 }>) {
   const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
+  const [isGradeOpen, setIsGradeOpen] = useState(false);
+  const { showToast } = useToast();
   const isAdmin = role === "admin";
 
   const isAllFilled =
@@ -223,12 +230,17 @@ export function ManualSessionHeader({
               </button>
             )}
 
-            {/* Tombol Nilai untuk Admin (AC8, AC9) - Disiapkan untuk integrasi penilaian berikutnya */}
+            {/* Tombol Nilai untuk Admin (AC8, AC9) */}
             {isAdmin && (
               <button
                 type="button"
-                disabled
-                title="Pengiriman penilaian sesi manual belum diintegrasikan."
+                disabled={!isAllFilled}
+                onClick={() => setIsGradeOpen(true)}
+                title={
+                  !isAllFilled
+                    ? "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai."
+                    : "Kirim sesi ini untuk dinilai."
+                }
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Kirim untuk Dinilai
@@ -254,6 +266,24 @@ export function ManualSessionHeader({
           sessionLabel={session.label}
           onFinalized={handleFinalized}
           onClose={() => setIsFinalizeOpen(false)}
+        />
+      )}
+
+      {isGradeOpen && (
+        <GradeSessionDialog
+          session={{ id: session.id, label: session.label }}
+          gateway={gradingGateway}
+          onGraded={() => {
+            setIsGradeOpen(false);
+            showToast(`Sesi “${session.label}” selesai dinilai.`);
+            onSessionUpdated();
+          }}
+          onClose={(afterError) => {
+            setIsGradeOpen(false);
+            if (afterError) {
+              onSessionUpdated();
+            }
+          }}
         />
       )}
     </div>

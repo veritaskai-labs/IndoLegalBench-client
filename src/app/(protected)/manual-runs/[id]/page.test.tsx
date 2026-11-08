@@ -17,6 +17,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "session-123" }),
 }));
 
+vi.mock("@/components/ui/Toast", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 const { useManualSessionDetailMock } = vi.hoisted(() => ({
   useManualSessionDetailMock: vi.fn(),
 }));
