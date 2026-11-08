@@ -19,9 +19,9 @@ export function QuestionCopyButton({ question, caseCode }: Readonly<{ question: 
       >
         {status === "copied" ? "Tersalin" : "Salin pertanyaan"}
       </button>
-      <span role="status" className="text-xs text-red-700">
+      <output className="text-xs text-red-700">
         {status === "failed" ? "Gagal menyalin. Pilih teks pertanyaan lalu salin manual." : ""}
-      </span>
+      </output>
     </div>
   );
 }

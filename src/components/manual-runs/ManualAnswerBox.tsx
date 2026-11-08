@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useManualAnswerDraft } from "@/hooks/useManualAnswerDraft";
 import { formatWib } from "@/lib/datetime/formatWib";
@@ -54,11 +54,14 @@ export function ManualAnswerBox({
   useEffect(() => () => onDirtyChange(attemptId, false), [attemptId, onDirtyChange]);
 
   const label = `Percobaan ${slot.repetition_no}`;
+  const headingId = useId();
 
   return (
-    <div role="group" aria-label={label} className="space-y-3 rounded-md border border-slate-200 p-3">
+    <fieldset aria-labelledby={headingId} className="min-w-0 space-y-3 rounded-md border border-slate-200 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold text-slate-900">{label}</h4>
+        <h4 id={headingId} className="text-sm font-semibold text-slate-900">
+          {label}
+        </h4>
         <span
           className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
             slot.filled ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
@@ -144,6 +147,6 @@ export function ManualAnswerBox({
           </p>
         </ConfirmDialog>
       )}
-    </div>
+    </fieldset>
   );
 }

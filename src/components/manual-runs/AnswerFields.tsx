@@ -47,7 +47,7 @@ export function AnswerFields({
           disabled={disabled}
           onChange={(event) => onChange("platformRefused", event.target.checked)}
         />
-        Platform menolak menjawab
+        <span>Platform menolak menjawab</span>
       </label>
 
       {draft.platformRefused ? (
@@ -108,7 +108,7 @@ export function AnswerFields({
 
       <div className="space-y-1">
         <label className="block text-xs font-medium text-slate-600">
-          Tanggal dan jam jawaban diperoleh (WIB)
+          <span>Tanggal dan jam jawaban diperoleh (WIB)</span>
           <input
             type="datetime-local"
             value={draft.obtainedAt}

@@ -94,7 +94,10 @@ describe("ManualCaseCard (PBI-22 AC3, AC4, AC8)", () => {
 
     // Assert
     const groups = screen.getAllByRole("group", { name: /^Percobaan \d$/ });
-    expect(groups.map((group) => group.getAttribute("aria-label"))).toEqual(["Percobaan 1", "Percobaan 2"]);
+    expect(groups.map((group) => within(group).getByRole("heading", { level: 4 }).textContent)).toEqual([
+      "Percobaan 1",
+      "Percobaan 2",
+    ]);
   });
 
   // Positive: AC3 the copy button of this case, and no other copy action.

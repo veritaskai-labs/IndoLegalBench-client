@@ -114,7 +114,7 @@ function EvidenceList({ gateway, sessionId, snapshotItemId, attemptNo, canEdit }
         <div className="space-y-2">
           {!canAdd && <p className="text-xs text-slate-600">{EVIDENCE_LIMIT_MESSAGE}</p>}
           <label className="block text-xs font-medium text-slate-600">
-            Unggah berkas bukti
+            <span>Unggah berkas bukti</span>
             <input
               type="file"
               accept={ACCEPT}
@@ -129,7 +129,7 @@ function EvidenceList({ gateway, sessionId, snapshotItemId, attemptNo, canEdit }
           </label>
           <div className="flex flex-wrap items-end gap-2">
             <label className="block text-xs font-medium text-slate-600">
-              Tautan bukti
+              <span>Tautan bukti</span>
               <input
                 type="url"
                 value={linkText}
