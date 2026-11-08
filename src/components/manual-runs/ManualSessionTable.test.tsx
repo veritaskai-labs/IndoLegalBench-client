@@ -15,6 +15,7 @@ function createMockSession(overrides: Partial<SessionListItem> = {}): SessionLis
     case_count: 50,
     repetitions: 1,
     status: "not_filled",
+    session_type: "manual",
     progress: { completed: 0, total: 50, completed_cases: 0, total_cases: 50, percent_cases_complete: 0 },
     ...overrides,
   };

@@ -20,6 +20,7 @@ function createMockCase(overrides: Partial<ManualCaseProgress> = {}): ManualCase
         answered_at_platform: null,
         source: "manual",
         platform_refused: false,
+        evidence_count: null,
       },
       {
         attempt_id: "att-2",
@@ -28,6 +29,7 @@ function createMockCase(overrides: Partial<ManualCaseProgress> = {}): ManualCase
         answered_at_platform: "2026-11-07T11:00:00Z",
         source: "manual",
         platform_refused: false,
+        evidence_count: null,
       },
     ],
     ...overrides,

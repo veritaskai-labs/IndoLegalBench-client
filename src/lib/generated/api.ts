@@ -857,7 +857,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Lanjutkan sisa pekerjaan dengan guard versi dan penanda jeda panjang */
+        /**
+         * Lanjutkan sisa pekerjaan dengan guard versi dan penanda jeda panjang
+         * @description 202 dengan status `running` bila tidak ada sesi otomatis lain yang berjalan atau menunggu. Selain itu status `queued`: sesi kembali ke belakang antrean dan worker melanjutkannya pada gilirannya, tidak pernah bersamaan dengan sesi lain (SCRUM-267).
+         */
         post: operations["resume_measurements__session_id__resume_post"];
         delete?: never;
         options?: never;
@@ -1113,7 +1116,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Daftar sesi pengukuran manual, terbaru di atas. archived=true menampilkan sesi arsip */
+        get: operations["list_manual_sessions_manual_measurements_get"];
         put?: never;
         /** Buat sesi manual: snapshot kasus saat itu juga, status Belum terisi */
         post: operations["create_manual_session_manual_measurements_post"];
@@ -1186,6 +1190,58 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}/answers/{snapshot_item_id}/{attempt_no}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar bukti satu jawaban manual */
+        get: operations["list_manual_evidence_manual_measurements__session_id__answers__snapshot_item_id___attempt_no__evidence_get"];
+        put?: never;
+        /** Tambah bukti jawaban manual: satu berkas PNG/JPG/PDF atau satu tautan */
+        post: operations["add_manual_evidence_manual_measurements__session_id__answers__snapshot_item_id___attempt_no__evidence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}/evidence/{evidence_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unduh berkas bukti jawaban manual */
+        get: operations["download_manual_evidence_manual_measurements__session_id__evidence__evidence_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/manual-measurements/{session_id}/evidence/{evidence_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Hapus bukti jawaban manual yang salah */
+        delete: operations["delete_manual_evidence_manual_measurements__session_id__evidence__evidence_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1427,8 +1483,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Daftar pilihan provider penilai aktif
-         * @description Untuk dropdown penilai di form pengukuran (Admin dan Developer AI). Hanya id, nama, jenis, dan model; tanpa URL, hint kredensial, harga, atau anggaran.
+         * Daftar pilihan provider penilai (produk AI otomatis aktif)
+         * @description Untuk dropdown penilai di form pengukuran (Admin dan Developer AI). Isinya produk AI otomatis yang aktif dan belum dihapus, sama dengan halaman Provider. Hanya id, nama, jenis, dan model; tanpa URL, hint kredensial, harga, atau anggaran.
          */
         get: operations["list_judge_options_judge_providers_get"];
         put?: never;
@@ -2425,6 +2481,51 @@ export interface components {
             field?: string | null;
         };
         /**
+         * EvidenceKind
+         * @description Jenis bukti jawaban manual (D9 attempt_evidence.kind). PBI-22 AC7, SCRUM-233.
+         * @enum {string}
+         */
+        EvidenceKind: "file" | "link";
+        /**
+         * EvidenceRead
+         * @description Satu bukti jawaban manual (D9 attempt_evidence). PBI-22 AC7, SCRUM-233.
+         */
+        EvidenceRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["EvidenceKind"];
+            /**
+             * File Name
+             * @description Nama asli berkas yang sudah dirapikan; null untuk tautan
+             */
+            file_name: string | null;
+            /**
+             * Mime Type
+             * @description Tipe dari isi berkas: image/png, image/jpeg, application/pdf
+             */
+            mime_type: string | null;
+            /** Size Bytes */
+            size_bytes: number | null;
+            /**
+             * Url
+             * @description Tautan bukti; null untuk berkas
+             */
+            url: string | null;
+            /**
+             * Uploaded By
+             * Format: uuid
+             */
+            uploaded_by: string;
+            /**
+             * Uploaded At
+             * Format: date-time
+             */
+            uploaded_at: string;
+        };
+        /**
          * ExportFormat
          * @enum {string}
          */
@@ -2724,6 +2825,8 @@ export interface components {
             /** Repetitions */
             repetitions: number;
             status: components["schemas"]["SessionStatus"];
+            /** @description automatic atau manual; label manual di daftar sesi (PBI-22 AC9) */
+            session_type: components["schemas"]["SessionType"];
             progress: components["schemas"]["SessionProgressRead"];
         };
         /**
@@ -3055,6 +3158,12 @@ export interface components {
             filled_by?: string | null;
             /** Filled At */
             filled_at?: string | null;
+            /**
+             * Evidence Count
+             * @description Jumlah bukti jawaban ini, maks 3 (AC7). null bila peran Anda tidak boleh melihat bukti (MANUAL_EVIDENCE_VISIBILITY)
+             * @default 0
+             */
+            evidence_count: number | null;
         };
         /**
          * ManualCaseProgress
@@ -4085,6 +4194,8 @@ export interface components {
             /** Repetitions */
             repetitions: number;
             status: components["schemas"]["SessionStatus"];
+            /** @description automatic atau manual; label manual di daftar sesi (PBI-22 AC9) */
+            session_type: components["schemas"]["SessionType"];
             progress: components["schemas"]["SessionProgressRead"];
             purpose: components["schemas"]["MeasurementPurpose"];
             split_filter: components["schemas"]["CaseFilter"];
@@ -4266,6 +4377,8 @@ export interface components {
             /** Repetitions */
             repetitions: number;
             status: components["schemas"]["SessionStatus"];
+            /** @description automatic atau manual; label manual di daftar sesi (PBI-22 AC9) */
+            session_type: components["schemas"]["SessionType"];
             progress: components["schemas"]["SessionProgressRead"];
         };
         /**
@@ -4372,6 +4485,11 @@ export interface components {
          * @enum {string}
          */
         SessionStatus: "queued" | "running" | "paused" | "cancelled" | "finished" | "finished_with_failures" | "failed" | "not_filled" | "partially_filled" | "complete" | "graded" | "finalized";
+        /**
+         * SessionType
+         * @enum {string}
+         */
+        SessionType: "automatic" | "manual";
         /**
          * SessionUnarchiveResponse
          * @description Hasil unarchive. Sesinya tampil lagi di GET /measurements, status tidak berubah (AC10).
@@ -7123,7 +7241,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Resume ditolak: MODEL_VERSION_CHANGED (mulai sesi baru), MODEL_VERSION_CONFIRMATION_REQUIRED (konfirmasi Admin), ATTEMPT_RECOVERY_REQUIRED, ANOTHER_SESSION_RUNNING, SESSION_NOT_RESUMABLE, SESSION_ARCHIVED, SESSION_ACCEPTED, SESSION_NOT_AUTOMATIC. */
+            /** @description Resume ditolak: MODEL_VERSION_CHANGED (mulai sesi baru), MODEL_VERSION_CONFIRMATION_REQUIRED (konfirmasi Admin), ANOTHER_SESSION_RUNNING (hanya bila slot tetap bentrok setelah dicoba ulang ke antrean), SESSION_NOT_RESUMABLE, SESSION_ARCHIVED, SESSION_ACCEPTED, SESSION_NOT_AUTOMATIC. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7764,7 +7882,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Sesi diarsipkan (`SESSION_ARCHIVED`) atau sesi dalam antrean belum bisa dinilai (`SESSION_NOT_GRADABLE`). */
+            /** @description Sesi diarsipkan (`SESSION_ARCHIVED`) atau sesi dalam antrean belum bisa dinilai (`SESSION_NOT_GRADABLE`). Sesi manual: masih ada jawaban kosong (`NOT_COMPLETE`) atau statusnya bukan status manual (`MANUAL_SESSION_STATUS_INVALID`). Jawaban ditimpa selama judge berjalan (`ANSWERS_CHANGED_DURING_GRADING`) atau sesi diarsipkan di tengah penilaian (`SESSION_ARCHIVED`): tidak ada hasil yang tersimpan, picu lagi. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7898,6 +8016,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GradedSessionListItem"][];
+                };
+            };
+        };
+    };
+    list_manual_sessions_manual_measurements_get: {
+        parameters: {
+            query?: {
+                /** @description Tampilkan sesi pengukuran manual yang diarsipkan */
+                archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionListItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8113,6 +8263,211 @@ export interface operations {
             };
             /** @description Sesi manual tidak ditemukan (`MANUAL_SESSION_NOT_FOUND`) atau jawaban tidak ada (`MANUAL_ANSWER_NOT_FOUND`). */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_manual_evidence_manual_measurements__session_id__answers__snapshot_item_id___attempt_no__evidence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                snapshot_item_id: string;
+                attempt_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRead"][];
+                };
+            };
+            /** @description Sesi, percobaan, atau bukti tidak ditemukan, atau peran Anda tidak boleh melihat bukti (`MANUAL_SESSION_NOT_FOUND`, `MANUAL_ATTEMPT_NOT_FOUND`, `EVIDENCE_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_manual_evidence_manual_measurements__session_id__answers__snapshot_item_id___attempt_no__evidence_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                snapshot_item_id: string;
+                attempt_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Tangkapan layar PNG/JPG atau PDF
+                     */
+                    file?: string;
+                    /** @description Tautan bukti, http atau https */
+                    url?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRead"];
+                };
+            };
+            /** @description Sesi, percobaan, atau bukti tidak ditemukan, atau peran Anda tidak boleh melihat bukti (`MANUAL_SESSION_NOT_FOUND`, `MANUAL_ATTEMPT_NOT_FOUND`, `EVIDENCE_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi sudah Selesai (`MANUAL_SESSION_FINALIZED`) atau masih berstatus sesi otomatis (`MANUAL_SESSION_STATUS_INVALID`), atau sudah 3 bukti (`EVIDENCE_LIMIT_REACHED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Berkas melewati MANUAL_EVIDENCE_MAX_BYTES (`EVIDENCE_TOO_LARGE`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Bukan tepat satu berkas atau tautan (`EVIDENCE_KIND_REQUIRED`), isi berkas bukan PNG/JPG/PDF (`EVIDENCE_TYPE_NOT_ALLOWED`, `EVIDENCE_TYPE_MISMATCH`), berkas kosong (`EVIDENCE_EMPTY`), atau tautan tidak sah (`EVIDENCE_LINK_INVALID`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    download_manual_evidence_manual_measurements__session_id__evidence__evidence_id__file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Isi berkas, selalu sebagai lampiran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                    "image/jpeg": unknown;
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Sesi, percobaan, atau bukti tidak ditemukan, atau peran Anda tidak boleh melihat bukti (`MANUAL_SESSION_NOT_FOUND`, `MANUAL_ATTEMPT_NOT_FOUND`, `EVIDENCE_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_manual_evidence_manual_measurements__session_id__evidence__evidence_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sesi, percobaan, atau bukti tidak ditemukan, atau peran Anda tidak boleh melihat bukti (`MANUAL_SESSION_NOT_FOUND`, `MANUAL_ATTEMPT_NOT_FOUND`, `EVIDENCE_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi sudah Selesai (`MANUAL_SESSION_FINALIZED`) atau masih berstatus sesi otomatis (`MANUAL_SESSION_STATUS_INVALID`). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -22,6 +22,7 @@ const MOCK_ROWS: SessionListItem[] = [
     case_count: 50,
     repetitions: 1,
     status: "partially_filled",
+    session_type: "manual",
     progress: { completed: 20, total: 50, completed_cases: 20, total_cases: 50, percent_cases_complete: 40 },
   },
 ];

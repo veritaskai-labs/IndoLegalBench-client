@@ -39,6 +39,7 @@ function session(overrides: Partial<SessionListItem> = {}): SessionListItem {
     case_count: 20,
     repetitions: 3,
     status: "finished",
+    session_type: "automatic",
     progress: { completed: 60, total: 60, completed_cases: 20, total_cases: 20, percent_cases_complete: 100 },
     ...overrides,
   };
