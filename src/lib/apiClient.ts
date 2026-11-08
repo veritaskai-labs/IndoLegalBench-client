@@ -1,4 +1,10 @@
 import type { components } from "@/lib/generated/api";
+import {
+  ACTIVITY_HEADER,
+  PASSIVE_ACTIVITY,
+  markLost,
+  observeServerDeadlines,
+} from "@/lib/sessionClock";
 
 export const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -65,7 +71,22 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
 }
 
 function notifyUnauthorized(reason: UnauthorizedReason): void {
+  // The timer and a 401 share this path (SCRUM-252 AC4). Remember the absolute
+  // expiry so a late 200 for the same login cannot put the page back.
+  markLost();
   for (const listener of unauthorizedListeners) listener(reason);
+}
+
+/**
+ * SCRUM-254. End the session the same way a 401 SESSION_EXPIRED does, without
+ * waiting for a business call. One passive /me lets the server delete the row
+ * when its own clock agrees; it does not refresh last_activity_at.
+ */
+export function endExpiredSession(): void {
+  const newly = markLost();
+  notifyUnauthorized("expired");
+  if (!newly) return;
+  void apiFetch("/me", { activity: "passive" }).catch(() => undefined);
 }
 
 function stringOrNull(value: unknown): string | null {
@@ -122,18 +143,34 @@ async function parseError(response: Response): Promise<ApiError> {
  * peninjau di halaman kasus) tidak memindahkan pengguna ke /forbidden saat server menjawab 403. Errornya
  * tetap dilempar, dan pemanggil yang memutuskan.
  */
-export type ApiFetchInit = RequestInit & { silentForbidden?: boolean };
+export type ApiFetchInit = RequestInit & {
+  silentForbidden?: boolean;
+  /** SCRUM-251. "passive" authenticates without moving last_activity_at. */
+  activity?: "passive";
+};
 
 /** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
 export async function apiFetch<T>(
   path: string,
-  { silentForbidden = false, ...init }: ApiFetchInit = {},
+  { silentForbidden = false, activity, ...init }: ApiFetchInit = {},
 ): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...init.headers };
+  if (activity === "passive") headers[ACTIVITY_HEADER] = PASSIVE_ACTIVITY;
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...init.headers },
+    headers,
   });
+
+  if (response.ok && response.headers && typeof response.headers.get === "function") {
+    const verdict = observeServerDeadlines(response.headers);
+    // A 200 for the login we already ended, or a deadline we cannot read, must
+    // not become data on screen (SCRUM-254 AC6).
+    if (verdict === "rejected" || verdict === "invalid") {
+      notifyUnauthorized("expired");
+      throw new ApiError(401, "SESSION_EXPIRED");
+    }
+  }
 
   if (!response.ok) {
     const err = await parseError(response);

@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { onUnauthorized } from "@/lib/apiClient";
 import {
@@ -30,14 +30,23 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock }),
 }));
 
+// jsdom cannot construct a trusted event. The isTrusted gate is asserted on the
+// pure helper; here the event type is what decides whether a renewal is sent.
+vi.mock("@/lib/sessionClock", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/sessionClock")>();
+  return {
+    ...actual,
+    isDeliberateActivity: (event: { type: string }) =>
+      event.type === "pointerdown" || event.type === "keydown" || event.type === "wheel",
+  };
+});
+
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const fetchMock = vi.fn();
 
-function trusted(type: string) {
-  const event = new Event(type, { bubbles: true, cancelable: true });
-  Object.defineProperty(event, "isTrusted", { configurable: true, get: () => true });
-  return event;
+function activity(type: string) {
+  return new Event(type, { bubbles: true, cancelable: true });
 }
 
 function seed(idleDeadline: string, absoluteExpires = ABSOLUTE) {
@@ -75,18 +84,21 @@ function activityHeader(call: number) {
   return new Headers(init?.headers).get("X-Veritask-Activity");
 }
 
-function Harness({ poll }: { poll?: () => void }) {
-  const [ended, setEnded] = useState(false);
-  useEffect(() => onUnauthorized(() => setEnded(true)), []);
+function Poller({ poll }: { poll: () => void }) {
   useEffect(() => {
-    if (!poll) return;
     const id = setInterval(poll, 1000);
     return () => clearInterval(id);
   }, [poll]);
+  return <p>protected content</p>;
+}
+
+function Harness({ children }: { children?: ReactNode }) {
+  const [ended, setEnded] = useState(false);
+  useEffect(() => onUnauthorized(() => setEnded(true)), []);
   if (ended) return <p>login</p>;
   return (
     <>
-      <p>protected content</p>
+      {children ?? <p>protected content</p>}
       <SessionExpiry />
     </>
   );
@@ -146,13 +158,16 @@ describe("SessionExpiry", () => {
     const resolve = deferredResponse();
     const poll = vi.fn();
     await act(async () => {
-      render(<Harness poll={poll} />);
+      render(
+        <Harness>
+          <Poller poll={poll} />
+        </Harness>,
+      );
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
     expect(poll).toHaveBeenCalled();
-    const callsAtWarningEdge = poll.mock.calls.length;
 
     await act(async () => {
       vi.setSystemTime(new Date(IDLE));
@@ -165,7 +180,12 @@ describe("SessionExpiry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/me$/);
     expect(activityHeader(0)).toBe("passive");
-    expect(poll.mock.calls.length).toBe(callsAtWarningEdge);
+    const pollsAtLogout = poll.mock.calls.length;
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(poll.mock.calls.length).toBe(pollsAtLogout);
 
     await act(async () => {
       resolve(responseWith("2026-11-08T11:30:00.000Z"));
@@ -210,8 +230,8 @@ describe("SessionExpiry", () => {
     });
 
     await act(async () => {
-      window.dispatchEvent(trusted("pointermove"));
-      window.dispatchEvent(trusted("pointerdown"));
+      window.dispatchEvent(activity("pointermove"));
+      window.dispatchEvent(activity("pointerdown"));
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -219,15 +239,15 @@ describe("SessionExpiry", () => {
     expect(activityHeader(0)).toBeNull();
 
     await act(async () => {
-      window.dispatchEvent(trusted("keydown"));
-      window.dispatchEvent(trusted("wheel"));
+      window.dispatchEvent(activity("keydown"));
+      window.dispatchEvent(activity("wheel"));
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     fetchMock.mockResolvedValue(responseWith("2026-11-08T11:30:00.000Z"));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(60_000);
-      window.dispatchEvent(trusted("keydown"));
+      window.dispatchEvent(activity("keydown"));
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -242,7 +262,7 @@ describe("SessionExpiry", () => {
     });
 
     await act(async () => {
-      window.dispatchEvent(trusted("pointerdown"));
+      window.dispatchEvent(activity("pointerdown"));
       fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: true, cancelable: true }));
     });
 
