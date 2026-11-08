@@ -34,16 +34,18 @@ export function useManualEvidence(
   const { reload } = list;
 
   const run = useCallback(
-    async (job: () => Promise<void>, reloadAfter: boolean) => {
-      if (inFlight.current) return;
+    async (job: () => Promise<void>, reloadAfter: boolean): Promise<boolean> => {
+      if (inFlight.current) return false;
       inFlight.current = true;
       setBusy(true);
       setError(null);
       try {
         await job();
         if (reloadAfter) reload();
+        return true;
       } catch (failure) {
         setError(toMessage(failure));
+        return false;
       } finally {
         inFlight.current = false;
         setBusy(false);
@@ -55,14 +57,14 @@ export function useManualEvidence(
   const count = list.status === "ready" ? list.data.length : null;
 
   const add = useCallback(
-    async (input: EvidenceInput) => {
-      if (count === null) return;
+    async (input: EvidenceInput): Promise<boolean> => {
+      if (count === null) return false;
       const problem = validateEvidence(input, count);
       if (problem !== null) {
         setError(problem);
-        return;
+        return false;
       }
-      await run(async () => {
+      return run(async () => {
         await gateway.addEvidence(sessionId, snapshotItemId, attemptNo, input);
       }, true);
     },
