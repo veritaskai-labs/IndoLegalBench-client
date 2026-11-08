@@ -5,12 +5,14 @@ const createObjectURL = vi.fn();
 const revokeObjectURL = vi.fn();
 
 beforeEach(() => {
+  vi.useFakeTimers();
   createObjectURL.mockReturnValue("blob:fake-url");
   Object.defineProperty(URL, "createObjectURL", { value: createObjectURL, configurable: true });
   Object.defineProperty(URL, "revokeObjectURL", { value: revokeObjectURL, configurable: true });
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   createObjectURL.mockReset();
   revokeObjectURL.mockReset();
@@ -41,10 +43,25 @@ describe("saveBlob", () => {
 
     // Act
     saveBlob(new Blob(["x"]), "bukti.png");
+    vi.runAllTimers();
 
     // Assert
     expect(document.querySelector("a[download]")).toBeNull();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake-url");
+  });
+
+  // Edge: Safari can cancel the download if the url is revoked in the same tick as the click.
+  it("does not release the blob url in the same tick as the click", () => {
+    // Arrange
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+
+    // Act
+    saveBlob(new Blob(["x"]), "bukti.png");
+
+    // Assert
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(revokeObjectURL).toHaveBeenCalledTimes(1);
   });
 
   // Negative: if the browser refuses the click the blob url is still released.
@@ -59,6 +76,7 @@ describe("saveBlob", () => {
 
     // Assert
     expect(call).toThrow("diblokir");
+    vi.runAllTimers();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:fake-url");
     expect(document.querySelector("a[download]")).toBeNull();
   });
