@@ -120,6 +120,71 @@ describe("ToastProvider", () => {
     expect(region().querySelector("b")).toBeNull();
   });
 
+  it("renders a link action and closes when clicked", () => {
+    function ActionTrigger() {
+      const { showToast } = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            showToast("Selesai dinilai", {
+              label: "Lihat laporan",
+              href: "/reports/sessions/s-1",
+            })
+          }
+        >
+          tampilkan dengan tautan
+        </button>
+      );
+    }
+
+    render(
+      <ToastProvider>
+        <ActionTrigger />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "tampilkan dengan tautan" }));
+    const link = screen.getByRole("link", { name: "Lihat laporan" });
+    expect(link).toHaveAttribute("href", "/reports/sessions/s-1");
+
+    fireEvent.click(link);
+    expect(region()).toBeEmptyDOMElement();
+  });
+
+  it("renders a button action and invokes onClick", () => {
+    const onAction = vi.fn();
+    function ButtonTrigger() {
+      const { showToast } = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            showToast("Item dihapus", {
+              label: "Urungkan",
+              onClick: onAction,
+            })
+          }
+        >
+          tampilkan dengan aksi
+        </button>
+      );
+    }
+
+    render(
+      <ToastProvider>
+        <ButtonTrigger />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "tampilkan dengan aksi" }));
+    const btn = screen.getByRole("button", { name: "Urungkan" });
+
+    fireEvent.click(btn);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(region()).toBeEmptyDOMElement();
+  });
+
   // Negative
   it("throws a clear error when useToast is used outside ToastProvider", () => {
     // React logs the thrown error; silence it so the test output stays readable.

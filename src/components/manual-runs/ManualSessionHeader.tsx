@@ -275,7 +275,10 @@ export function ManualSessionHeader({
           gateway={gradingGateway}
           onGraded={() => {
             setIsGradeOpen(false);
-            showToast(`Sesi “${session.label}” selesai dinilai.`);
+            showToast(`Sesi “${session.label}” selesai dinilai.`, {
+              label: "Lihat laporan →",
+              href: `/reports/sessions/${encodeURIComponent(session.id)}`,
+            });
             onSessionUpdated();
           }}
           onClose={(afterError) => {

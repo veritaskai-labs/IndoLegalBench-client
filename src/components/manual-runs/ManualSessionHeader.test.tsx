@@ -286,6 +286,10 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       `Sesi “${session.label}” selesai dinilai.`,
+      {
+        label: "Lihat laporan →",
+        href: `/reports/sessions/${session.id}`,
+      },
     );
     expect(onSessionUpdated).toHaveBeenCalledTimes(1);
   });
