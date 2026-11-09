@@ -197,14 +197,14 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   // Positif
   it("replaces the reviewer and reloads the queue", async () => {
     const user = userEvent.setup();
-    const active = assignment({ id: "a1", reviewer_id: "u1" });
-    queueMock.mockResolvedValue([row({ assignments: [active] })]);
+    const moved = assignment({ id: "a1", reviewer_id: "u1", status: "void", void_reason: "role_changed" });
+    queueMock.mockResolvedValue([row({ void_assignments: [moved] })]);
     replaceMock.mockResolvedValue(REPLACED);
 
     render(<AdminReviewsPage />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
     );
     await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
     await user.type(
@@ -277,8 +277,8 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     // Negatif
   it("leaves the case author out of the candidates", async () => {
     const user = userEvent.setup();
-    const active = assignment({ id: "a1", reviewer_id: "u1" });
-    queueMock.mockResolvedValue([row({ assignments: [active] })]);
+    const moved = assignment({ id: "a1", reviewer_id: "u1", status: "void", void_reason: "role_changed" });
+    queueMock.mockResolvedValue([row({ void_assignments: [moved] })]);
     usersMock.mockResolvedValue([ROBEN, AILEEN, ESI]);
     versionsMock.mockResolvedValue([
       makeSummary(1, { author: { id: "u5", name: "Esi" } }),
@@ -286,7 +286,7 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
 
     render(<AdminReviewsPage />);
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
     );
 
     expect(
@@ -299,14 +299,14 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   // Negatif: daftar anggota gagal diambil — pilihan kosong harus ada penjelasannya.
   it("says why the reviewer list is empty when the member list fails", async () => {
     const user = userEvent.setup();
-    queueMock.mockResolvedValue([row({ assignments: [assignment()] })]);
+    queueMock.mockResolvedValue([row({ void_assignments: [assignment({ status: "void", void_reason: "role_changed" })] })]);
     const failure = Promise.reject(new Error("offline"));
     failure.catch(() => undefined);
     usersMock.mockReturnValue(failure);
 
     render(<AdminReviewsPage />);
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
     );
 
     expect(
@@ -317,14 +317,14 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   // Negatif: pencarian penulis gagal — jangan diam-diam berhenti mengecualikan penulis.
   it("says the author could not be checked when the versions call fails", async () => {
     const user = userEvent.setup();
-    queueMock.mockResolvedValue([row({ assignments: [assignment()] })]);
+    queueMock.mockResolvedValue([row({ void_assignments: [assignment({ status: "void", void_reason: "role_changed" })] })]);
     const failure = Promise.reject(new Error("offline"));
     failure.catch(() => undefined);
     versionsMock.mockReturnValue(failure);
 
     render(<AdminReviewsPage />);
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
+      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
     );
 
     expect(
