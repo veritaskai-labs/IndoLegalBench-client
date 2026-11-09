@@ -116,7 +116,7 @@ export function ProviderFormDialog({
   typeLocked: initialTypeLocked = false,
   onClose,
   onSaved,
-}: Props) {
+}: Readonly<Props>) {
   const editing = product !== undefined;
   const ids = {
     name: useId(),
