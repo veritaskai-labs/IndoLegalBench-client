@@ -1097,8 +1097,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Daftar sesi selesai yang telah dinilai untuk Admin dan Viewer (SCRUM-226)
-         * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin dan Viewer.
+         * Daftar sesi selesai yang telah dinilai untuk Admin, Viewer, dan Kontributor (SCRUM-226)
+         * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin, Viewer, dan Kontributor.
          */
         get: operations["list_graded_sessions_endpoint_results_sessions_get"];
         put?: never;
