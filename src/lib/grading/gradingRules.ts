@@ -28,12 +28,13 @@ export function isGradableSession(session: GradeInput["session"]): boolean {
   return session.archived_at === null && GRADABLE.has(session.status);
 }
 
-/** Sama dengan list_graded_sessions di server#114: peran lain dijawab 403. */
-const GRADED_SESSION_ROLES: ReadonlySet<Role> = new Set(["admin", "viewer"]);
+/** Sama dengan list_graded_sessions di server#133: peran lain dijawab 403. */
+const GRADED_SESSION_ROLES: ReadonlySet<Role> = new Set(["admin", "viewer", "contributor"]);
 
 /**
- * Daftar sesi yang dinilai di Laporan (keputusan PO) hanya ditawarkan ke Admin dan Viewer. Ini hanya
- * menyembunyikan; server tetap menolak peran lain, jadi menyembunyikan tidak menjadi satu-satunya pagar.
+ * Daftar sesi yang dinilai di Laporan hanya ditawarkan ke Admin, Viewer, dan Kontributor (hak baca
+ * Viewer, PBI-24 AC10). Ini hanya menyembunyikan; server tetap menolak peran lain, jadi
+ * menyembunyikan tidak menjadi satu-satunya pagar.
  */
 export function canSeeGradedSessions(role: Role | null): boolean {
   return role !== null && GRADED_SESSION_ROLES.has(role);
@@ -83,8 +84,8 @@ export function resultsErrorMessage(error: unknown): string {
 }
 
 const SESSIONS_ERRORS: Record<string, string> = {
-  // server#114 list_graded_sessions: hanya Admin dan Viewer.
-  FORBIDDEN: "Daftar hasil penilaian hanya dapat dilihat Admin dan Viewer.",
+  // server#133 list_graded_sessions: hanya Admin, Viewer, dan Kontributor.
+  FORBIDDEN: "Daftar hasil penilaian hanya dapat dilihat Admin, Viewer, dan Kontributor.",
 };
 
 export function sessionsErrorMessage(error: unknown): string {

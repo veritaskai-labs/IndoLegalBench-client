@@ -40,7 +40,7 @@ describe("useGradedSessions (PBI-14 AC8, Laporan list)", () => {
     await waitFor(() =>
       expect(result.current).toMatchObject({
         status: "error",
-        message: "Daftar hasil penilaian hanya dapat dilihat Admin dan Viewer.",
+        message: "Daftar hasil penilaian hanya dapat dilihat Admin, Viewer, dan Kontributor.",
       }),
     );
   });
