@@ -29,7 +29,7 @@ export function RubricField({
     value,
     "aria-invalid": error ? true : undefined,
     "aria-describedby": error ? errorId : undefined,
-    className: "mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm aria-[invalid=true]:border-red-500",
+    className: "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-black aria-[invalid=true]:border-red-500",
   } as const;
 
   return (

@@ -47,7 +47,7 @@ export function AspectEditor({
             value={aspect.graderPath}
             onChange={(event) => onChange({ graderPath: event.target.value as GraderPath })}
             aria-invalid={pathError ? true : undefined}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-black"
           >
             {Object.entries(PATH_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
