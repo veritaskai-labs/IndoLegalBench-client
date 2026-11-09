@@ -21,3 +21,11 @@ export function mergeSavedProduct(before: AiProductListItem, saved: AiProduct): 
     remaining_budget_idr: before.remaining_budget_idr,
   };
 }
+
+/**
+ * AC4 (UAT TC_23): jenis pengukuran terkunci sejak produk punya sesi pertama, sama dengan aturan
+ * server. Dipakai untuk mengunci pilihan sejak formulir dibuka, bukan setelah server menolak.
+ */
+export function isMeasurementTypeLocked(item: AiProductListItem): boolean {
+  return item.session_count > 0;
+}
