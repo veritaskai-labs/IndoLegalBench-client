@@ -34,6 +34,8 @@ import { SaveTypeWarningDialog } from "@/components/providers/SaveTypeWarningDia
 type Props = {
   /** Tanpa produk berarti daftar baru, dengan produk berarti ubah. */
   product?: AiProduct;
+  /** AC4: produk sudah punya riwayat, jadi jenis terkunci sejak formulir dibuka. */
+  typeLocked?: boolean;
   onClose: () => void;
   onSaved: (saved: AiProduct) => void;
 };
@@ -109,7 +111,12 @@ function isHttpUrl(text: string): boolean {
  * Form daftar/ubah produk AI (SCRUM-117, AC1 dan AC2). Kredensial write-only:
  * saat ubah, field-nya kosong dan hanya dikirim bila diisi.
  */
-export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
+export function ProviderFormDialog({
+  product,
+  typeLocked: initialTypeLocked = false,
+  onClose,
+  onSaved,
+}: Props) {
   const editing = product !== undefined;
   const ids = {
     name: useId(),
@@ -146,8 +153,8 @@ export function ProviderFormDialog({ product, onClose, onSaved }: Props) {
   );
   const [modelParams, setModelParams] = useState(() => formatModelParams(product?.model_params));
   const [confirming, setConfirming] = useState(false);
-  /** AC4: dikunci setelah server menolak perubahan jenis karena ada riwayat. */
-  const [typeLocked, setTypeLocked] = useState(false);
+  /** AC4: terkunci sejak awal bila ada riwayat, atau setelah server menolak pergantian jenis. */
+  const [typeLocked, setTypeLocked] = useState(initialTypeLocked);
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
