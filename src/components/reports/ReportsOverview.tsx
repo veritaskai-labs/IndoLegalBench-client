@@ -10,8 +10,8 @@ import { useGradedSessions } from "@/hooks/useGradedSessions";
 import { canSeeGradedSessions } from "@/lib/grading/gradingRules";
 
 /**
- * Isi halaman Laporan. Admin dan Viewer membaca hasil penilaian sesi di sini (PBI-14 AC8, keputusan
- * PO: Viewer tidak membuka Eksekusi). Laporan perbandingan (PBI-15–17) nanti menjadi bagian baru di
+ * Isi halaman Laporan. Admin, Viewer, dan Kontributor membaca hasil penilaian sesi di sini (PBI-14
+ * AC8, PBI-24 AC10; keputusan PO: Viewer tidak membuka Eksekusi). Laporan perbandingan (PBI-15–17) nanti menjadi bagian baru di
  * halaman ini. Peran lain, yang servernya menolak daftar ini, tetap melihat placeholder.
  */
 export function ReportsOverview() {

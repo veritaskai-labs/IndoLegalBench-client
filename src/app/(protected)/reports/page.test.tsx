@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Laporan)", () => {
-  it.each<Role>(["viewer", "admin"])("lists the graded sessions for %s", async (role) => {
+  it.each<Role>(["viewer", "admin", "contributor"])("lists the graded sessions for %s", async (role) => {
     signedInAs(role);
 
     render(<ReportsPage />);
@@ -43,10 +43,10 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     expect(sessionsRead).toHaveBeenCalledTimes(1);
   });
 
-  // Contributor still has the Laporan menu, but server#114 refuses the list (403), so the page keeps
-  // the placeholder and never asks for it.
-  it("keeps the placeholder for Contributor and does not ask for the list", () => {
-    signedInAs("contributor");
+  // Developer AI has no Laporan list: the server refuses it (403), so the page keeps the placeholder
+  // and never asks for it.
+  it("keeps the placeholder for Developer AI and does not ask for the list", () => {
+    signedInAs("developer_ai");
 
     render(<ReportsPage />);
 
