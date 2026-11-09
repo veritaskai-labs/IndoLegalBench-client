@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ManualSessionDetailPage from "./page";
@@ -28,6 +28,19 @@ const { useManualSessionDetailMock } = vi.hoisted(() => ({
 vi.mock("@/hooks/useManualSessionDetail", () => ({
   useManualSessionDetail: (id: string, unfilledOnly: boolean) =>
     useManualSessionDetailMock(id, unfilledOnly),
+}));
+
+const { gatewayMock } = vi.hoisted(() => ({
+  gatewayMock: {
+    saveAnswer: vi.fn(),
+    getHistory: vi.fn(),
+    listEvidence: vi.fn(),
+  },
+}));
+
+vi.mock("@/lib/runs/manualAnswersApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/runs/manualAnswersApi")>()),
+  manualAnswerGateway: gatewayMock,
 }));
 
 function signedInAs(role: Role | null, status: "loading" | "authenticated" = "authenticated") {
@@ -111,6 +124,9 @@ function mockSession(overrides: Partial<ManualSessionDetail> = {}): ManualSessio
 describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    gatewayMock.saveAnswer.mockResolvedValue({ attempt_id: "att-2" });
+    gatewayMock.getHistory.mockResolvedValue([]);
+    gatewayMock.listEvidence.mockResolvedValue([]);
   });
 
   it("shows loading state when authentication is loading", () => {
@@ -226,7 +242,9 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
     // Header and title still mounted (page does not blank)
     expect(screen.getByRole("heading", { name: "Pengukuran LegalHero Batch 1" })).toBeInTheDocument();
     expect(screen.getByLabelText("Hanya yang belum terisi")).toBeInTheDocument();
-    expect(screen.getByText("Memuat…")).toBeInTheDocument();
+    // Case cards stay on screen while refetching instead of flashing a spinner
+    expect(screen.queryByText("Memuat…")).not.toBeInTheDocument();
+    expect(screen.getByText("Kasus Penipuan Bisnis")).toBeInTheDocument();
   });
 
   it("renders empty state message when cases list is empty", () => {
@@ -241,5 +259,132 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
     render(<ManualSessionDetailPage />);
 
     expect(screen.getByText("Belum ada kasus pada sesi ini.")).toBeInTheDocument();
+  });
+
+  // Positive: AC3 the guide on how to ask the platform and how to copy is on the page.
+  it("shows the guide for filling in answers", () => {
+    // Arrange
+    signedInAs("contributor");
+    useManualSessionDetailMock.mockReturnValue({ status: "ready", data: mockSession(), reload: vi.fn() });
+
+    // Act
+    render(<ManualSessionDetailPage />);
+
+    // Assert
+    expect(screen.getByRole("heading", { name: "Panduan mengisi jawaban" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salin pertanyaan KASUS-001" })).toBeInTheDocument();
+  });
+
+  // Positive: Admin and Contributor can fill an open session.
+  it.each(["admin", "contributor"] as const)("lets %s save answers on an open session", (role) => {
+    // Arrange
+    signedInAs(role);
+    useManualSessionDetailMock.mockReturnValue({ status: "ready", data: mockSession(), reload: vi.fn() });
+
+    // Act
+    render(<ManualSessionDetailPage />);
+
+    // Assert
+    expect(screen.getAllByRole("button", { name: "Simpan jawaban" }).length).toBeGreaterThan(0);
+  });
+
+  // Edge: a finalized session cannot be reopened, so the boxes are read-only.
+  it("makes the boxes read-only once the session is finalized", () => {
+    // Arrange
+    signedInAs("admin");
+    useManualSessionDetailMock.mockReturnValue({
+      status: "ready",
+      data: mockSession({ status: "finalized", finalized_at: "2026-11-06T10:00:00Z" }),
+      reload: vi.fn(),
+    });
+
+    // Act
+    render(<ManualSessionDetailPage />);
+
+    // Assert
+    expect(screen.queryByRole("button", { name: "Simpan jawaban" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: /^Jawaban Percobaan/ })[0]).toHaveAttribute("readonly");
+  });
+
+  // Positive: saving reloads the session so progress and status follow.
+  it("reloads the session after an answer is saved", async () => {
+    // Arrange
+    const reload = vi.fn();
+    signedInAs("contributor");
+    useManualSessionDetailMock.mockReturnValue({ status: "ready", data: mockSession(), reload });
+    render(<ManualSessionDetailPage />);
+    const boxes = screen.getAllByRole("textbox", { name: "Jawaban Percobaan 1" });
+    fireEvent.change(boxes[1], { target: { value: "Jawaban dari platform" } });
+
+    // Act
+    fireEvent.click(screen.getAllByRole("button", { name: "Simpan jawaban" })[1]);
+
+    // Assert
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(gatewayMock.saveAnswer).toHaveBeenCalledWith(
+      "session-123",
+      expect.objectContaining({ snapshot_item_id: "snap-2", answer_md: "Jawaban dari platform", confirm: false }),
+    );
+  });
+
+  // Positive: unsaved text makes the browser ask before the user leaves; a clean page does not.
+  it("warns before leaving only while there are unsaved changes", () => {
+    // Arrange
+    signedInAs("contributor");
+    useManualSessionDetailMock.mockReturnValue({ status: "ready", data: mockSession(), reload: vi.fn() });
+    render(<ManualSessionDetailPage />);
+    const leave = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const cleanWarning = leave();
+
+    // Act
+    fireEvent.change(screen.getAllByRole("textbox", { name: "Jawaban Percobaan 1" })[1], { target: { value: "belum disimpan" } });
+    const dirtyWarning = leave();
+
+    // Assert
+    expect(cleanWarning).toBe(false);
+    expect(dirtyWarning).toBe(true);
+  });
+
+  // Edge: a reload (after save or a filter change) keeps the cards and what was typed on screen.
+  it("keeps the cards and unsaved text while the session reloads", () => {
+    // Arrange
+    signedInAs("contributor");
+    const reload = vi.fn();
+    useManualSessionDetailMock.mockReturnValue({ status: "ready", data: mockSession(), reload });
+    const { rerender } = render(<ManualSessionDetailPage />);
+    const typed = screen.getAllByRole("textbox", { name: "Jawaban Percobaan 1" })[1];
+    fireEvent.change(typed, { target: { value: "ketikan saya" } });
+
+    // Act
+    useManualSessionDetailMock.mockReturnValue({ status: "loading", reload });
+    rerender(<ManualSessionDetailPage />);
+
+    // Assert
+    expect(screen.queryByText("Memuat…")).not.toBeInTheDocument();
+    expect(screen.getByText("Kasus Penipuan Bisnis")).toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: "Jawaban Percobaan 1" })[1]).toHaveValue("ketikan saya");
+  });
+
+  // Edge: the unfilled filter leaves no case, which means everything is filled (AC8).
+  it("says every case is filled when the unfilled filter leaves nothing", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    signedInAs("admin");
+    useManualSessionDetailMock.mockReturnValue({
+      status: "ready",
+      data: mockSession({ cases: [] }),
+      reload: vi.fn(),
+    });
+    render(<ManualSessionDetailPage />);
+
+    // Act
+    await user.click(screen.getByLabelText("Hanya yang belum terisi"));
+
+    // Assert
+    expect(screen.getByText("Semua kasus pada sesi ini telah selesai diisi.")).toBeInTheDocument();
   });
 });
