@@ -19,7 +19,7 @@ const FIELD =
   "rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-800 " +
   "focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
-export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Props) {
+export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Readonly<Props>) {
   // Kode kasus baru dicari saat Enter atau keluar dari kolom, bukan per ketikan.
   const [caseCode, setCaseCode] = useState(value.case_code ?? "");
 

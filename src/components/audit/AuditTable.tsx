@@ -20,7 +20,7 @@ function ActorCell({ entry }: Readonly<{ entry: AuditEntry }>) {
   );
 }
 
-export function AuditTable({ entries, onRowClick }: Props) {
+export function AuditTable({ entries, onRowClick }: Readonly<Props>) {
   return (
         <table className="w-full text-left text-sm">
       <thead className="border-b border-slate-200 text-xs font-medium text-slate-600">
