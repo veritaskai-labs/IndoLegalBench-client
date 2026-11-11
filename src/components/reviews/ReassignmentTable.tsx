@@ -2,7 +2,6 @@
 
 import { ROUND_STATUS_LABEL } from "@/lib/reviews/reviewLabels";
 import {
-  activeAssignments,
   reassignmentReason,
   reviewerName,
   voidedReplaceText,
@@ -36,9 +35,6 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
             Status ronde
           </th>
           <th scope="col" className="py-3 px-4">
-            Reviewer aktif
-          </th>
-          <th scope="col" className="py-3 px-4">
             Alasan
           </th>
           <th scope="col" className="py-3 px-4">
@@ -48,25 +44,16 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
       </thead>
       <tbody>
         {rows.map((queued) => {
-          const active = activeAssignments(queued);
-
           /**
-           * AC8: kasus yang reviewernya dinonaktifkan justru yang paling perlu diganti,
-           * jadi penugasan void ikut dapat tombol. Labelnya dibedakan supaya admin tahu
-           * penugasan mana yang sedang ia ganti.
+           * AC8 (PBI-24): tab ini hanya untuk penugasan yang sudah tidak berlaku (peran
+           * diubah atau reviewer nonaktif). Reviewer yang masih aktif diganti dari tab
+           * "Dalam review", jadi tidak dapat tombol di sini.
            */
-          const swappable = [
-            ...active.map((item) => ({
-              item,
-              text: "Ganti reviewer",
-              label: `Ganti reviewer ${reviewerName(item)}`,
-            })),
-            ...queued.void_assignments.map((item) => ({
-              item,
-              text: voidedReplaceText(item),
-              label: `${voidedReplaceText(item)} ${reviewerName(item)}`,
-            })),
-          ];
+          const swappable = queued.void_assignments.map((item) => ({
+            item,
+            text: voidedReplaceText(item),
+            label: `${voidedReplaceText(item)} ${reviewerName(item)}`,
+          }));
 
           return (
             <tr
@@ -81,15 +68,12 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
               <td className="py-3 px-4 text-slate-700">
                 {ROUND_STATUS_LABEL[queued.round_status]}
               </td>
-              <td className="py-3 px-4 text-slate-700">
-                {active.length === 0 ? "—" : active.map(reviewerName).join(", ")}
-              </td>
               <td className="py-3 px-4 text-slate-600">
                 {reassignmentReason(queued)}
               </td>
               <td className="py-3 px-4">
                 {swappable.length === 0 ? (
-                  <span className="text-slate-500">Belum ada penugasan</span>
+                  <span className="text-slate-500">Tidak ada penugasan untuk diganti</span>
                 ) : (
                   <ul className="space-y-1">
                     {swappable.map(({ item, text, label }) => (

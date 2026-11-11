@@ -58,45 +58,43 @@ describe("ReassignmentTable", () => {
   });
 
   // Positif
-  it("names the reviewer who is still assigned", () => {
+  it("has no Reviewer aktif column", () => {
     const queued = row({ assignments: [assignment({ reviewer_name: "Roben" })] });
 
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
-    expect(screen.getByText("Roben")).toBeInTheDocument();
-  });
-
-  // Positif
-  it("hands the assignment back when the admin picks ganti reviewer", async () => {
-    const user = userEvent.setup();
-    const onReplace = vi.fn();
-    const active = assignment({ id: "a7", reviewer_name: "Roben" });
-    const queued = row({ assignments: [active] });
-
-    render(<ReassignmentTable rows={[queued]} onReplace={onReplace} />);
-    await user.click(
-      screen.getByRole("button", { name: "Ganti reviewer Roben" }),
-    );
-
-    expect(onReplace).toHaveBeenCalledWith(active, queued);
+    expect(
+      screen.queryByRole("columnheader", { name: "Reviewer aktif" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Roben")).not.toBeInTheDocument();
   });
 
   // Negatif
-  it("offers no button when no assignment is active yet", () => {
+  it("offers no button for a reviewer who is still active", () => {
+    const queued = row({ assignments: [assignment({ reviewer_name: "Roben" })] });
+
+    render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByText("Tidak ada penugasan untuk diganti")).toBeInTheDocument();
+  });
+
+  // Negatif
+  it("offers no button when the round has no assignment yet", () => {
     const queued = row({ round_status: "awaiting_assignment" });
 
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.getByText("Belum ada penugasan")).toBeInTheDocument();
+    expect(screen.getByText("Tidak ada penugasan untuk diganti")).toBeInTheDocument();
   });
 
   // corner
-  it("gives one button per active reviewer of the same case", () => {
+  it("gives one button per void assignment of the same case", () => {
     const queued = row({
-      assignments: [
-        assignment({ id: "a1", reviewer_name: "Roben" }),
-        assignment({ id: "a2", reviewer_name: "Aileen" }),
+      void_assignments: [
+        assignment({ id: "a1", status: "void", reviewer_name: "Roben", void_reason: "role_changed" }),
+        assignment({ id: "a2", status: "void", reviewer_name: "Aileen", void_reason: "deactivated" }),
       ],
     });
 
@@ -134,7 +132,7 @@ describe("ReassignmentTable", () => {
   });
 
   // corner: satu ronde bisa punya reviewer aktif dan reviewer nonaktif sekaligus.
-  it("offers both the active and the deactivated reviewer of one row", () => {
+  it("offers a button only for the deactivated reviewer of a mixed row", () => {
     const queued = row({
       assignments: [assignment({ id: "a1", reviewer_name: "Roben" })],
       void_assignments: [
@@ -150,8 +148,8 @@ describe("ReassignmentTable", () => {
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
     expect(
-      screen.getByRole("button", { name: "Ganti reviewer Roben" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Ganti reviewer Roben" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Ganti reviewer nonaktif Rina" }),
     ).toBeInTheDocument();

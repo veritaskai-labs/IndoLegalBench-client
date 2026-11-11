@@ -6,7 +6,7 @@ import { type ReactNode, useId, useState } from "react";
  * Callback ref: buka sebagai modal saat dialog dipasang. React memanggilnya lagi dengan null
  * saat dialog dilepas. jsdom belum punya showModal, jadi atribut open dipasang sendiri.
  */
-function openAsModal(dialog: HTMLDialogElement | null) {
+export function openAsModal(dialog: HTMLDialogElement | null) {
   if (!dialog) return;
   if (typeof dialog.showModal === "function") dialog.showModal();
   else dialog.setAttribute("open", "");

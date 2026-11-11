@@ -88,6 +88,9 @@ describe("gradeErrorMessage", () => {
     // server#114 (session_grade.py) answers 409 when no rubric version is active. Retrying can't fix
     // that, so the message says what has to happen first (review on #77).
     [new ApiError(409, "RUBRIC_NOT_ACTIVE"), "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi."],
+    [new ApiError(409, "NOT_COMPLETE"), "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai."],
+    [new ApiError(409, "MANUAL_SESSION_STATUS_INVALID"), "Status sesi manual tidak valid untuk dinilai."],
+    [new ApiError(409, "ANSWERS_CHANGED_DURING_GRADING"), "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi."],
   ])("explains %s", (error, message) => {
     expect(gradeErrorMessage(error)).toBe(message);
   });
@@ -122,10 +125,10 @@ describe("resultsErrorMessage (AC8)", () => {
 });
 
 describe("sessionsErrorMessage (AC8, Laporan list)", () => {
-  // server#114 list_graded_sessions: only Admin and Viewer may list graded sessions.
-  it("explains that only Admin and Viewer may see the list", () => {
+  // server#133 list_graded_sessions: Admin, Viewer and Contributor may list graded sessions.
+  it("explains that only Admin, Viewer and Contributor may see the list", () => {
     expect(sessionsErrorMessage(new ApiError(403, "FORBIDDEN"))).toBe(
-      "Daftar hasil penilaian hanya dapat dilihat Admin dan Viewer.",
+      "Daftar hasil penilaian hanya dapat dilihat Admin, Viewer, dan Kontributor.",
     );
   });
 
@@ -137,13 +140,13 @@ describe("sessionsErrorMessage (AC8, Laporan list)", () => {
   });
 });
 
-// server#114 list_graded_sessions answers 403 to every other role, so the list is not offered to them.
+// server#133 list_graded_sessions answers 403 to every other role, so the list is not offered to them.
 // The API stays the real gate (AGENTS.md: hiding alone is not enough).
-describe("canSeeGradedSessions (AC8, PO decision: Viewer reads results under Laporan)", () => {
+describe("canSeeGradedSessions (PBI-14 AC8, PBI-24 AC10: Contributor has Viewer rights under Laporan)", () => {
   it.each<[Role, boolean]>([
     ["admin", true],
     ["viewer", true],
-    ["contributor", false],
+    ["contributor", true],
     ["developer_ai", false],
   ])("answers %s with %s", (role, allowed) => {
     expect(canSeeGradedSessions(role)).toBe(allowed);

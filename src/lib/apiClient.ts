@@ -166,12 +166,17 @@ function requestHeaders(init: HeadersInit | undefined, activity: "passive" | und
   return headers;
 }
 
-/** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
-export async function apiFetch<T>(
+/**
+ * Kirim permintaan dengan cookie sesi dan tangani galat server. Dipakai bersama oleh apiFetch (JSON)
+ * dan apiFetchBlob (berkas), supaya penanganan galat dan 403 hanya ada di satu tempat.
+ * Badan FormData (unggah multipart) tidak diberi Content-Type: browser yang memasang batas multipart-nya.
+ */
+async function request(
   path: string,
   { silentForbidden = false, activity, ...init }: ApiFetchInit = {},
-): Promise<T> {
+): Promise<Response> {
   const headers = requestHeaders(init.headers, activity);
+  if (init.body instanceof FormData) delete headers["Content-Type"];
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: "include",
@@ -197,6 +202,18 @@ export async function apiFetch<T>(
     if (err.status === 401) notifyUnauthorized(err.code === "SESSION_EXPIRED" ? "expired" : "no_session");
     throw err;
   }
+  return response;
+}
+
+/** Fetch wrapper. Session via httpOnly cookie, jadi credentials: "include" wajib */
+export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promise<T> {
+  const response = await request(path, init);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** Seperti apiFetch, tetapi hasilnya berkas (misalnya unduh bukti jawaban manual). */
+export async function apiFetchBlob(path: string, init: ApiFetchInit = {}): Promise<Blob> {
+  const response = await request(path, init);
+  return response.blob();
 }

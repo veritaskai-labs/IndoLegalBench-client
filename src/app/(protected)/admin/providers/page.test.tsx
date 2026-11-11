@@ -932,3 +932,32 @@ describe("ProvidersPage session count and remaining budget (PBI-23 AC6, SCRUM-21
     expect(screen.queryByText("Tidak ada produk AI nonaktif")).not.toBeInTheDocument();
   });
 });
+
+// UAT TC_23: a product with history must not offer the other measurement type at all.
+describe("ProvidersPage measurement type lock (AC4)", () => {
+  it("disables both type options when the product already has sessions", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([listItem({ name: "Veritask", session_count: 16 })]);
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Ubah Veritask" }));
+
+    await screen.findByRole("dialog", { name: "Ubah produk AI" });
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Otomatis/ })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Otomatis/ })).toBeChecked();
+    expect(screen.getByText(/Jenis terkunci karena produk sudah punya riwayat pengukuran/)).toBeInTheDocument();
+  });
+
+  it("keeps the type editable for a product without sessions", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValue([listItem({ session_count: 0 })]);
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Ubah DeepSeek" }));
+
+    await screen.findByRole("dialog", { name: "Ubah produk AI" });
+    expect(screen.getByRole("radio", { name: /Manual/ })).toBeEnabled();
+    expect(screen.queryByText(/Jenis terkunci/)).not.toBeInTheDocument();
+  });
+});

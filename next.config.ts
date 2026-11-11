@@ -8,7 +8,10 @@ const nextConfig: NextConfig = {
   // /admin/providers like the API and the sidebar. Not permanent, so it can
   // change once the name is settled.
   async redirects() {
-    return [{ source: "/admin/ai-products", destination: "/admin/providers", permanent: false }];
+    return [
+      { source: "/admin/ai-products", destination: "/admin/providers", permanent: false },
+      { source: "/reports/session/:id*", destination: "/reports/sessions/:id*", permanent: false },
+    ];
   },
 };
 

@@ -88,6 +88,7 @@ function session(overrides: Partial<SessionDetail> = {}): SessionDetail {
     case_count: 1,
     repetitions: 3,
     status: "finished",
+    session_type: "automatic",
     progress: { completed: 3, total: 3, completed_cases: 1, total_cases: 1, percent_cases_complete: 100 },
     purpose: "trial",
     split_filter: "both",

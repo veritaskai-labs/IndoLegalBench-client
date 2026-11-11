@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AiProduct, AiProductListItem } from "@/types/provider";
-import { mergeSavedProduct } from "./productUsage";
+import { isMeasurementTypeLocked, mergeSavedProduct } from "./productUsage";
 
 function saved(overrides: Partial<AiProduct> = {}): AiProduct {
   return {
@@ -83,5 +83,20 @@ describe("mergeSavedProduct", () => {
 
   it("asks for a reload when a budget appears where there was none", () => {
     expect(mergeSavedProduct(row({ monthly_budget_idr: null }), saved())).toBeNull();
+  });
+});
+
+// UAT TC_23: the type is locked as soon as the product has any measurement session.
+describe("isMeasurementTypeLocked", () => {
+  it("locks a product that already has sessions", () => {
+    expect(isMeasurementTypeLocked(row({ session_count: 16 }))).toBe(true);
+  });
+
+  it("leaves a product without sessions open", () => {
+    expect(isMeasurementTypeLocked(row({ session_count: 0 }))).toBe(false);
+  });
+
+  it("locks from the very first session", () => {
+    expect(isMeasurementTypeLocked(row({ session_count: 1 }))).toBe(true);
   });
 });

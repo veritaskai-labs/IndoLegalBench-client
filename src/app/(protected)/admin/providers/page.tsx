@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/Toast";
 import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
 import { formatDate, formatDateTime, formatRupiah, formatRupiahDown, MEASUREMENT_TYPE_LABEL, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
-import { mergeSavedProduct } from "@/lib/providers/productUsage";
+import { isMeasurementTypeLocked, mergeSavedProduct } from "@/lib/providers/productUsage";
 import type { AiProduct, AiProductListItem, MeasurementType } from "@/types/provider";
 
 type Dialog =
@@ -279,6 +279,7 @@ export default function ProvidersPage() {
       {(dialog.mode === "create" || dialog.mode === "edit") && (
         <ProviderFormDialog
           product={dialog.mode === "edit" ? dialog.product : undefined}
+          typeLocked={dialog.mode === "edit" && isMeasurementTypeLocked(dialog.product)}
           onClose={() => setDialog({ mode: "closed" })}
           onSaved={(saved) => {
             setDialog({ mode: "closed" });
