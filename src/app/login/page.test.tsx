@@ -13,7 +13,7 @@
  */
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LOGIN_URL } from "@/lib/auth";
 import LoginPage from "./page";
 
@@ -98,5 +98,33 @@ describe("LoginPage, AC-3 pemberitahuan sesi berakhir", () => {
     await renderLogin(["expired", "lain"]);
 
     expect(screen.getByRole("status")).toHaveTextContent(PESAN_KEDALUWARSA);
+  });
+});
+
+describe("LoginPage, SCRUM-253 AC3 no loop and one notice", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Edge: /login is where every 401 sends the user. If this page ever asked the API anything
+  // (for example "who am I?"), an expired cookie would answer 401 here too, and the 401 handler
+  // would send the user to /login again: a redirect loop. The page must render without a request.
+  it("renders the expired notice without calling the API, so a 401 cannot bounce back here", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await renderLogin("expired");
+
+    expect(screen.getByRole("status")).toHaveTextContent(PESAN_KEDALUWARSA);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // Edge: two polls can expire in the same moment and a stale link can carry the reason twice
+  // (?reason=expired&reason=expired). If the notice were drawn once per value, the user would
+  // see the same warning stacked twice.
+  it("shows the expired notice once when the reason arrives twice", async () => {
+    await renderLogin(["expired", "expired"]);
+
+    expect(screen.getAllByRole("status")).toHaveLength(1);
   });
 });
