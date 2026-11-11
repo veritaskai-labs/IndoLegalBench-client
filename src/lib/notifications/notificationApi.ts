@@ -6,9 +6,9 @@ export function listNotifications(size: number): Promise<NotificationPage> {
   return apiFetch<NotificationPage>(`/notifications?size=${size}`);
 }
 
-/** GET /notifications/unread-count. Jumlah untuk badge lonceng. */
+/** GET /notifications/unread-count. Jumlah untuk badge lonceng. Bukan aktivitas pengguna (SCRUM-251). */
 export function getUnreadCount(): Promise<UnreadCount> {
-  return apiFetch<UnreadCount>("/notifications/unread-count");
+  return apiFetch<UnreadCount>("/notifications/unread-count", { activity: "passive" });
 }
 
 /** POST /notifications/{id}/read. Notifikasi milik orang lain dijawab 404. */

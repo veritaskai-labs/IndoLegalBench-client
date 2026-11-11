@@ -19,8 +19,10 @@ export const SESSIONS_POLL_MS = 5000;
 export function useSessions(archived = false) {
   return usePolledResource({
     requestKey: archived ? "measurement-sessions-archived" : "measurement-sessions",
-    load: async () => {
-      const items = await listSessions(archived);
+    load: async (passive) => {
+      const items = await (passive
+        ? listSessions(archived, { activity: "passive" })
+        : listSessions(archived));
       return items.filter((item) => !isManualStatus(item.status));
     },
     toMessage: () => "Gagal memuat sesi pengukuran. Coba lagi.",

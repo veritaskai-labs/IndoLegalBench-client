@@ -49,7 +49,7 @@ describe("AuthProvider", () => {
     renderWithProvider();
 
     expect(screen.getByText("loading")).toBeInTheDocument();
-    expect(apiFetchMock).toHaveBeenCalledWith("/me");
+    expect(apiFetchMock).toHaveBeenCalledWith("/me", { activity: "passive" });
   });
 
   it("becomes authenticated when /me returns a user", async () => {

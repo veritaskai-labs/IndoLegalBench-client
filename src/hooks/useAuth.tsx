@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     
     
-    apiFetch<Me>("/me")
+    apiFetch<Me>("/me", { activity: "passive" })
     .then((user) => {
       if (cancelled) return;
       setState({ status: "authenticated", user });

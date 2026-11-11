@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { onForbidden, onUnauthorized, type UnauthorizedReason } from "@/lib/apiClient";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { SessionExpiry } from "@/components/layout/SessionExpiry";
 
 function loginPath(reason: UnauthorizedReason): string {
   return reason === "expired" ? "/login?reason=expired" : "/login";
@@ -43,5 +44,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Unmounting the children drops whatever the page fetched, so nothing stays on screen.
   if (auth.status !== "authenticated" || ended !== null) return <LoadingState />;
-  return <>{children}</>;
+  return (
+    <>
+      <SessionExpiry />
+      {children}
+    </>
+  );
 }

@@ -21,7 +21,12 @@ function jsonResponse(status: number, body: unknown): Response {
 
 function lastRequest() {
   const [url, init] = fetchMock.mock.calls.at(-1) ?? [];
-  return { url, method: init?.method, credentials: init?.credentials };
+  return {
+    url,
+    method: init?.method,
+    credentials: init?.credentials,
+    activity: new Headers(init?.headers).get("X-Veritask-Activity"),
+  };
 }
 
 beforeEach(() => {
@@ -49,6 +54,7 @@ describe("listNotifications", () => {
       url: `${BASE_URL}/notifications?size=10`,
       method: undefined,
       credentials: "include",
+      activity: null,
     });
   });
 });
@@ -65,6 +71,7 @@ describe("getUnreadCount", () => {
     // Assert
     expect(result).toEqual({ count: 3 });
     expect(lastRequest().url).toBe(`${BASE_URL}/notifications/unread-count`);
+    expect(lastRequest().activity).toBe("passive");
   });
 });
 
@@ -83,6 +90,7 @@ describe("markNotificationRead", () => {
     expect(lastRequest()).toMatchObject({
       url: `${BASE_URL}/notifications/${NOTIFICATION_ID}/read`,
       method: "POST",
+      activity: null,
     });
   });
 
@@ -132,6 +140,7 @@ describe("markAllNotificationsRead", () => {
     expect(lastRequest()).toMatchObject({
       url: `${BASE_URL}/notifications/read-all`,
       method: "POST",
+      activity: null,
     });
   });
 });

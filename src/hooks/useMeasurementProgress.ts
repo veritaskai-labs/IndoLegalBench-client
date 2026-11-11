@@ -33,7 +33,8 @@ function toMessage(error: unknown): string {
 export function useMeasurementProgress(sessionId: string, options: { poll: boolean }): ProgressResource & { reload: () => void } {
   return usePolledResource({
     requestKey: sessionId,
-    load: () => getProgress(sessionId),
+    load: (passive) =>
+      passive ? getProgress(sessionId, { activity: "passive" }) : getProgress(sessionId),
     toMessage,
     shouldPoll: () => options.poll,
     intervalMs: PROGRESS_POLL_MS,
