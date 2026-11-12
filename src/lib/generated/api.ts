@@ -1049,6 +1049,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/{session_id}/grade/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Perkiraan biaya penilaian sebelum tombol Nilai (Admin)
+         * @description Berapa percobaan, panggilan judge, token, dan rupiah yang akan terpakai bila Nilai ditekan.
+         *
+         *     Body sama dengan POST /grade. Tidak memanggil judge dan tidak menyimpan apa pun (SCRUM-286).
+         */
+        post: operations["estimate_grade_endpoint_measurements__session_id__grade_estimate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements/{session_id}/grading-runs": {
         parameters: {
             query?: never;
@@ -2550,6 +2572,66 @@ export interface components {
          * @enum {string}
          */
         ExportFormat: "csv" | "pdf";
+        /**
+         * GradeEstimateResponse
+         * @description Perkiraan biaya penilaian sebelum tombol Nilai (PBI-14 AC6, SCRUM-286). Uang berupa string.
+         *
+         *     Percobaan gangguan teknis (jawaban kosong, AI menolak) tidak dihitung karena tidak dikirim ke
+         *     judge. Harga dan kurs sama dengan biaya nyata penilaian.
+         */
+        GradeEstimateResponse: {
+            /**
+             * Judge Provider Id
+             * Format: uuid
+             * @description Judge yang dipakai: pilihan Admin atau judge sesi
+             */
+            judge_provider_id: string;
+            /**
+             * Rubric Version
+             * @description Versi rubrik yang akan dipakai, mis. 'v1'
+             */
+            rubric_version: string;
+            /**
+             * Attempts To Grade
+             * @description Percobaan yang akan dikirim ke judge
+             */
+            attempts_to_grade: number;
+            /**
+             * Judge Calls
+             * @description Dua panggilan judge per percobaan: kualitas dan format
+             */
+            judge_calls: number;
+            /**
+             * Estimated Input Tokens
+             * @description Perkiraan token prompt ke judge
+             */
+            estimated_input_tokens: number;
+            /**
+             * Estimated Output Tokens
+             * @description Perkiraan token jawaban judge
+             */
+            estimated_output_tokens: number;
+            /**
+             * Estimated Cost Idr
+             * @description Perkiraan biaya dalam rupiah, dua desimal
+             */
+            estimated_cost_idr: string;
+            /**
+             * Usd Idr Rate
+             * @description Kurs rupiah per USD yang dipakai hari ini
+             */
+            usd_idr_rate: string;
+            /**
+             * Remaining Budget Idr
+             * @description Sisa anggaran bulan ini untuk produk judge, tidak pernah negatif
+             */
+            remaining_budget_idr: string;
+            /**
+             * Budget Sufficient
+             * @description Perkiraan biaya tidak melebihi sisa anggaran
+             */
+            budget_sufficient: boolean;
+        };
         /**
          * GradeSessionRequest
          * @description Pemicu penilaian manual oleh Admin (PBI-14 AC6, AC7).
@@ -7948,6 +8030,68 @@ export interface operations {
                 };
             };
             /** @description LLM judge yang dipilih bukan produk AI otomatis yang aktif (`JUDGE_NOT_ELIGIBLE`). Body yang bentuknya tidak valid tetap dijawab `detail` bawaan FastAPI. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    estimate_grade_endpoint_measurements__session_id__grade_estimate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GradeSessionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradeEstimateResponse"];
+                };
+            };
+            /** @description Hanya Admin yang dapat melihat perkiraan biaya penilaian (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`), versi rubrik tidak ada (`RUBRIC_VERSION_NOT_FOUND`), atau produk judge sesi bukan produk AI otomatis (`JUDGE_PROVIDER_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi belum bisa dinilai, aturannya sama dengan tombol Nilai: diarsipkan (`SESSION_ARCHIVED`), dalam antrean (`SESSION_NOT_GRADABLE`), atau sesi manual yang masih ada jawaban kosong (`NOT_COMPLETE`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description LLM judge bukan produk AI otomatis yang aktif (`JUDGE_NOT_ELIGIBLE`), sesi tidak punya judge dan tidak ada yang dipilih (`JUDGE_NOT_CONFIGURED`), atau harga token masuk atau keluar produk judge belum lengkap (`JUDGE_PRICING_MISSING`). Body yang bentuknya tidak valid tetap dijawab `detail` bawaan FastAPI. */
             422: {
                 headers: {
                     [name: string]: unknown;
