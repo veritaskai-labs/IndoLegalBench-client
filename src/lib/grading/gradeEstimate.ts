@@ -54,5 +54,5 @@ export function toEstimateView(estimate: GradeEstimate, judges: readonly JudgePr
  * nol dan anggaran cukup, jadi server yang memutuskan langkah berikutnya.
  */
 export function canStartGrading(resource: AsyncResource<EstimateView | null>): boolean {
-  return resource.status === "ready" && resource.data !== null && resource.data.budgetSufficient;
+  return resource.status === "ready" && resource.data?.budgetSufficient === true;
 }
