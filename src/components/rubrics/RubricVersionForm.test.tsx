@@ -50,6 +50,83 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
     expect(screen.getByLabelText("Bobot aspek 1")).toHaveAttribute("type", "number");
   });
 
+  // Positive: every field explains itself with a small note under the label.
+  it.each([
+    ["Berlaku sejak", /mulai dipakai/i],
+    ["Nama penyetuju", /tim legal.*menyetujui versi rubrik.*boleh dikosongkan/i],
+    ["Tanggal persetujuan", /disetujui.*boleh dikosongkan/i],
+    ["Prompt penilai kualitas", /penilai LLM.*kualitas/i],
+    ["Prompt penilai format", /penilai LLM.*format/i],
+    ["Label skor 5", /nama tingkat/i],
+    ["Nama aspek 1", /aspek yang dinilai/i],
+    ["Jalur aspek 1", /deterministik.*LLM judge/i],
+    ["Bobot aspek 1", /bobot/i],
+    ["Definisi aspek 1", /arti aspek/i],
+    ["Deskripsi aspek 1 skor 5", /skor 5/i],
+    ["Deskripsi aspek 1 skor 0", /skor 0/i],
+    ["Lulus skor 4", /lulus/i],
+  ])("explains %s with a note under the label", (label, note) => {
+    // Arrange / Act
+    setup();
+
+    // Assert
+    expect(screen.getByLabelText(label)).toHaveAccessibleDescription(note);
+  });
+
+  // Positive: typed fields show a grey example of what to type.
+  it.each([
+    ["Nama penyetuju", /tim legal/i],
+    ["Prompt penilai kualitas", /.+/],
+    ["Prompt penilai format", /.+/],
+    ["Label skor 5", /.+/],
+    ["Nama aspek 1", /.+/],
+    ["Bobot aspek 1", /\d+/],
+    ["Definisi aspek 1", /.+/],
+    ["Deskripsi aspek 1 skor 3", /.+/],
+  ])("shows an example placeholder in %s", (label, example) => {
+    // Arrange / Act
+    setup();
+
+    // Assert
+    expect(screen.getByLabelText(label)).toHaveAttribute("placeholder", expect.stringMatching(example));
+  });
+
+  // Negative: a date input has a browser format, so it gets a note but no placeholder.
+  it("gives the date fields a note and no placeholder", () => {
+    // Arrange / Act
+    setup();
+
+    // Assert
+    expect(screen.getByLabelText("Berlaku sejak")).not.toHaveAttribute("placeholder");
+    expect(screen.getByLabelText("Tanggal persetujuan")).not.toHaveAttribute("placeholder");
+  });
+
+  // Edge: an added aspect explains itself too, and the template keeps the notes.
+  it("shows the notes on an added aspect", async () => {
+    // Arrange
+    const { user } = setup();
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Tambah aspek" }));
+
+    // Assert
+    expect(screen.getByLabelText("Nama aspek 2")).toHaveAccessibleDescription(/aspek yang dinilai/i);
+    expect(screen.getByLabelText("Bobot aspek 2")).toHaveAttribute("placeholder", expect.stringMatching(/\d+/));
+  });
+
+  it("keeps the notes and placeholders after the v1 template fills the form", async () => {
+    // Arrange
+    const { user } = setup();
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Isi dari template rubrik v1" }));
+
+    // Assert
+    expect(screen.getByLabelText("Nama penyetuju")).toHaveAccessibleDescription(/tim legal/i);
+    expect(screen.getByLabelText("Nama aspek 1")).toHaveAccessibleDescription(/aspek yang dinilai/i);
+    expect(screen.getByLabelText("Nama penyetuju")).toHaveAttribute("placeholder", expect.stringMatching(/tim legal/i));
+  });
+
   // Positive: the template of the client rubric v1 fills the form.
   it("fills the dimensions, levels and descriptors from the v1 template", async () => {
     // Arrange
@@ -195,8 +272,7 @@ describe("RubricVersionForm (AC7: form membuat versi baru)", () => {
     // Assert
     const weight = await screen.findByLabelText("Bobot aspek 1");
     await waitFor(() => expect(weight).toHaveAttribute("aria-invalid", "true"));
-    const describedBy = weight.getAttribute("aria-describedby") ?? "";
-    expect(document.getElementById(describedBy)).toHaveTextContent("Bobot harus berjumlah 100");
+    expect(weight).toHaveAccessibleDescription(expect.stringContaining("Bobot harus berjumlah 100"));
     expect(screen.getByRole("alert")).toHaveTextContent("Bobot harus berjumlah 100");
     expect(onCreated).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Nama aspek 1")).not.toHaveAttribute("aria-invalid", "true");
