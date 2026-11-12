@@ -1069,6 +1069,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/{session_id}/grading-runs/{grading_run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Satu hasil penilaian sesi, termasuk run lama atau LLM judge lain (Admin)
+         * @description Run tertentu dari riwayat penilaian, lengkap dengan judge-nya (SCRUM-280).
+         */
+        get: operations["get_grading_run_endpoint_measurements__session_id__grading_runs__grading_run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements/{session_id}/results": {
         parameters: {
             query?: never;
@@ -2540,6 +2560,11 @@ export interface components {
              * @description Versi rubrik yang dipilih Admin. Bila kosong, memakai versi aktif (default 'v1').
              */
             rubric_version?: string | null;
+            /**
+             * Judge Provider Id
+             * @description LLM judge untuk penilaian ini: produk AI otomatis yang aktif. Bila kosong, memakai judge sesi. Judge lain ditolak 422 JUDGE_NOT_ELIGIBLE (SCRUM-280).
+             */
+            judge_provider_id?: string | null;
         };
         /**
          * GradedSessionListItem
@@ -2579,6 +2604,33 @@ export interface components {
          * @enum {string}
          */
         GraderPath: "deterministic" | "llm";
+        /**
+         * GradingJudge
+         * @description LLM judge yang menilai satu run (SCRUM-280, feedback UAT K-17 dan K-18).
+         */
+        GradingJudge: {
+            /**
+             * Judge Provider Id
+             * Format: uuid
+             * @description ID produk AI yang menjadi judge
+             */
+            judge_provider_id: string;
+            /**
+             * Name
+             * @description Nama produk judge
+             */
+            name?: string | null;
+            /**
+             * Model Version
+             * @description Versi model yang dilaporkan judge di jawabannya; null bila tidak ada jawaban
+             */
+            model_version?: string | null;
+            /**
+             * Cost Idr
+             * @description Total biaya panggilan judge pada run ini, Rupiah
+             */
+            cost_idr?: string | null;
+        };
         /**
          * GradingRunSummary
          * @description Satu baris riwayat penilaian sesi, tanpa rincian kasus (PBI-14 AC7).
@@ -2622,6 +2674,8 @@ export interface components {
              * @description True bila ini hasil penilaian terbaru sesi tersebut
              */
             is_latest: boolean;
+            /** @description LLM judge run ini; null untuk run lama tanpa judge */
+            judge?: components["schemas"]["GradingJudge"] | null;
             /** @description Tiga skor terpisah: dev, test, dan gabungan */
             scores: components["schemas"]["ThreeScores"];
         };
@@ -4319,6 +4373,8 @@ export interface components {
              * @default true
              */
             is_latest: boolean;
+            /** @description LLM judge run ini; null untuk run lama tanpa judge */
+            judge?: components["schemas"]["GradingJudge"] | null;
             /** @description Tiga skor terpisah: dev, test, dan gabungan */
             scores: components["schemas"]["ThreeScores"];
             /**
@@ -7891,13 +7947,13 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Validation Error */
+            /** @description LLM judge yang dipilih bukan produk AI otomatis yang aktif (`JUDGE_NOT_ELIGIBLE`). Body yang bentuknya tidak valid tetap dijawab `detail` bawaan FastAPI. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -7932,6 +7988,56 @@ export interface operations {
                 };
             };
             /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_grading_run_endpoint_measurements__session_id__grading_runs__grading_run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+                grading_run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionGradingResponse"];
+                };
+            };
+            /** @description Hanya Admin yang dapat melihat riwayat penilaian (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`) atau run penilaian tidak ada di sesi ini (`GRADING_RUN_NOT_FOUND`). */
             404: {
                 headers: {
                     [name: string]: unknown;
