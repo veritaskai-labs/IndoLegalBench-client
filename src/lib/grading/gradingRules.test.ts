@@ -89,6 +89,8 @@ describe("gradeErrorMessage", () => {
     // that, so the message says what has to happen first (review on #77).
     [new ApiError(409, "RUBRIC_NOT_ACTIVE"), "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi."],
     [new ApiError(409, "NOT_COMPLETE"), "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai."],
+    // SCRUM-280: the chosen judge was turned off or is not an automatic product any more.
+    [new ApiError(422, "JUDGE_NOT_ELIGIBLE"), "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain."],
     [new ApiError(409, "MANUAL_SESSION_STATUS_INVALID"), "Status sesi manual tidak valid untuk dinilai."],
     [new ApiError(409, "ANSWERS_CHANGED_DURING_GRADING"), "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi."],
   ])("explains %s", (error, message) => {
@@ -162,6 +164,8 @@ describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", (
     // The history is Admin only (server#122); a role change while the page is open lands here.
     [new ApiError(403, "FORBIDDEN"), "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman."],
     [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
+    // SCRUM-283: opening one run that no longer belongs to this session.
+    [new ApiError(404, "GRADING_RUN_NOT_FOUND"), "Hasil penilaian ini tidak ditemukan. Muat ulang halaman."],
   ])("explains %s", (error, message) => {
     expect(runsErrorMessage(error)).toBe(message);
   });

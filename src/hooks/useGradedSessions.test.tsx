@@ -8,7 +8,7 @@ import { useGradedSessions } from "./useGradedSessions";
 
 // The hook takes the gateway as a parameter (DIP), so the test hands it a fake instead of mocking modules.
 function fakeGateway(sessions: GradingGateway["sessions"]): GradingGateway {
-  return { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(sessions), runs: vi.fn() };
+  return { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(sessions), runs: vi.fn(), run: vi.fn() };
 }
 
 describe("useGradedSessions (PBI-14 AC8, Laporan list)", () => {
@@ -50,7 +50,7 @@ describe("useGradedSessions (PBI-14 AC8, Laporan list)", () => {
       .fn<GradingGateway["sessions"]>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce([gradedSessionItem()]);
-    const gateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions, runs: vi.fn() };
+    const gateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions, runs: vi.fn(), run: vi.fn() };
 
     const { result } = renderHook(() => useGradedSessions(gateway));
     await waitFor(() =>

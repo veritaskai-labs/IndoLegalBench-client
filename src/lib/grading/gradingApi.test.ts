@@ -58,7 +58,7 @@ describe("httpGradingGateway.grade (POST /measurements/{id}/grade, PBI-14 AC6)",
   it("sends the chosen rubric version as rubric_version when re-grading", async () => {
     fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse({ kind: "regrade", rubric_version: "v2" })));
 
-    const result = await httpGradingGateway.grade("s-1", "v2");
+    const result = await httpGradingGateway.grade("s-1", { rubricVersion: "v2" });
 
     expect(result).toMatchObject({ kind: "regrade", rubric_version: "v2" });
     const [url, init] = fetchMock.mock.calls[0];
@@ -67,13 +67,39 @@ describe("httpGradingGateway.grade (POST /measurements/{id}/grade, PBI-14 AC6)",
     expect(JSON.parse(init.body)).toEqual({ rubric_version: "v2" });
   });
 
+  // K-17/K-18 (SCRUM-283): the Admin picks the LLM judge when re-grading, sent as judge_provider_id.
+  it("sends the chosen judge and version together", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse({ kind: "regrade" })));
+
+    await httpGradingGateway.grade("s-1", { rubricVersion: "v2", judgeProviderId: "judge-b" });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ rubric_version: "v2", judge_provider_id: "judge-b" });
+  });
+
+  it("sends only the judge when no version is chosen", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
+
+    await httpGradingGateway.grade("s-1", { judgeProviderId: "judge-b" });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ judge_provider_id: "judge-b" });
+  });
+
+  // Edge: empty options behave like no options, so the server keeps its defaults.
+  it("sends no body for empty options", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
+
+    await httpGradingGateway.grade("s-1", {});
+
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+
   it.each([
     [404, "RUBRIC_VERSION_NOT_FOUND"],
     [409, "RUBRIC_NOT_ACTIVE"],
   ])("hands a %i %s refusal for a chosen version to the caller", async (status, code) => {
     fetchMock.mockResolvedValue(fakeResponse(status, { code }));
 
-    await expect(httpGradingGateway.grade("s-1", "v9")).rejects.toMatchObject({ status, code });
+    await expect(httpGradingGateway.grade("s-1", { rubricVersion: "v9" })).rejects.toMatchObject({ status, code });
   });
 
   it("encodes the session id in the path", async () => {
@@ -206,5 +232,38 @@ describe("httpGradingGateway.runs (GET /measurements/{id}/grading-runs, PBI-14 A
     fetchMock.mockResolvedValue(fakeResponse(404, { code: "MEASUREMENT_NOT_FOUND" }));
 
     await expect(httpGradingGateway.runs("s-1")).rejects.toMatchObject({ status: 404, code: "MEASUREMENT_NOT_FOUND" });
+  });
+});
+
+describe("httpGradingGateway.run (GET /measurements/{id}/grading-runs/{run_id}, SCRUM-280)", () => {
+  it("reads one grading run of the session with its cases", async () => {
+    const older = gradingResponse({ grading_run_id: "run-1", is_latest: false });
+    fetchMock.mockResolvedValue(fakeResponse(200, older));
+
+    await expect(httpGradingGateway.run("s-1", "run-1")).resolves.toEqual(older);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/s-1\/grading-runs\/run-1$/);
+  });
+
+  it("encodes both ids in the path", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
+
+    await httpGradingGateway.run("a/b", "c/d");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grading-runs\/c%2Fd$/);
+  });
+
+  // Negative: a run of another session is 404 on the server; the caller explains it.
+  it("hands 404 GRADING_RUN_NOT_FOUND to the caller", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(404, { code: "GRADING_RUN_NOT_FOUND" }));
+
+    await expect(httpGradingGateway.run("s-1", "run-x")).rejects.toMatchObject({ status: 404, code: "GRADING_RUN_NOT_FOUND" });
+  });
+
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.run("s-1", "run-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
   });
 });

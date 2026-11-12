@@ -62,6 +62,8 @@ const GRADE_ERRORS: Record<string, string> = {
   NOT_COMPLETE: "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai.",
   MANUAL_SESSION_STATUS_INVALID: "Status sesi manual tidak valid untuk dinilai.",
   ANSWERS_CHANGED_DURING_GRADING: "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi.",
+  // server#134: judge pilihan Admin sudah nonaktif atau bukan produk otomatis.
+  JUDGE_NOT_ELIGIBLE: "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain.",
 };
 
 const RESULTS_ERRORS: Record<string, string> = {
@@ -96,6 +98,8 @@ const RUNS_ERRORS: Record<string, string> = {
   // server#122: riwayat penilaian hanya untuk Admin.
   FORBIDDEN: "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman.",
   MEASUREMENT_NOT_FOUND: NOT_FOUND,
+  // server#134: run yang dibuka bukan milik sesi ini (atau sudah tidak ada).
+  GRADING_RUN_NOT_FOUND: "Hasil penilaian ini tidak ditemukan. Muat ulang halaman.",
 };
 
 export function runsErrorMessage(error: unknown): string {

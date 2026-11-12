@@ -100,21 +100,22 @@ describe("regradeAvailability (AC7: Nilai ulang dengan versi terbaru)", () => {
     expect(result).toEqual({ available: false, reason: "never_graded" });
   });
 
-  it("is off when the latest result already used the newest version", () => {
+  // K-17/K-18 (SCRUM-283): with the newest version already used, another LLM judge can still re-grade.
+  it("stays on when the latest result already used the newest version", () => {
     // Arrange / Act
     const result = regradeAvailability(input({ latest: gradingResponse({ rubric_version: "v2", kind: "regrade" }) }));
 
     // Assert
-    expect(result).toEqual({ available: false, reason: "already_latest" });
+    expect(result).toEqual({ available: true, version: V2 });
   });
 
-  // Edge: a result from a version missing in the list (server newer than the list) must not reopen the button.
-  it("is off when the result used a version newer than anything in the list", () => {
+  // Edge: a result from a version missing in the list still allows a re-grade; the server decides.
+  it("stays on when the result used a version newer than anything in the list", () => {
     // Arrange / Act
     const result = regradeAvailability(input({ versions: [V1], latest: gradingResponse({ rubric_version: "v9" }) }));
 
     // Assert
-    expect(result).toEqual({ available: false, reason: "already_latest" });
+    expect(result).toEqual({ available: true, version: V1 });
   });
 
   // Edge: a label the client cannot read must not hide the button forever; the server decides.
@@ -138,7 +139,6 @@ describe("REGRADE_UNAVAILABLE_TEXT", () => {
       session_not_gradable: "Sesi ini belum bisa dinilai ulang. Hanya sesi yang berjalan atau sudah selesai, dan belum diarsipkan.",
       no_rubric: "Belum ada versi rubrik. Buat versi rubrik dulu di halaman Rubrik.",
       never_graded: "Sesi ini belum pernah dinilai. Gunakan tombol Nilai terlebih dahulu.",
-      already_latest: "Hasil terbaru sudah memakai versi rubrik terbaru.",
     });
   });
 });

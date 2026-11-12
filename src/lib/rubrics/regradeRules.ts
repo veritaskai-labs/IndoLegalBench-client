@@ -5,12 +5,7 @@ import type { SessionDetail } from "@/types/measurement";
 import type { RubricVersionSummary } from "@/types/rubric";
 import { latestVersion } from "./rubricVersion";
 
-export type RegradeUnavailableReason =
-  | "not_admin"
-  | "session_not_gradable"
-  | "no_rubric"
-  | "never_graded"
-  | "already_latest";
+export type RegradeUnavailableReason = "not_admin" | "session_not_gradable" | "no_rubric" | "never_graded";
 
 export type RegradeAvailability =
   | { available: true; version: RubricVersionSummary }
@@ -24,14 +19,12 @@ export const REGRADE_UNAVAILABLE_TEXT: Record<Exclude<RegradeUnavailableReason, 
   session_not_gradable: "Sesi ini belum bisa dinilai ulang. Hanya sesi yang berjalan atau sudah selesai, dan belum diarsipkan.",
   no_rubric: "Belum ada versi rubrik. Buat versi rubrik dulu di halaman Rubrik.",
   never_graded: "Sesi ini belum pernah dinilai. Gunakan tombol Nilai terlebih dahulu.",
-  already_latest: "Hasil terbaru sudah memakai versi rubrik terbaru.",
 };
 
 /**
- * Kapan "Nilai ulang dengan versi terbaru" ditawarkan (PBI-14 AC7), dan dengan versi mana.
- * Server tidak membuka daftar run, jadi keputusan diambil dari hasil terbaru (GET /results) dan
- * daftar versi (GET /admin/rubrics). Server tetap yang menolak bila keadaan sudah berubah (409).
- * Label hasil yang tidak berbentuk versi tidak mengunci tombol: server yang menentukan.
+ * Kapan "Nilai ulang" ditawarkan (PBI-14 AC7), dan versi mana yang dipilih lebih dulu. Hasil yang
+ * sudah memakai versi terbaru tetap boleh dinilai ulang, karena Admin bisa memilih LLM judge lain
+ * untuk jawaban yang sama (feedback UAT K-17/K-18). Server tetap yang menolak (409/422).
  */
 export function regradeAvailability(input: {
   role: Role | null;
@@ -46,14 +39,5 @@ export function regradeAvailability(input: {
   const newest = latestVersion(versions);
   if (newest === null) return { available: false, reason: "no_rubric" };
   if (latest === null) return { available: false, reason: "never_graded" };
-
-  if (usesNewestOrAbove(latest.rubric_version, newest.version_no)) return { available: false, reason: "already_latest" };
   return { available: true, version: newest };
-}
-
-/** Label "v2" dibaca sebagai nomor; label lain dianggap lebih lama supaya tombol tidak terkunci. */
-function usesNewestOrAbove(label: string, newestNo: number): boolean {
-  const match = /^v(\d+)$/.exec(label);
-  if (match === null) return false;
-  return Number(match[1]) >= newestNo;
 }
