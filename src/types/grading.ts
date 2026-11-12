@@ -18,3 +18,6 @@ export type ThreeScores = components["schemas"]["ThreeScores"];
 export type GradingRunSummary = components["schemas"]["GradingRunSummary"];
 /** LLM judge satu run: produk, model yang dilaporkan, total biaya panggilan yang tercatat (server#134). */
 export type GradingJudge = components["schemas"]["GradingJudge"];
+
+/** Perkiraan biaya penilaian sebelum tombol Nilai (POST /measurements/{id}/grade/estimate, Admin, server#135). */
+export type GradeEstimate = components["schemas"]["GradeEstimateResponse"];

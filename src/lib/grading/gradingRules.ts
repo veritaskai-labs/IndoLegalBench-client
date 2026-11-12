@@ -68,6 +68,15 @@ const GRADE_ERRORS: Record<string, string> = {
   JUDGE_REQUIRED: "Pilih LLM judge dulu sebelum menilai.",
 };
 
+// Perkiraan biaya (server#135): kode yang sama dengan /grade ikut kalimatnya, ditambah kode judge.
+const ESTIMATE_ERRORS: Record<string, string> = {
+  ...GRADE_ERRORS,
+  JUDGE_PRICING_MISSING:
+    "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Provider.",
+  JUDGE_NOT_CONFIGURED: "Sesi ini belum punya penilai LLM dan belum ada yang dipilih.",
+  JUDGE_PROVIDER_NOT_FOUND: "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman.",
+};
+
 const RESULTS_ERRORS: Record<string, string> = {
   // server#114: hasil sesi yang masih berjalan hanya untuk Admin.
   FORBIDDEN: "Hasil penilaian sesi yang masih berjalan hanya dapat dilihat Admin.",
@@ -81,6 +90,10 @@ function messageFor(table: Record<string, string>, error: unknown, fallback: str
 
 export function gradeErrorMessage(error: unknown): string {
   return messageFor(GRADE_ERRORS, error, "Penilaian gagal. Coba lagi.");
+}
+
+export function estimateErrorMessage(error: unknown): string {
+  return messageFor(ESTIMATE_ERRORS, error, "Perkiraan biaya gagal dimuat. Coba lagi.");
 }
 
 export function resultsErrorMessage(error: unknown): string {

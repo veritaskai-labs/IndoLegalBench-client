@@ -2,9 +2,12 @@
 
 import { useId, useState } from "react";
 
+import { GradeEstimateTable } from "@/components/grading/GradeEstimateTable";
 import { JudgeProviderSelect } from "@/components/providers/JudgeProviderSelect";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useGradeEstimate } from "@/hooks/useGradeEstimate";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
+import { canStartGrading } from "@/lib/grading/gradeEstimate";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { gradeErrorMessage } from "@/lib/grading/gradingRules";
 import { versionLabel } from "@/lib/rubrics/rubricVersion";
@@ -15,8 +18,9 @@ const BOX = "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 t
 
 /**
  * Nilai ulang (PBI-14 AC7, K-17/K-18): Admin memilih versi rubrik dan LLM judge. Jawaban sama bisa
- * dinilai judge lain; hasil lama tetap tersimpan dengan rubrik dan judge-nya sendiri. Pending, kunci
- * tombol, dan pesan error datang dari ConfirmDialog; gateway dan daftar judge disuntikkan.
+ * dinilai judge lain; hasil lama tetap tersimpan dengan rubrik dan judge-nya sendiri. Perkiraan biaya
+ * dimuat ulang setiap judge atau versi diganti, dan tombol baru hidup bila anggaran cukup. Pending,
+ * kunci tombol, dan pesan error datang dari ConfirmDialog; gateway dan daftar judge disuntikkan.
  */
 export function RegradeDialog({
   session,
@@ -43,13 +47,20 @@ export function RegradeDialog({
   const [version, setVersion] = useState(versionLabel(defaultVersion.version_no));
   const [judgeId, setJudgeId] = useState(defaultJudgeId);
   const newestFirst = [...versions].sort((a, b) => b.version_no - a.version_no);
+  // Tanpa judge belum ada yang diperkirakan: perkiraan untuk judge sesi yang lama akan menyesatkan.
+  const estimate = useGradeEstimate(
+    session.id,
+    judgeId === "" ? null : { rubricVersion: version, judgeProviderId: judgeId },
+    gateway,
+    judgeApi,
+  );
 
   return (
     <ConfirmDialog
       title="Nilai ulang sesi ini?"
       confirmLabel="Nilai ulang"
       busyLabel="Menilai ulang…"
-      confirmDisabled={judgeId === ""}
+      confirmDisabled={judgeId === "" || !canStartGrading(estimate)}
       onConfirm={() => gateway.grade(session.id, { rubricVersion: version, judgeProviderId: judgeId })}
       errorMessage={gradeErrorMessage}
       onDone={onRegraded}
@@ -69,6 +80,7 @@ export function RegradeDialog({
           </select>
         </div>
         <JudgeProviderSelect value={judgeId} onChange={setJudgeId} api={judgeApi} />
+        <GradeEstimateTable estimate={estimate} />
         <p className="text-sm text-slate-600">
           Hasil lama tetap tersimpan dengan rubrik dan penilainya sendiri. Hasil baru ditandai Terbaru.
         </p>

@@ -5,15 +5,21 @@ import { describe, expect, it, vi } from "vitest";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
-import { gradingResponse } from "@/test/gradingFixtures";
+import { BUDGET_SHORT_TEXT, NO_ATTEMPTS_TEXT } from "@/lib/grading/gradeEstimate";
+import { gradeEstimate, gradingResponse } from "@/test/gradingFixtures";
 import type { JudgeProviderOption } from "@/types/provider";
 import { GradeSessionDialog } from "./GradeSessionDialog";
 
-const JUDGE_A: JudgeProviderOption = { id: "judge-a", name: "DeepSeek", provider_type: "openai_compatible", model_name: "deepseek-chat" };
-const JUDGE_B: JudgeProviderOption = { id: "judge-b", name: "Gemini", provider_type: "openai_compatible", model_name: "gemini-2.5-pro" };
+const TABLE = { name: "Perkiraan biaya penilaian" };
+const JUDGE_A: JudgeProviderOption = { id: "judge-a", name: "Judge Alfa", provider_type: "openai_compatible", model_name: "m" };
+const JUDGE_B: JudgeProviderOption = { id: "judge-b", name: "Judge Beta", provider_type: "openai_compatible", model_name: "gemini-2.5-pro" };
 
-function renderDialog(grade: GradingGateway["grade"], judges: JudgeProviderOption[] = [JUDGE_A, JUDGE_B]) {
-  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn() };
+function renderDialog(
+  grade: GradingGateway["grade"],
+  estimate: GradingGateway["estimate"] = () => Promise.resolve(gradeEstimate()),
+  judges: JudgeProviderOption[] = [JUDGE_A, JUDGE_B],
+) {
+  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
   const onGraded = vi.fn();
   const onClose = vi.fn();
@@ -39,7 +45,7 @@ async function chooseJudge(
   await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), judgeId);
 }
 
-describe("GradeSessionDialog (PBI-14 AC6)", () => {
+describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
   // AC6: the judge cost goes to its own budget, so the Admin hears that before spending it.
   it("says what grading uses and where its cost goes before doing it", () => {
     const { dialog } = renderDialog(() => Promise.resolve(gradingResponse()));
@@ -48,23 +54,25 @@ describe("GradeSessionDialog (PBI-14 AC6)", () => {
     expect(dialog.getByText(/Biaya penilai LLM/)).toHaveTextContent("anggaran penilai");
   });
 
-  // K-14: the judge is chosen here, so nothing is sent before one is picked.
-  it("starts with no judge and keeps Nilai off until one is chosen", async () => {
+  // K-14: the judge is chosen here, so nothing is estimated or sent before one is picked.
+  it("starts with no judge, asks for no estimate and keeps Nilai off until one is chosen", async () => {
     const user = userEvent.setup();
-    const { dialog } = renderDialog(() => Promise.resolve(gradingResponse()));
+    const { dialog, gateway } = renderDialog(() => Promise.resolve(gradingResponse()));
     const button = dialog.getByRole("button", { name: "Nilai" });
 
     await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
     expect(button).toBeDisabled();
+    expect(gateway.estimate).not.toHaveBeenCalled();
 
     await chooseJudge(dialog, user);
+    await dialog.findByRole("table", TABLE);
 
     expect(button).toBeEnabled();
   });
 
   // Edge: no active automatic product yet, so the Admin is sent to set one up and cannot start.
   it("keeps Nilai off and explains when no judge is active", async () => {
-    const { dialog } = renderDialog(() => Promise.resolve(gradingResponse()), []);
+    const { dialog } = renderDialog(() => Promise.resolve(gradingResponse()), undefined, []);
 
     expect(await dialog.findByText(/Belum ada provider yang aktif/)).toBeInTheDocument();
     expect(dialog.getByRole("button", { name: "Nilai" })).toBeDisabled();
@@ -76,6 +84,7 @@ describe("GradeSessionDialog (PBI-14 AC6)", () => {
     const { dialog, gateway, onGraded } = renderDialog(() => Promise.resolve(graded));
     await chooseJudge(dialog, user, "judge-b");
 
+    await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(gateway.grade).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-b" });
@@ -88,6 +97,7 @@ describe("GradeSessionDialog (PBI-14 AC6)", () => {
     const { dialog, gateway } = renderDialog(() => new Promise(() => {}));
     await chooseJudge(dialog, user);
 
+    await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(dialog.getByRole("button", { name: "Menilai…" })).toBeDisabled();
@@ -101,6 +111,7 @@ describe("GradeSessionDialog (PBI-14 AC6)", () => {
     const { dialog, onGraded, onClose } = renderDialog(() => Promise.reject(new ApiError(409, "SESSION_ARCHIVED")));
     await chooseJudge(dialog, user);
 
+    await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(await dialog.findByRole("alert")).toHaveTextContent("Sesi yang sudah diarsipkan tidak bisa dinilai.");
@@ -115,6 +126,7 @@ describe("GradeSessionDialog (PBI-14 AC6)", () => {
     const { dialog } = renderDialog(() => Promise.reject(new ApiError(422, "JUDGE_REQUIRED")));
     await chooseJudge(dialog, user);
 
+    await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(await dialog.findByRole("alert")).toHaveTextContent("Pilih LLM judge dulu sebelum menilai.");
@@ -128,5 +140,93 @@ describe("GradeSessionDialog (PBI-14 AC6)", () => {
 
     expect(gateway.grade).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith(false);
+  });
+
+  // AC6: the Admin sees what grading will cost with the chosen judge before pressing Nilai.
+  it("shows the estimate table for the chosen judge before Nilai", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const { dialog, gateway } = renderDialog(() => Promise.resolve(gradingResponse()));
+
+    // Act
+    await chooseJudge(dialog, user);
+
+    // Assert
+    const table = within(await dialog.findByRole("table", TABLE));
+    expect(gateway.estimate).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
+    expect(table.getByRole("rowheader", { name: "Jumlah percobaan" }).nextElementSibling).toHaveTextContent("12");
+    expect(table.getByRole("rowheader", { name: "Perkiraan biaya" }).nextElementSibling).toHaveTextContent("Rp 15.251");
+    expect(table.getByRole("rowheader", { name: "Sisa anggaran judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
+    await waitFor(() => expect(table.getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("Judge Alfa"));
+  });
+
+  it("keeps Nilai off while the estimate loads", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const { dialog, gateway } = renderDialog(() => Promise.resolve(gradingResponse()), () => new Promise(() => {}));
+
+    // Act
+    await chooseJudge(dialog, user);
+
+    // Assert
+    expect(await dialog.findByRole("status")).toHaveTextContent("Memuat perkiraan biaya…");
+    expect(dialog.getByRole("button", { name: "Nilai" })).toBeDisabled();
+    expect(gateway.grade).not.toHaveBeenCalled();
+  });
+
+  // AC6: a short budget warns and turns the start button off.
+  it("warns and keeps Nilai off when the estimated cost is above the remaining budget", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const { dialog, gateway } = renderDialog(
+      () => Promise.resolve(gradingResponse()),
+      () => Promise.resolve(gradeEstimate({ budget_sufficient: false, estimated_cost_idr: "600000.00" })),
+    );
+    await chooseJudge(dialog, user);
+
+    // Act
+    await dialog.findByRole("table", TABLE);
+    await user.click(dialog.getByRole("button", { name: "Nilai" }));
+
+    // Assert
+    expect(dialog.getByRole("alert")).toHaveTextContent(BUDGET_SHORT_TEXT);
+    expect(dialog.getByRole("button", { name: "Nilai" })).toBeDisabled();
+    expect(gateway.grade).not.toHaveBeenCalled();
+  });
+
+  // Negative: without a cost the Admin must not start; the error offers a retry that brings Nilai back.
+  it("keeps Nilai off when the estimate fails and enables it after a successful retry", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const estimate = vi
+      .fn<GradingGateway["estimate"]>()
+      .mockRejectedValueOnce(new ApiError(422, "JUDGE_PRICING_MISSING"))
+      .mockResolvedValueOnce(gradeEstimate());
+    const { dialog } = renderDialog(() => Promise.resolve(gradingResponse()), estimate);
+
+    // Act / Assert
+    await chooseJudge(dialog, user);
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Harga token penilai ini belum lengkap");
+    expect(dialog.getByRole("button", { name: "Nilai" })).toBeDisabled();
+    await user.click(dialog.getByRole("button", { name: "Coba lagi" }));
+    await dialog.findByRole("table", TABLE);
+    expect(dialog.getByRole("button", { name: "Nilai" })).toBeEnabled();
+  });
+
+  // Edge: nothing to send to the judge costs nothing; the server decides what happens.
+  it("keeps Nilai on and explains when there are no attempts to grade", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const { dialog } = renderDialog(
+      () => Promise.resolve(gradingResponse()),
+      () => Promise.resolve(gradeEstimate({ attempts_to_grade: 0, estimated_cost_idr: "0.00" })),
+    );
+
+    // Act
+    await chooseJudge(dialog, user);
+
+    // Assert
+    expect(await dialog.findByText(NO_ATTEMPTS_TEXT)).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "Nilai" })).toBeEnabled();
   });
 });

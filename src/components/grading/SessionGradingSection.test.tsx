@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/apiClient";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
@@ -46,6 +46,7 @@ function renderSection({
     sessions: vi.fn(),
     runs: vi.fn(runs),
     run: vi.fn(run),
+    estimate: vi.fn(() => Promise.resolve(gradeEstimate())),
   };
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn(listVersions) });
   render(
@@ -108,6 +109,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     await user.click(within(section).getByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
     await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(gateway.grade).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
@@ -170,6 +172,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     await user.click(await within(section).findByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
     await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
     await dialog.findByRole("alert");
     await user.click(dialog.getByRole("button", { name: "Tutup" }));
@@ -217,6 +220,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       });
 
       await user.click(await within(section).findByRole("button", { name: BUTTON }));
+      await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
       await user.click(
         within(screen.getByRole("dialog", { name: "Nilai ulang sesi ini?" })).getByRole("button", { name: "Nilai ulang" }),
       );
