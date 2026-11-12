@@ -46,6 +46,7 @@ function renderSection({
     sessions: vi.fn(),
     runs: vi.fn(runs),
     run: vi.fn(run),
+    estimate: vi.fn(),
   };
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn(listVersions) });
   render(

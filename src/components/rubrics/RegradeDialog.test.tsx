@@ -26,7 +26,7 @@ function setup({
   defaultJudgeId?: string;
   judges?: JudgeProviderOption[];
 } = {}) {
-  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn() };
+  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn() };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
   const onRegraded = vi.fn();
   const onClose = vi.fn();

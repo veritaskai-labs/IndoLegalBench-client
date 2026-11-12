@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { GradedSessionListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
+import type { GradeEstimate, GradedSessionListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
 
 /**
  * Pintu ke server untuk penilaian sesi (PBI-14). Hook dan komponen bergantung pada interface ini,
@@ -17,6 +17,8 @@ export interface GradeOptions {
 export interface GradingGateway {
   /** Tanpa pilihan: versi rubrik aktif dan judge sesi. Nilai ulang mengirim versi dan/atau judge (AC7). */
   grade(sessionId: string, options?: GradeOptions): Promise<SessionGradingResponse>;
+  /** Perkiraan biaya penilaian dengan pilihan yang sama seperti grade, tanpa memanggil judge (Admin, AC6). */
+  estimate(sessionId: string, options?: GradeOptions): Promise<GradeEstimate>;
   results(sessionId: string): Promise<SessionGradingResponse>;
   /** Riwayat penilaian sesi, terbaru di atas (Admin, AC7). Kosong bila sesi belum pernah dinilai. */
   runs(sessionId: string): Promise<GradingRunSummary[]>;
@@ -51,6 +53,19 @@ export const httpGradingGateway: GradingGateway = {
   grade: (sessionId, options) => {
     const body = gradeBody(options);
     return apiFetch<SessionGradingResponse>(sessionPath(sessionId, "grade"), {
+      method: "POST",
+      ...(body === undefined ? {} : { body }),
+      silentForbidden: true,
+    });
+  },
+
+  /**
+   * POST /measurements/{id}/grade/estimate (Admin, AC6, server#135). Body sama dengan grade, jadi
+   * perkiraan memakai judge dan versi rubrik yang sama dengan penilaian yang diumumkannya.
+   */
+  estimate: (sessionId, options) => {
+    const body = gradeBody(options);
+    return apiFetch<GradeEstimate>(sessionPath(sessionId, "grade/estimate"), {
       method: "POST",
       ...(body === undefined ? {} : { body }),
       silentForbidden: true,
