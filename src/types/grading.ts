@@ -16,3 +16,5 @@ export type ThreeScores = components["schemas"]["ThreeScores"];
 
 /** Satu baris GET /measurements/{id}/grading-runs (Admin): ringkasan satu run, tanpa rincian kasus (PBI-14 AC7). */
 export type GradingRunSummary = components["schemas"]["GradingRunSummary"];
+/** LLM judge satu run: produk, model yang dilaporkan, total biaya panggilan yang tercatat (server#134). */
+export type GradingJudge = components["schemas"]["GradingJudge"];

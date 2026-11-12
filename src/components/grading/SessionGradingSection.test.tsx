@@ -207,7 +207,11 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
         .fn<GradingGateway["results"]>()
         .mockResolvedValueOnce(gradingResponse({ rubric_version: "v1", judge: JUDGE_A }))
         .mockResolvedValueOnce(gradingResponse({ rubric_version: "v2", kind: "regrade", judge: JUDGE_A }));
-      const { section, gateway } = renderSection({ results, listVersions: () => Promise.resolve([V1, V2]) });
+      const { section, gateway } = renderSection({
+        results,
+        grade: () => Promise.resolve(gradingResponse({ rubric_version: "v2", kind: "regrade", judge: JUDGE_A })),
+        listVersions: () => Promise.resolve([V1, V2]),
+      });
 
       await user.click(await within(section).findByRole("button", { name: BUTTON }));
       await user.click(
@@ -284,7 +288,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       const { section, gateway } = await openOlder(() => Promise.resolve(OLDER));
 
       // Assert
-      await waitFor(() => expect(within(section).getByRole("table", { name: "Skor sesi" })).toHaveTextContent("0.10"));
+      await waitFor(() => expect(within(section).getByRole("table", { name: "Skor sesi" })).toHaveTextContent("0,10"));
       expect(gateway.run).toHaveBeenCalledWith("s-1", "run-1");
       expect(section).toHaveTextContent("Menampilkan hasil penilaian 07 Nov 2026, 10.00 WIB, bukan yang terbaru.");
     });
@@ -300,7 +304,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
       // Assert
       expect(within(section).queryByText(/bukan yang terbaru/)).not.toBeInTheDocument();
-      expect(within(section).getByRole("table", { name: "Skor sesi" })).not.toHaveTextContent("0.10");
+      expect(within(section).getByRole("table", { name: "Skor sesi" })).not.toHaveTextContent("0,10");
       expect(gateway.results).toHaveBeenCalledTimes(1);
     });
 

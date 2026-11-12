@@ -274,4 +274,18 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
     // Assert
     expect(onSelectRun).toHaveBeenCalledWith("run-1");
   });
+
+  // Edge: a result graded before server#134 has no judge, so the dialog asks for one before re-grading.
+  it("asks for a judge when the latest result has none", async () => {
+    // Arrange
+    const { user } = setup({ latest: gradingResponse({ judge: null }) });
+
+    // Act
+    await user.click(await screen.findByRole("button", { name: BUTTON }));
+
+    // Assert
+    const dialog = within(screen.getByRole("dialog", { name: "Nilai ulang sesi ini?" }));
+    await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
+    expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
+  });
 });
