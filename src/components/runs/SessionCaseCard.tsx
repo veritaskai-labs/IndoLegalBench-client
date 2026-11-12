@@ -9,7 +9,7 @@ import type { SessionCaseResult } from "@/types/measurement";
  * Kasus test yang disamarkan untuk Developer AI hanya menampilkan status percobaan; isinya
  * sudah dikosongkan oleh server, bukan disembunyikan di sini.
  */
-export function SessionCaseCard({ item }: Readonly<{ item: SessionCaseResult }>) {
+export function SessionCaseCard({ item, sessionLabel }: Readonly<{ item: SessionCaseResult; sessionLabel?: string }>) {
   const answerContext: AnswerContext = { masked: item.masked };
 
   return (
@@ -39,7 +39,13 @@ export function SessionCaseCard({ item }: Readonly<{ item: SessionCaseResult }>)
           <h3 className="text-sm font-semibold text-slate-900">Jawaban mentah</h3>
           <ol className="space-y-3">
             {sortedAttempts(item.attempts).map((attempt) => (
-              <AttemptAnswer key={attempt.repetition_no} attempt={attempt} context={answerContext} />
+              <AttemptAnswer
+                key={attempt.repetition_no}
+                attempt={attempt}
+                context={answerContext}
+                attemptCount={item.attempts.length}
+                label={sessionLabel}
+              />
             ))}
           </ol>
         </section>

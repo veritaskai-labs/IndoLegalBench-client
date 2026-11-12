@@ -131,7 +131,7 @@ function SessionDetailView({
         {session.cases.length === 0 ? (
           <p className="text-sm text-slate-500">Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.</p>
         ) : (
-          session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} />)
+          session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} sessionLabel={session.label} />)
         )}
       </section>
     </div>
