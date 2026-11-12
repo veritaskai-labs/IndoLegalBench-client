@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { gradedSessionItem, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import { gradeEstimate, gradedSessionItem, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { httpGradingGateway } from "./gradingApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
@@ -264,6 +264,65 @@ describe("httpGradingGateway.run (GET /measurements/{id}/grading-runs/{run_id}, 
     fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
 
     await expect(httpGradingGateway.run("s-1", "run-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe("httpGradingGateway.estimate (POST /measurements/{id}/grade/estimate, PBI-14 AC6)", () => {
+  it("posts to the estimate path and returns the estimate", async () => {
+    const estimate = gradeEstimate();
+    fetchMock.mockResolvedValue(fakeResponse(200, estimate));
+
+    await expect(httpGradingGateway.estimate("s-1")).resolves.toEqual(estimate);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grade\/estimate$/);
+    expect(init.method).toBe("POST");
+  });
+
+  // No options: the server estimates with the session's judge and the active rubric.
+  it("sends no body when nothing is chosen", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradeEstimate()));
+
+    await httpGradingGateway.estimate("s-1");
+
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+
+  // The estimate must use the same choices as the grading it announces, so the body matches /grade.
+  it("sends the chosen judge and version like the grade request does", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradeEstimate()));
+
+    await httpGradingGateway.estimate("s-1", { rubricVersion: "v2", judgeProviderId: "judge-b" });
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ rubric_version: "v2", judge_provider_id: "judge-b" });
+  });
+
+  it("encodes the session id in the path", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradeEstimate()));
+
+    await httpGradingGateway.estimate("a/b");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grade\/estimate$/);
+  });
+
+  it.each([
+    [422, "JUDGE_PRICING_MISSING"],
+    [422, "JUDGE_NOT_ELIGIBLE"],
+    [422, "JUDGE_NOT_CONFIGURED"],
+    [404, "JUDGE_PROVIDER_NOT_FOUND"],
+    [409, "NOT_COMPLETE"],
+  ])("hands a %i %s refusal to the caller", async (status, code) => {
+    fetchMock.mockResolvedValue(fakeResponse(status, { code }));
+
+    await expect(httpGradingGateway.estimate("s-1")).rejects.toMatchObject({ status, code });
+  });
+
+  // A role changed while the dialog was open: the dialog explains it, no redirect to /forbidden.
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.estimate("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
     expect(forbidden).not.toHaveBeenCalled();
   });
 });

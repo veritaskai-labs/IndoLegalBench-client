@@ -1,6 +1,7 @@
 import type {
   AttemptGradeResult,
   CaseGradeResult,
+  GradeEstimate,
   GradedSessionListItem,
   GradingRunSummary,
   SessionGradingResponse,
@@ -83,6 +84,23 @@ export function gradedSessionItem(overrides: Partial<GradedSessionListItem> = {}
     product_name: "Produk Uji A",
     finished_at: "2026-11-07T03:00:00Z",
     rubric_version: "v1",
+    ...overrides,
+  };
+}
+
+/** Respons POST /measurements/{id}/grade/estimate (server#135): perkiraan biaya sebelum Nilai. Data sintetis. */
+export function gradeEstimate(overrides: Partial<GradeEstimate> = {}): GradeEstimate {
+  return {
+    judge_provider_id: "judge-a",
+    rubric_version: "v1",
+    attempts_to_grade: 12,
+    judge_calls: 24,
+    estimated_input_tokens: 48000,
+    estimated_output_tokens: 9600,
+    estimated_cost_idr: "15250.50",
+    usd_idr_rate: "16200.00",
+    remaining_budget_idr: "500000.00",
+    budget_sufficient: true,
     ...overrides,
   };
 }
