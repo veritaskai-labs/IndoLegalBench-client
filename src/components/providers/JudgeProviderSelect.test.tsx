@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
@@ -175,4 +175,42 @@ describe("JudgeProviderSelect", () => {
       await screen.findByRole("combobox", { name: /Provider Penilai/i }),
     ).toBeDisabled();
   });
+
+  // Review on client#92: a remembered judge that is no longer active must not stay chosen
+  // while the select shows the placeholder.
+  it("clears a chosen judge that is not in the active list any more", async () => {
+    // Arrange
+    api.listJudgeOptions.mockResolvedValue([DEEPSEEK, GEMINI]);
+
+    // Act
+    renderSelect({ value: "judge-yang-sudah-nonaktif" });
+
+    // Assert
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(""));
+  });
+
+  it("keeps a chosen judge that is still in the list", async () => {
+    // Arrange
+    api.listJudgeOptions.mockResolvedValue([DEEPSEEK, GEMINI]);
+
+    // Act
+    renderSelect({ value: GEMINI.id });
+
+    // Assert
+    expect(await screen.findByRole("combobox", { name: /Provider Penilai/i })).toHaveValue(GEMINI.id);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // Edge: nothing is cleared before the list is known, so a slow list does not erase the choice.
+  it("does not clear the choice while the list is still loading", () => {
+    // Arrange
+    api.listJudgeOptions.mockReturnValue(new Promise(() => undefined));
+
+    // Act
+    renderSelect({ value: "judge-yang-sudah-nonaktif" });
+
+    // Assert
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
+

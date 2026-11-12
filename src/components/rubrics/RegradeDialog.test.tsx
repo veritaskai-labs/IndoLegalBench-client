@@ -157,4 +157,15 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     expect(onClose).toHaveBeenCalledWith(false);
     expect(gateway.grade).not.toHaveBeenCalled();
   });
+
+  // Review on client#92: the latest result's judge was turned off since, so the dialog asks for another one.
+  it("asks for a judge again when the latest judge is not active any more", async () => {
+    // Arrange / Act
+    const { dialog } = setup({ defaultJudgeId: "judge-yang-sudah-nonaktif" });
+
+    // Assert
+    await waitFor(() => expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled());
+    expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue("");
+  });
 });
+
