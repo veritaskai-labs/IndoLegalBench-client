@@ -132,11 +132,6 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     mockListJudgeOptions.mockResolvedValue(MOCK_JUDGES);
   });
 
-  async function pilihPenilai(user: ReturnType<typeof userEvent.setup>) {
-    const judgeSelect = await screen.findByRole("combobox", { name: /Provider Penilai/i });
-    await user.selectOptions(judgeSelect, "judge-1");
-  }
-
   it("renders all form sections and disabled submit button initially", async () => {
     renderForm();
 
@@ -166,10 +161,11 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     expect(screen.getByText(/3. Produk AI Manual/)).toBeInTheDocument();
     expect(screen.getByTestId("product-select")).toBeInTheDocument();
 
-    expect(screen.getByText("4. Pengulangan & Penilai LLM")).toBeInTheDocument();
+    expect(screen.getByText("4. Pengulangan")).toBeInTheDocument();
     const repeatInput = screen.getByLabelText(/Jumlah Pengulangan/i);
     expect(repeatInput).toHaveValue(1);
-    expect(await screen.findByRole("combobox", { name: /Provider Penilai/i })).toBeInTheDocument();
+    // K-14 (SCRUM-282): LLM judge dipilih saat menilai, bukan saat membuat sesi.
+    expect(screen.queryByRole("combobox", { name: /Provider Penilai/i })).not.toBeInTheDocument();
 
     const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
     expect(submitBtn).toBeDisabled();
@@ -218,7 +214,6 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(screen.getByRole("button", { name: "Uji Coba" }));
     await user.click(screen.getByLabelText("Suite Hukum Pidana"));
     await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
-    await pilihPenilai(user);
 
     const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
     expect(submitBtn).toBeEnabled();
@@ -279,7 +274,6 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(screen.getByLabelText("Suite Hukum Pidana"));
     await user.click(screen.getByRole("button", { name: "Hanya Dev" }));
     await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
-    await pilihPenilai(user);
 
     const repeatInput = screen.getByLabelText(/Jumlah Pengulangan/i);
     await user.clear(repeatInput);
@@ -297,7 +291,6 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
       case_filter: "dev",
       product_id: "prod-manual-1",
       repeat_count: 2,
-      judge_provider_id: "judge-1",
     });
 
     await waitFor(() => {
@@ -320,7 +313,6 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     await user.click(screen.getByRole("button", { name: "Uji Coba" }));
     await user.click(screen.getByLabelText("Suite Hukum Pidana"));
     await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
-    await pilihPenilai(user);
 
     const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
     await user.click(submitBtn);
