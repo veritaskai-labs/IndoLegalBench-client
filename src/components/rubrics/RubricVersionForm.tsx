@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useCreateRubricVersion } from "@/hooks/useCreateRubricVersion";
 import { createEmptyDraft, createRubricV1Draft } from "@/lib/rubrics/rubricDraft";
 import { addAspect, removeAspect, setDescriptor, setField, updateAspect, updateLevel } from "@/lib/rubrics/rubricDraftEdit";
+import { RUBRIC_HELP, RUBRIC_PLACEHOLDER } from "@/lib/rubrics/rubricHelpText";
 import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import type { RubricVersion } from "@/types/rubric";
 import { AspectEditor } from "./AspectEditor";
@@ -49,13 +50,13 @@ export function RubricVersionForm({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <RubricField label="Berlaku sejak" type="date" value={draft.effectiveDate} onChange={(v) => setDraft(setField(draft, "effectiveDate", v))} error={errorFor("effective_date")} />
-        <RubricField label="Nama penyetuju" value={draft.approvedByName} onChange={(v) => setDraft(setField(draft, "approvedByName", v))} error={errorFor("approved_by_name")} />
-        <RubricField label="Tanggal persetujuan" type="date" value={draft.approvedAt} onChange={(v) => setDraft(setField(draft, "approvedAt", v))} error={errorFor("approved_at")} />
+        <RubricField label="Berlaku sejak" type="date" hint={RUBRIC_HELP.effectiveDate} value={draft.effectiveDate} onChange={(v) => setDraft(setField(draft, "effectiveDate", v))} error={errorFor("effective_date")} />
+        <RubricField label="Nama penyetuju" hint={RUBRIC_HELP.approvedByName} placeholder={RUBRIC_PLACEHOLDER.approvedByName} value={draft.approvedByName} onChange={(v) => setDraft(setField(draft, "approvedByName", v))} error={errorFor("approved_by_name")} />
+        <RubricField label="Tanggal persetujuan" type="date" hint={RUBRIC_HELP.approvedAt} value={draft.approvedAt} onChange={(v) => setDraft(setField(draft, "approvedAt", v))} error={errorFor("approved_at")} />
       </div>
 
-      <RubricField label="Prompt penilai kualitas" multiline value={draft.judgePromptQuality} onChange={(v) => setDraft(setField(draft, "judgePromptQuality", v))} error={errorFor("judge_prompt_quality")} />
-      <RubricField label="Prompt penilai format" multiline value={draft.judgePromptFormat} onChange={(v) => setDraft(setField(draft, "judgePromptFormat", v))} error={errorFor("judge_prompt_format")} />
+      <RubricField label="Prompt penilai kualitas" multiline hint={RUBRIC_HELP.judgePromptQuality} placeholder={RUBRIC_PLACEHOLDER.judgePromptQuality} value={draft.judgePromptQuality} onChange={(v) => setDraft(setField(draft, "judgePromptQuality", v))} error={errorFor("judge_prompt_quality")} />
+      <RubricField label="Prompt penilai format" multiline hint={RUBRIC_HELP.judgePromptFormat} placeholder={RUBRIC_PLACEHOLDER.judgePromptFormat} value={draft.judgePromptFormat} onChange={(v) => setDraft(setField(draft, "judgePromptFormat", v))} error={errorFor("judge_prompt_format")} />
 
       <LevelsEditor levels={draft.levels} errorFor={errorFor} onChange={(score, patch) => setDraft(updateLevel(draft, score, patch))} />
 
