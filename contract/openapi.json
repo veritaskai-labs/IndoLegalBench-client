@@ -4127,6 +4127,97 @@
         }
       }
     },
+    "/measurements/{session_id}/grade/estimate": {
+      "post": {
+        "tags": [
+          "measurements"
+        ],
+        "summary": "Perkiraan biaya penilaian sebelum tombol Nilai (Admin)",
+        "description": "Berapa percobaan, panggilan judge, token, dan rupiah yang akan terpakai bila Nilai ditekan.\n\nBody sama dengan POST /grade. Tidak memanggil judge dan tidak menyimpan apa pun (SCRUM-286).",
+        "operationId": "estimate_grade_endpoint_measurements__session_id__grade_estimate_post",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/GradeSessionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GradeEstimateResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Hanya Admin yang dapat melihat perkiraan biaya penilaian (`FORBIDDEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`), versi rubrik tidak ada (`RUBRIC_VERSION_NOT_FOUND`), atau produk judge sesi bukan produk AI otomatis (`JUDGE_PROVIDER_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sesi belum bisa dinilai, aturannya sama dengan tombol Nilai: diarsipkan (`SESSION_ARCHIVED`), dalam antrean (`SESSION_NOT_GRADABLE`), atau sesi manual yang masih ada jawaban kosong (`NOT_COMPLETE`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "LLM judge bukan produk AI otomatis yang aktif (`JUDGE_NOT_ELIGIBLE`), sesi tidak punya judge dan tidak ada yang dipilih (`JUDGE_NOT_CONFIGURED`), atau harga token masuk atau keluar produk judge belum lengkap (`JUDGE_PRICING_MISSING`). Body yang bentuknya tidak valid tetap dijawab `detail` bawaan FastAPI.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/measurements/{session_id}/grading-runs": {
       "get": {
         "tags": [
@@ -8723,6 +8814,79 @@
         ],
         "title": "ExportFormat"
       },
+      "GradeEstimateResponse": {
+        "properties": {
+          "judge_provider_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Judge Provider Id",
+            "description": "Judge yang dipakai: pilihan Admin atau judge sesi"
+          },
+          "rubric_version": {
+            "type": "string",
+            "title": "Rubric Version",
+            "description": "Versi rubrik yang akan dipakai, mis. 'v1'"
+          },
+          "attempts_to_grade": {
+            "type": "integer",
+            "title": "Attempts To Grade",
+            "description": "Percobaan yang akan dikirim ke judge"
+          },
+          "judge_calls": {
+            "type": "integer",
+            "title": "Judge Calls",
+            "description": "Dua panggilan judge per percobaan: kualitas dan format"
+          },
+          "estimated_input_tokens": {
+            "type": "integer",
+            "title": "Estimated Input Tokens",
+            "description": "Perkiraan token prompt ke judge"
+          },
+          "estimated_output_tokens": {
+            "type": "integer",
+            "title": "Estimated Output Tokens",
+            "description": "Perkiraan token jawaban judge"
+          },
+          "estimated_cost_idr": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Estimated Cost Idr",
+            "description": "Perkiraan biaya dalam rupiah, dua desimal"
+          },
+          "usd_idr_rate": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Usd Idr Rate",
+            "description": "Kurs rupiah per USD yang dipakai hari ini"
+          },
+          "remaining_budget_idr": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Remaining Budget Idr",
+            "description": "Sisa anggaran bulan ini untuk produk judge, tidak pernah negatif"
+          },
+          "budget_sufficient": {
+            "type": "boolean",
+            "title": "Budget Sufficient",
+            "description": "Perkiraan biaya tidak melebihi sisa anggaran"
+          }
+        },
+        "type": "object",
+        "required": [
+          "judge_provider_id",
+          "rubric_version",
+          "attempts_to_grade",
+          "judge_calls",
+          "estimated_input_tokens",
+          "estimated_output_tokens",
+          "estimated_cost_idr",
+          "usd_idr_rate",
+          "remaining_budget_idr",
+          "budget_sufficient"
+        ],
+        "title": "GradeEstimateResponse",
+        "description": "Perkiraan biaya penilaian sebelum tombol Nilai (PBI-14 AC6, SCRUM-286). Uang berupa string.\n\nPercobaan gangguan teknis (jawaban kosong, AI menolak) tidak dihitung karena tidak dikirim ke\njudge. Harga dan kurs sama dengan biaya nyata penilaian."
+      },
       "GradeSessionRequest": {
         "properties": {
           "rubric_version": {
@@ -8748,7 +8912,7 @@
               }
             ],
             "title": "Judge Provider Id",
-            "description": "LLM judge untuk penilaian ini: produk AI otomatis yang aktif. Bila kosong, memakai judge sesi. Judge lain ditolak 422 JUDGE_NOT_ELIGIBLE (SCRUM-280)."
+            "description": "LLM judge untuk penilaian ini: produk AI otomatis yang aktif. Bila kosong, memakai judge sesi. Judge lain ditolak 422 JUDGE_NOT_ELIGIBLE (SCRUM-280). Tanpa judge di sini maupun di sesi ditolak 422 JUDGE_REQUIRED (SCRUM-281)."
           }
         },
         "type": "object",
@@ -10440,10 +10604,17 @@
             "description": "official = Pengukuran Resmi, trial = Uji Coba"
           },
           "judge_provider_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Judge Provider Id",
-            "description": "Provider penilai (LLM judge) dari GET /judge-providers. Wajib; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE"
+            "description": "Opsional. Penilai bawaan sesi dari GET /judge-providers; penilai dipilih saat menilai (POST /measurements/{id}/grade). Bila diisi, penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE"
           }
         },
         "type": "object",
@@ -10451,8 +10622,7 @@
           "suite_ids",
           "product_id",
           "label",
-          "purpose",
-          "judge_provider_id"
+          "purpose"
         ],
         "title": "ManualStartRequest",
         "description": "Body POST /manual-measurements (PBI-22 AC1, SCRUM-230).\n\nIsian sesi otomatis diwarisi (suite, filter, label, tujuan, penilai), supaya aturan\nvalidasinya satu. Bedanya: produk harus manual, dan percobaan standar 1, bukan 3."
@@ -12827,10 +12997,17 @@
             "description": "official = Pengukuran Resmi, trial = Uji Coba"
           },
           "judge_provider_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Judge Provider Id",
-            "description": "Provider penilai (LLM judge) dari GET /judge-providers. Wajib; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE"
+            "description": "Opsional. Penilai bawaan sesi dari GET /judge-providers; penilai dipilih saat menilai (POST /measurements/{id}/grade). Bila diisi, penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE"
           }
         },
         "type": "object",
@@ -12838,8 +13015,7 @@
           "suite_ids",
           "product_id",
           "label",
-          "purpose",
-          "judge_provider_id"
+          "purpose"
         ],
         "title": "StartRequest",
         "description": "Body POST /measurements (PBI-11 AC1, SCRUM-207).\n\nIsian ringkasan diwarisi supaya Mulai divalidasi dengan aturan yang sama\nseperti Lihat ringkasan, ditambah label dan tujuan yang wajib."
