@@ -6,6 +6,7 @@ import type { SessionStatus } from "@/types/measurement";
 import {
   canGrade,
   canSeeGradedSessions,
+  estimateErrorMessage,
   gradeErrorMessage,
   isNotGraded,
   resultsErrorMessage,
@@ -176,5 +177,29 @@ describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", (
     ["a non-error value", "boom"],
   ])("falls back to a retry message for %s", (_name, error) => {
     expect(runsErrorMessage(error)).toBe("Gagal memuat riwayat penilaian. Coba lagi.");
+  });
+});
+
+describe("estimateErrorMessage (PBI-14 AC6)", () => {
+  it.each([
+    [new ApiError(422, "JUDGE_PRICING_MISSING"), "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Provider."],
+    [new ApiError(422, "JUDGE_NOT_CONFIGURED"), "Sesi ini belum punya penilai LLM dan belum ada yang dipilih."],
+    [new ApiError(404, "JUDGE_PROVIDER_NOT_FOUND"), "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman."],
+    // Same codes and words as the grade request, so the estimate and the grading never disagree.
+    [new ApiError(422, "JUDGE_NOT_ELIGIBLE"), "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain."],
+    [new ApiError(404, "RUBRIC_VERSION_NOT_FOUND"), "Versi rubrik yang dipilih tidak ditemukan. Muat ulang halaman."],
+    [new ApiError(409, "SESSION_ARCHIVED"), "Sesi yang sudah diarsipkan tidak bisa dinilai."],
+    [new ApiError(409, "NOT_COMPLETE"), "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai."],
+    [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman."],
+  ])("explains %s", (error, message) => {
+    expect(estimateErrorMessage(error)).toBe(message);
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+    ["a non-error value", "boom"],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(estimateErrorMessage(error)).toBe("Perkiraan biaya gagal dimuat. Coba lagi.");
   });
 });
