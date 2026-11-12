@@ -123,6 +123,13 @@ async function openCase(user: ReturnType<typeof userEvent.setup>, code = "QA-001
   return within(card);
 }
 
+// Attempts start closed when a case has several (SCRUM-292); open them all to read the answers.
+async function expandAttempts(user: ReturnType<typeof userEvent.setup>, card: ReturnType<typeof within>) {
+  for (const toggle of card.queryAllByRole("button", { name: /^Jawaban percobaan/, expanded: false })) {
+    await user.click(toggle);
+  }
+}
+
 beforeEach(() => {
   get.mockReset();
   params.id = "s-1";
@@ -381,6 +388,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     const items = card.getAllByRole("listitem", { name: /^Percobaan/ });
     // Corner: repetition 2 is missing and stays missing.
     expect(items.map((item) => item.getAttribute("aria-label"))).toEqual(["Percobaan 1", "Percobaan 3"]);
@@ -422,6 +430,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     const [first, second] = card.getAllByRole("listitem", { name: /^Percobaan/ });
     expect(within(first).getByRole("heading", { level: 2, name: "Kesimpulan" })).toBeInTheDocument();
     expect(within(first).getByRole("listitem")).toHaveTextContent("poin satu");
@@ -448,6 +457,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     expect(card.getByText("Gagal teknis, tidak ada jawaban.")).toBeInTheDocument();
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
   });
@@ -466,6 +476,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     expect(card.getByText("Jawaban dev saat berjalan")).toBeInTheDocument();
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
     expect(card.queryByText("Jawaban tampil setelah sesi selesai.")).not.toBeInTheDocument();
@@ -494,6 +505,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user, "KASUS-TEST");
+    await expandAttempts(user, card);
     expect(card.getByText("Isi kasus test disembunyikan untuk Developer AI. Hanya status percobaan yang ditampilkan.")).toBeInTheDocument();
     expect(card.queryByText("Rujukan hukum")).not.toBeInTheDocument();
     expect(card.getAllByText("Isi kasus test disembunyikan untuk Developer AI.")).toHaveLength(2);
