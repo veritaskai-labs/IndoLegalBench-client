@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
-import { gradingResponse } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingResponse } from "@/test/gradingFixtures";
 import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
@@ -27,7 +27,7 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   retrySession: vi.fn(),
 }));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
-vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), estimate: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
@@ -38,6 +38,7 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 const get = vi.mocked(getSession);
 const progressRead = vi.mocked(getProgress);
 const gradeRequest = vi.mocked(httpGradingGateway.grade);
+const estimateRequest = vi.mocked(httpGradingGateway.estimate);
 const resultsRead = vi.mocked(httpGradingGateway.results);
 
 function signedInAs(role: Role) {
@@ -718,10 +719,13 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     const user = userEvent.setup();
     get.mockResolvedValue(session({ status: "finished" }));
     gradeRequest.mockResolvedValue(gradingResponse());
+    estimateRequest.mockResolvedValue(gradeEstimate());
 
     render(<SessionDetailPage />);
     const results = await screen.findByRole("region", { name: "Hasil penilaian" });
     await user.click(await within(results).findByRole("button", { name: "Nilai" }));
+    // The start button stays off until the cost estimate is shown.
+    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(within(screen.getByRole("dialog", { name: "Nilai sesi ini?" })).getByRole("button", { name: "Nilai" }));
 
     expect(gradeRequest).toHaveBeenCalledWith("s-1");

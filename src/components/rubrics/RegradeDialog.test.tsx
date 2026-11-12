@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
-import { gradingResponse } from "@/test/gradingFixtures";
+import { BUDGET_SHORT_TEXT } from "@/lib/grading/gradeEstimate";
+import { gradeEstimate, gradingResponse } from "@/test/gradingFixtures";
 import { makeRubricSummary } from "@/test/rubricFixtures";
 import type { JudgeProviderOption } from "@/types/provider";
 import { RegradeDialog } from "./RegradeDialog";
@@ -16,17 +17,20 @@ const V2 = makeRubricSummary({ id: "id-2", version_no: 2 });
 const JUDGE_A: JudgeProviderOption = { id: "judge-a", name: "DeepSeek", provider_type: "openai_compatible", model_name: "deepseek-chat" };
 const JUDGE_B: JudgeProviderOption = { id: "judge-b", name: "Gemini", provider_type: "openai_compatible", model_name: "gemini-2.5-pro" };
 const TITLE = "Nilai ulang sesi ini?";
+const TABLE = { name: "Perkiraan biaya penilaian" };
 
 function setup({
   grade = vi.fn().mockResolvedValue(REGRADED),
   defaultJudgeId = "judge-a",
   judges = [JUDGE_A, JUDGE_B],
+  estimate = vi.fn().mockResolvedValue(gradeEstimate()),
 }: {
   grade?: GradingGateway["grade"];
+  estimate?: GradingGateway["estimate"];
   defaultJudgeId?: string;
   judges?: JudgeProviderOption[];
 } = {}) {
-  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn() };
+  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
   const onRegraded = vi.fn();
   const onClose = vi.fn();
@@ -74,6 +78,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     const { dialog, gateway, onRegraded, user } = setup();
     await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-b");
     await user.selectOptions(dialog.getByLabelText("Versi rubrik"), "v1");
+    await dialog.findByRole("table", TABLE);
 
     // Act
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
@@ -94,6 +99,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
 
     // Assert
+    await dialog.findByRole("table", TABLE);
     expect(button).toBeEnabled();
   });
 
@@ -107,6 +113,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     // Arrange
     const { dialog, onRegraded, onClose, user } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
     await dialog.findByRole("option", { name: "DeepSeek" });
+    await dialog.findByRole("table", TABLE);
 
     // Act
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
@@ -122,6 +129,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     // Arrange
     const { dialog, onClose, user } = setup({ grade: vi.fn().mockRejectedValue(new ApiError(404, "MEASUREMENT_NOT_FOUND")) });
     await dialog.findByRole("option", { name: "DeepSeek" });
+    await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
     await dialog.findByRole("alert");
 
@@ -137,6 +145,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     // Arrange
     const { dialog, gateway, user } = setup();
     await dialog.findByRole("option", { name: "DeepSeek" });
+    await dialog.findByRole("table", TABLE);
 
     // Act
     await user.dblClick(dialog.getByRole("button", { name: "Nilai ulang" }));
@@ -167,5 +176,106 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     await waitFor(() => expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled());
     expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue("");
   });
-});
 
+  // AC6: the table is for the judge and version the Admin is about to use.
+  it("estimates with the default judge and version", async () => {
+    // Arrange
+    const estimate = vi.fn().mockResolvedValue(gradeEstimate({ judge_provider_id: "judge-a", rubric_version: "v2" }));
+
+    // Act
+    const { dialog } = setup({ estimate });
+
+    // Assert
+    const table = within(await dialog.findByRole("table", TABLE));
+    expect(estimate).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" });
+    expect(table.getByRole("rowheader", { name: "Versi rubrik" }).nextElementSibling).toHaveTextContent("Versi 2");
+    await waitFor(() => expect(table.getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("DeepSeek"));
+  });
+
+  it("loads the estimate again when the judge changes", async () => {
+    // Arrange
+    const estimate = vi.fn().mockResolvedValue(gradeEstimate({ judge_provider_id: "judge-b" }));
+    const { dialog, user } = setup({ estimate });
+    await dialog.findByRole("table", TABLE);
+
+    // Act
+    await user.selectOptions(dialog.getByLabelText(/Provider Penilai/), "judge-b");
+
+    // Assert
+    await waitFor(() => expect(estimate).toHaveBeenLastCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-b" }));
+    await waitFor(() =>
+      expect(within(dialog.getByRole("table", TABLE)).getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("Gemini"),
+    );
+  });
+
+  it("loads the estimate again when the rubric version changes", async () => {
+    // Arrange
+    const estimate = vi.fn().mockResolvedValue(gradeEstimate({ rubric_version: "v1" }));
+    const { dialog, user } = setup({ estimate });
+    await dialog.findByRole("table", TABLE);
+
+    // Act
+    await user.selectOptions(dialog.getByLabelText("Versi rubrik"), "v1");
+
+    // Assert
+    await waitFor(() => expect(estimate).toHaveBeenLastCalledWith("s-1", { rubricVersion: "v1", judgeProviderId: "judge-a" }));
+  });
+
+  // The old estimate belongs to the old judge, so the button waits for the new one.
+  it("keeps the button off while the estimate for a new choice loads", async () => {
+    // Arrange
+    const estimate = vi.fn().mockResolvedValueOnce(gradeEstimate()).mockReturnValueOnce(new Promise(() => {}));
+    const { dialog, user } = setup({ estimate });
+    await dialog.findByRole("table", TABLE);
+
+    // Act
+    await user.selectOptions(dialog.getByLabelText(/Provider Penilai/), "judge-b");
+
+    // Assert
+    expect(dialog.getByRole("status")).toHaveTextContent("Memuat perkiraan biaya…");
+    expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
+  });
+
+  // Edge: no judge yet means no estimate; one for the session's old judge would mislead.
+  it("asks for no estimate until a judge is chosen", async () => {
+    // Arrange
+    const estimate = vi.fn().mockResolvedValue(gradeEstimate());
+    const { dialog, user } = setup({ defaultJudgeId: "", estimate });
+    await dialog.findByRole("option", { name: "DeepSeek" });
+
+    // Act / Assert
+    expect(estimate).not.toHaveBeenCalled();
+    expect(dialog.queryByRole("table")).not.toBeInTheDocument();
+    await user.selectOptions(dialog.getByLabelText(/Provider Penilai/), "judge-a");
+    await dialog.findByRole("table", TABLE);
+    expect(estimate).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" });
+  });
+
+  // AC6: a short budget warns and turns the start button off.
+  it("warns and keeps the button off when the estimated cost is above the remaining budget", async () => {
+    // Arrange
+    const estimate = vi.fn().mockResolvedValue(gradeEstimate({ budget_sufficient: false, estimated_cost_idr: "600000.00" }));
+    const { dialog, gateway, user } = setup({ estimate });
+
+    // Act
+    await dialog.findByRole("table", TABLE);
+    await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
+
+    // Assert
+    expect(dialog.getByRole("alert")).toHaveTextContent(BUDGET_SHORT_TEXT);
+    expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
+    expect(gateway.grade).not.toHaveBeenCalled();
+  });
+
+  it("keeps the button off when the estimate fails", async () => {
+    // Arrange
+    const estimate = vi.fn().mockRejectedValue(new ApiError(422, "JUDGE_PRICING_MISSING"));
+
+    // Act
+    const { dialog } = setup({ estimate });
+
+    // Assert
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Harga token penilai ini belum lengkap");
+    expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
+  });
+});

@@ -11,7 +11,7 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 // gradingApi has its own request tests (stubbed fetch); here only the page's reaction matters.
 vi.mock("@/lib/grading/gradingApi", () => ({
-  httpGradingGateway: { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn() },
+  httpGradingGateway: { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn() },
 }));
 
 const sessionsRead = vi.mocked(httpGradingGateway.sessions);

@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/apiClient";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionGradingResponse } from "@/types/grading";
@@ -42,7 +42,7 @@ function setup({
   selectedRunId?: string | null;
 } = {}) {
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]), ...rubrics });
-  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs, run: vi.fn() };
+  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs, run: vi.fn(), estimate: vi.fn(() => Promise.resolve(gradeEstimate())) };
   const onChanged = vi.fn();
   const onSelectRun = vi.fn();
   render(
@@ -211,6 +211,7 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
     // Arrange
     const { user, gradingGateway, onChanged } = setup();
     await user.click(await screen.findByRole("button", { name: BUTTON }));
+    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
 
     // Act
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Nilai ulang" }));
@@ -245,6 +246,7 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
     const { user, onChanged, gradingGateway } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
     await user.click(await screen.findByRole("button", { name: BUTTON }));
     const dialog = within(screen.getByRole("dialog"));
+    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
     await dialog.findByRole("alert");
 
