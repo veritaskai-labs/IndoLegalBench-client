@@ -38,9 +38,9 @@ type Props = Readonly<{
 
 /**
  * Nilai ulang dengan versi rubrik dan LLM judge pilihan, plus riwayat penilaian, di halaman detail
- * sesi (PBI-14 AC7, K-17/K-18). Hanya Admin: data
- * dimuat di komponen dalam, supaya peran lain tidak memanggil GET /admin/rubrics yang menjawab 403
- * dan mengalihkan mereka ke /forbidden. Kapan tombol boleh aktif ditentukan regradeAvailability.
+ * sesi (PBI-14 AC7, K-17/K-18). Hanya Admin: data dimuat di komponen dalam, supaya peran lain tidak
+ * memanggil GET /admin/rubrics yang menjawab 403 dan mengalihkan mereka ke /forbidden. Kapan tombol
+ * boleh aktif ditentukan regradeAvailability.
  */
 export function RegradeSection(props: Props) {
   if (props.role !== "admin") return null;

@@ -1,10 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import Link from "next/link";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useAuth } from "@/hooks/useAuth";
 import { useJudgeOptions, type JudgeOptionsApi } from "@/hooks/useJudgeOptions";
+import { isUnavailableJudge } from "@/lib/providers/judgeChoice";
 
 type Props = {
   /** Id penilai terpilih; string kosong berarti belum memilih. */
@@ -28,6 +29,12 @@ export function JudgeProviderSelect({
   const judges = useJudgeOptions(api);
   const auth = useAuth();
   const isAdmin = auth.status === "authenticated" && auth.user.role === "admin";
+  // Pilihan yang sudah tidak aktif dikosongkan begitu daftarnya diketahui, supaya tampilan
+  // "Pilih provider penilai" dan nilai yang dikirim tidak berbeda (review client#92).
+  const unavailable = judges.status === "ready" && isUnavailableJudge(value, judges.options);
+  useEffect(() => {
+    if (unavailable) onChange("");
+  }, [unavailable, onChange]);
 
   function control() {
     if (judges.status === "error") {
