@@ -21,10 +21,6 @@ vi.mock("@/lib/providers/providerApi", () => ({
   listProductOptions: vi.fn(),
 }));
 
-vi.mock("@/lib/providers/judgeApi", () => ({
-  listJudgeOptions: vi.fn(),
-}));
-
 vi.mock("@/lib/measurements/measurementApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/measurements/measurementApi")>();
   return {
@@ -35,14 +31,12 @@ vi.mock("@/lib/measurements/measurementApi", async (importOriginal) => {
 });
 
 import { listProductOptions } from "@/lib/providers/providerApi";
-import { listJudgeOptions } from "@/lib/providers/judgeApi";
 import {
   getMeasurementSummary,
   startMeasurement,
 } from "@/lib/measurements/measurementApi";
 
 const mockListProductOptions = vi.mocked(listProductOptions);
-const mockListJudgeOptions = vi.mocked(listJudgeOptions);
 const mockGetMeasurementSummary = vi.mocked(getMeasurementSummary);
 const mockStartMeasurement = vi.mocked(startMeasurement);
 
@@ -71,16 +65,6 @@ const MOCK_SUITES: Suite[] = [
   },
 ];
 
-const JUDGE_DEEPSEEK = "8b47374e-0000-4000-8000-000000000001";
-const MOCK_JUDGES = [
-  {
-    id: JUDGE_DEEPSEEK,
-    name: "DeepSeek V4-Flash",
-    provider_type: "openai_compatible" as const,
-    model_name: "deepseek-v4-flash",
-  },
-];
-
 const MOCK_SUMMARY: SummaryResponse = {
   case_count: 40,
   total_calls: 120,
@@ -102,7 +86,6 @@ describe("CreateMeasurementForm", () => {
       suites: MOCK_SUITES,
       reload: vi.fn(),
     });
-    mockListJudgeOptions.mockResolvedValue(MOCK_JUDGES);
     mockListProductOptions.mockResolvedValue([
       { id: "prod-gemini", name: "Gemini 1.5 Pro", measurement_type: "automatic" },
       { id: "prod-deepseek", name: "DeepSeek-V3", measurement_type: "automatic" },

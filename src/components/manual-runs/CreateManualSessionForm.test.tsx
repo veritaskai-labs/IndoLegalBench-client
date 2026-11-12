@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateManualSessionForm } from "./CreateManualSessionForm";
 import type { Suite } from "@/types/suite";
-import type { JudgeProviderOption } from "@/types/provider";
 import { ToastProvider } from "@/components/ui/Toast";
 
 const { pushMock, showToastMock } = vi.hoisted(() => ({
@@ -57,36 +56,15 @@ vi.mock("@/components/providers/ProductSelect", () => ({
   ),
 }));
 
-vi.mock("@/lib/providers/judgeApi", () => ({
-  listJudgeOptions: vi.fn(),
-}));
-
 vi.mock("@/lib/runs/manualRunsApi", () => ({
   createManualSession: vi.fn(),
   manualErrorMessage: (err: unknown, fallback: string) =>
     err instanceof Error ? err.message : fallback,
 }));
 
-import { listJudgeOptions } from "@/lib/providers/judgeApi";
 import { createManualSession } from "@/lib/runs/manualRunsApi";
 
-const mockListJudgeOptions = vi.mocked(listJudgeOptions);
 const mockCreateManualSession = vi.mocked(createManualSession);
-
-const MOCK_JUDGES: JudgeProviderOption[] = [
-  {
-    id: "judge-1",
-    name: "Judge DeepSeek",
-    provider_type: "openai_compatible",
-    model_name: "deepseek-v4-flash",
-  },
-  {
-    id: "judge-2",
-    name: "Judge Claude",
-    provider_type: "anthropic_messages",
-    model_name: "claude-3-5-sonnet",
-  },
-];
 
 const MOCK_SUITES: Suite[] = [
   {
@@ -129,7 +107,6 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
       suites: MOCK_SUITES,
       reload: vi.fn(),
     });
-    mockListJudgeOptions.mockResolvedValue(MOCK_JUDGES);
   });
 
   it("renders all form sections and disabled submit button initially", async () => {

@@ -2,7 +2,6 @@
 
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { JudgeProviderSelect } from "@/components/providers/JudgeProviderSelect";
 import { ProductSelect } from "@/components/providers/ProductSelect";
 import { MeasurementSummaryCard } from "./MeasurementSummaryCard";
 import { useSuites } from "@/hooks/useSuites";
@@ -49,8 +48,7 @@ export function CreateMeasurementForm() {
   // Step 3: Produk AI Otomatis
   const [productId, setProductId] = useState("");
 
-  // Step 4: Pengulangan & Penilai LLM
-  const [judgeProviderId, setJudgeProviderId] = useState("");
+  // Step 4: Pengulangan (LLM judge dipilih saat menilai, K-14)
   const [repeatCount, setRepeatCount] = useState<number | "">(3);
   const hasValidRepeat =
     typeof repeatCount === "number" && repeatCount >= 1 && repeatCount <= 5;
@@ -139,7 +137,6 @@ export function CreateMeasurementForm() {
       selectedSuiteIds.length === 0 ||
       !productId ||
       !purpose ||
-      !judgeProviderId ||
       !hasValidRepeat
     )
       return;
@@ -155,7 +152,6 @@ export function CreateMeasurementForm() {
         product_id: productId,
         label: label.trim(),
         purpose,
-        judge_provider_id: judgeProviderId,
       };
 
       const res = await startMeasurement(payload);
@@ -182,7 +178,6 @@ export function CreateMeasurementForm() {
     selectedSuiteIds.length > 0 &&
     Boolean(productId) &&
     Boolean(purpose) &&
-    Boolean(judgeProviderId) &&
     hasValidRepeat &&
     summary !== null &&
     budgetExceeded === null &&
@@ -418,14 +413,15 @@ export function CreateMeasurementForm() {
         </div>
       </section>
 
-      {/* Langkah 4: Pengulangan & Penilai LLM */}
+      {/* Langkah 4: Pengulangan */}
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
         <header className="border-b border-slate-100 pb-3">
           <h2 className="text-base font-semibold text-slate-900">
-            4. Pengulangan & Penilai LLM
+            4. Pengulangan
           </h2>
           <p className="text-xs text-slate-500">
-            Setiap kasus akan dikirim sebanyak jumlah pengulangan sebagai percakapan baru.
+            Setiap kasus akan dikirim sebanyak jumlah pengulangan sebagai percakapan baru. LLM judge
+            dipilih saat sesi dinilai.
           </p>
         </header>
 
@@ -480,12 +476,6 @@ export function CreateMeasurementForm() {
               </div>
             )}
           </div>
-
-          <JudgeProviderSelect
-            value={judgeProviderId}
-            onChange={setJudgeProviderId}
-            disabled={isStarting}
-          />
         </div>
       </section>
 
