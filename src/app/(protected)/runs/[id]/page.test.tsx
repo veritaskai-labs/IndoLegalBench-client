@@ -28,6 +28,12 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
 }));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
 vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), estimate: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
+// K-14 (SCRUM-282): dialog Nilai memuat daftar LLM judge sendiri.
+vi.mock("@/lib/providers/judgeApi", () => ({
+  listJudgeOptions: vi.fn().mockResolvedValue([
+    { id: "judge-a", name: "DeepSeek", provider_type: "openai_compatible", model_name: "deepseek-chat" },
+  ]),
+}));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
@@ -724,11 +730,13 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     render(<SessionDetailPage />);
     const results = await screen.findByRole("region", { name: "Hasil penilaian" });
     await user.click(await within(results).findByRole("button", { name: "Nilai" }));
-    // The start button stays off until the cost estimate is shown.
-    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
-    await user.click(within(screen.getByRole("dialog", { name: "Nilai sesi ini?" })).getByRole("button", { name: "Nilai" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
+    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    // The start button stays off until the cost estimate for that judge is shown.
+    await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
+    await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
-    expect(gradeRequest).toHaveBeenCalledWith("s-1");
+    expect(gradeRequest).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
   });
 
   it("shows the scores of a graded session", async () => {

@@ -65,6 +65,8 @@ const GRADE_ERRORS: Record<string, string> = {
   ANSWERS_CHANGED_DURING_GRADING: "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi.",
   // server#134: judge pilihan Admin sudah nonaktif atau bukan produk otomatis.
   JUDGE_NOT_ELIGIBLE: "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain.",
+  // server#136: tanpa judge di permintaan maupun sesi (K-14, SCRUM-281).
+  JUDGE_REQUIRED: "Pilih LLM judge dulu sebelum menilai.",
 };
 
 // Perkiraan biaya (server#135): kode yang sama dengan /grade ikut kalimatnya, ditambah kode judge.

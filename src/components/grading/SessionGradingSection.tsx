@@ -94,6 +94,7 @@ export function SessionGradingSection({
         <GradeSessionDialog
           session={session}
           gateway={gateway}
+          judgeApi={judgeApi}
           onGraded={() => {
             setDialogOpen(false);
             results.reload();
