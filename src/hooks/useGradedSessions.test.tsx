@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
-import { gradedSessionItem } from "@/test/gradingFixtures";
+import { gradedRunItem } from "@/test/gradingFixtures";
 import { useGradedSessions } from "./useGradedSessions";
 
 // The hook takes the gateway as a parameter (DIP), so the test hands it a fake instead of mocking modules.
@@ -13,7 +13,7 @@ function fakeGateway(sessions: GradingGateway["sessions"]): GradingGateway {
 
 describe("useGradedSessions (PBI-14 AC8, Laporan list)", () => {
   it("loads the graded sessions", async () => {
-    const list = [gradedSessionItem(), gradedSessionItem({ session_id: "s-2" })];
+    const list = [gradedRunItem(), gradedRunItem({ session_id: "s-2" })];
     const gateway = fakeGateway(() => Promise.resolve(list));
 
     const { result } = renderHook(() => useGradedSessions(gateway));
@@ -49,7 +49,7 @@ describe("useGradedSessions (PBI-14 AC8, Laporan list)", () => {
     const sessions = vi
       .fn<GradingGateway["sessions"]>()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockResolvedValueOnce([gradedSessionItem()]);
+      .mockResolvedValueOnce([gradedRunItem()]);
     const gateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions, runs: vi.fn(), run: vi.fn(), estimate: vi.fn() };
 
     const { result } = renderHook(() => useGradedSessions(gateway));
@@ -59,7 +59,7 @@ describe("useGradedSessions (PBI-14 AC8, Laporan list)", () => {
 
     act(() => result.current.reload());
 
-    await waitFor(() => expect(result.current).toMatchObject({ status: "ready", data: [gradedSessionItem()] }));
+    await waitFor(() => expect(result.current).toMatchObject({ status: "ready", data: [gradedRunItem()] }));
     expect(sessions).toHaveBeenCalledTimes(2);
   });
 });

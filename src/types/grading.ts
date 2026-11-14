@@ -8,7 +8,8 @@ export type AttemptGradeResult = components["schemas"]["AttemptGradeResult"];
 
 export type AttemptSource = components["schemas"]["AttemptSource"];
 
-export type GradedSessionListItem = components["schemas"]["GradedSessionListItem"];
+/** Satu baris GET /results/sessions: satu grading run beserta LLM judge dan versi rubriknya (server#137, SCRUM-296). */
+export type GradedRunListItem = components["schemas"]["GradedRunListItem"];
 /** Skor dua jalur yang tidak pernah digabung (AC1): deterministik dan penilai LLM, Decimal sebagai string. */
 export type ScorePair = components["schemas"]["ScorePair"];
 /** Skor Dev, Test dan Gabungan yang terpisah (PBI-11 AC9). */

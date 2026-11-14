@@ -47,7 +47,7 @@ function GradedSessionsSection() {
         <h2 id={headingId} className="text-base font-semibold text-slate-900">
           Hasil penilaian sesi
         </h2>
-        <p className="text-sm text-slate-600">Sesi pengukuran yang sudah selesai dan dinilai. Pilih sesi untuk melihat skornya.</p>
+        <p className="text-sm text-slate-600">Satu baris per penilaian dari sesi yang sudah selesai, lengkap dengan LLM judge dan versi rubriknya. Pilih satu untuk melihat skornya.</p>
       </div>
       <GradedSessionList sessions={sessions} />
     </section>
