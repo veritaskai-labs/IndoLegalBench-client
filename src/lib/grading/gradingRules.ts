@@ -73,7 +73,7 @@ const GRADE_ERRORS: Record<string, string> = {
 const ESTIMATE_ERRORS: Record<string, string> = {
   ...GRADE_ERRORS,
   JUDGE_PRICING_MISSING:
-    "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Provider.",
+    "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia.",
   JUDGE_NOT_CONFIGURED: "Sesi ini belum punya penilai LLM dan belum ada yang dipilih.",
   JUDGE_PROVIDER_NOT_FOUND: "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman.",
 };
