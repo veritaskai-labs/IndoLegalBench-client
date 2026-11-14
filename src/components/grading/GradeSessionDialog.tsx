@@ -15,8 +15,9 @@ import { GradeEstimateTable } from "./GradeEstimateTable";
 
 /**
  * Konfirmasi tombol Nilai (PBI-14 AC6). LLM judge dipilih di sini, bukan saat membuat sesi (K-14,
- * SCRUM-282). Penilai LLM memakai anggaran tersendiri, jadi Admin diberi tahu sebelum memakainya lewat
- * tabel perkiraan biaya untuk judge yang dipilih dan rubrik aktif; tombol Nilai baru hidup bila judge
+ * SCRUM-282). Biaya penilai LLM memotong anggaran bulanan produk judge di halaman Penyedia (K-16,
+ * SCRUM-288), jadi Admin diberi tahu sebelum memakainya lewat tabel perkiraan biaya untuk judge yang
+ * dipilih dan rubrik aktif; tombol Nilai baru hidup bila judge
  * dipilih, perkiraan sudah ada, dan anggaran cukup. Kunci tombol, Escape dan pesan penolakan datang
  * dari ConfirmDialog. Dipakai juga oleh "Kirim untuk Dinilai" di sesi manual.
  */
@@ -52,7 +53,10 @@ export function GradeSessionDialog({
         Jawaban yang sudah masuk di sesi “{session.label}” dinilai dengan rubrik versi aktif, lewat aturan
         deterministik dan penilai LLM.
       </p>
-      <p className="mt-2 text-sm text-slate-600">Biaya penilai LLM dihitung ke anggaran penilai, terpisah dari anggaran produk.</p>
+      <p className="mt-2 text-sm text-slate-600">
+        Biaya penilai LLM memotong anggaran bulanan produk LLM judge yang dipilih di halaman Penyedia. Sisa
+        anggarannya ada di tabel perkiraan.
+      </p>
       <div className="mt-3">
         <JudgeProviderSelect value={judgeId} onChange={setJudgeId} api={judgeApi} />
       </div>

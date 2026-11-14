@@ -18,7 +18,7 @@ export interface EstimateView {
 }
 
 export const BUDGET_SHORT_TEXT =
-  "Perkiraan biaya melebihi sisa anggaran penilai. Penilaian belum bisa dimulai. Tambah anggaran judge di halaman Provider atau pilih judge lain.";
+  "Perkiraan biaya melebihi sisa anggaran bulanan produk judge ini. Penilaian belum bisa dimulai. Tambah anggaran produk ini di halaman Penyedia atau pilih judge lain.";
 
 export const NO_ATTEMPTS_TEXT = "Tidak ada percobaan yang perlu dikirim ke judge, jadi penilaian ini tidak memakai anggaran.";
 
@@ -41,7 +41,7 @@ export function toEstimateView(estimate: GradeEstimate, judges: readonly JudgePr
       { label: "Versi rubrik", value: versionText(estimate.rubric_version) },
       { label: "LLM judge", value: judgeName(estimate.judge_provider_id, judges) },
       { label: "Perkiraan biaya", value: formatRupiah(estimate.estimated_cost_idr) },
-      { label: "Sisa anggaran judge", value: formatRupiahDown(estimate.remaining_budget_idr) },
+      { label: "Sisa anggaran bulanan judge", value: formatRupiahDown(estimate.remaining_budget_idr) },
     ],
     budgetSufficient: estimate.budget_sufficient,
     hasAttempts: estimate.attempts_to_grade > 0,
