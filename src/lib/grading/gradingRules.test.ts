@@ -9,7 +9,11 @@ import {
   estimateErrorMessage,
   gradeErrorMessage,
   isNotGraded,
+  judgeLabel,
+  reportRunHref,
+  reportRunStatusLabel,
   resultsErrorMessage,
+  runResultsErrorMessage,
   runsErrorMessage,
   sessionsErrorMessage,
 } from "./gradingRules";
@@ -201,5 +205,65 @@ describe("estimateErrorMessage (PBI-14 AC6)", () => {
     ["a non-error value", "boom"],
   ])("falls back to a retry message for %s", (_name, error) => {
     expect(estimateErrorMessage(error)).toBe("Perkiraan biaya gagal dimuat. Coba lagi.");
+  });
+});
+
+describe("judgeLabel (Laporan, LLM judge column)", () => {
+  it("names the judge product and the model it reported", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2" })).toBe("Judge Alfa · alfa-2");
+  });
+
+  // Edge: the judge gave no answer, so no model was reported.
+  it("shows the product name alone when no model was reported", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: "Judge Alfa", model_version: null })).toBe("Judge Alfa");
+  });
+
+  it("shows the model alone when the product name is missing", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: null, model_version: "alfa-2" })).toBe("alfa-2");
+  });
+
+  it("says the judge is unknown when the product has neither a name nor a model", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: null, model_version: null })).toBe("Judge tidak diketahui");
+  });
+
+  // Edge: runs graded before the judge was recorded have no judge at all.
+  it.each([null, undefined])("returns null for a run without a judge (%s)", (judge) => {
+    expect(judgeLabel(judge)).toBeNull();
+  });
+});
+
+describe("reportRunHref (Laporan, open the clicked run)", () => {
+  it("points at the run under its session", () => {
+    expect(reportRunHref({ session_id: "s-1", grading_run_id: "run-9" })).toBe("/reports/sessions/s-1/runs/run-9");
+  });
+
+  // Security: both ids come from the server, so neither may change the path.
+  it("encodes both ids", () => {
+    expect(reportRunHref({ session_id: "a/b?c", grading_run_id: "x#y" })).toBe("/reports/sessions/a%2Fb%3Fc/runs/x%23y");
+  });
+});
+
+describe("reportRunStatusLabel", () => {
+  it.each([
+    ["completed", true, "Terbaru"],
+    ["completed", false, "Sebelumnya"],
+    ["failed", true, "Gagal dinilai"],
+    ["failed", false, "Gagal dinilai"],
+  ])("labels a %s run (latest: %s) as %s", (status, isLatest, expected) => {
+    expect(reportRunStatusLabel({ status, is_latest: isLatest })).toBe(expected);
+  });
+});
+
+describe("runResultsErrorMessage (open one run under Laporan)", () => {
+  it.each([
+    ["FORBIDDEN", "Hasil penilaian sesi yang masih berjalan hanya dapat dilihat Admin."],
+    ["MEASUREMENT_NOT_FOUND", "Sesi tidak ditemukan. Muat ulang halaman."],
+    ["GRADING_RUN_NOT_FOUND", "Hasil penilaian ini tidak ditemukan. Muat ulang halaman."],
+  ])("explains %s", (code, message) => {
+    expect(runResultsErrorMessage(new ApiError(404, code))).toBe(message);
+  });
+
+  it("falls back to a general message for an unknown error", () => {
+    expect(runResultsErrorMessage(new TypeError("Failed to fetch"))).toBe("Gagal memuat hasil penilaian. Coba lagi.");
   });
 });

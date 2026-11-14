@@ -1099,8 +1099,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Satu hasil penilaian sesi, termasuk run lama atau LLM judge lain (Admin)
-         * @description Run tertentu dari riwayat penilaian, lengkap dengan judge-nya (SCRUM-280).
+         * Satu hasil penilaian sesi, termasuk run lama atau LLM judge lain (Admin, Viewer, Kontributor)
+         * @description Run tertentu dari baris Laporan, lengkap dengan judge-nya (SCRUM-280, SCRUM-297).
+         *
+         *     Viewer dan Kontributor mendapat soal dan jawaban mentah yang disamarkan.
          */
         get: operations["get_grading_run_endpoint_measurements__session_id__grading_runs__grading_run_id__get"];
         put?: never;
@@ -1139,10 +1141,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Daftar sesi selesai yang telah dinilai untuk Admin, Viewer, dan Kontributor (SCRUM-226)
-         * @description Daftar sesi selesai yang telah dinilai. Dapat diakses oleh Admin, Viewer, dan Kontributor.
+         * Daftar laporan, satu baris per grading run, untuk Admin, Viewer, dan Kontributor (SCRUM-296)
+         * @description Satu baris per grading run: nilai ulang menambah baris, baris lama tetap ada.
          */
-        get: operations["list_graded_sessions_endpoint_results_sessions_get"];
+        get: operations["list_graded_runs_endpoint_results_sessions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1584,6 +1586,12 @@ export interface components {
             price_input_usd_per_mtok?: number | string | null;
             /** Price Output Usd Per Mtok */
             price_output_usd_per_mtok?: number | string | null;
+            /** Price Cache Read Usd Per Mtok */
+            price_cache_read_usd_per_mtok?: number | string | null;
+            /** Price Cache Write Usd Per Mtok */
+            price_cache_write_usd_per_mtok?: number | string | null;
+            /** Price Cache Write Long Usd Per Mtok */
+            price_cache_write_long_usd_per_mtok?: number | string | null;
             /** Vendor Name */
             vendor_name?: string | null;
             /** Site Url */
@@ -1628,6 +1636,12 @@ export interface components {
             price_input_usd_per_mtok?: string | null;
             /** Price Output Usd Per Mtok */
             price_output_usd_per_mtok?: string | null;
+            /** Price Cache Read Usd Per Mtok */
+            price_cache_read_usd_per_mtok?: string | null;
+            /** Price Cache Write Usd Per Mtok */
+            price_cache_write_usd_per_mtok?: string | null;
+            /** Price Cache Write Long Usd Per Mtok */
+            price_cache_write_long_usd_per_mtok?: string | null;
             /** Vendor Name */
             vendor_name?: string | null;
             /**
@@ -1728,6 +1742,12 @@ export interface components {
             price_input_usd_per_mtok?: string | null;
             /** Price Output Usd Per Mtok */
             price_output_usd_per_mtok?: string | null;
+            /** Price Cache Read Usd Per Mtok */
+            price_cache_read_usd_per_mtok?: string | null;
+            /** Price Cache Write Usd Per Mtok */
+            price_cache_write_usd_per_mtok?: string | null;
+            /** Price Cache Write Long Usd Per Mtok */
+            price_cache_write_long_usd_per_mtok?: string | null;
             /** Vendor Name */
             vendor_name?: string | null;
             /**
@@ -1786,6 +1806,12 @@ export interface components {
             price_input_usd_per_mtok?: number | string | null;
             /** Price Output Usd Per Mtok */
             price_output_usd_per_mtok?: number | string | null;
+            /** Price Cache Read Usd Per Mtok */
+            price_cache_read_usd_per_mtok?: number | string | null;
+            /** Price Cache Write Usd Per Mtok */
+            price_cache_write_usd_per_mtok?: number | string | null;
+            /** Price Cache Write Long Usd Per Mtok */
+            price_cache_write_long_usd_per_mtok?: number | string | null;
             /** Vendor Name */
             vendor_name?: string | null;
             /** Site Url */
@@ -2644,19 +2670,25 @@ export interface components {
             rubric_version?: string | null;
             /**
              * Judge Provider Id
-             * @description LLM judge untuk penilaian ini: produk AI otomatis yang aktif. Bila kosong, memakai judge sesi. Judge lain ditolak 422 JUDGE_NOT_ELIGIBLE (SCRUM-280).
+             * @description LLM judge untuk penilaian ini: produk AI otomatis yang aktif. Bila kosong, memakai judge sesi. Judge lain ditolak 422 JUDGE_NOT_ELIGIBLE (SCRUM-280). Tanpa judge di sini maupun di sesi ditolak 422 JUDGE_REQUIRED (SCRUM-281).
              */
             judge_provider_id?: string | null;
         };
         /**
-         * GradedSessionListItem
-         * @description Ringkasan sesi pengukuran selesai yang telah dinilai untuk Admin dan Viewer (PBI-14, SCRUM-226, SCRUM-227).
+         * GradedRunListItem
+         * @description Satu baris laporan: satu grading run beserta judge dan versi rubriknya (SCRUM-296, K-21).
          */
-        GradedSessionListItem: {
+        GradedRunListItem: {
+            /**
+             * Grading Run Id
+             * Format: uuid
+             * @description ID grading run, unik per baris
+             */
+            grading_run_id: string;
             /**
              * Session Id
              * Format: uuid
-             * @description ID sesi pengukuran
+             * @description ID sesi pengukuran yang dinilai
              */
             session_id: string;
             /**
@@ -2666,19 +2698,55 @@ export interface components {
             label: string;
             /**
              * Product Name
-             * @description Nama produk AI yang diuji
+             * @description Nama produk AI yang diukur
              */
             product_name: string;
             /**
-             * Finished At
-             * @description Waktu sesi selesai (null bila belum tercatat)
+             * Session Type
+             * @description Jenis sesi pengukuran
+             * @enum {string}
              */
-            finished_at?: string | null;
+            session_type: "automatic" | "manual";
+            /** @description LLM judge run ini; null untuk run lama tanpa judge */
+            judge?: components["schemas"]["GradingJudge"] | null;
             /**
              * Rubric Version
-             * @description Versi rubrik yang digunakan pada penilaian terbaru (mis. 'v1')
+             * @description Versi rubrik yang digunakan (mis. 'v1')
              */
-            rubric_version?: string | null;
+            rubric_version: string;
+            /**
+             * Graded At
+             * Format: date-time
+             * @description Waktu penilaian dipicu, selalu UTC
+             */
+            graded_at: string;
+            /**
+             * Status
+             * @description completed bila ada skor; failed bila tidak satu pun percobaan bisa dinilai
+             */
+            status: string;
+            /**
+             * Is Latest
+             * @description True bila ini run terbaru sesi tersebut
+             */
+            is_latest: boolean;
+            /** @description Tiga skor terpisah: dev, test, dan gabungan */
+            scores: components["schemas"]["ThreeScores"];
+            /**
+             * Measurement Cost Idr
+             * @description Biaya panggilan produk yang sudah tersimpan untuk sesi ini, rupiah. Sesi manual 0. null bila ada panggilan tetapi biayanya belum tercatat
+             */
+            measurement_cost_idr: string | null;
+            /**
+             * Judge Cost Idr
+             * @description Biaya penilai yang sudah tersimpan pada run ini, rupiah. null bila belum ada
+             */
+            judge_cost_idr: string | null;
+            /**
+             * Total Cost Idr
+             * @description measurement_cost_idr ditambah judge_cost_idr. null bila salah satu sisi null, supaya biaya yang hilang tidak menjadi Rp 0
+             */
+            total_cost_idr: string | null;
         };
         /**
          * GraderPath
@@ -3464,10 +3532,9 @@ export interface components {
             purpose: components["schemas"]["MeasurementPurpose"];
             /**
              * Judge Provider Id
-             * Format: uuid
-             * @description Provider penilai (LLM judge) dari GET /judge-providers. Wajib; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
+             * @description Opsional. Penilai bawaan sesi dari GET /judge-providers; penilai dipilih saat menilai (POST /measurements/{id}/grade). Bila diisi, penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
              */
-            judge_provider_id: string;
+            judge_provider_id?: string | null;
         };
         /**
          * ManualStartResponse
@@ -4266,6 +4333,11 @@ export interface components {
             sections: components["schemas"]["VersionSections"] | null;
             /** Attempts */
             attempts: components["schemas"]["AttemptResult"][];
+            /**
+             * Cost Idr
+             * @description Biaya panggilan produk untuk kasus ini, rupiah, termasuk pengulangan dan coba ulang. null bila sesi otomatis belum punya biaya tercatat. Tetap diisi saat kasus disamarkan
+             */
+            cost_idr?: string | null;
         };
         /**
          * SessionControlResponse
@@ -4698,10 +4770,9 @@ export interface components {
             purpose: components["schemas"]["MeasurementPurpose"];
             /**
              * Judge Provider Id
-             * Format: uuid
-             * @description Provider penilai (LLM judge) dari GET /judge-providers. Wajib; penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
+             * @description Opsional. Penilai bawaan sesi dari GET /judge-providers; penilai dipilih saat menilai (POST /measurements/{id}/grade). Bila diisi, penilai yang tidak dikenal atau nonaktif ditolak 422 JUDGE_PROVIDER_NOT_AVAILABLE
              */
-            judge_provider_id: string;
+            judge_provider_id?: string | null;
         };
         /**
          * StartResponse
@@ -8172,7 +8243,7 @@ export interface operations {
                     "application/json": components["schemas"]["SessionGradingResponse"];
                 };
             };
-            /** @description Hanya Admin yang dapat melihat riwayat penilaian (`FORBIDDEN`). */
+            /** @description Peran tidak berwenang (`FORBIDDEN`), atau sesi masih berjalan dan pembacanya bukan Admin. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -8250,7 +8321,7 @@ export interface operations {
             };
         };
     };
-    list_graded_sessions_endpoint_results_sessions_get: {
+    list_graded_runs_endpoint_results_sessions_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -8265,7 +8336,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GradedSessionListItem"][];
+                    "application/json": components["schemas"]["GradedRunListItem"][];
                 };
             };
         };

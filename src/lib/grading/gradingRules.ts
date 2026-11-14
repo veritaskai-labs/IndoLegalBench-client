@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
+import type { GradedRunListItem, GradingJudge } from "@/types/grading";
 import type { SessionDetail, SessionStatus } from "@/types/measurement";
 
 /** Sama dengan GRADABLE_SESSION_STATUSES di server#114 (ensure_session_gradable). */
@@ -117,4 +118,37 @@ const RUNS_ERRORS: Record<string, string> = {
 
 export function runsErrorMessage(error: unknown): string {
   return messageFor(RUNS_ERRORS, error, "Gagal memuat riwayat penilaian. Coba lagi.");
+}
+
+const RUN_RESULTS_ERRORS: Record<string, string> = {
+  // server#141: hasil run sesi yang masih berjalan hanya untuk Admin; peran lain dijawab 403 juga.
+  FORBIDDEN: "Hasil penilaian sesi yang masih berjalan hanya dapat dilihat Admin.",
+  MEASUREMENT_NOT_FOUND: NOT_FOUND,
+  GRADING_RUN_NOT_FOUND: "Hasil penilaian ini tidak ditemukan. Muat ulang halaman.",
+};
+
+/** Pesan untuk membuka satu run dari Laporan; run yang tidak ada adalah kesalahan, bukan "belum dinilai". */
+export function runResultsErrorMessage(error: unknown): string {
+  return messageFor(RUN_RESULTS_ERRORS, error, "Gagal memuat hasil penilaian. Coba lagi.");
+}
+
+/**
+ * LLM judge satu run untuk kolom Laporan: produk dan model yang dilaporkan. Null bila run lama tidak
+ * punya judge, supaya tampilan memilih tanda kosongnya sendiri.
+ */
+export function judgeLabel(judge: GradingJudge | null | undefined): string | null {
+  if (!judge) return null;
+  const parts = [judge.name, judge.model_version].filter((part): part is string => Boolean(part));
+  return parts.length === 0 ? "Judge tidak diketahui" : parts.join(" · ");
+}
+
+/** Halaman satu run di Laporan. Kedua id berasal dari server, jadi di-encode supaya tidak mengubah path. */
+export function reportRunHref(item: Pick<GradedRunListItem, "session_id" | "grading_run_id">): string {
+  return `/reports/sessions/${encodeURIComponent(item.session_id)}/runs/${encodeURIComponent(item.grading_run_id)}`;
+}
+
+/** Status satu baris Laporan: gagal dinilai, atau run terbaru, atau run yang sudah digantikan nilai ulang. */
+export function reportRunStatusLabel(item: Pick<GradedRunListItem, "status" | "is_latest">): string {
+  if (item.status === "failed") return "Gagal dinilai";
+  return item.is_latest ? "Terbaru" : "Sebelumnya";
 }

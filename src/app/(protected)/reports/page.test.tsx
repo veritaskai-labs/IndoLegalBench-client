@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
-import { gradedSessionItem } from "@/test/gradingFixtures";
+import { gradedRunItem } from "@/test/gradingFixtures";
 import type { Role } from "@/types";
 import ReportsPage from "./page";
 
@@ -25,7 +25,7 @@ function signedInAs(role: Role) {
 
 beforeEach(() => {
   sessionsRead.mockReset();
-  sessionsRead.mockResolvedValue([gradedSessionItem({ session_id: "s-1" })]);
+  sessionsRead.mockResolvedValue([gradedRunItem({ session_id: "s-1" })]);
 });
 
 describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Laporan)", () => {
@@ -38,7 +38,7 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     const section = screen.getByRole("region", { name: "Hasil penilaian sesi" });
     expect(await within(section).findByRole("link", { name: "Uji Coba Produk A" })).toHaveAttribute(
       "href",
-      "/reports/sessions/s-1",
+      "/reports/sessions/s-1/runs/run-1",
     );
     expect(sessionsRead).toHaveBeenCalledTimes(1);
   });

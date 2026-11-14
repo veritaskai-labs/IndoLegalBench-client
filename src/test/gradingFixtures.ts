@@ -2,7 +2,7 @@ import type {
   AttemptGradeResult,
   CaseGradeResult,
   GradeEstimate,
-  GradedSessionListItem,
+  GradedRunListItem,
   GradingRunSummary,
   SessionGradingResponse,
 } from "@/types/grading";
@@ -76,14 +76,23 @@ export function gradingRunSummary(overrides: Partial<GradingRunSummary> = {}): G
   };
 }
 
-/** Satu baris GET /results/sessions (server#114 bff8755): sesi selesai yang sudah dinilai. */
-export function gradedSessionItem(overrides: Partial<GradedSessionListItem> = {}): GradedSessionListItem {
+/** Satu baris GET /results/sessions (server#137, #140): satu grading run dengan judge dan versi rubriknya. Data sintetis. */
+export function gradedRunItem(overrides: Partial<GradedRunListItem> = {}): GradedRunListItem {
   return {
+    grading_run_id: "run-1",
     session_id: "s-1",
     label: "Uji Coba Produk A",
     product_name: "Produk Uji A",
-    finished_at: "2026-11-07T03:00:00Z",
+    session_type: "automatic",
+    judge: { judge_provider_id: "judge-a", name: "Judge Alfa", model_version: "alfa-2", cost_idr: "1500.00" },
     rubric_version: "v1",
+    graded_at: "2026-11-07T03:00:00Z",
+    status: "completed",
+    is_latest: true,
+    scores: gradingResponse().scores,
+    measurement_cost_idr: "0.00",
+    judge_cost_idr: "1500.00",
+    total_cost_idr: "1500.00",
     ...overrides,
   };
 }

@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { GradeEstimate, GradedSessionListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
+import type { GradeEstimate, GradedRunListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
 
 /**
  * Pintu ke server untuk penilaian sesi (PBI-14). Hook dan komponen bergantung pada interface ini,
@@ -24,7 +24,8 @@ export interface GradingGateway {
   runs(sessionId: string): Promise<GradingRunSummary[]>;
   /** Satu run lengkap dengan kasusnya, termasuk run lama atau judge lain (Admin, server#134). */
   run(sessionId: string, runId: string): Promise<SessionGradingResponse>;
-  sessions(): Promise<GradedSessionListItem[]>;
+  /** Daftar Laporan: satu baris per grading run, termasuk run lama dan judge lain (server#137). */
+  sessions(): Promise<GradedRunListItem[]>;
 }
 
 function sessionPath(sessionId: string, action: string): string {
@@ -87,9 +88,10 @@ export const httpGradingGateway: GradingGateway = {
     }),
 
   /**
-   * GET /results/sessions (Admin, Viewer; keputusan PO): sesi selesai yang sudah dinilai, untuk
-   * dipilih di Laporan. Server juga punya /measurements/results/sessions dengan isi yang sama; yang
-   * dipakai jalur ini, sesuai usulan di review server#114.
+   * GET /results/sessions (Admin, Viewer, Kontributor): satu baris per grading run dari sesi selesai,
+   * untuk dipilih di Laporan. Nilai ulang menambah baris, baris lama tetap ada (server#137). Server
+   * juga punya /measurements/results/sessions dengan isi yang sama; yang dipakai jalur ini, sesuai
+   * usulan di review server#114.
    */
-  sessions: () => apiFetch<GradedSessionListItem[]>("/results/sessions", { silentForbidden: true }),
+  sessions: () => apiFetch<GradedRunListItem[]>("/results/sessions", { silentForbidden: true }),
 };
