@@ -27,7 +27,7 @@ describe("toEstimateView (PBI-14 AC6)", () => {
       "Versi rubrik",
       "LLM judge",
       "Perkiraan biaya",
-      "Sisa anggaran judge",
+      "Sisa anggaran bulanan judge",
     ]);
     expect(view.rows.map((row) => plain(row.value))).toEqual(["12", "Versi 1", "Judge Alfa", "Rp 15.251", "Rp 500.000"]);
   });
@@ -53,13 +53,13 @@ describe("toEstimateView (PBI-14 AC6)", () => {
   it("shows the remaining budget rounded down, never above the real amount", () => {
     const view = toEstimateView(gradeEstimate({ remaining_budget_idr: "500000.99" }), [judge()]);
 
-    expect(valueOf(view, "Sisa anggaran judge")).toBe("Rp 500.000");
+    expect(valueOf(view, "Sisa anggaran bulanan judge")).toBe("Rp 500.000");
   });
 
   it("keeps a remaining budget above 2^53 exact", () => {
     const view = toEstimateView(gradeEstimate({ remaining_budget_idr: "9007199254740993.00" }), [judge()]);
 
-    expect(valueOf(view, "Sisa anggaran judge")).toBe("Rp 9.007.199.254.740.993");
+    expect(valueOf(view, "Sisa anggaran bulanan judge")).toBe("Rp 9.007.199.254.740.993");
   });
 
   // Zero is a valid price (a free judge), not a missing value.
@@ -125,7 +125,7 @@ describe("canStartGrading (PBI-14 AC6)", () => {
 describe("estimate texts", () => {
   it("tells the Admin what a short budget means for the start button", () => {
     expect(BUDGET_SHORT_TEXT).toBe(
-      "Perkiraan biaya melebihi sisa anggaran penilai. Penilaian belum bisa dimulai. Tambah anggaran judge di halaman Provider atau pilih judge lain.",
+      "Perkiraan biaya melebihi sisa anggaran bulanan produk judge ini. Penilaian belum bisa dimulai. Tambah anggaran produk ini di halaman Penyedia atau pilih judge lain.",
     );
   });
 

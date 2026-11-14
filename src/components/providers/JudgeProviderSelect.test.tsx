@@ -126,7 +126,7 @@ describe("JudgeProviderSelect", () => {
       await screen.findByText(/Belum ada provider yang aktif/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "halaman Provider" }),
+      screen.getByRole("link", { name: "halaman Penyedia" }),
     ).toHaveAttribute("href", "/admin/providers");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
@@ -141,7 +141,7 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(
-      await screen.findByText(/Minta Admin menambahkannya di halaman Provider/),
+      await screen.findByText(/Minta Admin menambahkannya di halaman Penyedia/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });

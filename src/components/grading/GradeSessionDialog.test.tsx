@@ -46,12 +46,17 @@ async function chooseJudge(
 }
 
 describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
-  // AC6: the judge cost goes to its own budget, so the Admin hears that before spending it.
-  it("says what grading uses and where its cost goes before doing it", () => {
+  // K-16 (SCRUM-288): the judge cost comes out of the judge product's monthly budget on the
+  // Penyedia page; there is no separate judge budget any more (server SCRUM-271).
+  it("says what grading uses and that its cost comes from the judge product's budget", () => {
     const { dialog } = renderDialog(() => Promise.resolve(gradingResponse()));
 
     expect(dialog.getByText(/“Run November”/)).toHaveTextContent("rubrik versi aktif");
-    expect(dialog.getByText(/Biaya penilai LLM/)).toHaveTextContent("anggaran penilai");
+    const cost = dialog.getByText(/Biaya penilai LLM/);
+    expect(cost).toHaveTextContent(
+      "Biaya penilai LLM memotong anggaran bulanan produk LLM judge yang dipilih di halaman Penyedia. Sisa anggarannya ada di tabel perkiraan.",
+    );
+    expect(cost).not.toHaveTextContent("terpisah");
   });
 
   // K-14: the judge is chosen here, so nothing is estimated or sent before one is picked.
@@ -156,7 +161,7 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     expect(gateway.estimate).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
     expect(table.getByRole("rowheader", { name: "Jumlah percobaan" }).nextElementSibling).toHaveTextContent("12");
     expect(table.getByRole("rowheader", { name: "Perkiraan biaya" }).nextElementSibling).toHaveTextContent("Rp 15.251");
-    expect(table.getByRole("rowheader", { name: "Sisa anggaran judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
+    expect(table.getByRole("rowheader", { name: "Sisa anggaran bulanan judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
     await waitFor(() => expect(table.getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("Judge Alfa"));
   });
 

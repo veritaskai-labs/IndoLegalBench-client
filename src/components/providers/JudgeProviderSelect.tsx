@@ -18,7 +18,7 @@ type Props = {
 const BOX =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
 
-/** Pemilih penilai (LLM judge) dari provider otomatis yang aktif di halaman Provider (PBI-14 AC1). */
+/** Pemilih penilai (LLM judge) dari provider otomatis yang aktif di halaman Penyedia (PBI-14 AC1). */
 export function JudgeProviderSelect({
   value,
   onChange,
@@ -65,12 +65,12 @@ export function JudgeProviderSelect({
                 href="/admin/providers"
                 className="text-indigo-600 underline"
               >
-                halaman Provider
+                halaman Penyedia
               </Link>
               .
             </>
           ) : (
-            "Minta Admin menambahkannya di halaman Provider."
+            "Minta Admin menambahkannya di halaman Penyedia."
           )}
         </p>
       );
