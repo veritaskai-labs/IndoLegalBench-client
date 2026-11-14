@@ -21,7 +21,7 @@ describe("GradeEstimateTable (PBI-14 AC6)", () => {
     expect(table.getByRole("rowheader", { name: "Versi rubrik" }).nextElementSibling).toHaveTextContent("Versi 1");
     expect(table.getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("Judge Alfa");
     expect(table.getByRole("rowheader", { name: "Perkiraan biaya" }).nextElementSibling).toHaveTextContent("Rp 15.251");
-    expect(table.getByRole("rowheader", { name: "Sisa anggaran judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
+    expect(table.getByRole("rowheader", { name: "Sisa anggaran bulanan judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
   });
 
   it("shows no warning when the budget is enough", () => {
