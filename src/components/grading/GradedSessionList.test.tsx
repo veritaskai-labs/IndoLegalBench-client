@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AsyncResource } from "@/hooks/useAsyncResource";
+import { formatRupiah } from "@/lib/providers/format";
 import { gradedRunItem } from "@/test/gradingFixtures";
 import type { GradedRunListItem } from "@/types/grading";
 import { GradedSessionList } from "./GradedSessionList";
@@ -24,6 +25,9 @@ describe("GradedSessionList (PBI-22 AC9, Laporan: one row per grading run)", () 
       "Versi rubrik",
       "Dinilai",
       "Status",
+      "Biaya pengukuran",
+      "Biaya penilaian",
+      "Total",
     ]);
     const row = within(table).getByRole("row", { name: /Uji Coba Produk A/ });
     expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
@@ -33,6 +37,9 @@ describe("GradedSessionList (PBI-22 AC9, Laporan: one row per grading run)", () 
       "v1",
       "07 Nov 2026, 10.00 WIB",
       "Terbaru",
+      formatRupiah("0.00"),
+      formatRupiah("1500.00"),
+      formatRupiah("1500.00"),
     ]);
   });
 
@@ -95,7 +102,7 @@ describe("GradedSessionList (PBI-22 AC9, Laporan: one row per grading run)", () 
 
     const table = screen.getByRole("table", { name: "Hasil penilaian per run" });
     expect(table).toHaveTextContent("Belum ada sesi yang dinilai.");
-    expect(within(table).getByText("Belum ada sesi yang dinilai.").closest("td")).toHaveAttribute("colspan", "6");
+    expect(within(table).getByText("Belum ada sesi yang dinilai.").closest("td")).toHaveAttribute("colspan", "9");
   });
 
   // Mobile: the table scrolls sideways instead of squeezing the columns.
@@ -120,5 +127,84 @@ describe("GradedSessionList (PBI-22 AC9, Laporan: one row per grading run)", () 
     await user.click(screen.getByRole("button", { name: "Coba lagi" }));
 
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("GradedSessionList cost columns (SCRUM-299)", () => {
+  function cellsOf(name: RegExp) {
+    return within(screen.getByRole("row", { name })).getAllByRole("cell");
+  }
+
+  // Whole rupiah, same formatter as the measurement summary. Sen round (15,50 → Rp 16).
+  it("shows measurement, judge, and total cost in whole rupiah", () => {
+    renderList({
+      status: "ready",
+      data: [
+        gradedRunItem({
+          measurement_cost_idr: "12500.40",
+          judge_cost_idr: "3200.50",
+          total_cost_idr: "15700.90",
+        }),
+      ],
+    });
+
+    const cells = cellsOf(/Uji Coba Produk A/);
+    expect(cells[6].textContent).toBe(formatRupiah("12500.40"));
+    expect(cells[7].textContent).toBe(formatRupiah("3200.50"));
+    expect(cells[8].textContent).toBe(formatRupiah("15700.90"));
+    expect(cells.map((cell) => cell.textContent).join(" ")).not.toMatch(/estimasi/i);
+  });
+
+  // A manual session stores 0.00 on purpose. That is Rupiah, not the empty mark.
+  it("shows Rp 0 for a manual session measurement cost of 0.00", () => {
+    renderList({
+      status: "ready",
+      data: [
+        gradedRunItem({
+          session_type: "manual",
+          label: "Pencatatan manual Produk B",
+          measurement_cost_idr: "0.00",
+          judge_cost_idr: "1800.00",
+          total_cost_idr: "1800.00",
+        }),
+      ],
+    });
+
+    const cells = cellsOf(/Pencatatan manual Produk B/);
+    expect(cells[6].textContent).toBe(formatRupiah("0.00"));
+    expect(cells[7].textContent).toBe(formatRupiah("1800.00"));
+    expect(cells[8].textContent).toBe(formatRupiah("1800.00"));
+  });
+
+  // A missing side stays a dash, and the total stays a dash so it is not shown as Rp 0.
+  it("shows a dash when a cost is missing", () => {
+    renderList({
+      status: "ready",
+      data: [
+        gradedRunItem({
+          label: "Uji Produk C",
+          measurement_cost_idr: null,
+          judge_cost_idr: "2500.00",
+          total_cost_idr: null,
+        }),
+      ],
+    });
+
+    const cells = cellsOf(/Uji Produk C/);
+    expect(cells[6].textContent).toBe("–");
+    expect(cells[7].textContent).toBe(formatRupiah("2500.00"));
+    expect(cells[8].textContent).toBe("–");
+  });
+
+  it("right-aligns the three cost columns", () => {
+    renderList({ status: "ready", data: [gradedRunItem()] });
+
+    const table = screen.getByRole("table", { name: "Hasil penilaian per run" });
+    for (const name of ["Biaya pengukuran", "Biaya penilaian", "Total"]) {
+      expect(within(table).getByRole("columnheader", { name })).toHaveClass("text-right");
+    }
+    for (const cell of cellsOf(/Uji Coba Produk A/).slice(6)) {
+      expect(cell).toHaveClass("text-right", "tabular-nums");
+    }
   });
 });
