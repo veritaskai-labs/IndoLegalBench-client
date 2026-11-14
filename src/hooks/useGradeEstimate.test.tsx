@@ -116,7 +116,7 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
     await waitFor(() =>
       expect(result.current).toMatchObject({
         status: "error",
-        message: "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Provider.",
+        message: "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia.",
       }),
     );
   });

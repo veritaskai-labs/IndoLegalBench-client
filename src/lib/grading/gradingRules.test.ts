@@ -186,7 +186,7 @@ describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", (
 
 describe("estimateErrorMessage (PBI-14 AC6)", () => {
   it.each([
-    [new ApiError(422, "JUDGE_PRICING_MISSING"), "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Provider."],
+    [new ApiError(422, "JUDGE_PRICING_MISSING"), "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia."],
     [new ApiError(422, "JUDGE_NOT_CONFIGURED"), "Sesi ini belum punya penilai LLM dan belum ada yang dipilih."],
     [new ApiError(404, "JUDGE_PROVIDER_NOT_FOUND"), "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman."],
     // Same codes and words as the grade request, so the estimate and the grading never disagree.
