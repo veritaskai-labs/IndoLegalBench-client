@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -194,6 +194,25 @@ describe("GradedSessionList cost columns (SCRUM-299)", () => {
     expect(cells[6].textContent).toBe("–");
     expect(cells[7].textContent).toBe(formatRupiah("2500.00"));
     expect(cells[8].textContent).toBe("–");
+  });
+
+  it("pins the session name while the rest of the table scrolls", async () => {
+    renderList({ status: "ready", data: [gradedRunItem({ label: "Uji kurs tinggi" })] });
+
+    const table = screen.getByRole("table", { name: "Hasil penilaian per run" });
+    const header = within(table).getByRole("columnheader", { name: "Sesi" });
+    const session = within(screen.getByRole("row", { name: /Uji kurs tinggi/ })).getAllByRole("cell")[0];
+    expect(header).toHaveClass("md:sticky", "md:left-0", "md:whitespace-nowrap", "md:bg-slate-50");
+    expect(session).toHaveClass("md:sticky", "md:left-0", "md:whitespace-nowrap", "md:bg-white");
+    expect(header).not.toHaveClass("md:shadow-[8px_0_8px_-8px_rgba(15,23,42,0.35)]");
+
+    const scroller = table.parentElement;
+    if (!scroller) throw new Error("missing scroller");
+    Object.defineProperty(scroller, "scrollLeft", { value: 120, configurable: true });
+    scroller.dispatchEvent(new Event("scroll"));
+
+    await waitFor(() => expect(header).toHaveClass("md:shadow-[8px_0_8px_-8px_rgba(15,23,42,0.35)]"));
+    expect(session).toHaveClass("md:shadow-[8px_0_8px_-8px_rgba(15,23,42,0.35)]");
   });
 
   it("right-aligns the three cost columns", () => {
