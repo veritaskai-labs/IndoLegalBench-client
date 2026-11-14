@@ -107,10 +107,12 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
     expect(await within(section).findByText("Sesi ini belum dinilai.")).toBeInTheDocument();
     await user.click(within(section).getByRole("button", { name: "Nilai" }));
-    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
-    await user.click(within(screen.getByRole("dialog", { name: "Nilai sesi ini?" })).getByRole("button", { name: "Nilai" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
+    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
+    await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
-    expect(gateway.grade).toHaveBeenCalledWith("s-1");
+    expect(gateway.grade).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
     expect(await within(section).findByRole("table", { name: "Skor sesi" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText("Sesi “Run November” selesai dinilai.")).toBeInTheDocument();
@@ -169,7 +171,8 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
     await user.click(await within(section).findByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
+    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
     await dialog.findByRole("alert");
     await user.click(dialog.getByRole("button", { name: "Tutup" }));
