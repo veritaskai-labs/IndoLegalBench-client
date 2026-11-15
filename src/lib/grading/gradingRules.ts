@@ -164,6 +164,14 @@ const FAILURE_REASONS: Record<string, string> = {
   GRADING_ERROR: "Terjadi kesalahan saat menilai.",
 };
 
+/** Sesi yang diarsipkan tidak bisa dinilai lagi, jadi mengulang run yang gagal karenanya hanya akan ditolak server. */
+const NOT_RETRYABLE: ReadonlySet<string> = new Set(["SESSION_ARCHIVED"]);
+
+/** Apakah run yang gagal dengan error_code ini layak ditawari "Coba Nilai Ulang". Kode yang belum dikenal boleh dicoba. */
+export function canRetryGrading(errorCode: string | null | undefined): boolean {
+  return !(errorCode && NOT_RETRYABLE.has(errorCode));
+}
+
 /** Alasan run di latar belakang gagal, dari error_code progres; kode yang belum dikenal tetap dijelaskan. */
 export function gradingFailureMessage(errorCode: string | null | undefined): string {
   const reason = errorCode ? FAILURE_REASONS[errorCode] : undefined;

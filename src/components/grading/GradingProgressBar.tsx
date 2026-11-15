@@ -1,6 +1,6 @@
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { GradingProgressResource } from "@/hooks/useGradingProgress";
-import { gradingFailureMessage, isGradingActive } from "@/lib/grading/gradingRules";
+import { canRetryGrading, gradingFailureMessage, isGradingActive } from "@/lib/grading/gradingRules";
 
 const BAR =
   "h-2 w-full appearance-none overflow-hidden rounded-full bg-slate-100 [&::-webkit-progress-bar]:bg-slate-100 [&::-webkit-progress-value]:bg-indigo-600 [&::-moz-progress-bar]:bg-indigo-600";
@@ -9,8 +9,15 @@ const BAR =
  * Progres penilaian di latar belakang (K-13, SCRUM-285): antre, berjalan "X dari N percobaan", atau
  * alasan gagal. Tidak menampilkan apa pun saat memuat, sebelum dinilai, atau setelah selesai: hasil
  * penilaian sudah tampil di tempatnya sendiri. Dipakai halaman sesi otomatis dan manual.
+ *
+ * Run yang gagal membawa tombol "Coba Nilai Ulang" (K-19, SCRUM-290) bila pemanggil memberi onRetry:
+ * pemanggil yang tidak boleh menilai (bukan Admin, sesi diarsipkan) tidak memberinya. Tombol hilang
+ * sendiri begitu run baru antre karena tampilan beralih ke progres.
  */
-export function GradingProgressBar({ progress }: Readonly<{ progress: GradingProgressResource }>) {
+export function GradingProgressBar({
+  progress,
+  onRetry,
+}: Readonly<{ progress: GradingProgressResource; onRetry?: () => void }>) {
   if (progress.status === "error") return <ErrorState message={progress.message} onRetry={progress.reload} />;
   if (progress.status === "loading") return null;
 
@@ -36,9 +43,21 @@ export function GradingProgressBar({ progress }: Readonly<{ progress: GradingPro
 
   if (data?.status === "failed") {
     return (
-      <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-        Penilaian terakhir gagal. {gradingFailureMessage(data.error_code)}
-      </p>
+      <div
+        role="alert"
+        className="flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p>Penilaian terakhir gagal. {gradingFailureMessage(data.error_code)}</p>
+        {onRetry && canRetryGrading(data.error_code) && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="shrink-0 self-start rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-indigo-700 sm:self-auto"
+          >
+            Coba Nilai Ulang
+          </button>
+        )}
+      </div>
     );
   }
   return null;
