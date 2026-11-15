@@ -62,6 +62,8 @@ export function useGradingProgress(
 
   const runId = data?.grading_run_id ?? null;
   const runStatus = data?.status ?? null;
+  if (pendingRunId !== null && runId === pendingRunId) setPendingRunId(null);
+
   useEffect(() => {
     if (runId === null || runStatus === null) return;
     if (runStatus === "queued" || runStatus === "running") {
