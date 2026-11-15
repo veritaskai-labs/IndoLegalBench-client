@@ -86,7 +86,6 @@ function createMockDetail(overrides: Partial<ManualSessionDetail> = {}): ManualS
 
 function fakeGradingGateway(progress: GradingGateway["progress"] = () => Promise.resolve(null)): GradingGateway {
   return {
-    grade: vi.fn(),
     enqueue: vi.fn(),
     progress: vi.fn(progress),
     estimate: vi.fn(),

@@ -23,7 +23,6 @@ const judgeApi: JudgeOptionsApi = {
 
 function renderSection({
   results,
-  grade = () => Promise.resolve(gradingResponse()),
   enqueue = () => Promise.resolve(gradingRunQueued()),
   progress = () => Promise.resolve(null),
   role = "admin",
@@ -35,7 +34,6 @@ function renderSection({
   run = () => new Promise(() => {}),
 }: {
   results: GradingGateway["results"];
-  grade?: GradingGateway["grade"];
   enqueue?: GradingGateway["enqueue"];
   progress?: GradingGateway["progress"];
   role?: Role | null;
@@ -46,7 +44,6 @@ function renderSection({
   run?: GradingGateway["run"];
 }) {
   const gateway: GradingGateway = {
-    grade: vi.fn(grade),
     results: vi.fn(results),
     sessions: vi.fn(),
     enqueue: vi.fn(enqueue),
@@ -118,7 +115,6 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
-    expect(gateway.grade).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(screen.getByText("Penilaian sesi “Run November” berjalan di latar belakang.")).toBeInTheDocument();
   });

@@ -19,7 +19,7 @@ function renderDialog(
   estimate: GradingGateway["estimate"] = () => Promise.resolve(gradeEstimate()),
   judges: JudgeProviderOption[] = [JUDGE_A, JUDGE_B],
 ) {
-  const gateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(enqueue), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
+  const gateway: GradingGateway = { results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(enqueue), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
   const onQueued = vi.fn();
   const onClose = vi.fn();
@@ -95,7 +95,6 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
     expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-b" });
-    expect(gateway.grade).not.toHaveBeenCalled();
     await waitFor(() => expect(onQueued).toHaveBeenCalledWith(queued));
   });
 

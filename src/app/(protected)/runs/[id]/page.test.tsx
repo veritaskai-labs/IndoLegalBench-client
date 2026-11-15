@@ -28,7 +28,6 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
 }));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
 vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: {
-    grade: vi.fn(),
     enqueue: vi.fn(),
     progress: vi.fn().mockResolvedValue(null),
     estimate: vi.fn(),

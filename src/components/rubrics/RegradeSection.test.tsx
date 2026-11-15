@@ -44,7 +44,7 @@ function setup({
   gradingActive?: boolean;
 } = {}) {
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]), ...rubrics });
-  const gradingGateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs, run: vi.fn(), estimate: vi.fn(() => Promise.resolve(gradeEstimate())) };
+  const gradingGateway: GradingGateway = { results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs, run: vi.fn(), estimate: vi.fn(() => Promise.resolve(gradeEstimate())) };
   const onChanged = vi.fn();
   const onSelectRun = vi.fn();
   const onQueued = vi.fn();

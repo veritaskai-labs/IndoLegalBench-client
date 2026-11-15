@@ -30,7 +30,7 @@ function setup({
   defaultJudgeId?: string;
   judges?: JudgeProviderOption[];
 } = {}) {
-  const gateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate };
+  const gateway: GradingGateway = { results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
   const onQueued = vi.fn();
   const onClose = vi.fn();
@@ -87,7 +87,6 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     // Assert
     await waitFor(() => expect(onQueued).toHaveBeenCalledWith(QUEUED));
     expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { rubricVersion: "v1", judgeProviderId: "judge-b" });
-    expect(gateway.grade).not.toHaveBeenCalled();
   });
 
   // Edge: an older run without a judge leaves the choice empty, so nothing is sent until one is picked.
@@ -267,7 +266,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     // Assert
     expect(dialog.getByRole("alert")).toHaveTextContent(BUDGET_SHORT_TEXT);
     expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
-    expect(gateway.grade).not.toHaveBeenCalled();
+    expect(gateway.enqueue).not.toHaveBeenCalled();
   });
 
   it("keeps the button off when the estimate fails", async () => {

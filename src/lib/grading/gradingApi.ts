@@ -22,16 +22,14 @@ export interface GradeOptions {
 }
 
 export interface GradingGateway {
-  /** Tanpa pilihan: versi rubrik aktif dan judge sesi. Nilai ulang mengirim versi dan/atau judge (AC7). */
-  grade(sessionId: string, options?: GradeOptions): Promise<SessionGradingResponse>;
   /**
-   * Antre penilaian dengan pilihan yang sama seperti grade; server langsung membalas 202 dan worker
-   * yang memanggil judge (K-13). Progresnya dibaca lewat progress.
+   * Antre penilaian, pertama kali maupun ulang (AC6, AC7). Tanpa pilihan: versi rubrik aktif dan judge
+   * sesi. Server langsung membalas 202 dan worker yang memanggil judge (K-13); progresnya lewat progress.
    */
   enqueue(sessionId: string, options?: GradeOptions): Promise<GradingRunQueued>;
   /** Progres run terbaru (Admin). Null bila sesi belum pernah dinilai. passive untuk polling (SCRUM-251). */
   progress(sessionId: string, read?: { activity?: "passive" }): Promise<GradingProgress | null>;
-  /** Perkiraan biaya penilaian dengan pilihan yang sama seperti grade, tanpa memanggil judge (Admin, AC6). */
+  /** Perkiraan biaya penilaian dengan pilihan yang sama seperti enqueue, tanpa memanggil judge (Admin, AC6). */
   estimate(sessionId: string, options?: GradeOptions): Promise<GradeEstimate>;
   results(sessionId: string): Promise<SessionGradingResponse>;
   /** Riwayat penilaian sesi, terbaru di atas (Admin, AC7). Kosong bila sesi belum pernah dinilai. */
@@ -46,7 +44,7 @@ function sessionPath(sessionId: string, action: string): string {
   return `/measurements/${encodeURIComponent(sessionId)}/${action}`;
 }
 
-/** Body POST /grade: hanya pilihan yang diisi, tanpa body sama sekali bila tidak ada pilihan. */
+/** Body POST /grading-runs dan /grade/estimate: hanya pilihan yang diisi, tanpa body bila tidak ada pilihan. */
 export function gradeBody(options: GradeOptions = {}): string | undefined {
   const body = {
     ...(options.rubricVersion === undefined ? {} : { rubric_version: options.rubricVersion }),
@@ -62,21 +60,8 @@ export function gradeBody(options: GradeOptions = {}): string | undefined {
  */
 export const httpGradingGateway: GradingGateway = {
   /**
-   * POST /measurements/{id}/grade (Admin, AC6, AC7). Tanpa pilihan tidak ada body: server memakai
-   * versi rubrik aktif dan judge sesi. Nilai ulang menambah run baru; hasil lama tetap tersimpan.
-   */
-  grade: (sessionId, options) => {
-    const body = gradeBody(options);
-    return apiFetch<SessionGradingResponse>(sessionPath(sessionId, "grade"), {
-      method: "POST",
-      ...(body === undefined ? {} : { body }),
-      silentForbidden: true,
-    });
-  },
-
-  /**
-   * POST /measurements/{id}/grading-runs (Admin, server#142). Body dan aturannya sama dengan grade,
-   * tetapi server hanya mencatat run queued dan membalas 202, jadi dialog tidak menunggu judge.
+   * POST /measurements/{id}/grading-runs (Admin, server#142). Server hanya mencatat run queued dan
+   * membalas 202, jadi dialog tidak menunggu judge. Nilai ulang menambah run baru; hasil lama tetap.
    * 409 GRADING_IN_PROGRESS bila masih ada run yang antre atau berjalan.
    */
   enqueue: (sessionId, options) => {
@@ -99,7 +84,7 @@ export const httpGradingGateway: GradingGateway = {
     }),
 
   /**
-   * POST /measurements/{id}/grade/estimate (Admin, AC6, server#135). Body sama dengan grade, jadi
+   * POST /measurements/{id}/grade/estimate (Admin, AC6, server#135). Body sama dengan enqueue, jadi
    * perkiraan memakai judge dan versi rubrik yang sama dengan penilaian yang diumumkannya.
    */
   estimate: (sessionId, options) => {

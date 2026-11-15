@@ -12,7 +12,7 @@ const params = vi.hoisted(() => ({ id: "s-1", runId: "run-1" }));
 vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // gradingApi has its own request tests (stubbed fetch); here only the page's reaction matters.
-vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn(), run: vi.fn() } }));
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { results: vi.fn(), run: vi.fn() } }));
 
 const runRead = vi.mocked(httpGradingGateway.run);
 

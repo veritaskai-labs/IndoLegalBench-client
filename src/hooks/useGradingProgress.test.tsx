@@ -10,7 +10,6 @@ import { useGradingProgress } from "./useGradingProgress";
 
 function fakeGateway(progress: GradingGateway["progress"]): GradingGateway {
   return {
-    grade: vi.fn(),
     enqueue: vi.fn(),
     progress: vi.fn(progress),
     estimate: vi.fn(),

@@ -8,7 +8,7 @@ import { useGradingRuns } from "./useGradingRuns";
 
 // The hook takes the gateway as a parameter (DIP), so the test hands it a fake instead of mocking modules.
 function fakeGateway(runs: GradingGateway["runs"]): GradingGateway {
-  return { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(runs), run: vi.fn(), estimate: vi.fn() };
+  return { results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(runs), run: vi.fn(), estimate: vi.fn() };
 }
 
 describe("useGradingRuns (PBI-14 AC7)", () => {
