@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -66,6 +66,48 @@ describe("GradingProgressBar (K-13, SCRUM-285)", () => {
     expect(alert).toHaveTextContent("Penilaian terakhir gagal.");
     expect(alert).toHaveTextContent(reason);
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+  });
+
+  describe("Coba Nilai Ulang (K-19, SCRUM-290)", () => {
+    const RETRY = { name: "Coba Nilai Ulang" };
+
+    // Positive: the Admin can start again from the failure message, whatever the reason was.
+    it.each(["judge_not_configured", "judge_unavailable", "judge_pricing_missing", "judge_budget_exhausted", "judge_incomplete", "NO_SCORE", "GRADING_INTERRUPTED", "ANSWERS_CHANGED_DURING_GRADING", "GRADING_ERROR", "SOMETHING_NEW", null])(
+      "offers it next to the message when the run failed with %s",
+      async (code) => {
+        const onRetry = vi.fn();
+        render(<GradingProgressBar progress={ready(gradingProgress({ status: "failed", error_code: code }))} onRetry={onRetry} />);
+
+        await userEvent.click(within(screen.getByRole("alert")).getByRole("button", RETRY));
+
+        expect(onRetry).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    // Negative: an archived session cannot be graded, so a retry could only be refused.
+    it("does not offer it when the session was archived during grading", () => {
+      render(
+        <GradingProgressBar progress={ready(gradingProgress({ status: "failed", error_code: "SESSION_ARCHIVED" }))} onRetry={vi.fn()} />,
+      );
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Sesi diarsipkan saat penilaian berjalan.");
+      expect(screen.queryByRole("button", RETRY)).not.toBeInTheDocument();
+    });
+
+    // Negative: callers that cannot start grading (not Admin, archived session) pass no handler.
+    it("shows only the message when the caller gives no way to retry", () => {
+      render(<GradingProgressBar progress={ready(gradingProgress({ status: "failed", error_code: "GRADING_ERROR" }))} />);
+
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.queryByRole("button", RETRY)).not.toBeInTheDocument();
+    });
+
+    // Edge: a run that is queued, running or finished has nothing to retry.
+    it.each(["queued", "running", "finished"] as const)("does not offer it while the latest run is %s", (status) => {
+      render(<GradingProgressBar progress={ready(gradingProgress({ status, percent: 100 }))} onRetry={vi.fn()} />);
+
+      expect(screen.queryByRole("button", RETRY)).not.toBeInTheDocument();
+    });
   });
 
   it("explains a failed first read and retries it", async () => {
