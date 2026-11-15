@@ -2,6 +2,9 @@ import { memo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { mermaidSource } from "@/lib/markdown/mermaidBlock";
+import { MermaidDiagram } from "./MermaidDiagram";
+
 /** Skema tautan yang boleh diklik. Selain ini (javascript:, data:, vbscript:) targetnya dibuang. */
 const SAFE_LINK_PROTOCOL = /^(https?:|mailto:)/i;
 
@@ -21,9 +24,12 @@ const ELEMENTS: Components = {
   ul: ({ children }) => <ul className="mt-2 list-disc space-y-1 pl-5">{children}</ul>,
   ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-5">{children}</ol>,
   blockquote: ({ children }) => <blockquote className="mt-2 border-l-4 border-slate-200 pl-3 text-slate-600">{children}</blockquote>,
-  pre: ({ children }) => (
-    <pre className="mt-2 overflow-x-auto rounded-md bg-slate-100 p-3 font-mono text-xs whitespace-pre">{children}</pre>
-  ),
+  // Blok ```mermaid digambar sebagai diagram (K-12, SCRUM-295); blok kode lain tetap teks.
+  pre: ({ children, node }) => {
+    const diagram = mermaidSource(node);
+    if (diagram !== null) return <MermaidDiagram code={diagram} />;
+    return <pre className="mt-2 overflow-x-auto rounded-md bg-slate-100 p-3 font-mono text-xs whitespace-pre">{children}</pre>;
+  },
   code: ({ children, className }) => <code className={className ?? "rounded bg-slate-100 px-1 font-mono text-xs"}>{children}</code>,
   table: ({ children }) => (
     <div className="mt-2 overflow-x-auto">
@@ -49,7 +55,8 @@ const ELEMENTS: Components = {
  * Jawaban mentah AI sebagai tampilan terformat (PBI-11 AC8). Teks di database tidak diubah.
  * Aman dari XSS karena react-markdown membangun elemen React dari pohon sintaks markdown, tanpa
  * dangerouslySetInnerHTML dan tanpa plugin rehype-raw: HTML mentah dari AI tampil sebagai teks
- * apa adanya, tidak pernah menjadi elemen.
+ * apa adanya, tidak pernah menjadi elemen. Satu pengecualian ada di MermaidDiagram: SVG buatan
+ * mermaid (mode "strict") untuk blok ```mermaid.
  */
 function MarkdownAnswerBase({ source }: Readonly<{ source: string }>) {
   return (
