@@ -11,6 +11,7 @@ import {
   isNotGraded,
   judgeLabel,
   reportRunHref,
+  resultJudgeText,
   reportRunStatusLabel,
   resultsErrorMessage,
   runResultsErrorMessage,
@@ -229,6 +230,53 @@ describe("judgeLabel (Laporan, LLM judge column)", () => {
   // Edge: runs graded before the judge was recorded have no judge at all.
   it.each([null, undefined])("returns null for a run without a judge (%s)", (judge) => {
     expect(judgeLabel(judge)).toBeNull();
+  });
+});
+
+describe("resultJudgeText (K-11, SCRUM-291: LLM judge di ringkasan hasil penilaian)", () => {
+  // Positif: klien melihat nama produk dan model yang menilai, sesuai permintaan K-11.
+  it("names the judge product and the model", () => {
+    // Arrange
+    const judge = { judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2" };
+
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("Judge Alfa · alfa-2");
+  });
+
+  // Edge: judge gagal menjawab sehingga model tidak dilaporkan; nama produknya tetap tampil.
+  it("shows the product name alone when no model was reported", () => {
+    // Arrange
+    const judge = { judge_provider_id: "j-1", name: "Judge Alfa", model_version: null };
+
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("Judge Alfa");
+  });
+
+  // Edge: produk judge sudah dihapus dan modelnya tidak tercatat, tetapi run-nya memang punya judge.
+  it("says the judge is unknown when it has neither a name nor a model", () => {
+    // Arrange
+    const judge = { judge_provider_id: "j-1", name: null, model_version: null };
+
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("Judge tidak diketahui");
+  });
+
+  // Negatif: run lama dinilai sebelum judge dicatat; ringkasan menyebutnya, bukan menampilkan kosong.
+  it.each([null, undefined])("says the judge was not recorded for a run without a judge (%s)", (judge) => {
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("tidak tercatat");
   });
 });
 

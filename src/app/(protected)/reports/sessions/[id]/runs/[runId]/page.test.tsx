@@ -63,14 +63,31 @@ describe("ReportRunPage (PBI-22 AC9, one run opened from Laporan)", () => {
     expect(runRead).toHaveBeenCalledWith("a/b", "x#y");
   });
 
-  // Edge: an old run without a judge still opens.
-  it("omits the judge line for a run without a judge", async () => {
+  // Edge (K-11, SCRUM-291): run lama tanpa judge tetap terbuka dan barisnya menyebut judge tidak tercatat.
+  it("says the judge was not recorded for a run without a judge", async () => {
+    // Arrange
     runRead.mockResolvedValue(gradingResponse({ session_label: "Uji Coba Produk A", judge: null }));
 
+    // Act
     render(<ReportRunPage />);
 
+    // Assert
     await screen.findByRole("heading", { level: 1, name: "Uji Coba Produk A" });
-    expect(screen.queryByText(/LLM judge:/)).not.toBeInTheDocument();
+    expect(screen.getByText("LLM judge: tidak tercatat")).toBeInTheDocument();
+  });
+
+  // Edge (K-11, SCRUM-291): baris judge pindah ke ringkasan bersama, jadi tidak boleh tampil dua kali.
+  it("names the judge only once", async () => {
+    // Arrange
+    runRead.mockResolvedValue(
+      gradingResponse({ judge: { judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2", cost_idr: null } }),
+    );
+
+    // Act
+    render(<ReportRunPage />);
+
+    // Assert
+    expect(await screen.findAllByText(/LLM judge:/)).toHaveLength(1);
   });
 
   it("explains a run that is not found and lets the user try again", async () => {

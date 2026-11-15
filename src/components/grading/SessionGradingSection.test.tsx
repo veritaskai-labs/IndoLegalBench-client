@@ -84,6 +84,18 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     expect(section).toHaveTextContent("Dinilai 07 Nov 2026, 10.00 WIB");
   });
 
+  // Positif (K-11, SCRUM-291, TC_88): halaman detail sesi menyebut LLM judge yang menilai hasil yang tampil.
+  it("names the LLM judge product and model in the summary", async () => {
+    // Arrange
+    const results = () => Promise.resolve(gradingResponse({ judge: JUDGE_A }));
+
+    // Act
+    const { section } = renderSection({ results });
+
+    // Assert
+    expect(await within(section).findByText("LLM judge: DeepSeek · deepseek-chat")).toBeInTheDocument();
+  });
+
   // Edge: cases is optional in the contract (default_factory=list).
   it("shows an empty case table when the result carries no cases", async () => {
     const { section } = renderSection({ results: () => Promise.resolve(gradingResponse({ cases: undefined })) });
