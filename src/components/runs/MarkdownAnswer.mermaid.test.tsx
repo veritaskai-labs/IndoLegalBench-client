@@ -33,7 +33,7 @@ describe("MarkdownAnswer mermaid blocks (K-12, SCRUM-295)", () => {
     const { container } = render(<MarkdownAnswer source={source} />);
 
     // Assert
-    expect(await screen.findByRole("img", { name: "Diagram Mermaid" })).toContainElement(screen.getByTestId("gambar"));
+    expect(await screen.findByRole("figure", { name: "Diagram Mermaid" })).toContainElement(screen.getByTestId("gambar"));
     expect(renderMermaid).toHaveBeenCalledWith(expect.any(String), "graph TD\n  A[Gugatan] --> B[Putusan]\n");
     expect(container.querySelector("pre")).toBeNull();
     expect(screen.getByText("Alur perkara:")).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("MarkdownAnswer mermaid blocks (K-12, SCRUM-295)", () => {
     await user.click(screen.getByRole("button", { name: "Pratinjau" }));
 
     // Assert
-    expect(await screen.findByRole("img", { name: "Diagram Mermaid" })).toBeInTheDocument();
+    expect(await screen.findByRole("figure", { name: "Diagram Mermaid" })).toBeInTheDocument();
   });
 
   // Negatif: blok kode bahasa lain tidak pernah dikirim ke mermaid dan tetap tampil sebagai kode.
@@ -109,7 +109,7 @@ describe("MarkdownAnswer mermaid blocks (K-12, SCRUM-295)", () => {
     const { container } = render(<MarkdownAnswer source={source} />);
 
     // Assert
-    await waitFor(() => expect(screen.getAllByRole("img", { name: "Diagram Mermaid" })).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("figure", { name: "Diagram Mermaid" })).toHaveLength(2));
     expect(renderMermaid).toHaveBeenCalledTimes(2);
     expect(container.querySelectorAll("pre")).toHaveLength(1);
   });
@@ -123,7 +123,7 @@ describe("MarkdownAnswer mermaid blocks (K-12, SCRUM-295)", () => {
     const { container } = render(<MarkdownAnswer source={source} />);
 
     // Assert
-    await screen.findByRole("img", { name: "Diagram Mermaid" });
+    await screen.findByRole("figure", { name: "Diagram Mermaid" });
     expect(renderMermaid).toHaveBeenCalledWith(expect.any(String), "graph TD\n  A[<script>window.__pwned = true</script>]\n");
     expect(container.querySelector("script")).toBeNull();
     expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();

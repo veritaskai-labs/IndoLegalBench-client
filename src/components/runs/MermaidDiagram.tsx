@@ -58,9 +58,10 @@ export function MermaidDiagram({
     );
   }
 
+  // <figure> dengan nama, bukan role="img" pada <div>: pembaca layar tetap mengenalinya sebagai satu
+  // gambar bernama, dan isi diagramnya (teks label di dalam SVG) masih bisa dibaca.
   return (
-    <div
-      role="img"
+    <figure
       aria-label="Diagram Mermaid"
       className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-white p-3 [&>svg]:mx-auto [&>svg]:h-auto [&>svg]:max-w-full"
       // SVG ini buatan mermaid dengan securityLevel "strict" (sudah disaring DOMPurify), bukan teks

@@ -31,7 +31,7 @@ describe("MermaidDiagram (K-12, SCRUM-295)", () => {
     render(<MermaidDiagram code={FLOW} render={renderer} />);
 
     // Assert
-    const diagram = await screen.findByRole("img", { name: "Diagram Mermaid" });
+    const diagram = await screen.findByRole("figure", { name: "Diagram Mermaid" });
     expect(diagram.querySelector("svg")).toBe(screen.getByTestId("gambar"));
     expect(screen.queryByText(/graph TD/)).not.toBeInTheDocument();
     expect(renderer).toHaveBeenCalledWith(expect.stringMatching(/^mermaid-[\w-]+$/), FLOW);
@@ -47,7 +47,7 @@ describe("MermaidDiagram (K-12, SCRUM-295)", () => {
 
     // Assert
     expect(screen.getByText("Memuat diagram...")).toBeInTheDocument();
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.queryByRole("figure")).not.toBeInTheDocument();
 
     pending.get(FLOW)?.resolve("<svg />");
     await waitFor(() => expect(screen.queryByText("Memuat diagram...")).not.toBeInTheDocument());
@@ -64,7 +64,7 @@ describe("MermaidDiagram (K-12, SCRUM-295)", () => {
     // Assert
     expect(await screen.findByText(/Diagram tidak dapat ditampilkan/)).toBeInTheDocument();
     expect(container.querySelector("pre code")?.textContent).toBe("graf TD\n  A --> B");
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.queryByRole("figure")).not.toBeInTheDocument();
   });
 
   // Edge: dua diagram di satu jawaban harus punya id SVG berbeda, kalau tidak gayanya saling menimpa.
@@ -81,7 +81,7 @@ describe("MermaidDiagram (K-12, SCRUM-295)", () => {
     );
 
     // Assert
-    await waitFor(() => expect(screen.getAllByRole("img")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("figure")).toHaveLength(2));
     const [firstId, secondId] = renderer.mock.calls.map(([id]) => id);
     expect(firstId).not.toBe(secondId);
   });
@@ -130,7 +130,7 @@ describe("MermaidDiagram (K-12, SCRUM-295)", () => {
     // Arrange
     const renderer = vi.fn<MermaidRenderer>().mockResolvedValue("<svg />");
     const { rerender } = render(<MermaidDiagram code={FLOW} render={renderer} />);
-    await screen.findByRole("img");
+    await screen.findByRole("figure");
 
     // Act
     rerender(<MermaidDiagram code={FLOW} render={renderer} />);
