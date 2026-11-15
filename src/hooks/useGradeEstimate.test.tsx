@@ -11,7 +11,7 @@ import { useGradeEstimate } from "./useGradeEstimate";
 // The hook takes the gateway and the judge list as parameters (DIP), so the test hands it fakes
 // instead of mocking modules.
 function fakeGateway(estimate: GradingGateway["estimate"]): GradingGateway {
-  return { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
+  return { results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
 }
 
 function fakeJudges(names: Record<string, string> = { "judge-a": "Judge Alfa", "judge-b": "Judge Beta" }): JudgeOptionsApi {

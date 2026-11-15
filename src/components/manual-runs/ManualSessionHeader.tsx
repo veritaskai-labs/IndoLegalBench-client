@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { GradeSessionDialog } from "@/components/grading/GradeSessionDialog";
+import { GradingProgressBar } from "@/components/grading/GradingProgressBar";
 import { FinalizeSessionDialog } from "@/components/manual-runs/FinalizeSessionDialog";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { useToast } from "@/components/ui/Toast";
+import { useGradingProgress } from "@/hooks/useGradingProgress";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { unknownName } from "@/lib/runs/sessionRules";
@@ -15,6 +17,13 @@ import {
 } from "@/types/measurement";
 import type { Role } from "@/types";
 import type { ManualSessionDetail } from "@/types/measurement";
+
+/** Penjelasan tombol "Kirim untuk Dinilai": kenapa mati, atau apa yang dilakukannya. */
+function gradeButtonTitle(isAllFilled: boolean, gradingActive: boolean): string {
+  if (!isAllFilled) return "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai.";
+  if (gradingActive) return "Penilaian sesi ini sedang berjalan di latar belakang.";
+  return "Kirim sesi ini untuk dinilai.";
+}
 
 export function ManualSessionHeader({
   session,
@@ -35,6 +44,19 @@ export function ManualSessionHeader({
   const [isGradeOpen, setIsGradeOpen] = useState(false);
   const { showToast } = useToast();
   const isAdmin = role === "admin";
+  const reportHref = `/reports/sessions/${encodeURIComponent(session.id)}`;
+  // K-13 (SCRUM-285): penilaian berjalan di latar belakang. Halaman ini tidak punya tabel skor, jadi
+  // saat run selesai sesi dimuat ulang (status Dinilai) dan laporannya ditawarkan lewat toast.
+  const grading = useGradingProgress(session.id, {
+    enabled: isAdmin,
+    gateway: gradingGateway,
+    onSettled: (run) => {
+      onSessionUpdated();
+      if (run.status === "finished") {
+        showToast(`Sesi “${session.label}” selesai dinilai.`, { label: "Lihat laporan →", href: reportHref });
+      }
+    },
+  });
 
   const isAllFilled =
     session.total_answers > 0 && session.filled_answers === session.total_answers;
@@ -234,13 +256,9 @@ export function ManualSessionHeader({
             {isAdmin && (
               <button
                 type="button"
-                disabled={!isAllFilled}
+                disabled={!isAllFilled || grading.active}
                 onClick={() => setIsGradeOpen(true)}
-                title={
-                  !isAllFilled
-                    ? "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai."
-                    : "Kirim sesi ini untuk dinilai."
-                }
+                title={gradeButtonTitle(isAllFilled, grading.active)}
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Kirim untuk Dinilai
@@ -258,6 +276,8 @@ export function ManualSessionHeader({
             style={{ width: `${percent}%` }}
           />
         </div>
+
+        <GradingProgressBar progress={grading} />
       </section>
 
       {isFinalizeOpen && (
@@ -273,18 +293,17 @@ export function ManualSessionHeader({
         <GradeSessionDialog
           session={{ id: session.id, label: session.label }}
           gateway={gradingGateway}
-          onGraded={() => {
+          onQueued={(queued) => {
             setIsGradeOpen(false);
-            showToast(`Sesi “${session.label}” selesai dinilai.`, {
-              label: "Lihat laporan →",
-              href: `/reports/sessions/${encodeURIComponent(session.id)}`,
-            });
-            onSessionUpdated();
+            grading.started(queued);
+            showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
           }}
           onClose={(afterError) => {
             setIsGradeOpen(false);
             if (afterError) {
               onSessionUpdated();
+              // GRADING_IN_PROGRESS: run lain sudah berjalan, jadi progresnya ikut ditampilkan.
+              grading.reload();
             }
           }}
         />

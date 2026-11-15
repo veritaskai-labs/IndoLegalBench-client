@@ -27,7 +27,13 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   retrySession: vi.fn(),
 }));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
-vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), estimate: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: {
+    enqueue: vi.fn(),
+    progress: vi.fn().mockResolvedValue(null),
+    estimate: vi.fn(),
+    results: vi.fn(),
+    runs: vi.fn().mockResolvedValue([]),
+  } }));
 // K-14 (SCRUM-282): dialog Nilai memuat daftar LLM judge sendiri.
 vi.mock("@/lib/providers/judgeApi", () => ({
   listJudgeOptions: vi.fn().mockResolvedValue([
@@ -43,7 +49,7 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const get = vi.mocked(getSession);
 const progressRead = vi.mocked(getProgress);
-const gradeRequest = vi.mocked(httpGradingGateway.grade);
+const enqueueRequest = vi.mocked(httpGradingGateway.enqueue);
 const estimateRequest = vi.mocked(httpGradingGateway.estimate);
 const resultsRead = vi.mocked(httpGradingGateway.results);
 
@@ -142,7 +148,7 @@ beforeEach(() => {
   params.id = "s-1";
   signedInAs("admin");
   progressRead.mockReturnValue(new Promise(() => {}));
-  gradeRequest.mockReset();
+  enqueueRequest.mockReset();
   resultsRead.mockReset();
   resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
 });
@@ -724,7 +730,7 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
   it("lets Admin grade a finished session from the page", async () => {
     const user = userEvent.setup();
     get.mockResolvedValue(session({ status: "finished" }));
-    gradeRequest.mockResolvedValue(gradingResponse());
+    enqueueRequest.mockResolvedValue({ grading_run_id: "run-1", status: "queued" });
     estimateRequest.mockResolvedValue(gradeEstimate());
 
     render(<SessionDetailPage />);
@@ -736,7 +742,7 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
-    expect(gradeRequest).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
+    expect(enqueueRequest).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
   });
 
   it("shows the scores of a graded session", async () => {

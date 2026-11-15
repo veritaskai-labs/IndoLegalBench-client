@@ -1049,6 +1049,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/measurements/{session_id}/grading-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Riwayat penilaian sesi pengukuran, terbaru di atas (Admin)
+         * @description Semua penilaian sesi ini, termasuk hasil lama sebelum nilai ulang (PBI-14 AC7).
+         */
+        get: operations["list_grading_runs_endpoint_measurements__session_id__grading_runs_get"];
+        put?: never;
+        /**
+         * Antre penilaian sesi di latar belakang (Admin)
+         * @description Catat run queued dan langsung balas 202; worker penilaian yang memanggil judge (K-13).
+         *
+         *     Body dan aturan sama dengan POST /grade. Progres dibaca lewat GET /grading-progress.
+         */
+        post: operations["enqueue_grading_endpoint_measurements__session_id__grading_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/measurements/{session_id}/grading-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Progres penilaian terbaru sesi pengukuran (Admin)
+         * @description Status dan jumlah percobaan yang sudah dinilai untuk progress bar; null bila belum pernah dinilai.
+         */
+        get: operations["grading_progress_endpoint_measurements__session_id__grading_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/measurements/{session_id}/grade/estimate": {
         parameters: {
             query?: never;
@@ -1065,26 +1111,6 @@ export interface paths {
          *     Body sama dengan POST /grade. Tidak memanggil judge dan tidak menyimpan apa pun (SCRUM-286).
          */
         post: operations["estimate_grade_endpoint_measurements__session_id__grade_estimate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/measurements/{session_id}/grading-runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Riwayat penilaian sesi pengukuran, terbaru di atas (Admin)
-         * @description Semua penilaian sesi ini, termasuk hasil lama sebelum nilai ulang (PBI-14 AC7).
-         */
-        get: operations["list_grading_runs_endpoint_measurements__session_id__grading_runs_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2780,6 +2806,73 @@ export interface components {
              * @description Total biaya panggilan judge pada run ini, Rupiah
              */
             cost_idr?: string | null;
+        };
+        /**
+         * GradingProgress
+         * @description Progres penilaian terbaru satu sesi untuk progress bar (SCRUM-284, K-13).
+         */
+        GradingProgress: {
+            /**
+             * Grading Run Id
+             * Format: uuid
+             * @description ID grading run terbaru sesi ini
+             */
+            grading_run_id: string;
+            /**
+             * Status
+             * @description queued = menunggu worker, running = sedang dinilai, finished/failed = selesai
+             * @enum {string}
+             */
+            status: "queued" | "running" | "finished" | "failed";
+            /**
+             * Attempts Graded
+             * @description Percobaan yang sudah dinilai
+             */
+            attempts_graded: number;
+            /**
+             * Attempts Total
+             * @description Semua percobaan sesi yang dinilai run ini
+             */
+            attempts_total: number;
+            /**
+             * Percent
+             * @description attempts_graded / attempts_total, dibulatkan ke bawah
+             */
+            percent: number;
+            /**
+             * Error Code
+             * @description Alasan run gagal (misalnya GRADING_INTERRUPTED); kosong bila tidak gagal
+             */
+            error_code?: string | null;
+            /**
+             * Triggered At
+             * Format: date-time
+             * @description Waktu Admin memicu penilaian
+             */
+            triggered_at: string;
+            /**
+             * Finished At
+             * @description Waktu run berakhir
+             */
+            finished_at?: string | null;
+        };
+        /**
+         * GradingRunQueued
+         * @description Balasan 202 POST /measurements/{id}/grading-runs (SCRUM-284, K-13).
+         */
+        GradingRunQueued: {
+            /**
+             * Grading Run Id
+             * Format: uuid
+             * @description ID grading run yang dibuat
+             */
+            grading_run_id: string;
+            /**
+             * Status
+             * @description Selalu queued: judge dipanggil worker penilaian di latar belakang
+             * @constant
+             */
+            status: "queued";
         };
         /**
          * GradingRunSummary
@@ -8091,7 +8184,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Sesi diarsipkan (`SESSION_ARCHIVED`) atau sesi dalam antrean belum bisa dinilai (`SESSION_NOT_GRADABLE`). Sesi manual: masih ada jawaban kosong (`NOT_COMPLETE`) atau statusnya bukan status manual (`MANUAL_SESSION_STATUS_INVALID`). Jawaban ditimpa selama judge berjalan (`ANSWERS_CHANGED_DURING_GRADING`) atau sesi diarsipkan di tengah penilaian (`SESSION_ARCHIVED`): tidak ada hasil yang tersimpan, picu lagi. */
+            /** @description Sesi diarsipkan (`SESSION_ARCHIVED`) atau sesi dalam antrean belum bisa dinilai (`SESSION_NOT_GRADABLE`). Sesi manual: masih ada jawaban kosong (`NOT_COMPLETE`) atau statusnya bukan status manual (`MANUAL_SESSION_STATUS_INVALID`). Jawaban ditimpa selama judge berjalan (`ANSWERS_CHANGED_DURING_GRADING`) atau sesi diarsipkan di tengah penilaian (`SESSION_ARCHIVED`): tidak ada hasil yang tersimpan, picu lagi. Masih ada penilaian yang antre atau berjalan (`GRADING_IN_PROGRESS`, SCRUM-284). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -8107,6 +8200,166 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_grading_runs_endpoint_measurements__session_id__grading_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradingRunSummary"][];
+                };
+            };
+            /** @description Hanya Admin yang dapat melihat riwayat penilaian (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enqueue_grading_endpoint_measurements__session_id__grading_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["GradeSessionRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradingRunQueued"];
+                };
+            };
+            /** @description Hanya Admin yang dapat memicu penilaian (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi diarsipkan (`SESSION_ARCHIVED`) atau sesi dalam antrean belum bisa dinilai (`SESSION_NOT_GRADABLE`). Sesi manual: masih ada jawaban kosong (`NOT_COMPLETE`) atau statusnya bukan status manual (`MANUAL_SESSION_STATUS_INVALID`). Jawaban ditimpa selama judge berjalan (`ANSWERS_CHANGED_DURING_GRADING`) atau sesi diarsipkan di tengah penilaian (`SESSION_ARCHIVED`): tidak ada hasil yang tersimpan, picu lagi. Masih ada penilaian yang antre atau berjalan (`GRADING_IN_PROGRESS`, SCRUM-284). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description LLM judge yang dipilih bukan produk AI otomatis yang aktif (`JUDGE_NOT_ELIGIBLE`). Body yang bentuknya tidak valid tetap dijawab `detail` bawaan FastAPI. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    grading_progress_endpoint_measurements__session_id__grading_progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GradingProgress"] | null;
+                };
+            };
+            /** @description Hanya Admin yang dapat melihat progres penilaian (`FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -8169,55 +8422,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    list_grading_runs_endpoint_measurements__session_id__grading_runs_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                session_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GradingRunSummary"][];
-                };
-            };
-            /** @description Hanya Admin yang dapat melihat riwayat penilaian (`FORBIDDEN`). */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Pengukuran tidak ditemukan (`MEASUREMENT_NOT_FOUND`). */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

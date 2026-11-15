@@ -3,6 +3,8 @@ import type {
   CaseGradeResult,
   GradeEstimate,
   GradedRunListItem,
+  GradingProgress,
+  GradingRunQueued,
   GradingRunSummary,
   SessionGradingResponse,
 } from "@/types/grading";
@@ -110,6 +112,26 @@ export function gradeEstimate(overrides: Partial<GradeEstimate> = {}): GradeEsti
     usd_idr_rate: "16200.00",
     remaining_budget_idr: "500000.00",
     budget_sufficient: true,
+    ...overrides,
+  };
+}
+
+/** Balasan 202 POST /measurements/{id}/grading-runs (server#142): run masuk antrean. Data sintetis. */
+export function gradingRunQueued(overrides: Partial<GradingRunQueued> = {}): GradingRunQueued {
+  return { grading_run_id: "run-queued", status: "queued", ...overrides };
+}
+
+/** Respons GET /measurements/{id}/grading-progress (server#142, #143): run yang sedang dinilai. Data sintetis. */
+export function gradingProgress(overrides: Partial<GradingProgress> = {}): GradingProgress {
+  return {
+    grading_run_id: "run-queued",
+    status: "running",
+    attempts_graded: 3,
+    attempts_total: 12,
+    percent: 25,
+    error_code: null,
+    triggered_at: "2026-11-15T03:00:00Z",
+    finished_at: null,
     ...overrides,
   };
 }

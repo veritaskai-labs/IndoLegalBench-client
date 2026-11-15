@@ -89,13 +89,6 @@ export function toRunRows(runs: RunSource[]): RunRow[] {
   return [...runs].sort(newestFirst).map(toRunRow);
 }
 
-/** Toast setelah nilai ulang: versi dan judge dari hasil baru, bukan dari pilihan di dialog. */
-export function regradeDoneMessage(result: Pick<SessionGradingResponse, "rubric_version" | "judge">): string {
-  const version = versionText(result.rubric_version);
-  const name = result.judge?.name;
-  return name ? `Penilaian ulang selesai dengan ${version} dan penilai ${name}.` : `Penilaian ulang selesai dengan ${version}.`;
-}
-
 /** Keterangan di atas skor saat yang tampil adalah run lama, supaya tidak dikira hasil terbaru. */
 export function olderRunNote(triggeredAt: string): string {
   return `Menampilkan hasil penilaian ${formatWib(triggeredAt)}, bukan yang terbaru.`;

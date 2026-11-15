@@ -1,8 +1,12 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualSessionHeader } from "./ManualSessionHeader";
+import { PROGRESS_POLL_MS } from "@/hooks/useMeasurementProgress";
+import type { GradingGateway } from "@/lib/grading/gradingApi";
+import { gradingProgress } from "@/test/gradingFixtures";
 import type { ManualSessionDetail } from "@/types/measurement";
+import type { Role } from "@/types";
 
 const showToastMock = vi.fn();
 vi.mock("@/components/ui/Toast", () => ({
@@ -32,16 +36,16 @@ vi.mock("./FinalizeSessionDialog", () => ({
 
 vi.mock("@/components/grading/GradeSessionDialog", () => ({
   GradeSessionDialog: ({
-    onGraded,
+    onQueued,
     onClose,
   }: {
     session: { id: string; label: string };
     gateway?: unknown;
-    onGraded: (res: unknown) => void;
+    onQueued: (res: unknown) => void;
     onClose: (afterError: boolean) => void;
   }) => (
     <div data-testid="grade-dialog">
-      <button type="button" onClick={() => onGraded({})}>
+      <button type="button" onClick={() => onQueued({ grading_run_id: "run-1", status: "queued" })}>
         Confirm Grade
       </button>
       <button type="button" onClick={() => onClose(false)}>
@@ -80,9 +84,113 @@ function createMockDetail(overrides: Partial<ManualSessionDetail> = {}): ManualS
   };
 }
 
+function fakeGradingGateway(progress: GradingGateway["progress"] = () => Promise.resolve(null)): GradingGateway {
+  return {
+    enqueue: vi.fn(),
+    progress: vi.fn(progress),
+    estimate: vi.fn(),
+    results: vi.fn(),
+    runs: vi.fn(),
+    run: vi.fn(),
+    sessions: vi.fn(),
+  };
+}
+
+function renderGradable({
+  progress,
+  role = "admin",
+  onSessionUpdated = vi.fn(),
+}: { progress?: GradingGateway["progress"]; role?: Role; onSessionUpdated?: () => void } = {}) {
+  const session = createMockDetail({ status: "complete", filled_answers: 50, total_answers: 50 });
+  const gradingGateway = fakeGradingGateway(progress);
+  render(
+    <ManualSessionHeader
+      session={session}
+      role={role}
+      unfilledOnly={false}
+      onToggleUnfilled={vi.fn()}
+      onSessionUpdated={onSessionUpdated}
+      gradingGateway={gradingGateway}
+    />,
+  );
+  return { session, gradingGateway, onSessionUpdated };
+}
+
 describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
   beforeEach(() => {
     showToastMock.mockClear();
+  });
+
+  // K-13 (SCRUM-285): "Kirim untuk Dinilai" runs in the background and its progress shows here.
+  describe("background grading progress", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("shows the queued run and turns 'Kirim untuk Dinilai' off once the dialog closes", async () => {
+      const user = userEvent.setup();
+      const progress = vi
+        .fn<GradingGateway["progress"]>()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(gradingProgress({ grading_run_id: "run-1", status: "queued", attempts_graded: 0, attempts_total: 50, percent: 0 }));
+      renderGradable({ progress });
+      await waitFor(() => expect(progress).toHaveBeenCalledTimes(1));
+
+      await user.click(screen.getByRole("button", { name: /kirim untuk dinilai/i }));
+      await user.click(screen.getByRole("button", { name: "Confirm Grade" }));
+
+      expect(await screen.findByText("Menunggu giliran penilaian · 0 dari 50 percobaan (0%)")).toBeInTheDocument();
+      const gradeBtn = screen.getByRole("button", { name: /kirim untuk dinilai/i });
+      expect(gradeBtn).toBeDisabled();
+      expect(gradeBtn).toHaveAttribute("title", "Penilaian sesi ini sedang berjalan di latar belakang.");
+    });
+
+    // AC: progress stays right after a refresh or after coming back to the page.
+    it("shows a run that is already running when the page opens", async () => {
+      renderGradable({
+        progress: () => Promise.resolve(gradingProgress({ status: "running", attempts_graded: 10, attempts_total: 50, percent: 20 })),
+      });
+
+      expect(await screen.findByText("10 dari 50 percobaan dinilai (20%)")).toBeInTheDocument();
+      expect(screen.getByRole("progressbar", { name: "Progres penilaian" })).toHaveAttribute("value", "20");
+      expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toBeDisabled();
+    });
+
+    // The manual page has no score table: the session moves to Dinilai and the report is one click away.
+    it("reloads the session and links to the report when the run finishes", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const progress = vi
+        .fn<GradingGateway["progress"]>()
+        .mockResolvedValueOnce(gradingProgress({ status: "running" }))
+        .mockResolvedValue(gradingProgress({ status: "finished", percent: 100 }));
+      const { session, onSessionUpdated } = renderGradable({ progress });
+      expect(await screen.findByRole("progressbar", { name: "Progres penilaian" })).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS);
+
+      await waitFor(() => expect(onSessionUpdated).toHaveBeenCalledTimes(1));
+      expect(showToastMock).toHaveBeenCalledWith(`Sesi “${session.label}” selesai dinilai.`, {
+        label: "Lihat laporan →",
+        href: `/reports/sessions/${session.id}`,
+      });
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    });
+
+    it("explains a failed run and lets the Admin send it again", async () => {
+      renderGradable({ progress: () => Promise.resolve(gradingProgress({ status: "failed", error_code: "NO_SCORE" })) });
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Penilaian terakhir gagal.");
+      expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toBeEnabled();
+    });
+
+    // The progress endpoint is Admin only, and contributors cannot grade.
+    it("does not ask a contributor for grading progress", async () => {
+      const { session, gradingGateway } = renderGradable({ role: "contributor" });
+
+      expect(await screen.findByText(session.label)).toBeInTheDocument();
+      expect(screen.queryByRole("progressbar", { name: "Progres penilaian" })).not.toBeInTheDocument();
+      expect(gradingGateway.progress).not.toHaveBeenCalled();
+    });
   });
   it("renders metadata, product info, and progress 'X dari N jawaban terisi'", () => {
     const session = createMockDetail();
@@ -259,7 +367,8 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
   });
 
-  it("handles grade completion with toast and triggers onSessionUpdated", async () => {
+  // K-13 (SCRUM-285): "Kirim untuk Dinilai" no longer waits for the judge in the pop-up.
+  it("closes the dialog once grading is queued and says it runs in the background", async () => {
     const user = userEvent.setup();
     const onSessionUpdated = vi.fn();
     const session = createMockDetail({
@@ -284,14 +393,9 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     await user.click(screen.getByRole("button", { name: "Confirm Grade" }));
 
     expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
-    expect(showToastMock).toHaveBeenCalledWith(
-      `Sesi “${session.label}” selesai dinilai.`,
-      {
-        label: "Lihat laporan →",
-        href: `/reports/sessions/${session.id}`,
-      },
-    );
-    expect(onSessionUpdated).toHaveBeenCalledTimes(1);
+    expect(showToastMock).toHaveBeenCalledWith(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
+    // Nothing is graded yet, so the session itself has not changed.
+    expect(onSessionUpdated).not.toHaveBeenCalled();
   });
 
   it("reloads session when GradeSessionDialog closes after an error", async () => {

@@ -1,5 +1,12 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { GradeEstimate, GradedRunListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
+import type {
+  GradeEstimate,
+  GradedRunListItem,
+  GradingProgress,
+  GradingRunQueued,
+  GradingRunSummary,
+  SessionGradingResponse,
+} from "@/types/grading";
 
 /**
  * Pintu ke server untuk penilaian sesi (PBI-14). Hook dan komponen bergantung pada interface ini,
@@ -15,9 +22,14 @@ export interface GradeOptions {
 }
 
 export interface GradingGateway {
-  /** Tanpa pilihan: versi rubrik aktif dan judge sesi. Nilai ulang mengirim versi dan/atau judge (AC7). */
-  grade(sessionId: string, options?: GradeOptions): Promise<SessionGradingResponse>;
-  /** Perkiraan biaya penilaian dengan pilihan yang sama seperti grade, tanpa memanggil judge (Admin, AC6). */
+  /**
+   * Antre penilaian, pertama kali maupun ulang (AC6, AC7). Tanpa pilihan: versi rubrik aktif dan judge
+   * sesi. Server langsung membalas 202 dan worker yang memanggil judge (K-13); progresnya lewat progress.
+   */
+  enqueue(sessionId: string, options?: GradeOptions): Promise<GradingRunQueued>;
+  /** Progres run terbaru (Admin). Null bila sesi belum pernah dinilai. passive untuk polling (SCRUM-251). */
+  progress(sessionId: string, read?: { activity?: "passive" }): Promise<GradingProgress | null>;
+  /** Perkiraan biaya penilaian dengan pilihan yang sama seperti enqueue, tanpa memanggil judge (Admin, AC6). */
   estimate(sessionId: string, options?: GradeOptions): Promise<GradeEstimate>;
   results(sessionId: string): Promise<SessionGradingResponse>;
   /** Riwayat penilaian sesi, terbaru di atas (Admin, AC7). Kosong bila sesi belum pernah dinilai. */
@@ -32,7 +44,7 @@ function sessionPath(sessionId: string, action: string): string {
   return `/measurements/${encodeURIComponent(sessionId)}/${action}`;
 }
 
-/** Body POST /grade: hanya pilihan yang diisi, tanpa body sama sekali bila tidak ada pilihan. */
+/** Body POST /grading-runs dan /grade/estimate: hanya pilihan yang diisi, tanpa body bila tidak ada pilihan. */
 export function gradeBody(options: GradeOptions = {}): string | undefined {
   const body = {
     ...(options.rubricVersion === undefined ? {} : { rubric_version: options.rubricVersion }),
@@ -48,12 +60,13 @@ export function gradeBody(options: GradeOptions = {}): string | undefined {
  */
 export const httpGradingGateway: GradingGateway = {
   /**
-   * POST /measurements/{id}/grade (Admin, AC6, AC7). Tanpa pilihan tidak ada body: server memakai
-   * versi rubrik aktif dan judge sesi. Nilai ulang menambah run baru; hasil lama tetap tersimpan.
+   * POST /measurements/{id}/grading-runs (Admin, server#142). Server hanya mencatat run queued dan
+   * membalas 202, jadi dialog tidak menunggu judge. Nilai ulang menambah run baru; hasil lama tetap.
+   * 409 GRADING_IN_PROGRESS bila masih ada run yang antre atau berjalan.
    */
-  grade: (sessionId, options) => {
+  enqueue: (sessionId, options) => {
     const body = gradeBody(options);
-    return apiFetch<SessionGradingResponse>(sessionPath(sessionId, "grade"), {
+    return apiFetch<GradingRunQueued>(sessionPath(sessionId, "grading-runs"), {
       method: "POST",
       ...(body === undefined ? {} : { body }),
       silentForbidden: true,
@@ -61,7 +74,17 @@ export const httpGradingGateway: GradingGateway = {
   },
 
   /**
-   * POST /measurements/{id}/grade/estimate (Admin, AC6, server#135). Body sama dengan grade, jadi
+   * GET /measurements/{id}/grading-progress (Admin, server#142). Bacaan pertama dan Coba lagi aktif;
+   * polling tiap 5 detik passive, supaya halaman yang dibiarkan terbuka tetap bisa kedaluwarsa.
+   */
+  progress: (sessionId, read) =>
+    apiFetch<GradingProgress | null>(sessionPath(sessionId, "grading-progress"), {
+      silentForbidden: true,
+      ...(read?.activity === "passive" ? { activity: "passive" as const } : {}),
+    }),
+
+  /**
+   * POST /measurements/{id}/grade/estimate (Admin, AC6, server#135). Body sama dengan enqueue, jadi
    * perkiraan memakai judge dan versi rubrik yang sama dengan penilaian yang diumumkannya.
    */
   estimate: (sessionId, options) => {

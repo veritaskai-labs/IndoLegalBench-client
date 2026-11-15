@@ -41,7 +41,7 @@ export function TopBar() {
           </button>
         )}
         <span className="h-5 w-5 rounded bg-indigo-500" />
-        IndoLegalBench
+        <span>IndoLegalBench</span>
       </span>
 
       {auth.status === "authenticated" && (

@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { gradeEstimate, gradedRunItem, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import {
+  gradeEstimate,
+  gradedRunItem,
+  gradingProgress,
+  gradingResponse,
+  gradingRunQueued,
+  gradingRunSummary,
+} from "@/test/gradingFixtures";
 import { httpGradingGateway } from "./gradingApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
@@ -31,103 +38,6 @@ afterEach(() => {
   while (unsubscribers.length > 0) unsubscribers.pop()?.();
   vi.unstubAllGlobals();
   fetchMock.mockReset();
-});
-
-describe("httpGradingGateway.grade (POST /measurements/{id}/grade, PBI-14 AC6)", () => {
-  it("posts to the grade path and returns the graded session", async () => {
-    const graded = gradingResponse();
-    fetchMock.mockResolvedValue(fakeResponse(200, graded));
-
-    await expect(httpGradingGateway.grade("s-1")).resolves.toEqual(graded);
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/measurements\/s-1\/grade$/);
-    expect(init.method).toBe("POST");
-  });
-
-  // The first grading uses the active rubric, which the server picks when no version is sent.
-  // Choosing a version is re-grading, which belongs to SCRUM-228.
-  it("sends no rubric version, so the server uses the active one", async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
-
-    await httpGradingGateway.grade("s-1");
-
-    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
-  });
-
-  // Re-grading (PBI-14 AC7): the Admin picks the version, sent as the label the server resolves ("v2").
-  it("sends the chosen rubric version as rubric_version when re-grading", async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse({ kind: "regrade", rubric_version: "v2" })));
-
-    const result = await httpGradingGateway.grade("s-1", { rubricVersion: "v2" });
-
-    expect(result).toMatchObject({ kind: "regrade", rubric_version: "v2" });
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/measurements\/s-1\/grade$/);
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ rubric_version: "v2" });
-  });
-
-  // K-17/K-18 (SCRUM-283): the Admin picks the LLM judge when re-grading, sent as judge_provider_id.
-  it("sends the chosen judge and version together", async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse({ kind: "regrade" })));
-
-    await httpGradingGateway.grade("s-1", { rubricVersion: "v2", judgeProviderId: "judge-b" });
-
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ rubric_version: "v2", judge_provider_id: "judge-b" });
-  });
-
-  it("sends only the judge when no version is chosen", async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
-
-    await httpGradingGateway.grade("s-1", { judgeProviderId: "judge-b" });
-
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ judge_provider_id: "judge-b" });
-  });
-
-  // Edge: empty options behave like no options, so the server keeps its defaults.
-  it("sends no body for empty options", async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
-
-    await httpGradingGateway.grade("s-1", {});
-
-    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
-  });
-
-  it.each([
-    [404, "RUBRIC_VERSION_NOT_FOUND"],
-    [409, "RUBRIC_NOT_ACTIVE"],
-  ])("hands a %i %s refusal for a chosen version to the caller", async (status, code) => {
-    fetchMock.mockResolvedValue(fakeResponse(status, { code }));
-
-    await expect(httpGradingGateway.grade("s-1", { rubricVersion: "v9" })).rejects.toMatchObject({ status, code });
-  });
-
-  it("encodes the session id in the path", async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, gradingResponse()));
-
-    await httpGradingGateway.grade("a/b");
-
-    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grade$/);
-  });
-
-  // Negative: a role changed while the page was open. The section explains it; no redirect.
-  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
-    const forbidden = listenForbidden();
-    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
-
-    await expect(httpGradingGateway.grade("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
-    expect(forbidden).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [409, "SESSION_NOT_GRADABLE"],
-    [409, "SESSION_ARCHIVED"],
-    [404, "MEASUREMENT_NOT_FOUND"],
-  ])("hands a %i %s refusal to the caller", async (status, code) => {
-    fetchMock.mockResolvedValue(fakeResponse(status, { code }));
-
-    await expect(httpGradingGateway.grade("s-1")).rejects.toMatchObject({ status, code });
-  });
 });
 
 describe("httpGradingGateway.results (GET /measurements/{id}/results, PBI-14 AC8)", () => {
@@ -323,6 +233,95 @@ describe("httpGradingGateway.estimate (POST /measurements/{id}/grade/estimate, P
     fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
 
     await expect(httpGradingGateway.estimate("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe("httpGradingGateway.enqueue (POST /measurements/{id}/grading-runs, K-13, SCRUM-285)", () => {
+  // The server answers 202 as soon as the run is queued; the judge runs in the grading worker.
+  it("posts the judge and version to grading-runs and returns the queued run", async () => {
+    const queued = gradingRunQueued();
+    fetchMock.mockResolvedValue(fakeResponse(202, queued));
+
+    await expect(httpGradingGateway.enqueue("s-1", { rubricVersion: "v2", judgeProviderId: "judge-b" })).resolves.toEqual(queued);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grading-runs$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ rubric_version: "v2", judge_provider_id: "judge-b" });
+  });
+
+  it("sends no body without options, like POST /grade", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, gradingRunQueued()));
+
+    await httpGradingGateway.enqueue("s-1");
+
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+
+  it("encodes the session id in the path", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, gradingRunQueued()));
+
+    await httpGradingGateway.enqueue("a/b");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grading-runs$/);
+  });
+
+  // A second click while a run is queued or running (server#142).
+  it("hands a 409 GRADING_IN_PROGRESS refusal to the caller", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(409, { code: "GRADING_IN_PROGRESS" }));
+
+    await expect(httpGradingGateway.enqueue("s-1")).rejects.toMatchObject({ status: 409, code: "GRADING_IN_PROGRESS" });
+  });
+
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.enqueue("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe("httpGradingGateway.progress (GET /measurements/{id}/grading-progress, K-13, SCRUM-285)", () => {
+  it("reads the latest run's progress", async () => {
+    const progress = gradingProgress();
+    fetchMock.mockResolvedValue(fakeResponse(200, progress));
+
+    await expect(httpGradingGateway.progress("s-1")).resolves.toEqual(progress);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grading-progress$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  // Edge: a session that was never graded answers null, not 404.
+  it("returns null before the first run", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, null));
+
+    await expect(httpGradingGateway.progress("s-1")).resolves.toBeNull();
+  });
+
+  // SCRUM-251: polling every 5 seconds must not keep the login session alive.
+  it("sends the passive header on a poll", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingProgress()));
+
+    await httpGradingGateway.progress("s-1", { activity: "passive" });
+
+    expect(fetchMock.mock.calls[0][1].headers["X-Veritask-Activity"]).toBe("passive");
+  });
+
+  it("does not mark the first read as passive", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingProgress()));
+
+    await httpGradingGateway.progress("s-1");
+
+    expect(fetchMock.mock.calls[0][1].headers["X-Veritask-Activity"]).toBeUndefined();
+  });
+
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.progress("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
     expect(forbidden).not.toHaveBeenCalled();
   });
 });

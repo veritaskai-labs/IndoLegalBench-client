@@ -6,6 +6,8 @@ interface EmptyStateProps {
   action?: {
     label: string;
     onClick: () => void;
+    /** Tombol tampil tetapi mati, misalnya selama penilaian di latar belakang berjalan. */
+    disabled?: boolean;
   };
   
   inTable?: boolean;
@@ -49,7 +51,8 @@ export function EmptyState({
         <button
           type="button"
           onClick={action.onClick}
-          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer"
+          disabled={action.disabled}
+          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         >
           {action.label}
         </button>
