@@ -38,6 +38,11 @@ const { gatewayMock } = vi.hoisted(() => ({
   },
 }));
 
+// The header follows background grading for Admin (SCRUM-285); no run here, and no real request.
+vi.mock("@/lib/grading/gradingApi", () => ({
+  httpGradingGateway: { progress: vi.fn().mockResolvedValue(null) },
+}));
+
 vi.mock("@/lib/runs/manualAnswersApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/runs/manualAnswersApi")>()),
   manualAnswerGateway: gatewayMock,
