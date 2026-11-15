@@ -9,7 +9,7 @@ import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { canStartGrading } from "@/lib/grading/gradeEstimate";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { gradeErrorMessage } from "@/lib/grading/gradingRules";
-import type { SessionGradingResponse } from "@/types/grading";
+import type { GradingRunQueued } from "@/types/grading";
 import type { SessionDetail } from "@/types/measurement";
 import { GradeEstimateTable } from "./GradeEstimateTable";
 
@@ -20,18 +20,21 @@ import { GradeEstimateTable } from "./GradeEstimateTable";
  * dipilih dan rubrik aktif; tombol Nilai baru hidup bila judge
  * dipilih, perkiraan sudah ada, dan anggaran cukup. Kunci tombol, Escape dan pesan penolakan datang
  * dari ConfirmDialog. Dipakai juga oleh "Kirim untuk Dinilai" di sesi manual.
+ *
+ * Penilaian berjalan di latar belakang (K-13, SCRUM-285): Nilai hanya mengantre run, server membalas
+ * 202, dan onQueued meneruskan run itu ke halaman yang menutup dialog lalu mengikuti progresnya.
  */
 export function GradeSessionDialog({
   session,
   gateway = httpGradingGateway,
   judgeApi,
-  onGraded,
+  onQueued,
   onClose,
 }: Readonly<{
   session: Pick<SessionDetail, "id" | "label">;
   gateway?: GradingGateway;
   judgeApi?: JudgeOptionsApi;
-  onGraded: (result: SessionGradingResponse) => void;
+  onQueued: (queued: GradingRunQueued) => void;
   onClose: (afterError: boolean) => void;
 }>) {
   const [judgeId, setJudgeId] = useState("");
@@ -42,11 +45,11 @@ export function GradeSessionDialog({
     <ConfirmDialog
       title="Nilai sesi ini?"
       confirmLabel="Nilai"
-      busyLabel="Menilai…"
+      busyLabel="Mengirim…"
       confirmDisabled={judgeId === "" || !canStartGrading(estimate)}
-      onConfirm={() => gateway.grade(session.id, { judgeProviderId: judgeId })}
+      onConfirm={() => gateway.enqueue(session.id, { judgeProviderId: judgeId })}
       errorMessage={gradeErrorMessage}
-      onDone={onGraded}
+      onDone={onQueued}
       onClose={onClose}
     >
       <p className="mt-2 text-sm text-slate-600">
@@ -56,6 +59,10 @@ export function GradeSessionDialog({
       <p className="mt-2 text-sm text-slate-600">
         Biaya penilai LLM memotong anggaran bulanan produk LLM judge yang dipilih di halaman Penyedia. Sisa
         anggarannya ada di tabel perkiraan.
+      </p>
+      <p className="mt-2 text-sm text-slate-600">
+        Penilaian berjalan di latar belakang: dialog ini tertutup begitu penilaian masuk antrean, dan progresnya
+        tampil di halaman sesi.
       </p>
       <div className="mt-3">
         <JudgeProviderSelect value={judgeId} onChange={setJudgeId} api={judgeApi} />

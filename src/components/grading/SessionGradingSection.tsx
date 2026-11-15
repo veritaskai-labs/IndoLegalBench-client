@@ -95,10 +95,9 @@ export function SessionGradingSection({
           session={session}
           gateway={gateway}
           judgeApi={judgeApi}
-          onGraded={() => {
+          onQueued={() => {
             setDialogOpen(false);
-            results.reload();
-            showToast(`Sesi “${session.label}” selesai dinilai.`);
+            showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
           }}
           onClose={(afterError) => {
             setDialogOpen(false);

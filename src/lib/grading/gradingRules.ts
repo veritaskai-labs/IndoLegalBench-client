@@ -67,6 +67,8 @@ const GRADE_ERRORS: Record<string, string> = {
   JUDGE_NOT_ELIGIBLE: "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain.",
   // server#136: tanpa judge di permintaan maupun sesi (K-14, SCRUM-281).
   JUDGE_REQUIRED: "Pilih LLM judge dulu sebelum menilai.",
+  // server#142: masih ada run yang antre atau berjalan untuk sesi ini (K-13).
+  GRADING_IN_PROGRESS: "Penilaian sesi ini masih berjalan. Tunggu sampai selesai; progresnya tampil di halaman sesi.",
 };
 
 // Perkiraan biaya (server#135): kode yang sama dengan /grade ikut kalimatnya, ditambah kode judge.

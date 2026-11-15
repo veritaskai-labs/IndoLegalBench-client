@@ -273,13 +273,9 @@ export function ManualSessionHeader({
         <GradeSessionDialog
           session={{ id: session.id, label: session.label }}
           gateway={gradingGateway}
-          onGraded={() => {
+          onQueued={() => {
             setIsGradeOpen(false);
-            showToast(`Sesi “${session.label}” selesai dinilai.`, {
-              label: "Lihat laporan →",
-              href: `/reports/sessions/${encodeURIComponent(session.id)}`,
-            });
-            onSessionUpdated();
+            showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
           }}
           onClose={(afterError) => {
             setIsGradeOpen(false);
