@@ -37,9 +37,10 @@ function headerClass(header: string, sessionEdge: string): string {
  * Biaya pengukuran, biaya penilaian, dan total datang dari GET /results/sessions (SCRUM-299) dan
  * memakai formatRupiah. Null memakai tanda kosong yang sama dengan judge yang tidak ada. 0.00
  * tetap Rupiah, termasuk biaya pengukuran sesi manual. Di laptop nama sesi tetap di tempat saat
- * jumlah yang panjang digeser ke dalam layar. Di HP seluruh tabel bergeser ke samping. Komponen murni:
- * data dan muat ulang datang dari useGradedSessions, aturan label dan link di gradingRules, dan
- * server yang menyaring sesi serta peran. Label sesi membuka run itu, bukan selalu run terbaru.
+ * jumlah yang panjang digeser ke dalam layar, dan bayangan tepi muncul setelah tabel digeser.
+ * Di HP seluruh tabel bergeser ke samping. Data dan muat ulang datang dari useGradedSessions,
+ * aturan label dan link di gradingRules, dan server yang menyaring sesi serta peran. Komponen ini
+ * hanya menyimpan apakah tabel sedang digeser. Label sesi membuka run itu, bukan selalu run terbaru.
  */
 export function GradedSessionList({
   sessions,

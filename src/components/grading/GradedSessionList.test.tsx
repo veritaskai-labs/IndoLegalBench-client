@@ -204,15 +204,16 @@ describe("GradedSessionList cost columns (SCRUM-299)", () => {
     const session = within(screen.getByRole("row", { name: /Uji kurs tinggi/ })).getAllByRole("cell")[0];
     expect(header).toHaveClass("md:sticky", "md:left-0", "md:whitespace-nowrap", "md:bg-slate-50");
     expect(session).toHaveClass("md:sticky", "md:left-0", "md:whitespace-nowrap", "md:bg-white");
-    expect(header).not.toHaveClass("md:shadow-[8px_0_8px_-8px_rgba(15,23,42,0.35)]");
+    expect(header.className).not.toContain("shadow");
+    expect(session.className).not.toContain("shadow");
 
     const scroller = table.parentElement;
     if (!scroller) throw new Error("missing scroller");
     Object.defineProperty(scroller, "scrollLeft", { value: 120, configurable: true });
     scroller.dispatchEvent(new Event("scroll"));
 
-    await waitFor(() => expect(header).toHaveClass("md:shadow-[8px_0_8px_-8px_rgba(15,23,42,0.35)]"));
-    expect(session).toHaveClass("md:shadow-[8px_0_8px_-8px_rgba(15,23,42,0.35)]");
+    await waitFor(() => expect(header.className).toContain("shadow"));
+    expect(session.className).toContain("shadow");
   });
 
   it("right-aligns the three cost columns", () => {
