@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/apiClient";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import { gradeEstimate, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingResponse, gradingRunQueued, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
@@ -23,6 +23,7 @@ const judgeApi: JudgeOptionsApi = {
 function renderSection({
   results,
   grade = () => Promise.resolve(gradingResponse()),
+  enqueue = () => Promise.resolve(gradingRunQueued()),
   role = "admin",
   status = "finished",
   archivedAt = null,
@@ -33,6 +34,7 @@ function renderSection({
 }: {
   results: GradingGateway["results"];
   grade?: GradingGateway["grade"];
+  enqueue?: GradingGateway["enqueue"];
   role?: Role | null;
   status?: SessionStatus;
   archivedAt?: string | null;
@@ -44,7 +46,7 @@ function renderSection({
     grade: vi.fn(grade),
     results: vi.fn(results),
     sessions: vi.fn(),
-    enqueue: vi.fn(),
+    enqueue: vi.fn(enqueue),
     progress: vi.fn(),
     runs: vi.fn(runs),
     run: vi.fn(run),
@@ -99,13 +101,11 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     expect(within(section).queryByRole("button", { name: "Nilai" })).not.toBeInTheDocument();
   });
 
-  it("lets Admin grade a session that has no result yet and then shows the result", async () => {
+  // K-13 (SCRUM-285): the dialog closes as soon as the server answers 202, and the Admin is told
+  // grading goes on in the background instead of waiting in the pop-up for every attempt.
+  it("closes the dialog right after the server queues grading and says it runs in the background", async () => {
     const user = userEvent.setup();
-    const results = vi
-      .fn<GradingGateway["results"]>()
-      .mockImplementationOnce(NOT_GRADED)
-      .mockResolvedValueOnce(gradingResponse());
-    const { section, gateway } = renderSection({ results });
+    const { section, gateway } = renderSection({ results: NOT_GRADED, enqueue: () => Promise.resolve(gradingRunQueued()) });
 
     expect(await within(section).findByText("Sesi ini belum dinilai.")).toBeInTheDocument();
     await user.click(within(section).getByRole("button", { name: "Nilai" }));
@@ -114,10 +114,10 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
-    expect(gateway.grade).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
-    expect(await within(section).findByRole("table", { name: "Skor sesi" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByText("Sesi “Run November” selesai dinilai.")).toBeInTheDocument();
+    expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
+    expect(gateway.grade).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText("Penilaian sesi “Run November” berjalan di latar belakang.")).toBeInTheDocument();
   });
 
   // AC6 and the binding rule: only Admin sees the action; the server still answers 403 to others.
@@ -169,7 +169,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       .fn<GradingGateway["results"]>()
       .mockImplementationOnce(NOT_GRADED)
       .mockResolvedValueOnce(gradingResponse());
-    const { section } = renderSection({ results, grade: () => Promise.reject(new ApiError(409, "SESSION_NOT_GRADABLE")) });
+    const { section } = renderSection({ results, enqueue: () => Promise.reject(new ApiError(409, "SESSION_NOT_GRADABLE")) });
 
     await user.click(await within(section).findByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));

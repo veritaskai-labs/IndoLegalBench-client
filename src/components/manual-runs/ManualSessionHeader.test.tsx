@@ -32,16 +32,16 @@ vi.mock("./FinalizeSessionDialog", () => ({
 
 vi.mock("@/components/grading/GradeSessionDialog", () => ({
   GradeSessionDialog: ({
-    onGraded,
+    onQueued,
     onClose,
   }: {
     session: { id: string; label: string };
     gateway?: unknown;
-    onGraded: (res: unknown) => void;
+    onQueued: (res: unknown) => void;
     onClose: (afterError: boolean) => void;
   }) => (
     <div data-testid="grade-dialog">
-      <button type="button" onClick={() => onGraded({})}>
+      <button type="button" onClick={() => onQueued({ grading_run_id: "run-1", status: "queued" })}>
         Confirm Grade
       </button>
       <button type="button" onClick={() => onClose(false)}>
@@ -259,7 +259,8 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
   });
 
-  it("handles grade completion with toast and triggers onSessionUpdated", async () => {
+  // K-13 (SCRUM-285): "Kirim untuk Dinilai" no longer waits for the judge in the pop-up.
+  it("closes the dialog once grading is queued and says it runs in the background", async () => {
     const user = userEvent.setup();
     const onSessionUpdated = vi.fn();
     const session = createMockDetail({
@@ -284,14 +285,9 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     await user.click(screen.getByRole("button", { name: "Confirm Grade" }));
 
     expect(screen.queryByTestId("grade-dialog")).not.toBeInTheDocument();
-    expect(showToastMock).toHaveBeenCalledWith(
-      `Sesi “${session.label}” selesai dinilai.`,
-      {
-        label: "Lihat laporan →",
-        href: `/reports/sessions/${session.id}`,
-      },
-    );
-    expect(onSessionUpdated).toHaveBeenCalledTimes(1);
+    expect(showToastMock).toHaveBeenCalledWith(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
+    // Nothing is graded yet, so the session itself has not changed.
+    expect(onSessionUpdated).not.toHaveBeenCalled();
   });
 
   it("reloads session when GradeSessionDialog closes after an error", async () => {
