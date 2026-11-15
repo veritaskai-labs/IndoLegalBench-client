@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { onForbidden } from "@/lib/apiClient";
-import { gradeEstimate, gradedRunItem, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import {
+  gradeEstimate,
+  gradedRunItem,
+  gradingProgress,
+  gradingResponse,
+  gradingRunQueued,
+  gradingRunSummary,
+} from "@/test/gradingFixtures";
 import { httpGradingGateway } from "./gradingApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire
@@ -323,6 +330,95 @@ describe("httpGradingGateway.estimate (POST /measurements/{id}/grade/estimate, P
     fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
 
     await expect(httpGradingGateway.estimate("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe("httpGradingGateway.enqueue (POST /measurements/{id}/grading-runs, K-13, SCRUM-285)", () => {
+  // The server answers 202 as soon as the run is queued; the judge runs in the grading worker.
+  it("posts the judge and version to grading-runs and returns the queued run", async () => {
+    const queued = gradingRunQueued();
+    fetchMock.mockResolvedValue(fakeResponse(202, queued));
+
+    await expect(httpGradingGateway.enqueue("s-1", { rubricVersion: "v2", judgeProviderId: "judge-b" })).resolves.toEqual(queued);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grading-runs$/);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ rubric_version: "v2", judge_provider_id: "judge-b" });
+  });
+
+  it("sends no body without options, like POST /grade", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, gradingRunQueued()));
+
+    await httpGradingGateway.enqueue("s-1");
+
+    expect(fetchMock.mock.calls[0][1].body).toBeUndefined();
+  });
+
+  it("encodes the session id in the path", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(202, gradingRunQueued()));
+
+    await httpGradingGateway.enqueue("a/b");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/measurements\/a%2Fb\/grading-runs$/);
+  });
+
+  // A second click while a run is queued or running (server#142).
+  it("hands a 409 GRADING_IN_PROGRESS refusal to the caller", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(409, { code: "GRADING_IN_PROGRESS" }));
+
+    await expect(httpGradingGateway.enqueue("s-1")).rejects.toMatchObject({ status: 409, code: "GRADING_IN_PROGRESS" });
+  });
+
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.enqueue("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+});
+
+describe("httpGradingGateway.progress (GET /measurements/{id}/grading-progress, K-13, SCRUM-285)", () => {
+  it("reads the latest run's progress", async () => {
+    const progress = gradingProgress();
+    fetchMock.mockResolvedValue(fakeResponse(200, progress));
+
+    await expect(httpGradingGateway.progress("s-1")).resolves.toEqual(progress);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/measurements\/s-1\/grading-progress$/);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  // Edge: a session that was never graded answers null, not 404.
+  it("returns null before the first run", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, null));
+
+    await expect(httpGradingGateway.progress("s-1")).resolves.toBeNull();
+  });
+
+  // SCRUM-251: polling every 5 seconds must not keep the login session alive.
+  it("sends the passive header on a poll", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingProgress()));
+
+    await httpGradingGateway.progress("s-1", { activity: "passive" });
+
+    expect(fetchMock.mock.calls[0][1].headers["X-Veritask-Activity"]).toBe("passive");
+  });
+
+  it("does not mark the first read as passive", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, gradingProgress()));
+
+    await httpGradingGateway.progress("s-1");
+
+    expect(fetchMock.mock.calls[0][1].headers["X-Veritask-Activity"]).toBeUndefined();
+  });
+
+  it("keeps the user on the page on 403 and hands the code to the caller", async () => {
+    const forbidden = listenForbidden();
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpGradingGateway.progress("s-1")).rejects.toMatchObject({ status: 403, code: "FORBIDDEN" });
     expect(forbidden).not.toHaveBeenCalled();
   });
 });
