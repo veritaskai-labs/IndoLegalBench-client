@@ -145,6 +145,23 @@ export function progressErrorMessage(error: unknown): string {
   return messageFor(PROGRESS_ERRORS, error, "Gagal memuat progres penilaian. Coba lagi.");
 }
 
+const NOTHING_SAVED = "Tidak ada hasil yang tersimpan.";
+
+// server#143 docs/GRADING_WORKER.md: alasan run gagal di grading_run_progress.error_code. Kalimat final
+// dan tombol "Coba lagi" menyusul di K-19 (SCRUM-289/290).
+const FAILURE_REASONS: Record<string, string> = {
+  GRADING_INTERRUPTED: `Penilaian terhenti di tengah jalan karena layanan penilai berhenti. ${NOTHING_SAVED}`,
+  NO_SCORE: "Tidak ada percobaan yang mendapat skor, misalnya karena LLM judge gagal atau harga tokennya belum lengkap.",
+  SESSION_ARCHIVED: `Sesi diarsipkan saat penilaian berjalan. ${NOTHING_SAVED}`,
+  ANSWERS_CHANGED_DURING_GRADING: `Jawaban berubah saat penilaian berjalan. ${NOTHING_SAVED}`,
+  GRADING_ERROR: `Terjadi kesalahan saat menilai. ${NOTHING_SAVED}`,
+};
+
+/** Alasan run di latar belakang gagal, dari error_code progres; kode yang belum dikenal tetap dijelaskan. */
+export function gradingFailureMessage(errorCode: string | null | undefined): string {
+  return (errorCode ? FAILURE_REASONS[errorCode] : undefined) ?? NOTHING_SAVED;
+}
+
 /** Run yang masih antre atau sedang dinilai worker: server menolak penilaian baru (409 GRADING_IN_PROGRESS). */
 export function isGradingActive(progress: Pick<GradingProgress, "status"> | null): boolean {
   return progress?.status === "queued" || progress?.status === "running";
