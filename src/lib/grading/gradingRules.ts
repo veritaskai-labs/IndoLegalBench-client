@@ -167,6 +167,9 @@ const FAILURE_REASONS: Record<string, string> = {
 /** Sesi yang diarsipkan tidak bisa dinilai lagi, jadi mengulang run yang gagal karenanya hanya akan ditolak server. */
 const NOT_RETRYABLE: ReadonlySet<string> = new Set(["SESSION_ARCHIVED"]);
 
+/** Judul dan tombol dialog konfirmasi "Coba Nilai Ulang", dipakai halaman sesi dan halaman sesi manual. */
+export const RETRY_GRADING_DIALOG = { title: "Coba nilai ulang sesi ini?", confirmLabel: "Coba Nilai Ulang" } as const;
+
 /** Apakah run yang gagal dengan error_code ini layak ditawari "Coba Nilai Ulang". Kode yang belum dikenal boleh dicoba. */
 export function canRetryGrading(errorCode: string | null | undefined): boolean {
   return !(errorCode && NOT_RETRYABLE.has(errorCode));
