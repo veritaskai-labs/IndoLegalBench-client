@@ -101,6 +101,20 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
     expect(screen.getByText(/Versi rubrik v1/)).toBeInTheDocument();
   });
 
+  // Positif (K-11, SCRUM-291, TC_87): Viewer di Laporan melihat LLM judge yang menilai sesi ini.
+  it("names the LLM judge product and model in the summary", async () => {
+    // Arrange
+    resultsRead.mockResolvedValue(
+      gradingResponse({ judge: { judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2", cost_idr: null } }),
+    );
+
+    // Act
+    render(<SessionResultsReportPage />);
+
+    // Assert
+    expect(await screen.findByText("LLM judge: Judge Alfa · alfa-2")).toBeInTheDocument();
+  });
+
   // PO: Viewer sees scores and, on a row, the grading detail and rubric version. The question and the
   // AI's answer are out of scope (raw answers come with PBI-16 AC2), even though /results still carries them.
   it("never shows the question or the AI's answer, even with a case opened", async () => {
