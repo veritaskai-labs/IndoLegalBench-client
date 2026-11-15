@@ -144,6 +144,15 @@ export function judgeLabel(judge: GradingJudge | null | undefined): string | nul
   return parts.length === 0 ? "Judge tidak diketahui" : parts.join(" · ");
 }
 
+/**
+ * LLM judge di ringkasan hasil penilaian (K-11, SCRUM-291): klien perlu tahu AI mana yang menilai.
+ * Run lama yang dinilai sebelum judge dicatat tetap diberi keterangan, supaya barisnya tidak hilang
+ * dan tidak dikira galat.
+ */
+export function resultJudgeText(judge: GradingJudge | null | undefined): string {
+  return judgeLabel(judge) ?? "tidak tercatat";
+}
+
 /** Halaman satu run di Laporan. Kedua id berasal dari server, jadi di-encode supaya tidak mengubah path. */
 export function reportRunHref(item: Pick<GradedRunListItem, "session_id" | "grading_run_id">): string {
   return `/reports/sessions/${encodeURIComponent(item.session_id)}/runs/${encodeURIComponent(item.grading_run_id)}`;
