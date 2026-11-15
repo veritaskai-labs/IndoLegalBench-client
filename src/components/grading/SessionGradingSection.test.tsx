@@ -276,6 +276,81 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       expect(within(section).getByRole("button", { name: "Nilai" })).toBeEnabled();
     });
 
+    describe("Coba Nilai Ulang (K-19, SCRUM-290)", () => {
+      const FAILED = () => Promise.resolve(gradingProgress({ status: "failed", error_code: "judge_budget_exhausted" }));
+
+      async function retryFromAlert(section: HTMLElement) {
+        const user = userEvent.setup();
+        await user.click(await within(await within(section).findByRole("alert")).findByRole("button", { name: "Coba Nilai Ulang" }));
+        const dialog = within(screen.getByRole("dialog", { name: "Coba nilai ulang sesi ini?" }));
+        await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+        await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
+        return { user, dialog };
+      }
+
+      // Positive: the failed first run has no result yet, so the retry cannot depend on the re-grade section.
+      it("confirms with the cost estimate and follows the new run", async () => {
+        const progress = vi
+          .fn<GradingGateway["progress"]>()
+          .mockResolvedValueOnce(gradingProgress({ status: "failed", error_code: "judge_budget_exhausted" }))
+          .mockResolvedValue(gradingProgress({ grading_run_id: "run-queued", status: "queued", attempts_graded: 0, percent: 0 }));
+        const { section, gateway } = renderSection({ results: NOT_GRADED, progress });
+        const { user, dialog } = await retryFromAlert(section);
+
+        await user.click(dialog.getByRole("button", { name: "Coba Nilai Ulang" }));
+
+        expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
+        await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+        expect(await within(section).findByRole("progressbar", { name: "Progres penilaian" })).toBeInTheDocument();
+        expect(within(section).queryByRole("button", { name: "Coba Nilai Ulang" })).not.toBeInTheDocument();
+      });
+
+      // Edge: an older result is on the page (re-grade failed); the retry is still offered.
+      it("is offered when the session already has an older result", async () => {
+        const { section } = renderSection({ results: () => Promise.resolve(gradingResponse()), progress: FAILED });
+
+        expect(await within(await within(section).findByRole("alert")).findByRole("button", { name: "Coba Nilai Ulang" })).toBeEnabled();
+      });
+
+      // Negative: another Admin retried first, so the server refuses and the page follows that run.
+      it("follows the other run after a GRADING_IN_PROGRESS refusal", async () => {
+        const progress = vi
+          .fn<GradingGateway["progress"]>()
+          .mockResolvedValueOnce(gradingProgress({ status: "failed", error_code: "NO_SCORE" }))
+          .mockResolvedValue(gradingProgress({ grading_run_id: "run-other", status: "running", attempts_graded: 6, attempts_total: 12, percent: 50 }));
+        const { section } = renderSection({
+          results: NOT_GRADED,
+          progress,
+          enqueue: () => Promise.reject(new ApiError(409, "GRADING_IN_PROGRESS")),
+        });
+        const { user, dialog } = await retryFromAlert(section);
+
+        await user.click(dialog.getByRole("button", { name: "Coba Nilai Ulang" }));
+        await dialog.findByRole("alert");
+        await user.click(dialog.getByRole("button", { name: "Tutup" }));
+
+        expect(await within(section).findByText("6 dari 12 percobaan dinilai (50%)")).toBeInTheDocument();
+      });
+
+      // Negative: an archived session cannot be graded, so only the message is shown.
+      it("is not offered on an archived session", async () => {
+        const { section } = renderSection({ results: NOT_GRADED, progress: FAILED, archivedAt: "2026-11-14T00:00:00Z" });
+
+        expect(await within(section).findByRole("alert")).toHaveTextContent("Penilaian terakhir gagal.");
+        expect(within(section).queryByRole("button", { name: "Coba Nilai Ulang" })).not.toBeInTheDocument();
+      });
+
+      it("is not offered when the failure was that the session got archived", async () => {
+        const { section } = renderSection({
+          results: NOT_GRADED,
+          progress: () => Promise.resolve(gradingProgress({ status: "failed", error_code: "SESSION_ARCHIVED" })),
+        });
+
+        expect(await within(section).findByRole("alert")).toHaveTextContent("Sesi diarsipkan saat penilaian berjalan.");
+        expect(within(section).queryByRole("button", { name: "Coba Nilai Ulang" })).not.toBeInTheDocument();
+      });
+    });
+
     // Another Admin queued it first: after closing the refusal, the page follows that run.
     it("follows the run another Admin started after a GRADING_IN_PROGRESS refusal", async () => {
       const progress = vi

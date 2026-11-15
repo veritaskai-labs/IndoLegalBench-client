@@ -36,15 +36,17 @@ vi.mock("./FinalizeSessionDialog", () => ({
 
 vi.mock("@/components/grading/GradeSessionDialog", () => ({
   GradeSessionDialog: ({
+    title,
     onQueued,
     onClose,
   }: {
     session: { id: string; label: string };
+    title?: string;
     gateway?: unknown;
     onQueued: (res: unknown) => void;
     onClose: (afterError: boolean) => void;
   }) => (
-    <div data-testid="grade-dialog">
+    <div data-testid="grade-dialog" data-title={title}>
       <button type="button" onClick={() => onQueued({ grading_run_id: "run-1", status: "queued" })}>
         Confirm Grade
       </button>
@@ -181,6 +183,32 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
 
       expect(await screen.findByRole("alert")).toHaveTextContent("Penilaian terakhir gagal.");
       expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toBeEnabled();
+    });
+
+    // K-19 (SCRUM-290): the failed message offers the retry here too, through the same confirmation dialog.
+    it("opens the retry confirmation from the failure message and follows the new run", async () => {
+      const user = userEvent.setup();
+      const progress = vi
+        .fn<GradingGateway["progress"]>()
+        .mockResolvedValueOnce(gradingProgress({ status: "failed", error_code: "judge_unavailable" }))
+        .mockResolvedValue(gradingProgress({ grading_run_id: "run-1", status: "queued", attempts_graded: 0, attempts_total: 50, percent: 0 }));
+      renderGradable({ progress });
+
+      await user.click(await screen.findByRole("button", { name: "Coba Nilai Ulang" }));
+
+      expect(screen.getByTestId("grade-dialog")).toHaveAttribute("data-title", "Coba nilai ulang sesi ini?");
+      await user.click(screen.getByRole("button", { name: "Confirm Grade" }));
+      expect(await screen.findByText("Menunggu giliran penilaian · 0 dari 50 percobaan (0%)")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Coba Nilai Ulang" })).not.toBeInTheDocument();
+    });
+
+    it("keeps the normal confirmation title for Kirim untuk Dinilai", async () => {
+      const user = userEvent.setup();
+      renderGradable();
+
+      await user.click(screen.getByRole("button", { name: /kirim untuk dinilai/i }));
+
+      expect(screen.getByTestId("grade-dialog")).not.toHaveAttribute("data-title");
     });
 
     // The progress endpoint is Admin only, and contributors cannot grade.
