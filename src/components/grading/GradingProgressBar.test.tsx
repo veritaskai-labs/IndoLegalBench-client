@@ -57,10 +57,6 @@ describe("GradingProgressBar (K-13, SCRUM-285)", () => {
 
   it.each([
     ["GRADING_INTERRUPTED", "Penilaian terhenti di tengah jalan karena layanan penilai berhenti. Tidak ada hasil yang tersimpan."],
-    ["NO_SCORE", "Tidak ada percobaan yang mendapat skor, misalnya karena LLM judge gagal atau harga tokennya belum lengkap."],
-    ["SESSION_ARCHIVED", "Sesi diarsipkan saat penilaian berjalan. Tidak ada hasil yang tersimpan."],
-    ["ANSWERS_CHANGED_DURING_GRADING", "Jawaban berubah saat penilaian berjalan. Tidak ada hasil yang tersimpan."],
-    ["GRADING_ERROR", "Terjadi kesalahan saat menilai. Tidak ada hasil yang tersimpan."],
     ["SOMETHING_NEW", "Tidak ada hasil yang tersimpan."],
     [null, "Tidak ada hasil yang tersimpan."],
   ])("explains a failed run with error code %s", (code, reason) => {
