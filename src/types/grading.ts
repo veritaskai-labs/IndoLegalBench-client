@@ -22,3 +22,8 @@ export type GradingJudge = components["schemas"]["GradingJudge"];
 
 /** Perkiraan biaya penilaian sebelum tombol Nilai (POST /measurements/{id}/grade/estimate, Admin, server#135). */
 export type GradeEstimate = components["schemas"]["GradeEstimateResponse"];
+
+/** Balasan 202 POST /measurements/{id}/grading-runs: run masuk antrean, judge dipanggil worker (server#142, K-13). */
+export type GradingRunQueued = components["schemas"]["GradingRunQueued"];
+/** GET /measurements/{id}/grading-progress (Admin): progres run terbaru untuk progress bar; null sebelum dinilai. */
+export type GradingProgress = components["schemas"]["GradingProgress"];

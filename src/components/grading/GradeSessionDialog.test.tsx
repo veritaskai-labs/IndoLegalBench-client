@@ -19,7 +19,7 @@ function renderDialog(
   estimate: GradingGateway["estimate"] = () => Promise.resolve(gradeEstimate()),
   judges: JudgeProviderOption[] = [JUDGE_A, JUDGE_B],
 ) {
-  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
+  const gateway: GradingGateway = { grade: vi.fn(grade), results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
   const onGraded = vi.fn();
   const onClose = vi.fn();

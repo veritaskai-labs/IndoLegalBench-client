@@ -44,6 +44,8 @@ function renderSection({
     grade: vi.fn(grade),
     results: vi.fn(results),
     sessions: vi.fn(),
+    enqueue: vi.fn(),
+    progress: vi.fn(),
     runs: vi.fn(runs),
     run: vi.fn(run),
     estimate: vi.fn(() => Promise.resolve(gradeEstimate())),

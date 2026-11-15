@@ -8,7 +8,7 @@ import { useSessionRun } from "./useSessionRun";
 
 // The hook takes the gateway as a parameter (DIP), so the test hands it a fake instead of mocking modules.
 function fakeGateway(run: GradingGateway["run"]): GradingGateway {
-  return { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), runs: vi.fn(), run: vi.fn(run), estimate: vi.fn() };
+  return { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(), run: vi.fn(run), estimate: vi.fn() };
 }
 
 describe("useSessionRun (PBI-22 AC9, open one run from Laporan)", () => {
