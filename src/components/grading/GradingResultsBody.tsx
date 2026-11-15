@@ -3,6 +3,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { formatWib } from "@/lib/datetime/formatWib";
+import { resultJudgeText } from "@/lib/grading/gradingRules";
 import type { SessionGradingResponse } from "@/types/grading";
 import { SessionScoreSummary } from "./SessionScoreSummary";
 import { SessionScoreTable } from "./SessionScoreTable";
@@ -10,7 +11,8 @@ import { SessionScoreTable } from "./SessionScoreTable";
 /**
  * Isi hasil penilaian satu sesi dalam empat keadaan: memuat, gagal, belum dinilai, dan hasil.
  * Dipakai bersama oleh halaman detail sesi (dengan tombol Nilai untuk Admin) dan halaman Laporan
- * (tanpa aksi), jadi kedua halaman menampilkan hasil yang sama dengan cara yang sama.
+ * (tanpa aksi), jadi kedua halaman menampilkan hasil yang sama dengan cara yang sama. Ringkasannya
+ * menyebut versi rubrik, waktu dinilai, dan LLM judge yang menilai (K-11).
  */
 export function GradingResultsBody({
   results,
@@ -36,9 +38,13 @@ export function GradingResultsBody({
   const result = results.data;
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-600">
-        Versi rubrik {result.rubric_version} · Dinilai {formatWib(result.triggered_at)}
-      </p>
+      <div className="text-sm text-slate-600">
+        <p>
+          Versi rubrik {result.rubric_version} · Dinilai {formatWib(result.triggered_at)}
+        </p>
+        {/* K-11 (SCRUM-291): produk dan model LLM judge yang menilai run ini, di semua halaman hasil. */}
+        <p>LLM judge: {resultJudgeText(result.judge)}</p>
+      </div>
       <SessionScoreSummary scores={result.scores} />
       <SessionScoreTable cases={result.cases ?? []} rubricVersion={result.rubric_version} />
     </div>
