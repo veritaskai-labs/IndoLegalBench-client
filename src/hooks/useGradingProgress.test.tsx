@@ -125,6 +125,30 @@ describe("useGradingProgress (K-13, SCRUM-285)", () => {
     await waitFor(() => expect(gateway.progress).toHaveBeenCalledTimes(3));
   });
 
+  it("stops treating a queued run as pending once a read shows it, so a later run can end", async () => {
+    let answer: GradingProgress | null = null;
+    const gateway = fakeGateway(() => Promise.resolve(answer));
+    const { result } = renderHook(() => useGradingProgress("s-1", { enabled: true, gateway }));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    answer = gradingProgress({ grading_run_id: "run-A", status: "finished", percent: 100 });
+    act(() => result.current.started(gradingRunQueued({ grading_run_id: "run-A" })));
+    await waitFor(() => expect(result.current).toMatchObject({ data: { grading_run_id: "run-A" }, active: false }));
+
+    answer = gradingProgress({ grading_run_id: "run-B", status: "running", percent: 50 });
+    act(() => result.current.reload());
+    await waitFor(() => expect(result.current).toMatchObject({ data: { grading_run_id: "run-B" }, active: true }));
+
+    answer = gradingProgress({ grading_run_id: "run-B", status: "finished", percent: 100 });
+    await vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS);
+    await waitFor(() => expect(result.current).toMatchObject({ data: { status: "finished" }, active: false }));
+    const calls = vi.mocked(gateway.progress).mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS * 2);
+
+    expect(gateway.progress).toHaveBeenCalledTimes(calls);
+  });
+
   // AC: the score table loads by itself when the run ends.
   it("calls onSettled once when a run it saw active finishes", async () => {
     const done = gradingProgress({ status: "finished", percent: 100 });
