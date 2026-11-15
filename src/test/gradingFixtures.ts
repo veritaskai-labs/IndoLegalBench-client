@@ -74,6 +74,9 @@ export function gradingRunSummary(overrides: Partial<GradingRunSummary> = {}): G
     triggered_at: "2026-11-07T03:00:00Z",
     is_latest: true,
     scores: gradingResponse().scores,
+    attempts_graded: 12,
+    attempts_total: 12,
+    attempts_ungraded: 0,
     ...overrides,
   };
 }
@@ -128,6 +131,7 @@ export function gradingProgress(overrides: Partial<GradingProgress> = {}): Gradi
     status: "running",
     attempts_graded: 3,
     attempts_total: 12,
+    attempts_ungraded: 9,
     percent: 25,
     error_code: null,
     triggered_at: "2026-11-15T03:00:00Z",

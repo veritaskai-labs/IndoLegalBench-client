@@ -2840,8 +2840,13 @@ export interface components {
              */
             percent: number;
             /**
+             * Attempts Ungraded
+             * @description Percobaan yang belum dinilai: attempts_total dikurangi attempts_graded
+             */
+            attempts_ungraded: number;
+            /**
              * Error Code
-             * @description Alasan run gagal (misalnya GRADING_INTERRUPTED); kosong bila tidak gagal
+             * @description Alasan run gagal, kosong bila tidak gagal: judge_not_configured, judge_unavailable, judge_pricing_missing, judge_budget_exhausted, judge_incomplete, NO_SCORE, GRADING_ERROR, GRADING_INTERRUPTED, atau kode konflik seperti SESSION_ARCHIVED
              */
             error_code?: string | null;
             /**
@@ -2921,6 +2926,29 @@ export interface components {
             judge?: components["schemas"]["GradingJudge"] | null;
             /** @description Tiga skor terpisah: dev, test, dan gabungan */
             scores: components["schemas"]["ThreeScores"];
+            /**
+             * Error Code
+             * @description Alasan run gagal, kosong bila tidak gagal: judge_not_configured, judge_unavailable, judge_pricing_missing, judge_budget_exhausted, judge_incomplete, NO_SCORE, GRADING_ERROR, GRADING_INTERRUPTED, atau kode konflik seperti SESSION_ARCHIVED
+             */
+            error_code?: string | null;
+            /**
+             * Attempts Graded
+             * @description Percobaan yang sudah dinilai
+             * @default 0
+             */
+            attempts_graded: number;
+            /**
+             * Attempts Total
+             * @description Semua percobaan sesi yang dinilai
+             * @default 0
+             */
+            attempts_total: number;
+            /**
+             * Attempts Ungraded
+             * @description Percobaan yang belum dinilai (attempts_total - attempts_graded)
+             * @default 0
+             */
+            attempts_ungraded: number;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
