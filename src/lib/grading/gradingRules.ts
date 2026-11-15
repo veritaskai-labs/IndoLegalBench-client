@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
-import type { GradedRunListItem, GradingJudge } from "@/types/grading";
+import type { GradedRunListItem, GradingJudge, GradingProgress } from "@/types/grading";
 import type { SessionDetail, SessionStatus } from "@/types/measurement";
 
 /** Sama dengan GRADABLE_SESSION_STATUSES di server#114 (ensure_session_gradable). */
@@ -132,6 +132,22 @@ const RUN_RESULTS_ERRORS: Record<string, string> = {
 /** Pesan untuk membuka satu run dari Laporan; run yang tidak ada adalah kesalahan, bukan "belum dinilai". */
 export function runResultsErrorMessage(error: unknown): string {
   return messageFor(RUN_RESULTS_ERRORS, error, "Gagal memuat hasil penilaian. Coba lagi.");
+}
+
+const PROGRESS_ERRORS: Record<string, string> = {
+  // server#142: progres penilaian hanya untuk Admin.
+  FORBIDDEN: "Progres penilaian hanya dapat dilihat Admin. Muat ulang halaman.",
+  MEASUREMENT_NOT_FOUND: NOT_FOUND,
+};
+
+/** Pesan bila progres penilaian gagal dibaca (GET /grading-progress, K-13). */
+export function progressErrorMessage(error: unknown): string {
+  return messageFor(PROGRESS_ERRORS, error, "Gagal memuat progres penilaian. Coba lagi.");
+}
+
+/** Run yang masih antre atau sedang dinilai worker: server menolak penilaian baru (409 GRADING_IN_PROGRESS). */
+export function isGradingActive(progress: Pick<GradingProgress, "status"> | null): boolean {
+  return progress?.status === "queued" || progress?.status === "running";
 }
 
 /**
