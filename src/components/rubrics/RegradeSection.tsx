@@ -9,11 +9,10 @@ import { useGradingRuns } from "@/hooks/useGradingRuns";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { useRubricVersions } from "@/hooks/useRubricVersions";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
-import { regradeDoneMessage } from "@/lib/rubrics/gradingRun";
 import { REGRADE_UNAVAILABLE_TEXT, regradeAvailability, type RegradeUnavailableReason } from "@/lib/rubrics/regradeRules";
 import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import type { Role } from "@/types";
-import type { SessionGradingResponse } from "@/types/grading";
+import type { GradingRunQueued, SessionGradingResponse } from "@/types/grading";
 import type { SessionDetail } from "@/types/measurement";
 import { GradingHistoryList } from "./GradingHistoryList";
 import { RegradeDialog } from "./RegradeDialog";
@@ -32,8 +31,12 @@ type Props = Readonly<{
   selectedRunId?: string | null;
   /** Admin membuka satu run dari riwayat (K-17/K-18). */
   onSelectRun?: (runId: string) => void;
-  /** Hasil di halaman perlu dimuat ulang: setelah nilai ulang, atau setelah dialog ditutup karena error. */
+  /** Hasil di halaman perlu dimuat ulang: dialog ditutup karena error. */
   onChanged: () => void;
+  /** Ada run yang antre atau berjalan di latar belakang: tombol dimatikan dengan alasannya (K-13). */
+  gradingActive?: boolean;
+  /** Server membalas 202: halaman mengikuti progres run ini dan memuat ulang hasil saat selesai. */
+  onQueued?: (queued: GradingRunQueued) => void;
 }>;
 
 /**
@@ -65,6 +68,8 @@ function AdminRegrade({
   selectedRunId = null,
   onSelectRun,
   onChanged,
+  gradingActive = false,
+  onQueued,
 }: Props) {
   const { showToast } = useToast();
   const versions = useRubricVersions(rubricsGateway);
@@ -86,7 +91,7 @@ function AdminRegrade({
   // Tidak menampilkan apa pun saat memuat, supaya tombol tidak berkedip hidup lalu mati.
   if (versions.status !== "ready" || runs.status !== "ready") return null;
 
-  const availability = regradeAvailability({ role, session, versions: versions.data, latest });
+  const availability = regradeAvailability({ role, session, versions: versions.data, latest, gradingActive });
   // not_admin tidak mungkin di sini: komponen luar sudah menyaring peran.
   const reason = availability.available ? null : (availability.reason as Exclude<RegradeUnavailableReason, "not_admin">);
 
@@ -113,11 +118,10 @@ function AdminRegrade({
           defaultJudgeId={latest?.judge?.judge_provider_id ?? ""}
           gateway={gradingGateway}
           judgeApi={judgeApi}
-          onRegraded={(result) => {
+          onQueued={(queued) => {
             setOpen(false);
-            runs.reload();
-            onChanged();
-            showToast(regradeDoneMessage(result));
+            onQueued?.(queued);
+            showToast("Penilaian ulang berjalan di latar belakang.");
           }}
           onClose={(afterError) => {
             setOpen(false);

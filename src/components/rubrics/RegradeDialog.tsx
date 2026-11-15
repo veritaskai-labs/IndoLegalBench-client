@@ -11,7 +11,7 @@ import { canStartGrading } from "@/lib/grading/gradeEstimate";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { gradeErrorMessage } from "@/lib/grading/gradingRules";
 import { versionLabel } from "@/lib/rubrics/rubricVersion";
-import type { SessionGradingResponse } from "@/types/grading";
+import type { GradingRunQueued } from "@/types/grading";
 import type { RubricVersionSummary } from "@/types/rubric";
 
 const BOX = "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
@@ -21,6 +21,7 @@ const BOX = "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 t
  * dinilai judge lain; hasil lama tetap tersimpan dengan rubrik dan judge-nya sendiri. Perkiraan biaya
  * dimuat ulang setiap judge atau versi diganti, dan tombol baru hidup bila anggaran cukup. Pending,
  * kunci tombol, dan pesan error datang dari ConfirmDialog; gateway dan daftar judge disuntikkan.
+ * Nilai ulang hanya mengantre run (K-13, SCRUM-285): server membalas 202 dan halaman mengikuti progresnya.
  */
 export function RegradeDialog({
   session,
@@ -29,7 +30,7 @@ export function RegradeDialog({
   defaultJudgeId,
   gateway = httpGradingGateway,
   judgeApi,
-  onRegraded,
+  onQueued,
   onClose,
 }: Readonly<{
   session: { id: string };
@@ -40,7 +41,7 @@ export function RegradeDialog({
   defaultJudgeId: string;
   gateway?: GradingGateway;
   judgeApi?: JudgeOptionsApi;
-  onRegraded: (result: SessionGradingResponse) => void;
+  onQueued: (queued: GradingRunQueued) => void;
   onClose: (afterError: boolean) => void;
 }>) {
   const versionId = useId();
@@ -59,11 +60,11 @@ export function RegradeDialog({
     <ConfirmDialog
       title="Nilai ulang sesi ini?"
       confirmLabel="Nilai ulang"
-      busyLabel="Menilai ulang…"
+      busyLabel="Mengirim…"
       confirmDisabled={judgeId === "" || !canStartGrading(estimate)}
-      onConfirm={() => gateway.grade(session.id, { rubricVersion: version, judgeProviderId: judgeId })}
+      onConfirm={() => gateway.enqueue(session.id, { rubricVersion: version, judgeProviderId: judgeId })}
       errorMessage={gradeErrorMessage}
-      onDone={onRegraded}
+      onDone={onQueued}
       onClose={onClose}
     >
       <div className="mt-3 space-y-3">

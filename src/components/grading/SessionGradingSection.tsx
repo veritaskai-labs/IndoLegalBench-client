@@ -101,6 +101,12 @@ export function SessionGradingSection({
           onChanged={() => {
             setChosenRunId(null);
             results.reload();
+            progress.reload();
+          }}
+          gradingActive={progress.active}
+          onQueued={(queued) => {
+            setChosenRunId(null);
+            progress.started(queued);
           }}
         />
       )}
