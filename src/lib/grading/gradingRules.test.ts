@@ -8,6 +8,7 @@ import {
   canSeeGradedSessions,
   estimateErrorMessage,
   gradeErrorMessage,
+  gradingFailureMessage,
   isNotGraded,
   judgeLabel,
   reportRunHref,
@@ -313,5 +314,30 @@ describe("runResultsErrorMessage (open one run under Laporan)", () => {
 
   it("falls back to a general message for an unknown error", () => {
     expect(runResultsErrorMessage(new TypeError("Failed to fetch"))).toBe("Gagal memuat hasil penilaian. Coba lagi.");
+  });
+});
+
+describe("gradingFailureMessage (K-19, SCRUM-290: alasan run gagal dari error_code)", () => {
+  const NOTHING_SAVED = "Tidak ada hasil yang tersimpan.";
+
+  // Positive: every code the server stores in grading_run_progress.error_code has its own sentence.
+  it.each([
+    ["judge_not_configured", "LLM judge belum dipilih untuk penilaian ini. Pilih judge lalu coba lagi."],
+    ["judge_unavailable", "LLM judge tidak dapat dihubungi. Periksa produk LLM judge di halaman Penyedia lalu coba lagi."],
+    ["judge_pricing_missing", "Harga token produk LLM judge belum lengkap. Lengkapi harga masuk dan keluar di halaman Penyedia."],
+    ["judge_budget_exhausted", "Anggaran bulanan produk LLM judge habis. Tambah anggarannya di halaman Penyedia atau pilih judge lain."],
+    ["judge_incomplete", "LLM judge tidak memberi penilaian yang lengkap. Coba nilai ulang."],
+    ["NO_SCORE", "Tidak ada jawaban yang dapat diberi skor, misalnya karena semua jawaban kosong atau ditolak."],
+    ["GRADING_INTERRUPTED", "Penilaian terhenti di tengah jalan karena layanan penilai berhenti."],
+    ["SESSION_ARCHIVED", "Sesi diarsipkan saat penilaian berjalan."],
+    ["ANSWERS_CHANGED_DURING_GRADING", "Jawaban berubah saat penilaian berjalan."],
+    ["GRADING_ERROR", "Terjadi kesalahan saat menilai."],
+  ])("explains %s and says nothing was saved", (code, reason) => {
+    expect(gradingFailureMessage(code)).toBe(`${reason} ${NOTHING_SAVED}`);
+  });
+
+  // Negative and edge: a code this client does not know yet must not hide the failure or leak the raw code.
+  it.each([["SOMETHING_NEW"], [""], [null], [undefined]])("falls back to a general sentence for %j", (code) => {
+    expect(gradingFailureMessage(code)).toBe(NOTHING_SAVED);
   });
 });

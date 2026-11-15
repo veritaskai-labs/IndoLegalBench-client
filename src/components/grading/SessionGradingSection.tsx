@@ -9,7 +9,7 @@ import { useGradingRun } from "@/hooks/useGradingRun";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { useSessionResults } from "@/hooks/useSessionResults";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
-import { canGrade } from "@/lib/grading/gradingRules";
+import { canGrade, isGradableSession, RETRY_GRADING_DIALOG } from "@/lib/grading/gradingRules";
 import { olderRunNote } from "@/lib/rubrics/gradingRun";
 import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import type { Role } from "@/types";
@@ -54,7 +54,7 @@ export function SessionGradingSection({
       if (run.status === "finished") showToast(`Sesi “${session.label}” selesai dinilai.`);
     },
   });
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialog, setDialog] = useState<"grade" | "retry" | null>(null);
   const [chosenRunId, setChosenRunId] = useState<string | null>(null);
 
   const latest = results.status === "ready" ? results.data : null;
@@ -72,7 +72,10 @@ export function SessionGradingSection({
         Hasil penilaian
       </h2>
 
-      <GradingProgressBar progress={progress} />
+      <GradingProgressBar
+        progress={progress}
+        onRetry={role === "admin" && isGradableSession(session) ? () => setDialog("retry") : undefined}
+      />
 
       {olderRunId !== null && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -85,7 +88,7 @@ export function SessionGradingSection({
 
       <GradingResultsBody
         results={shown}
-        gradeAction={gradable ? { label: "Nilai", onClick: () => setDialogOpen(true), disabled: progress.active } : undefined}
+        gradeAction={gradable ? { label: "Nilai", onClick: () => setDialog("grade"), disabled: progress.active } : undefined}
       />
 
       {latest !== null && (
@@ -111,18 +114,19 @@ export function SessionGradingSection({
         />
       )}
 
-      {dialogOpen && (
+      {dialog !== null && (
         <GradeSessionDialog
           session={session}
+          {...(dialog === "retry" ? RETRY_GRADING_DIALOG : {})}
           gateway={gateway}
           judgeApi={judgeApi}
           onQueued={(queued) => {
-            setDialogOpen(false);
+            setDialog(null);
             progress.started(queued);
             showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
           }}
           onClose={(afterError) => {
-            setDialogOpen(false);
+            setDialog(null);
             // Setelah penolakan, keadaan yang tampil mungkin sudah berbeda dari server: Admin lain sudah
             // menilai, atau run lain sedang berjalan (GRADING_IN_PROGRESS) dan progresnya perlu diikuti.
             if (afterError) {

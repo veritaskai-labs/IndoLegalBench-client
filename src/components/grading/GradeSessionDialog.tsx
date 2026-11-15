@@ -23,17 +23,25 @@ import { GradeEstimateTable } from "./GradeEstimateTable";
  *
  * Penilaian berjalan di latar belakang (K-13, SCRUM-285): Nilai hanya mengantre run, server membalas
  * 202, dan onQueued meneruskan run itu ke halaman yang menutup dialog lalu mengikuti progresnya.
+ *
+ * Setelah run gagal, dialog yang sama dipakai untuk "Coba Nilai Ulang" (K-19, SCRUM-290) dengan judul
+ * dan label tombol sendiri lewat title dan confirmLabel. Judge dipilih lagi dan biayanya diperkirakan
+ * lagi, karena penyebab gagalnya bisa judge, harga, atau anggaran.
  */
 export function GradeSessionDialog({
   session,
   gateway = httpGradingGateway,
   judgeApi,
+  title = "Nilai sesi ini?",
+  confirmLabel = "Nilai",
   onQueued,
   onClose,
 }: Readonly<{
   session: Pick<SessionDetail, "id" | "label">;
   gateway?: GradingGateway;
   judgeApi?: JudgeOptionsApi;
+  title?: string;
+  confirmLabel?: string;
   onQueued: (queued: GradingRunQueued) => void;
   onClose: (afterError: boolean) => void;
 }>) {
@@ -43,8 +51,8 @@ export function GradeSessionDialog({
 
   return (
     <ConfirmDialog
-      title="Nilai sesi ini?"
-      confirmLabel="Nilai"
+      title={title}
+      confirmLabel={confirmLabel}
       busyLabel="Mengirim…"
       confirmDisabled={judgeId === "" || !canStartGrading(estimate)}
       onConfirm={() => gateway.enqueue(session.id, { judgeProviderId: judgeId })}

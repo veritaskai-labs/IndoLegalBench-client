@@ -262,3 +262,68 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     expect(dialog.getByRole("button", { name: "Nilai" })).toBeEnabled();
   });
 });
+
+// K-19 (SCRUM-290): after a failed run the same dialog confirms "Coba Nilai Ulang" with its own words.
+describe("GradeSessionDialog as the retry confirmation (K-19, SCRUM-290)", () => {
+  const RETRY_TITLE = "Coba nilai ulang sesi ini?";
+
+  function renderRetry(estimate: GradingGateway["estimate"] = () => Promise.resolve(gradeEstimate())) {
+    const gateway: GradingGateway = {
+      results: vi.fn(),
+      sessions: vi.fn(),
+      enqueue: vi.fn(() => Promise.resolve(gradingRunQueued({ grading_run_id: "run-retry" }))),
+      progress: vi.fn(),
+      runs: vi.fn(),
+      run: vi.fn(),
+      estimate: vi.fn(estimate),
+    };
+    const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue([JUDGE_A, JUDGE_B]) };
+    const onQueued = vi.fn();
+    render(
+      <GradeSessionDialog
+        session={{ id: "s-1", label: "Run November" }}
+        gateway={gateway}
+        judgeApi={judgeApi}
+        title={RETRY_TITLE}
+        confirmLabel="Coba Nilai Ulang"
+        onQueued={onQueued}
+        onClose={vi.fn()}
+      />,
+    );
+    return { dialog: within(screen.getByRole("dialog", { name: RETRY_TITLE })), gateway, onQueued };
+  }
+
+  // Positive: the Admin sees the cost estimate before confirming, then a new run is queued.
+  it("shows the cost estimate and queues a new run with the chosen judge", async () => {
+    const user = userEvent.setup();
+    const { dialog, gateway, onQueued } = renderRetry();
+    await chooseJudge(dialog, user, "judge-b");
+
+    expect(await dialog.findByRole("table", TABLE)).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Coba Nilai Ulang" }));
+
+    expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-b" });
+    await waitFor(() => expect(onQueued).toHaveBeenCalledWith(gradingRunQueued({ grading_run_id: "run-retry" })));
+  });
+
+  // Negative: nothing is sent before a judge is chosen, so a click-through cannot queue a blind run.
+  it("keeps the retry button off until a judge is chosen", async () => {
+    const { dialog, gateway } = renderRetry();
+
+    await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
+
+    expect(dialog.getByRole("button", { name: "Coba Nilai Ulang" })).toBeDisabled();
+    expect(gateway.enqueue).not.toHaveBeenCalled();
+  });
+
+  // Negative: the judge that failed may still have no prices; the estimate is refused and so is the retry.
+  it("keeps the retry button off when the estimate is refused for missing prices", async () => {
+    const user = userEvent.setup();
+    const { dialog, gateway } = renderRetry(() => Promise.reject(new ApiError(422, "JUDGE_PRICING_MISSING")));
+    await chooseJudge(dialog, user);
+
+    expect(await dialog.findByRole("alert")).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "Coba Nilai Ulang" })).toBeDisabled();
+    expect(gateway.enqueue).not.toHaveBeenCalled();
+  });
+});

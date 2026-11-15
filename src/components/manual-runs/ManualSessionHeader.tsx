@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GradeSessionDialog } from "@/components/grading/GradeSessionDialog";
 import { GradingProgressBar } from "@/components/grading/GradingProgressBar";
+import { RETRY_GRADING_DIALOG } from "@/lib/grading/gradingRules";
 import { FinalizeSessionDialog } from "@/components/manual-runs/FinalizeSessionDialog";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { useToast } from "@/components/ui/Toast";
@@ -41,7 +42,7 @@ export function ManualSessionHeader({
   gradingGateway?: GradingGateway;
 }>) {
   const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
-  const [isGradeOpen, setIsGradeOpen] = useState(false);
+  const [gradeDialog, setGradeDialog] = useState<"grade" | "retry" | null>(null);
   const { showToast } = useToast();
   const isAdmin = role === "admin";
   const reportHref = `/reports/sessions/${encodeURIComponent(session.id)}`;
@@ -257,7 +258,7 @@ export function ManualSessionHeader({
               <button
                 type="button"
                 disabled={!isAllFilled || grading.active}
-                onClick={() => setIsGradeOpen(true)}
+                onClick={() => setGradeDialog("grade")}
                 title={gradeButtonTitle(isAllFilled, grading.active)}
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -277,7 +278,7 @@ export function ManualSessionHeader({
           />
         </div>
 
-        <GradingProgressBar progress={grading} />
+        <GradingProgressBar progress={grading} onRetry={isAdmin ? () => setGradeDialog("retry") : undefined} />
       </section>
 
       {isFinalizeOpen && (
@@ -289,17 +290,18 @@ export function ManualSessionHeader({
         />
       )}
 
-      {isGradeOpen && (
+      {gradeDialog !== null && (
         <GradeSessionDialog
           session={{ id: session.id, label: session.label }}
           gateway={gradingGateway}
+          {...(gradeDialog === "retry" ? RETRY_GRADING_DIALOG : {})}
           onQueued={(queued) => {
-            setIsGradeOpen(false);
+            setGradeDialog(null);
             grading.started(queued);
             showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
           }}
           onClose={(afterError) => {
-            setIsGradeOpen(false);
+            setGradeDialog(null);
             if (afterError) {
               onSessionUpdated();
               // GRADING_IN_PROGRESS: run lain sudah berjalan, jadi progresnya ikut ditampilkan.

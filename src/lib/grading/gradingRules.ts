@@ -149,19 +149,36 @@ export function progressErrorMessage(error: unknown): string {
 
 const NOTHING_SAVED = "Tidak ada hasil yang tersimpan.";
 
-// server#143 docs/GRADING_WORKER.md: alasan run gagal di grading_run_progress.error_code. Kalimat final
-// dan tombol "Coba lagi" menyusul di K-19 (SCRUM-289/290).
+// Kode di grading_run_progress.error_code (server#143, #144). Kode baru cukup satu baris di sini.
+// Run gagal tidak menyimpan hasil, jadi setiap alasan ditutup NOTHING_SAVED.
 const FAILURE_REASONS: Record<string, string> = {
-  GRADING_INTERRUPTED: `Penilaian terhenti di tengah jalan karena layanan penilai berhenti. ${NOTHING_SAVED}`,
-  NO_SCORE: "Tidak ada percobaan yang mendapat skor, misalnya karena LLM judge gagal atau harga tokennya belum lengkap.",
-  SESSION_ARCHIVED: `Sesi diarsipkan saat penilaian berjalan. ${NOTHING_SAVED}`,
-  ANSWERS_CHANGED_DURING_GRADING: `Jawaban berubah saat penilaian berjalan. ${NOTHING_SAVED}`,
-  GRADING_ERROR: `Terjadi kesalahan saat menilai. ${NOTHING_SAVED}`,
+  judge_not_configured: "LLM judge belum dipilih untuk penilaian ini. Pilih judge lalu coba lagi.",
+  judge_unavailable: "LLM judge tidak dapat dihubungi. Periksa produk LLM judge di halaman Penyedia lalu coba lagi.",
+  judge_pricing_missing: "Harga token produk LLM judge belum lengkap. Lengkapi harga masuk dan keluar di halaman Penyedia.",
+  judge_budget_exhausted: "Anggaran bulanan produk LLM judge habis. Tambah anggarannya di halaman Penyedia atau pilih judge lain.",
+  judge_incomplete: "LLM judge tidak memberi penilaian yang lengkap. Coba nilai ulang.",
+  NO_SCORE: "Tidak ada jawaban yang dapat diberi skor, misalnya karena semua jawaban kosong atau ditolak.",
+  GRADING_INTERRUPTED: "Penilaian terhenti di tengah jalan karena layanan penilai berhenti.",
+  SESSION_ARCHIVED: "Sesi diarsipkan saat penilaian berjalan.",
+  ANSWERS_CHANGED_DURING_GRADING: "Jawaban berubah saat penilaian berjalan.",
+  GRADING_ERROR: "Terjadi kesalahan saat menilai.",
 };
+
+/** Sesi yang diarsipkan tidak bisa dinilai lagi, jadi mengulang run yang gagal karenanya hanya akan ditolak server. */
+const NOT_RETRYABLE: ReadonlySet<string> = new Set(["SESSION_ARCHIVED"]);
+
+/** Judul dan tombol dialog konfirmasi "Coba Nilai Ulang", dipakai halaman sesi dan halaman sesi manual. */
+export const RETRY_GRADING_DIALOG = { title: "Coba nilai ulang sesi ini?", confirmLabel: "Coba Nilai Ulang" } as const;
+
+/** Apakah run yang gagal dengan error_code ini layak ditawari "Coba Nilai Ulang". Kode yang belum dikenal boleh dicoba. */
+export function canRetryGrading(errorCode: string | null | undefined): boolean {
+  return !(errorCode && NOT_RETRYABLE.has(errorCode));
+}
 
 /** Alasan run di latar belakang gagal, dari error_code progres; kode yang belum dikenal tetap dijelaskan. */
 export function gradingFailureMessage(errorCode: string | null | undefined): string {
-  return (errorCode ? FAILURE_REASONS[errorCode] : undefined) ?? NOTHING_SAVED;
+  const reason = errorCode ? FAILURE_REASONS[errorCode] : undefined;
+  return reason ? `${reason} ${NOTHING_SAVED}` : NOTHING_SAVED;
 }
 
 /** Run yang masih antre atau sedang dinilai worker: server menolak penilaian baru (409 GRADING_IN_PROGRESS). */
