@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 
 import { RegradeSection } from "@/components/rubrics/RegradeSection";
 import { useToast } from "@/components/ui/Toast";
+import { useGradingProgress } from "@/hooks/useGradingProgress";
 import { useGradingRun } from "@/hooks/useGradingRun";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { useSessionResults } from "@/hooks/useSessionResults";
@@ -14,6 +15,7 @@ import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsAp
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
 import { GradeSessionDialog } from "./GradeSessionDialog";
+import { GradingProgressBar } from "./GradingProgressBar";
 import { GradingResultsBody } from "./GradingResultsBody";
 
 type GradingSession = Pick<SessionDetail, "id" | "label" | "status" | "archived_at">;
@@ -24,6 +26,9 @@ type GradingSession = Pick<SessionDetail, "id" | "label" | "status" | "archived_
  * Setelah Nilai atau Nilai ulang (PBI-14 AC7), hasil dimuat ulang dari server, jadi tabel selalu yang
  * sudah disamarkan sesuai peran. Admin bisa membuka run lama dari riwayat (K-17/K-18); skornya
  * menggantikan hasil terbaru dengan keterangan dan jalan kembali.
+ *
+ * Penilaian berjalan di latar belakang (K-13, SCRUM-285): Admin melihat progresnya di sini, tombol
+ * Nilai mati selama run antre atau berjalan, dan hasil dimuat ulang sendiri begitu run berakhir.
  */
 export function SessionGradingSection({
   session,
@@ -41,6 +46,14 @@ export function SessionGradingSection({
   const headingId = useId();
   const { showToast } = useToast();
   const results = useSessionResults(session.id, gateway);
+  const progress = useGradingProgress(session.id, {
+    enabled: role === "admin",
+    gateway,
+    onSettled: (run) => {
+      results.reload();
+      if (run.status === "finished") showToast(`Sesi “${session.label}” selesai dinilai.`);
+    },
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [chosenRunId, setChosenRunId] = useState<string | null>(null);
 
@@ -59,6 +72,8 @@ export function SessionGradingSection({
         Hasil penilaian
       </h2>
 
+      <GradingProgressBar progress={progress} />
+
       {olderRunId !== null && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {older.status === "ready" && older.data !== null && <span>{olderRunNote(older.data.triggered_at)}</span>}
@@ -70,7 +85,7 @@ export function SessionGradingSection({
 
       <GradingResultsBody
         results={shown}
-        gradeAction={gradable ? { label: "Nilai", onClick: () => setDialogOpen(true) } : undefined}
+        gradeAction={gradable ? { label: "Nilai", onClick: () => setDialogOpen(true), disabled: progress.active } : undefined}
       />
 
       {latest !== null && (
@@ -95,14 +110,19 @@ export function SessionGradingSection({
           session={session}
           gateway={gateway}
           judgeApi={judgeApi}
-          onQueued={() => {
+          onQueued={(queued) => {
             setDialogOpen(false);
+            progress.started(queued);
             showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
           }}
           onClose={(afterError) => {
             setDialogOpen(false);
-            // Setelah penolakan, keadaan yang tampil mungkin sudah berbeda dari server (Admin lain sudah menilai).
-            if (afterError) results.reload();
+            // Setelah penolakan, keadaan yang tampil mungkin sudah berbeda dari server: Admin lain sudah
+            // menilai, atau run lain sedang berjalan (GRADING_IN_PROGRESS) dan progresnya perlu diikuti.
+            if (afterError) {
+              results.reload();
+              progress.reload();
+            }
           }}
         />
       )}

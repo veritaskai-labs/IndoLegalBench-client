@@ -18,7 +18,7 @@ export function GradingResultsBody({
 }: Readonly<{
   results: AsyncResource<SessionGradingResponse | null> & { reload: () => void };
   /** Tombol di keadaan belum dinilai; tidak ada untuk peran yang tidak boleh menilai. */
-  gradeAction?: { label: string; onClick: () => void };
+  gradeAction?: { label: string; onClick: () => void; disabled?: boolean };
 }>) {
   if (results.status === "loading") return <LoadingState />;
   if (results.status === "error") return <ErrorState variant="card" message={results.message} onRetry={results.reload} />;
