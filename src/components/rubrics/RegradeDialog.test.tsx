@@ -6,12 +6,12 @@ import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import { BUDGET_SHORT_TEXT } from "@/lib/grading/gradeEstimate";
-import { gradeEstimate, gradingResponse } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingRunQueued } from "@/test/gradingFixtures";
 import { makeRubricSummary } from "@/test/rubricFixtures";
 import type { JudgeProviderOption } from "@/types/provider";
 import { RegradeDialog } from "./RegradeDialog";
 
-const REGRADED = gradingResponse({ grading_run_id: "run-2", kind: "regrade", rubric_version: "v2" });
+const QUEUED = gradingRunQueued({ grading_run_id: "run-2" });
 const V1 = makeRubricSummary({ id: "id-1", version_no: 1, is_active: false });
 const V2 = makeRubricSummary({ id: "id-2", version_no: 2 });
 const JUDGE_A: JudgeProviderOption = { id: "judge-a", name: "DeepSeek", provider_type: "openai_compatible", model_name: "deepseek-chat" };
@@ -20,19 +20,19 @@ const TITLE = "Nilai ulang sesi ini?";
 const TABLE = { name: "Perkiraan biaya penilaian" };
 
 function setup({
-  grade = vi.fn().mockResolvedValue(REGRADED),
+  enqueue = vi.fn().mockResolvedValue(QUEUED),
   defaultJudgeId = "judge-a",
   judges = [JUDGE_A, JUDGE_B],
   estimate = vi.fn().mockResolvedValue(gradeEstimate()),
 }: {
-  grade?: GradingGateway["grade"];
+  enqueue?: GradingGateway["enqueue"];
   estimate?: GradingGateway["estimate"];
   defaultJudgeId?: string;
   judges?: JudgeProviderOption[];
 } = {}) {
-  const gateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate };
+  const gateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate };
   const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn().mockResolvedValue(judges) };
-  const onRegraded = vi.fn();
+  const onQueued = vi.fn();
   const onClose = vi.fn();
   render(
     <RegradeDialog
@@ -42,12 +42,12 @@ function setup({
       defaultJudgeId={defaultJudgeId}
       gateway={gateway}
       judgeApi={judgeApi}
-      onRegraded={onRegraded}
+      onQueued={onQueued}
       onClose={onClose}
     />,
   );
   const dialog = within(screen.getByRole("dialog", { name: TITLE }));
-  return { dialog, gateway, onRegraded, onClose, user: userEvent.setup() };
+  return { dialog, gateway, onQueued, onClose, user: userEvent.setup() };
 }
 
 describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
@@ -73,9 +73,10 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
   });
 
   // K-17: same answers, another judge.
-  it("re-grades with the chosen judge and version and tells the page", async () => {
+  // K-13 (SCRUM-285): the re-grade is queued; the server answers 202 and the page follows the progress.
+  it("queues the re-grade with the chosen judge and version and hands the queued run to the page", async () => {
     // Arrange
-    const { dialog, gateway, onRegraded, user } = setup();
+    const { dialog, gateway, onQueued, user } = setup();
     await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-b");
     await user.selectOptions(dialog.getByLabelText("Versi rubrik"), "v1");
     await dialog.findByRole("table", TABLE);
@@ -84,8 +85,9 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
 
     // Assert
-    await waitFor(() => expect(onRegraded).toHaveBeenCalledWith(REGRADED));
-    expect(gateway.grade).toHaveBeenCalledWith("s-1", { rubricVersion: "v1", judgeProviderId: "judge-b" });
+    await waitFor(() => expect(onQueued).toHaveBeenCalledWith(QUEUED));
+    expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { rubricVersion: "v1", judgeProviderId: "judge-b" });
+    expect(gateway.grade).not.toHaveBeenCalled();
   });
 
   // Edge: an older run without a judge leaves the choice empty, so nothing is sent until one is picked.
@@ -109,9 +111,10 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     [new ApiError(409, "SESSION_NOT_GRADABLE"), "Sesi ini belum bisa dinilai. Hanya sesi yang berjalan atau sudah selesai yang bisa dinilai."],
     [new ApiError(404, "RUBRIC_VERSION_NOT_FOUND"), "Versi rubrik yang dipilih tidak ditemukan. Muat ulang halaman."],
     [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman."],
+    [new ApiError(409, "GRADING_IN_PROGRESS"), "Penilaian sesi ini masih berjalan. Tunggu sampai selesai; progresnya tampil di halaman sesi."],
   ])("shows the reason for %s and stays open", async (refusal, message) => {
     // Arrange
-    const { dialog, onRegraded, onClose, user } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
+    const { dialog, onQueued, onClose, user } = setup({ enqueue: vi.fn().mockRejectedValue(refusal) });
     await dialog.findByRole("option", { name: "DeepSeek" });
     await dialog.findByRole("table", TABLE);
 
@@ -120,14 +123,14 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
 
     // Assert
     expect(await dialog.findByRole("alert")).toHaveTextContent(message);
-    expect(onRegraded).not.toHaveBeenCalled();
+    expect(onQueued).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   // Edge: after an error the data may be stale, so closing tells the page.
   it("tells the page the data may be stale when closed after an error", async () => {
     // Arrange
-    const { dialog, onClose, user } = setup({ grade: vi.fn().mockRejectedValue(new ApiError(404, "MEASUREMENT_NOT_FOUND")) });
+    const { dialog, onClose, user } = setup({ enqueue: vi.fn().mockRejectedValue(new ApiError(404, "MEASUREMENT_NOT_FOUND")) });
     await dialog.findByRole("option", { name: "DeepSeek" });
     await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
@@ -151,7 +154,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
     await user.dblClick(dialog.getByRole("button", { name: "Nilai ulang" }));
 
     // Assert
-    await waitFor(() => expect(gateway.grade).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(gateway.enqueue).toHaveBeenCalledTimes(1));
   });
 
   // Negative: backing out starts nothing.
@@ -164,7 +167,7 @@ describe("RegradeDialog (AC6, AC7, K-17/K-18)", () => {
 
     // Assert
     expect(onClose).toHaveBeenCalledWith(false);
-    expect(gateway.grade).not.toHaveBeenCalled();
+    expect(gateway.enqueue).not.toHaveBeenCalled();
   });
 
   // Review on client#92: the latest result's judge was turned off since, so the dialog asks for another one.

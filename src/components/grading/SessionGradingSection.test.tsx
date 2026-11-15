@@ -311,15 +311,16 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       expect(await within(section).findByRole("button", { name: BUTTON })).toBeEnabled();
     });
 
-    it("re-grades with the newest version, reloads the result and shows the new version as latest", async () => {
+    // K-13 (SCRUM-285): Nilai ulang is queued too; the page shows the progress and turns the button off.
+    it("queues the re-grade, shows its progress and turns Nilai ulang off", async () => {
       const user = userEvent.setup();
-      const results = vi
-        .fn<GradingGateway["results"]>()
-        .mockResolvedValueOnce(gradingResponse({ rubric_version: "v1", judge: JUDGE_A }))
-        .mockResolvedValueOnce(gradingResponse({ rubric_version: "v2", kind: "regrade", judge: JUDGE_A }));
+      const progress = vi
+        .fn<GradingGateway["progress"]>()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(gradingProgress({ status: "running", attempts_graded: 6, attempts_total: 12, percent: 50 }));
       const { section, gateway } = renderSection({
-        results,
-        grade: () => Promise.resolve(gradingResponse({ rubric_version: "v2", kind: "regrade", judge: JUDGE_A })),
+        results: () => Promise.resolve(gradingResponse({ rubric_version: "v1", judge: JUDGE_A })),
+        progress,
         listVersions: () => Promise.resolve([V1, V2]),
       });
 
@@ -329,12 +330,32 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
         within(screen.getByRole("dialog", { name: "Nilai ulang sesi ini?" })).getByRole("button", { name: "Nilai ulang" }),
       );
 
-      await waitFor(() =>
-        expect(gateway.grade).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" }),
-      );
+      expect(gateway.enqueue).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" });
+      expect(await within(section).findByText("6 dari 12 percobaan dinilai (50%)")).toBeInTheDocument();
+      expect(within(section).getByRole("button", { name: BUTTON })).toBeDisabled();
+    });
+
+    // When the re-grade ends, the result and the history load again by themselves.
+    it("shows the new version as latest once the re-grade finishes", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const results = vi
+        .fn<GradingGateway["results"]>()
+        .mockResolvedValueOnce(gradingResponse({ rubric_version: "v1", judge: JUDGE_A }))
+        .mockResolvedValue(gradingResponse({ rubric_version: "v2", kind: "regrade", judge: JUDGE_A }));
+      const progress = vi
+        .fn<GradingGateway["progress"]>()
+        .mockResolvedValueOnce(gradingProgress({ status: "running" }))
+        .mockResolvedValue(gradingProgress({ status: "finished", percent: 100 }));
+      const runs = vi.fn<GradingGateway["runs"]>().mockResolvedValue([]);
+      const { section } = renderSection({ results, progress, runs, listVersions: () => Promise.resolve([V1, V2]) });
+      expect(await within(section).findByRole("progressbar", { name: "Progres penilaian" })).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS);
+
       await waitFor(() => expect(section).toHaveTextContent("Versi rubrik v2"));
       expect(results).toHaveBeenCalledTimes(2);
-      expect(screen.getByText("Penilaian ulang selesai dengan Versi 2 dan penilai DeepSeek.")).toBeInTheDocument();
+      await waitFor(() => expect(runs).toHaveBeenCalledTimes(2));
+      vi.useRealTimers();
     });
 
     // Only Admin may re-grade, and other roles must not call the Admin only rubric list.

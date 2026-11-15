@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/apiClient";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import { gradeEstimate, gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingResponse, gradingRunQueued, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionGradingResponse } from "@/types/grading";
@@ -17,7 +17,7 @@ const v1 = makeRubricSummary({ id: "id-1", version_no: 1, is_active: false });
 const v2 = makeRubricSummary({ id: "id-2", version_no: 2 });
 const SESSION = { id: "s-1", status: "finished" as const, archived_at: null as string | null };
 const BUTTON = "Nilai ulang";
-const REGRADED = gradingResponse({ grading_run_id: "run-2", kind: "regrade", rubric_version: "v2" });
+const QUEUED = gradingRunQueued({ grading_run_id: "run-2" });
 const JUDGE_A = { judge_provider_id: "judge-a", name: "DeepSeek", model_version: "deepseek-chat", cost_idr: null };
 const judgeApi: JudgeOptionsApi = {
   listJudgeOptions: () =>
@@ -26,25 +26,28 @@ const judgeApi: JudgeOptionsApi = {
 
 function setup({
   rubrics = {},
-  grade = vi.fn().mockResolvedValue(REGRADED),
+  enqueue = vi.fn().mockResolvedValue(QUEUED),
   role = "admin",
   latest = gradingResponse({ judge: JUDGE_A }),
   session = SESSION,
   runs = vi.fn().mockResolvedValue([gradingRunSummary()]),
   selectedRunId = null,
+  gradingActive = false,
 }: {
   rubrics?: Partial<RubricsGateway>;
-  grade?: GradingGateway["grade"];
+  enqueue?: GradingGateway["enqueue"];
   role?: Role | null;
   latest?: SessionGradingResponse | null;
   session?: typeof SESSION;
   runs?: GradingGateway["runs"];
   selectedRunId?: string | null;
+  gradingActive?: boolean;
 } = {}) {
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]), ...rubrics });
-  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs, run: vi.fn(), estimate: vi.fn(() => Promise.resolve(gradeEstimate())) };
+  const gradingGateway: GradingGateway = { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs, run: vi.fn(), estimate: vi.fn(() => Promise.resolve(gradeEstimate())) };
   const onChanged = vi.fn();
   const onSelectRun = vi.fn();
+  const onQueued = vi.fn();
   render(
     <ToastProvider>
       <RegradeSection
@@ -57,10 +60,12 @@ function setup({
         selectedRunId={selectedRunId}
         onSelectRun={onSelectRun}
         onChanged={onChanged}
+        gradingActive={gradingActive}
+        onQueued={onQueued}
       />
     </ToastProvider>,
   );
-  return { rubricsGateway, gradingGateway, onChanged, onSelectRun, user: userEvent.setup() };
+  return { rubricsGateway, gradingGateway, onChanged, onSelectRun, onQueued, user: userEvent.setup() };
 }
 
 describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai lain)", () => {
@@ -206,10 +211,11 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
     expect(await screen.findByText("Belum ada hasil penilaian untuk sesi ini.")).toBeInTheDocument();
   });
 
-  // Positive: after the re-grade the dialog closes, the page reloads the result and the Admin is told.
-  it("closes the dialog, asks the page to reload and says the re-grade finished", async () => {
+  // K-13 (SCRUM-285): the dialog closes once the re-grade is queued; the page follows its progress
+  // and reloads the result when the run ends, so nothing is reloaded yet.
+  it("closes the dialog once the re-grade is queued, hands the run to the page and says it runs in the background", async () => {
     // Arrange
-    const { user, gradingGateway, onChanged } = setup();
+    const { user, gradingGateway, onChanged, onQueued } = setup();
     await user.click(await screen.findByRole("button", { name: BUTTON }));
     await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
 
@@ -218,10 +224,21 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
 
     // Assert
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(gradingGateway.grade).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" });
-    expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(gradingGateway.runs).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText("Penilaian ulang selesai dengan Versi 2.")).toBeInTheDocument();
+    expect(gradingGateway.enqueue).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" });
+    expect(onQueued).toHaveBeenCalledWith(QUEUED);
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(await screen.findByText("Penilaian ulang berjalan di latar belakang.")).toBeInTheDocument();
+  });
+
+  it("keeps the button off and says why while grading runs in the background", async () => {
+    // Arrange / Act
+    setup({ gradingActive: true });
+
+    // Assert
+    expect(await screen.findByRole("button", { name: BUTTON })).toBeDisabled();
+    expect(
+      screen.getByText("Penilaian sesi ini sedang berjalan di latar belakang. Nilai ulang bisa dipakai lagi setelah selesai."),
+    ).toBeInTheDocument();
   });
 
   // Negative: backing out starts nothing and reloads nothing.
@@ -235,7 +252,7 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
 
     // Assert
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(gradingGateway.grade).not.toHaveBeenCalled();
+    expect(gradingGateway.enqueue).not.toHaveBeenCalled();
     expect(onChanged).not.toHaveBeenCalled();
   });
 
@@ -243,7 +260,7 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
   it("asks the page to reload when the dialog is closed after an error", async () => {
     // Arrange
     const refusal = new ApiError(409, "SESSION_NOT_GRADABLE");
-    const { user, onChanged, gradingGateway } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
+    const { user, onChanged, gradingGateway } = setup({ enqueue: vi.fn().mockRejectedValue(refusal) });
     await user.click(await screen.findByRole("button", { name: BUTTON }));
     const dialog = within(screen.getByRole("dialog"));
     await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });

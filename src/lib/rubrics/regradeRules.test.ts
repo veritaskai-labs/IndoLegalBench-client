@@ -100,6 +100,15 @@ describe("regradeAvailability (AC7: Nilai ulang dengan versi terbaru)", () => {
     expect(result).toEqual({ available: false, reason: "never_graded" });
   });
 
+  // K-13 (SCRUM-285): a run is queued or running, so the server would answer 409 GRADING_IN_PROGRESS.
+  it("is off while grading runs in the background", () => {
+    // Arrange / Act
+    const result = regradeAvailability(input({ gradingActive: true }));
+
+    // Assert
+    expect(result).toEqual({ available: false, reason: "grading_in_progress" });
+  });
+
   // K-17/K-18 (SCRUM-283): with the newest version already used, another LLM judge can still re-grade.
   it("stays on when the latest result already used the newest version", () => {
     // Arrange / Act
@@ -139,6 +148,7 @@ describe("REGRADE_UNAVAILABLE_TEXT", () => {
       session_not_gradable: "Sesi ini belum bisa dinilai ulang. Hanya sesi yang berjalan atau sudah selesai, dan belum diarsipkan.",
       no_rubric: "Belum ada versi rubrik. Buat versi rubrik dulu di halaman Rubrik.",
       never_graded: "Sesi ini belum pernah dinilai. Gunakan tombol Nilai terlebih dahulu.",
+      grading_in_progress: "Penilaian sesi ini sedang berjalan di latar belakang. Nilai ulang bisa dipakai lagi setelah selesai.",
     });
   });
 });
