@@ -28,3 +28,12 @@ export function allowedScoreScopes(role: Role | null): readonly ScoreScope[] {
 export function canChooseProductLabel(role: Role | null): boolean {
   return role !== null && LABEL_CHOOSERS.includes(role);
 }
+
+export const REPORT_TITLE_MAX = 200;
+
+export type TitleProblem = "TITLE_REQUIRED" | "TITLE_TOO_LONG";
+
+export function titleProblem(title: string): TitleProblem | null {
+  void title;
+  return null;
+}

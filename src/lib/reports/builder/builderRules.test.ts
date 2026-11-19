@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/types";
-import { allowedScoreScopes, canChooseProductLabel } from "./builderRules";
+import {
+  allowedScoreScopes,
+  canChooseProductLabel,
+  REPORT_TITLE_MAX,
+  titleProblem,
+} from "./builderRules";
 
 describe("allowedScoreScopes", () => {
   // Positive: AC14, Admin and Developer AI may build reports with dev scores.
@@ -69,4 +74,93 @@ describe("canChooseProductLabel", () => {
       expect(allowed).toBe(false);
     },
   );
+});
+
+describe("titleProblem", () => {
+  const smile = String.fromCodePoint(0x1f600);
+  const zeroWidthSpace = String.fromCodePoint(0x200b);
+
+  // Positive: a normal title is fine.
+  it("accepts a normal title", () => {
+    // Arrange / Act
+    const problem = titleProblem("Perbandingan Oktober 2026");
+
+    // Assert
+    expect(problem).toBeNull();
+  });
+
+  // Negative: the server answers 422 for these, so the form must stop them first.
+  it.each([
+    ["empty", ""],
+    ["spaces only", "    "],
+    ["zero-width spaces only", `${zeroWidthSpace}${zeroWidthSpace}`],
+  ])("asks for a title when it is %s", (_name, title) => {
+    // Arrange / Act
+    const problem = titleProblem(title);
+
+    // Assert
+    expect(problem).toBe("TITLE_REQUIRED");
+  });
+
+  // Edge: 200 is the server limit (ReportCreate max_length). 200 passes, 201 does not.
+  it("accepts exactly the maximum length", () => {
+    // Arrange
+    const title = "a".repeat(REPORT_TITLE_MAX);
+
+    // Act
+    const problem = titleProblem(title);
+
+    // Assert
+    expect(REPORT_TITLE_MAX).toBe(200);
+    expect(problem).toBeNull();
+  });
+
+  it("rejects one character over the maximum", () => {
+    // Arrange
+    const title = "a".repeat(REPORT_TITLE_MAX + 1);
+
+    // Act
+    const problem = titleProblem(title);
+
+    // Assert
+    expect(problem).toBe("TITLE_TOO_LONG");
+  });
+
+  // Edge: Python counts characters (code points), JavaScript .length counts UTF-16 units,
+  // so an emoji is 1 for the server but 2 for .length. 200 emoji are allowed by the server;
+  // counting with .length would wrongly block them.
+  it("counts an emoji as one character, like the server", () => {
+    // Arrange
+    const title = smile.repeat(REPORT_TITLE_MAX);
+
+    // Act
+    const problem = titleProblem(title);
+
+    // Assert
+    expect(problem).toBeNull();
+  });
+
+  it("rejects 201 emoji", () => {
+    // Arrange
+    const title = smile.repeat(REPORT_TITLE_MAX + 1);
+
+    // Act
+    const problem = titleProblem(title);
+
+    // Assert
+    expect(problem).toBe("TITLE_TOO_LONG");
+  });
+
+  // Edge: the server strips the edges first, then checks the length, so spaces around a
+  // 200-character title must not make it too long.
+  it("does not count blank characters at the edges", () => {
+    // Arrange
+    const title = `   ${"a".repeat(REPORT_TITLE_MAX)}${zeroWidthSpace}  `;
+
+    // Act
+    const problem = titleProblem(title);
+
+    // Assert
+    expect(problem).toBeNull();
+  });
 });
