@@ -8,3 +8,7 @@ export function nonBlankText(text: string | null | undefined): string | null {
   const trimmed = text?.trim() ?? "";
   return trimmed === "" ? null : trimmed;
 }
+
+export function stripBlank(text: string): string {
+  return text.trim();
+}
