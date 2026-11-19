@@ -51,7 +51,14 @@ export interface BuilderChoices {
   productLabelMode: ProductLabelMode;
 }
 
+/**
+ * Pilihan form yang masih sah untuk peran ini. Bila peran berubah saat form terbuka, pilihan
+ * yang tidak lagi boleh diganti ke yang paling aman (Test, nama asli), supaya halaman tidak
+ * mengirim pilihan yang pasti ditolak 403 dan tidak lagi terlihat di layar.
+ */
 export function normalizeChoices(role: Role | null, choices: BuilderChoices): BuilderChoices {
-  void role;
-  return choices;
+  return {
+    scoreScope: allowedScoreScopes(role).includes(choices.scoreScope) ? choices.scoreScope : "test",
+    productLabelMode: canChooseProductLabel(role) ? choices.productLabelMode : "real_name",
+  };
 }
