@@ -26,21 +26,32 @@ export function selectionProblems(picked: readonly PickableSession[]): Selection
   return products.size < 2 ? ["NEED_AT_LEAST_TWO_PRODUCTS"] : [];
 }
 
+/** Sesi tampil di pilihan bila jenisnya cocok dengan filter (PBI-15 AC5); "all" menampilkan semua. */
 export function matchesFilter(session: PickableSession, filter: MeasurementFilter): boolean {
-  void session;
-  void filter;
-  return true;
+  return filter === "all" || session.session_type === filter;
 }
 
+/**
+ * Pisahkan sesi terpilih menjadi yang ikut dan yang dilepas filter. Server membuang sesi di luar
+ * measurement_filter tanpa pesan, jadi halaman melakukannya sendiri dan menyebut sesi yang dilepas.
+ */
 export function applyFilter(
   picked: readonly PickableSession[],
   filter: MeasurementFilter,
 ): { kept: PickableSession[]; dropped: PickableSession[] } {
-  void filter;
-  return { kept: [...picked], dropped: [] };
+  const kept: PickableSession[] = [];
+  const dropped: PickableSession[] = [];
+  for (const session of picked) (matchesFilter(session, filter) ? kept : dropped).push(session);
+  return { kept, dropped };
 }
 
+/**
+ * true bila sesi terpilih dinilai LLM judge yang berbeda (PBI-15 AC13 b), untuk peringatan
+ * sebelum Create. Judge yang tidak diketahui (null) dilewati: server yang memutuskan.
+ */
 export function judgeDiffers(picked: readonly PickableSession[]): boolean {
-  void picked;
-  return false;
+  const judges = new Set(
+    picked.map((s) => s.judge_model_version).filter((judge): judge is string => judge !== null),
+  );
+  return judges.size > 1;
 }
