@@ -80,6 +80,19 @@ describe("outcomeFromError", () => {
     });
   });
 
+  // Edge: ineligible must be an object keyed by session id. An array would otherwise turn
+  // its indexes ("0", "1") into fake session ids next to the wrong sessions.
+  it("ignores an ineligible list that is an array instead of a map", () => {
+    // Arrange
+    const error = apiError(409, "REPORT_NOT_COMPARABLE", { ineligible: [["SESSION_CANCELLED"]] });
+
+    // Act
+    const outcome = outcomeFromError(error);
+
+    // Assert
+    expect(outcome).toEqual({ kind: "not_comparable", selectionErrors: [], ineligible: {}, rejections: [] });
+  });
+
   it("reads a 409 without details as empty lists", () => {
     // Arrange / Act
     const outcome = outcomeFromError(apiError(409, "REPORT_NOT_COMPARABLE"));
@@ -124,6 +137,7 @@ describe("outcomeFromError", () => {
     [500, "INTERNAL_ERROR"],
     [409, "SOMETHING_ELSE"],
     [404, "NOT_FOUND"],
+    [403, "FORBIDDEN"],
     [0, "UNKNOWN_ERROR"],
   ])("reports %i %s as a general failure", (status, code) => {
     // Arrange / Act
