@@ -49,34 +49,26 @@ export function caseBasis(count: number): ReportCaseBasisRead[] {
   }));
 }
 
-/** Skor satu produk untuk satu split; peringkat dan skor total mengikuti aturan SA di D1. */
-type Scores = Pick<ReportResultRead, "det_score" | "llm_score" | "total_score" | "rank" | "failure_rate">;
+/**
+ * Skor satu produk untuk satu split: [skor deterministik, skor LLM, skor total, peringkat, tingkat kegagalan].
+ * Peringkat dan skor total mengikuti aturan SA di D1. Satu baris per produk berisi ketiga split.
+ */
+type ScoreTuple = readonly [string, string | null, string | null, number | null, string | null];
 
-const TEST_SCORES: Record<string, Scores> = {
-  AiYU: { det_score: "0.91", llm_score: "0.87", total_score: "0.89", rank: 1, failure_rate: "1.20" },
-  Gemini: { det_score: "0.84", llm_score: "0.88", total_score: "0.86", rank: 2, failure_rate: "0.00" },
-  // Rata-ratanya sama dengan Justisio; DeepSeek di atas karena skor LLM lebih tinggi (seri, D1).
-  DeepSeek: { det_score: "0.80", llm_score: "0.86", total_score: "0.83", rank: 3, failure_rate: "3.45" },
-  Justisio: { det_score: "0.86", llm_score: "0.80", total_score: "0.83", rank: 4, failure_rate: "0.80" },
+const SCORES: Record<string, Record<ScoreSplit, ScoreTuple>> = {
+  AiYU: { test: ["0.91", "0.87", "0.89", 1, "1.20"], dev: ["0.88", "0.90", "0.89", 1, "0.95"], combined: ["0.90", "0.88", "0.89", 1, "1.10"] },
+  Gemini: { test: ["0.84", "0.88", "0.86", 2, "0.00"], dev: ["0.86", "0.85", "0.86", 2, "0.00"], combined: ["0.85", "0.87", "0.86", 2, "0.00"] },
+  // Rata-rata test sama dengan Justisio; DeepSeek di atas karena skor LLM lebih tinggi (seri, D1).
+  DeepSeek: { test: ["0.80", "0.86", "0.83", 3, "3.45"], dev: ["0.79", "0.83", "0.81", 4, "2.90"], combined: ["0.80", "0.85", "0.83", 3, "3.25"] },
+  Justisio: { test: ["0.86", "0.80", "0.83", 4, "0.80"], dev: ["0.82", "0.81", "0.82", 3, "1.10"], combined: ["0.84", "0.80", "0.82", 4, "0.92"] },
   // Skor LLM kosong, jadi skor total dan peringkat kosong (D1). Manual: tingkat kegagalan tidak berlaku.
-  LegalHero: { det_score: "0.78", llm_score: null, total_score: null, rank: null, failure_rate: null },
+  LegalHero: { test: ["0.78", null, null, null, null], dev: ["0.75", null, null, null, null], combined: ["0.77", null, null, null, null] },
 };
 
-const DEV_SCORES: Record<string, Scores> = {
-  AiYU: { det_score: "0.88", llm_score: "0.90", total_score: "0.89", rank: 1, failure_rate: "0.95" },
-  Gemini: { det_score: "0.86", llm_score: "0.85", total_score: "0.86", rank: 2, failure_rate: "0.00" },
-  Justisio: { det_score: "0.82", llm_score: "0.81", total_score: "0.82", rank: 3, failure_rate: "1.10" },
-  DeepSeek: { det_score: "0.79", llm_score: "0.83", total_score: "0.81", rank: 4, failure_rate: "2.90" },
-  LegalHero: { det_score: "0.75", llm_score: null, total_score: null, rank: null, failure_rate: null },
-};
-
-const COMBINED_SCORES: Record<string, Scores> = {
-  AiYU: { det_score: "0.90", llm_score: "0.88", total_score: "0.89", rank: 1, failure_rate: "1.10" },
-  Gemini: { det_score: "0.85", llm_score: "0.87", total_score: "0.86", rank: 2, failure_rate: "0.00" },
-  DeepSeek: { det_score: "0.80", llm_score: "0.85", total_score: "0.83", rank: 3, failure_rate: "3.25" },
-  Justisio: { det_score: "0.84", llm_score: "0.80", total_score: "0.82", rank: 4, failure_rate: "0.92" },
-  LegalHero: { det_score: "0.77", llm_score: null, total_score: null, rank: null, failure_rate: null },
-};
+function scoresOf(product: string, split: ScoreSplit): Partial<ReportResultRead> {
+  const [det_score, llm_score, total_score, rank, failure_rate] = SCORES[product][split];
+  return { det_score, llm_score, total_score, rank, failure_rate };
+}
 
 const PRODUCTS: ReadonlyArray<Pick<ReportSessionRead, "product_label" | "measurement_kind" | "markers"> & { version: string | null }> = [
   { product_label: "Justisio", measurement_kind: "automatic", markers: [], version: "v1.4" },
@@ -91,12 +83,6 @@ const PRODUCTS: ReadonlyArray<Pick<ReportSessionRead, "product_label" | "measure
   { product_label: "Gemini", measurement_kind: "automatic", markers: [{ code: "trial" }], version: "2.5" },
 ];
 
-const SPLIT_SCORES: Record<ScoreSplit, Record<string, Scores>> = {
-  test: TEST_SCORES,
-  dev: DEV_SCORES,
-  combined: COMBINED_SCORES,
-};
-
 function sessionsFor(splits: readonly ScoreSplit[]): ReportSessionRead[] {
   return PRODUCTS.map(({ version, ...product }) => {
     const slug = product.product_label.toLowerCase();
@@ -107,7 +93,7 @@ function sessionsFor(splits: readonly ScoreSplit[]): ReportSessionRead[] {
       product_id: `product-${slug}`,
       results: splits.map((split) =>
         reportResult({
-          ...SPLIT_SCORES[split][product.product_label],
+          ...scoresOf(product.product_label, split),
           score_split: split,
           cases_graded_count: manual ? 42 : 50,
           repetitions: manual ? 1 : 3,
