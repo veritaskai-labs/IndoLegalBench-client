@@ -1,3 +1,4 @@
+import { stripBlank } from "@/lib/text";
 import type { Role } from "@/types";
 import type { ScoreScope } from "./builderTypes";
 
@@ -29,11 +30,18 @@ export function canChooseProductLabel(role: Role | null): boolean {
   return role !== null && LABEL_CHOOSERS.includes(role);
 }
 
+/** Batas judul di server (ReportCreate `max_length`), dihitung dalam karakter. */
 export const REPORT_TITLE_MAX = 200;
 
 export type TitleProblem = "TITLE_REQUIRED" | "TITLE_TOO_LONG";
 
+/**
+ * Masalah judul laporan, atau null bila judul sah. Sama dengan server: karakter kosong di tepi
+ * dibuang dulu (stripBlank), lalu panjangnya dihitung per karakter (code point), bukan per unit
+ * UTF-16 seperti `.length`, supaya emoji dihitung satu seperti di Python.
+ */
 export function titleProblem(title: string): TitleProblem | null {
-  void title;
-  return null;
+  const stripped = stripBlank(title);
+  if (stripped === "") return "TITLE_REQUIRED";
+  return Array.from(stripped).length > REPORT_TITLE_MAX ? "TITLE_TOO_LONG" : null;
 }
