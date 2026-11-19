@@ -1,0 +1,63 @@
+"use client";
+
+import { useParams } from "next/navigation";
+
+import { ReportDocument } from "@/components/reports/comparison/ReportDocument";
+import { ReportPdfActions } from "@/components/reports/comparison/ReportPdfActions";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { ErrorState } from "@/components/ui/ErrorState";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { useReport } from "@/hooks/useReports";
+import { REPORT_STATUS_LABEL } from "@/lib/reports/reportRules";
+import { decodeRouteParam } from "@/lib/routeParams";
+
+const GENERAL_TITLE = "Laporan perbandingan";
+
+/** Item terakhir breadcrumb: judul laporan, "…" selama dimuat (null), atau judul umum bila gagal. */
+function currentLabel(report: ReturnType<typeof useReport>): string | null {
+  if (report.status === "ready") return report.data.title;
+  return report.status === "loading" ? null : GENERAL_TITLE;
+}
+
+/**
+ * Satu laporan perbandingan yang dibuka ulang dari hasil beku (PBI-15, D3 langkah 10–15). Bagian aplikasi
+ * (breadcrumb, status, tombol) berbahasa Indonesia; isi laporan mengikuti bahasa laporan (Fase 0 K3). Laporan
+ * tersimpan milik orang lain hanya untuk Admin (D9): server menolaknya, dan halaman tidak menawarkan PDF.
+ */
+export default function ComparisonReportPage() {
+  const reportId = decodeRouteParam(useParams<{ id: string }>().id);
+  const report = useReport(reportId);
+
+  return (
+    <div className="space-y-5">
+      <Breadcrumb
+        items={[
+          { label: "Laporan", href: "/reports" },
+          { label: GENERAL_TITLE, href: "/reports/comparisons" },
+          { label: currentLabel(report) },
+        ]}
+      />
+
+      {report.status !== "ready" && <h1 className="text-xl font-semibold text-slate-900">{GENERAL_TITLE}</h1>}
+      {report.status === "loading" && <LoadingState label="Memuat laporan…" />}
+      {report.status === "error" && <ErrorState variant="card" message={report.message} onRetry={report.reload} />}
+
+      {report.status === "ready" && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                {REPORT_STATUS_LABEL[report.data.status]}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
+                Bahasa laporan: {report.data.language.toUpperCase()}
+              </span>
+            </div>
+            <ReportPdfActions reportId={report.data.id} />
+          </div>
+          <ReportDocument report={report.data} />
+        </>
+      )}
+    </div>
+  );
+}
