@@ -3,6 +3,7 @@ import type { Role } from "@/types";
 import {
   allowedScoreScopes,
   canChooseProductLabel,
+  normalizeChoices,
   REPORT_TITLE_MAX,
   titleProblem,
 } from "./builderRules";
@@ -162,5 +163,63 @@ describe("titleProblem", () => {
 
     // Assert
     expect(problem).toBeNull();
+  });
+});
+
+describe("normalizeChoices", () => {
+  // Positive: allowed choices stay as they are.
+  it("keeps the choices an admin is allowed to make", () => {
+    // Arrange
+    const choices = { scoreScope: "dev_test", productLabelMode: "code" } as const;
+
+    // Act
+    const normalized = normalizeChoices("admin", choices);
+
+    // Assert
+    expect(normalized).toEqual(choices);
+  });
+
+  // Edge: the role can change while the form is open (login refresh, mock role). A Dev
+  // choice left in state would be sent and end in 403 REPORT_SCOPE_FORBIDDEN, with no
+  // option on screen to undo it.
+  it.each(["viewer", "contributor"] as const)("moves %s back to Test scores", (role) => {
+    // Arrange / Act
+    const normalized = normalizeChoices(role, { scoreScope: "dev", productLabelMode: "real_name" });
+
+    // Assert
+    expect(normalized.scoreScope).toBe("test");
+  });
+
+  // Edge: same for the label, which only Admin may set (403 REPORT_LABEL_MODE_FORBIDDEN).
+  it.each(["developer_ai", "viewer", "contributor"] as const)(
+    "moves %s back to real product names",
+    (role) => {
+      // Arrange / Act
+      const normalized = normalizeChoices(role, { scoreScope: "test", productLabelMode: "code" });
+
+      // Assert
+      expect(normalized.productLabelMode).toBe("real_name");
+    },
+  );
+
+  // Positive: Developer AI keeps a dev score choice (AC14) while losing the code label (AC9).
+  it("lets Developer AI keep Dev + Test but not code labels", () => {
+    // Arrange / Act
+    const normalized = normalizeChoices("developer_ai", {
+      scoreScope: "dev_test",
+      productLabelMode: "code",
+    });
+
+    // Assert
+    expect(normalized).toEqual({ scoreScope: "dev_test", productLabelMode: "real_name" });
+  });
+
+  // Edge: role not known yet falls back to the safest choices.
+  it("uses Test and real names while the role is not known", () => {
+    // Arrange / Act
+    const normalized = normalizeChoices(null, { scoreScope: "dev", productLabelMode: "code" });
+
+    // Assert
+    expect(normalized).toEqual({ scoreScope: "test", productLabelMode: "real_name" });
   });
 });

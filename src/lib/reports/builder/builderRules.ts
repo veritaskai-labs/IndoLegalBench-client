@@ -1,6 +1,6 @@
 import { stripBlank } from "@/lib/text";
 import type { Role } from "@/types";
-import type { ScoreScope } from "./builderTypes";
+import type { ProductLabelMode, ScoreScope } from "./builderTypes";
 
 /**
  * Jenis nilai yang boleh dipilih tiap peran (PBI-15 AC7, AC14), sama dengan creation_policy
@@ -44,4 +44,14 @@ export function titleProblem(title: string): TitleProblem | null {
   const stripped = stripBlank(title);
   if (stripped === "") return "TITLE_REQUIRED";
   return Array.from(stripped).length > REPORT_TITLE_MAX ? "TITLE_TOO_LONG" : null;
+}
+
+export interface BuilderChoices {
+  scoreScope: ScoreScope;
+  productLabelMode: ProductLabelMode;
+}
+
+export function normalizeChoices(role: Role | null, choices: BuilderChoices): BuilderChoices {
+  void role;
+  return choices;
 }
