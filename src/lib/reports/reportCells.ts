@@ -21,9 +21,13 @@ export function failureRateText(kind: MeasurementKind, rate: string | null, lang
   return shown === DASH ? DASH : `${shown}%`;
 }
 
-/** Versi model produk apa adanya, atau tanda pisah bila kosong (sama dengan pdf.py). */
+/**
+ * Versi model produk apa adanya, atau tanda pisah bila kosong (sama dengan pdf.py). String kosong juga jadi
+ * tanda pisah, jadi sengaja tidak memakai ?? yang hanya menangkap null.
+ */
 export function modelVersionText(version: string | null): string {
-  return version || DASH;
+  if (!version) return DASH;
+  return version;
 }
 
 /**
