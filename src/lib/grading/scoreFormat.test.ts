@@ -36,3 +36,38 @@ describe("formatScore (PBI-14 AC3)", () => {
     expect(formatScore(value)).toBe("–");
   });
 });
+
+// SCRUM-322 (Fase 0 K3, PBI-26 AC5): a comparison report shows numbers in the report's own language, the same as
+// its PDF (pdf.py format_score), so "0.91" in English and "0,91" in Indonesian. Without a language it stays Indonesian.
+describe("formatScore in the report language (SCRUM-322)", () => {
+  it.each([
+    ["0.91", "0.91"],
+    ["4", "4.00"],
+    ["0", "0.00"],
+    ["100", "100.00"],
+  ])("shows %s as %s in English", (value, shown) => {
+    expect(formatScore(value, "en")).toBe(shown);
+  });
+
+  // Edge: the same half-up rounding as the server in English too. 0.125 is exact in binary, so a banker's
+  // rounding (Python round()) would give 0.12; ROUND_HALF_UP gives 0.13.
+  it.each([
+    ["0.125", "0.13"],
+    ["1.005", "1.01"],
+    ["3.744", "3.74"],
+  ])("rounds %s half up to %s in English", (value, shown) => {
+    expect(formatScore(value, "en")).toBe(shown);
+  });
+
+  it.each([
+    ["0.125", "0,13"],
+    ["100", "100,00"],
+  ])("keeps the Indonesian format for %s when the language is id", (value, shown) => {
+    expect(formatScore(value, "id")).toBe(shown);
+  });
+
+  // Negative: a missing or malformed value is a dash in either language, including the Indonesian "0,91".
+  it.each([null, undefined, "", "0,91", "abc"])("shows a dash for %j in English", (value) => {
+    expect(formatScore(value, "en")).toBe("–");
+  });
+});
