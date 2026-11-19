@@ -87,10 +87,9 @@ describe("ReportRankingTable", () => {
     expect(table.querySelector("img")).toBeNull();
   });
 
-  // K6: on a phone the table scrolls sideways inside its own region, which keyboard users can focus.
-  it("wraps the table in a focusable scroll region named after the section", () => {
+  // K6: on a phone the table scrolls sideways inside its own labelled region (a section, Sonar S6819).
+  it("wraps the table in a scroll region named after the section", () => {
     renderTable();
-    const region = screen.getByRole("region", { name: "Test cases" });
-    expect(region).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("region", { name: "Test cases" }).tagName).toBe("SECTION");
   });
 });

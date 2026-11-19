@@ -29,12 +29,9 @@ export function ReportRankingTable({
   const [rank, product, ...rest] = labels.columns;
 
   return (
-    <div
-      role="region"
-      aria-label={caption}
-      tabIndex={0}
-      className="overflow-x-auto rounded-lg border border-slate-200 focus-visible:outline-2 focus-visible:outline-indigo-600"
-    >
+    // shortcut: no tabIndex (Sonar S6845); Chrome, Edge and Firefox focus a scroll box by keyboard, Safari does not, add a focusable wrapper if Safari users report it.
+    <section aria-label={caption} className="overflow-x-auto rounded-lg border border-slate-200">
+
       <table className="w-full min-w-[980px] border-separate border-spacing-0 text-xs text-slate-800">
         <caption className="sr-only">{caption}</caption>
         <thead className="bg-slate-50 text-slate-600">
@@ -76,6 +73,6 @@ export function ReportRankingTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }
