@@ -23,113 +23,96 @@ export type ReportLabels = {
   months: readonly string[];
 };
 
-/**
- * Teks isi laporan dalam bahasa laporan (Fase 0 K3). Disalin apa adanya dari _LABELS di pembuat PDF server
- * (PR #145, app/modules/reports/pdf.py) supaya web dan PDF memakai kata yang sama. Kalau label di sana berubah,
- * misalnya lewat SCRUM-355 (PBI-26), ubah di sini juga; tes paritasnya akan gagal sampai keduanya sama.
- * Bagian aplikasi di sekitar laporan (breadcrumb, tombol, status) tidak di sini dan tetap Bahasa Indonesia.
+/** Satu teks dalam dua bahasa, Indonesia lalu Inggris, berdampingan supaya pasangannya mudah dicek. */
+type Pair = readonly [id: string, en: string];
+
+type TextKey = Exclude<keyof ReportLabels, "columns" | "splits" | "markers" | "months">;
+
+/*
+ * Teks isi laporan (Fase 0 K3), disalin apa adanya dari _LABELS di pembuat PDF server (PR #145,
+ * app/modules/reports/pdf.py) supaya web dan PDF memakai kata yang sama. Kalau label di sana berubah, misalnya
+ * lewat SCRUM-355 (PBI-26), ubah di sini juga; tes paritasnya gagal sampai keduanya sama. Bagian aplikasi di
+ * sekitar laporan (breadcrumb, tombol, status) tidak di sini dan tetap Bahasa Indonesia.
  */
+const TEXT: Readonly<Record<TextKey, Pair>> = {
+  automatic: ["Otomatis", "Automatic"],
+  manual: ["Manual", "Manual"],
+  notApplicable: ["Tidak berlaku", "Not applicable"],
+  rubric: ["Rubrik", "Rubric"],
+  judgeModel: ["Model penilai", "Judge model"],
+  caseBasis: ["Jumlah kasus dasar perbandingan", "Cases used for comparison"],
+  caseVersions: ["Versi kasus", "Case versions"],
+  created: ["Dibuat", "Created"],
+  devBanner: [
+    "Laporan berisi skor dev, hanya untuk internal dan tidak dapat diterbitkan.",
+    "This report contains dev scores. Internal only, it cannot be published.",
+  ],
+  noResults: ["Tidak ada hasil untuk laporan ini.", "This report has no results."],
+  contact: [
+    `Untuk mendapatkan isi kasus, kirim email ke ${REPORT_CONTACT_EMAIL}.`,
+    `To get the case contents, email ${REPORT_CONTACT_EMAIL}.`,
+  ],
+  deterministic: ["Skor deterministik", "Deterministic score"],
+  llm: ["Skor penilai LLM", "LLM judge score"],
+};
+
+/** Urutan kunci di objek ini adalah urutan kolom tabel, sama dengan PDF. */
+const COLUMNS: Readonly<Record<string, Pair>> = {
+  rank: ["Peringkat", "Rank"],
+  product: ["Produk", "Product"],
+  kind: ["Jenis", "Type"],
+  deterministic: ["Skor deterministik", "Deterministic score"],
+  llm: ["Skor penilai LLM", "LLM judge score"],
+  graded: ["Kasus dinilai", "Cases graded"],
+  basis: ["Kasus dasar", "Basis cases"],
+  failureRate: ["Tingkat kegagalan", "Failure rate"],
+  attempts: ["Percobaan", "Attempts"],
+  modelVersion: ["Versi model", "Model version"],
+  markers: ["Penanda", "Markers"],
+};
+
+const SPLITS: Readonly<Record<ScoreSplit, Pair>> = {
+  test: ["Kasus test", "Test cases"],
+  dev: ["Kasus dev", "Dev cases"],
+  combined: ["Gabungan dev + test", "Dev + test combined"],
+};
+
+/** Penanda D2 yang sudah punya label; kode lain tetap ditampilkan apa adanya (markerLabel). */
+const MARKERS: Readonly<Record<string, Pair>> = {
+  trial: ["Uji Coba", "Trial"],
+  model_version_differs: ["Versi model berbeda", "Different model version"],
+  repetitions_differ: ["Jumlah percobaan berbeda", "Different number of attempts"],
+  manual_date_span_over_7_days: ["Rentang jawaban manual lebih dari 7 hari", "Manual answers span more than 7 days"],
+  refusals: ["Menolak menjawab", "Refused to answer"],
+};
+
+const SIDE: Readonly<Record<ReportLanguage, 0 | 1>> = { id: 0, en: 1 };
+const LOCALE: Readonly<Record<ReportLanguage, string>> = { id: "id-ID", en: "en-US" };
+
+function pickAll<K extends string>(table: Readonly<Record<K, Pair>>, side: 0 | 1): Record<K, string> {
+  return Object.fromEntries(Object.entries<Pair>(table).map(([key, pair]) => [key, pair[side]])) as Record<K, string>;
+}
+
+/** Nama bulan lengkap dari Intl: sama persis dengan daftar bulan di pdf.py untuk kedua bahasa (dicek tes). */
+function monthNames(language: ReportLanguage): string[] {
+  const format = new Intl.DateTimeFormat(LOCALE[language], { month: "long", timeZone: "UTC" });
+  return Array.from({ length: 12 }, (_, month) => format.format(Date.UTC(2026, month, 1)));
+}
+
+function labelsFor(language: ReportLanguage): ReportLabels {
+  const side = SIDE[language];
+  return {
+    ...pickAll(TEXT, side),
+    columns: Object.values(COLUMNS).map((pair) => pair[side]),
+    splits: pickAll(SPLITS, side),
+    markers: pickAll(MARKERS, side),
+    months: monthNames(language),
+  };
+}
+
 export const REPORT_LABELS: Readonly<Record<ReportLanguage, ReportLabels>> = {
-  id: {
-    automatic: "Otomatis",
-    manual: "Manual",
-    notApplicable: "Tidak berlaku",
-    rubric: "Rubrik",
-    judgeModel: "Model penilai",
-    caseBasis: "Jumlah kasus dasar perbandingan",
-    caseVersions: "Versi kasus",
-    created: "Dibuat",
-    devBanner: "Laporan berisi skor dev, hanya untuk internal dan tidak dapat diterbitkan.",
-    noResults: "Tidak ada hasil untuk laporan ini.",
-    contact: `Untuk mendapatkan isi kasus, kirim email ke ${REPORT_CONTACT_EMAIL}.`,
-    columns: [
-      "Peringkat",
-      "Produk",
-      "Jenis",
-      "Skor deterministik",
-      "Skor penilai LLM",
-      "Kasus dinilai",
-      "Kasus dasar",
-      "Tingkat kegagalan",
-      "Percobaan",
-      "Versi model",
-      "Penanda",
-    ],
-    deterministic: "Skor deterministik",
-    llm: "Skor penilai LLM",
-    splits: { test: "Kasus test", dev: "Kasus dev", combined: "Gabungan dev + test" },
-    markers: {
-      trial: "Uji Coba",
-      model_version_differs: "Versi model berbeda",
-      repetitions_differ: "Jumlah percobaan berbeda",
-      manual_date_span_over_7_days: "Rentang jawaban manual lebih dari 7 hari",
-      refusals: "Menolak menjawab",
-    },
-    months: [
-      "Januari",
-      "Februari",
-      "Maret",
-      "April",
-      "Mei",
-      "Juni",
-      "Juli",
-      "Agustus",
-      "September",
-      "Oktober",
-      "November",
-      "Desember",
-    ],
-  },
-  en: {
-    automatic: "Automatic",
-    manual: "Manual",
-    notApplicable: "Not applicable",
-    rubric: "Rubric",
-    judgeModel: "Judge model",
-    caseBasis: "Cases used for comparison",
-    caseVersions: "Case versions",
-    created: "Created",
-    devBanner: "This report contains dev scores. Internal only, it cannot be published.",
-    noResults: "This report has no results.",
-    contact: `To get the case contents, email ${REPORT_CONTACT_EMAIL}.`,
-    columns: [
-      "Rank",
-      "Product",
-      "Type",
-      "Deterministic score",
-      "LLM judge score",
-      "Cases graded",
-      "Basis cases",
-      "Failure rate",
-      "Attempts",
-      "Model version",
-      "Markers",
-    ],
-    deterministic: "Deterministic score",
-    llm: "LLM judge score",
-    splits: { test: "Test cases", dev: "Dev cases", combined: "Dev + test combined" },
-    markers: {
-      trial: "Trial",
-      model_version_differs: "Different model version",
-      repetitions_differ: "Different number of attempts",
-      manual_date_span_over_7_days: "Manual answers span more than 7 days",
-      refusals: "Refused to answer",
-    },
-    months: [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ],
-  },
+  id: labelsFor("id"),
+  en: labelsFor("en"),
 };
 
 /** Label otomatis/manual untuk kolom Jenis (PBI-15 AC5). */
