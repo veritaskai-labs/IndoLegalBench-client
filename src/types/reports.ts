@@ -7,8 +7,8 @@ import type { components } from "@/lib/generated/api";
  * draft server PR #145 (app/modules/reports/schemas.py, SCRUM-320) apa adanya: nama tipe, nama field, dan
  * nilai enum. Decimal dikirim sebagai string, uuid dan waktu juga string.
  *
- * TODO(SCRUM-322): begitu endpoint SCRUM-320 masuk kontrak, ganti setiap tipe di sini dengan alias
- * components["schemas"][...] seperti file tipe lain, lalu hapus salinan ini.
+ * Begitu endpoint SCRUM-320 masuk kontrak, setiap tipe di sini diganti alias components["schemas"][...] seperti
+ * file tipe lain, lalu salinan ini dihapus (Fase 3 SCRUM-322, dicatat di PR #103).
  */
 
 export type SplitTag = components["schemas"]["SplitTag"];
