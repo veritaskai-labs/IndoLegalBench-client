@@ -119,6 +119,14 @@ describe("markerLabel", () => {
     expect(markerLabel({ code: "judge_retried" }, "en")).toBe("judge_retried");
   });
 
+  // Negative: a code that happens to name a built-in object property must not print that property.
+  it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])(
+    "shows the raw code %s instead of an inherited object property",
+    (code) => {
+      expect(markerLabel({ code }, "en")).toBe(code);
+    },
+  );
+
   it.each([
     ["en", "Refused to answer (2)"],
     ["id", "Menolak menjawab (2)"],
