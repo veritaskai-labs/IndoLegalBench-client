@@ -141,9 +141,11 @@ export function measurementKindLabel(kind: MeasurementKind, language: ReportLang
 /**
  * Satu penanda D2 dalam bahasa laporan. Kode yang belum punya label tetap ditampilkan apa adanya, sama dengan
  * pdf.py, supaya penanda baru dari server tidak hilang. Detail yang tidak kosong ditulis dalam kurung.
+ * Object.hasOwn menjaga kode seperti "toString" agar tidak membaca properti bawaan objek.
  */
 export function markerLabel(marker: ReportMarker, language: ReportLanguage): string {
-  const text = REPORT_LABELS[language].markers[marker.code] ?? marker.code;
+  const labels = REPORT_LABELS[language].markers;
+  const text = Object.hasOwn(labels, marker.code) ? labels[marker.code] : marker.code;
   return marker.detail ? `${text} (${marker.detail})` : text;
 }
 
