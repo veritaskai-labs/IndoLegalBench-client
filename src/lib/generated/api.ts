@@ -1509,6 +1509,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/sessions/{session_id}/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unduh skor per kasus satu sesi sebagai CSV
+         * @description Semua kasus sesi ditulis; kasus tanpa skor berstatus `tidak dinilai`. Setiap berkas yang diserahkan disimpan selamanya (AC7), jadi permintaan ini menulis ke basis data; isi yang sama untuk sesi yang sama hanya disimpan sekali.
+         */
+        get: operations["download_session_score_file_reports_sessions__session_id__csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/published-reports": {
         parameters: {
             query?: never;
@@ -10575,6 +10595,55 @@ export interface operations {
             };
             /** @description Laporan, angka, kasus, percobaan, atau bukti tidak ditemukan di balik angka ini (`REPORT_NOT_FOUND`, `REPORT_RESULT_NOT_FOUND`, `REPORT_CASE_NOT_FOUND`, `REPORT_EVIDENCE_NOT_FOUND`, `EVIDENCE_NOT_FOUND`) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_session_score_file_reports_sessions__session_id__csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Berkas CSV skor satu sesi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Sesi pengukuran tidak ada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi belum layak diunduh (D2), atau tidak ada kasus yang boleh dilihat peran ini (`SCORE_FILE_NO_VISIBLE_CASES`). `code` alasan pertama; `reasons` berisi semua alasan dengan kode dan kalimatnya. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
