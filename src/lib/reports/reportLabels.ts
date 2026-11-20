@@ -82,8 +82,8 @@ const SPLITS: Readonly<Record<ScoreSplit, Pair>> = {
   combined: ["Gabungan dev + test", "Dev + test combined"],
 };
 
-/** Penanda D2 yang sudah punya label; kode lain tetap ditampilkan apa adanya (markerLabel). */
-const MARKERS: Readonly<Record<string, Pair>> = {
+/** Satu label per kode di kontrak, jadi kode baru gagal typecheck setelah gen:api. */
+const MARKERS: Readonly<Record<ReportMarkerRead["code"], Pair>> = {
   model_version_differs: ["Versi model berbeda", "Different model version"],
   repetitions_differ: ["Jumlah percobaan berbeda", "Different number of attempts"],
   manual_date_span_over_7_days: ["Rentang jawaban manual lebih dari 7 hari", "Manual answers span more than 7 days"],
