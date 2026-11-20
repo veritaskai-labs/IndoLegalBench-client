@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
+import { httpPublicationGateway } from "@/lib/reports/publicationApi";
 import { httpReportsGateway } from "@/lib/reports/reportsApi";
+import { session } from "@/test/authMock";
 import { devTestReport, firstReport } from "@/test/reportFixtures";
 
 import ComparisonReportPage from "./page";
@@ -17,11 +19,20 @@ vi.mock("@/lib/reports/reportsApi", () => ({
   httpReportsGateway: { list: vi.fn(), detail: vi.fn(), pdf: vi.fn() },
 }));
 
+// SCRUM-335: the Terbitkan section reads the role; null keeps the session loading, as before.
+vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
+vi.mock("@/lib/reports/publicationApi", () => ({
+  httpPublicationGateway: { publish: vi.fn(), listPublished: vi.fn() },
+}));
+
 const detail = vi.mocked(httpReportsGateway.detail);
+const publish = vi.mocked(httpPublicationGateway.publish);
 
 beforeEach(() => {
   params.id = "r-1";
+  session.role = null;
   detail.mockReset();
+  publish.mockReset();
 });
 
 // SCRUM-322 (D3 steps 10-15): reopen one saved report from its frozen results, with the PDF next to it.
@@ -101,5 +112,53 @@ describe("ComparisonReportPage", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Coba lagi" }));
     expect(await screen.findByRole("article")).toBeInTheDocument();
+  });
+});
+
+// SCRUM-335 (PBI-17 AC9, AC12): publishing from the report page.
+describe("ComparisonReportPage publishing", () => {
+  it("lets Admin publish a saved Test report and reloads it as published", async () => {
+    session.role = "admin";
+    detail.mockResolvedValueOnce(firstReport()).mockResolvedValueOnce(firstReport({ status: "published" }));
+    publish.mockResolvedValue({ id: "pub-1", report_id: "r-1", version_no: 1, supersedes_id: null });
+
+    render(<ComparisonReportPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Terbitkan" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Terbitkan laporan?" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Terbitkan" }));
+
+    expect(publish).toHaveBeenCalledWith(firstReport().id, undefined);
+    expect(await screen.findByText("Terbit")).toBeInTheDocument();
+    expect(detail).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps Terbitkan off for a Dev + Test report and says why", async () => {
+    session.role = "admin";
+    detail.mockResolvedValue(devTestReport());
+
+    render(<ComparisonReportPage />);
+
+    expect(await screen.findByRole("button", { name: "Terbitkan" })).toBeDisabled();
+    expect(screen.getByText(/memuat skor dev, jadi tidak bisa diterbitkan/)).toBeInTheDocument();
+  });
+
+  it("shows no Terbitkan to a Viewer", async () => {
+    session.role = "viewer";
+    detail.mockResolvedValue(firstReport());
+
+    render(<ComparisonReportPage />);
+
+    await screen.findByRole("article");
+    expect(screen.queryByRole("button", { name: "Terbitkan" })).toBeNull();
+  });
+
+  it("marks a replaced version for every role", async () => {
+    session.role = "viewer";
+    detail.mockResolvedValue(firstReport({ status: "superseded" }));
+
+    render(<ComparisonReportPage />);
+
+    expect(await screen.findByText(/sudah digantikan versi yang lebih baru/)).toBeInTheDocument();
   });
 });
