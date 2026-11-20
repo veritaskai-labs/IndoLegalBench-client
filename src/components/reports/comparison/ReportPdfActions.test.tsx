@@ -16,7 +16,13 @@ const REPORT_ID = "8f1c2d3e-0000-4000-8000-000000000001";
 const pdfFile = new Blob(["%PDF-1.4"], { type: "application/pdf" });
 
 function gatewayWith(pdf: ReportsGateway["pdf"]): ReportsGateway {
-  return { list: vi.fn(), detail: vi.fn().mockResolvedValue(firstReport()), pdf };
+  return {
+    list: vi.fn(),
+    detail: vi.fn().mockResolvedValue(firstReport()),
+    pdf,
+    eligibleSessions: vi.fn(),
+    create: vi.fn(),
+  };
 }
 
 const createObjectURL = vi.fn(() => "blob:report-pdf");

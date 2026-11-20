@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
 import { firstReport } from "@/test/reportFixtures";
-import type { ReportSummary } from "@/types/reports";
+import type { EligibleSession, ReportCreate, ReportSummary } from "@/types/reports";
 
 import { httpReportsGateway } from "./reportsApi";
 
@@ -101,4 +101,80 @@ describe("httpReportsGateway.pdf (GET /reports/{id}/pdf, D3 step 13)", () => {
     await expect(httpReportsGateway.pdf("r-1")).rejects.toBeInstanceOf(ApiError);
     expect(forbidden).not.toHaveBeenCalled();
   });
+});
+
+// SCRUM-321: the builder page reads every pickable session with its reasons, then sends one POST /reports.
+function eligibleSession(overrides: Partial<EligibleSession> = {}): EligibleSession {
+  return {
+    session_id: "s-1",
+    label: "Sesi A",
+    product_id: "p-1",
+    product_name: "Produk A",
+    created_at: "2026-11-18T09:00:00Z",
+    session_type: "automatic",
+    purpose: "measurement",
+    status: "completed",
+    judge_model_version: "judge-1",
+    eligible: true,
+    reasons: [],
+    ...overrides,
+  } as EligibleSession;
+}
+
+describe("httpReportsGateway.eligibleSessions (GET /reports/eligible-sessions, SCRUM-321)", () => {
+  it.each(["all", "automatic", "manual"] as const)(
+    "asks the server for the %s sessions with the session cookie",
+    async (filter) => {
+      const rows = [eligibleSession(), eligibleSession({ session_id: "s-2", eligible: false })];
+      fetchMock.mockResolvedValue(fakeResponse(200, rows));
+
+      await expect(httpReportsGateway.eligibleSessions(filter)).resolves.toEqual(rows);
+      const [url, init] = fetchMock.mock.calls[0];
+      const { pathname, search } = new URL(url);
+      expect(`${pathname}${search}`).toBe(`/reports/eligible-sessions?measurement_filter=${filter}`);
+      expect(init).toMatchObject({ credentials: "include" });
+    },
+  );
+});
+
+describe("httpReportsGateway.create (POST /reports, SCRUM-321 / PBI-15 AC1)", () => {
+  const body: ReportCreate = {
+    title: "Perbandingan November",
+    session_ids: ["s-1", "s-2"],
+    score_scope: "test",
+    measurement_filter: "all",
+    product_label_mode: "real_name",
+    language: "id",
+  };
+
+  it("sends the form as JSON in one POST and returns the saved report", async () => {
+    const response = { report: { id: "r-9" }, warning: null };
+    fetchMock.mockResolvedValue(fakeResponse(201, response));
+
+    await expect(httpReportsGateway.create(body)).resolves.toEqual(response);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/reports$/);
+    expect(init).toMatchObject({ method: "POST", credentials: "include" });
+    expect(JSON.parse(init.body)).toEqual(body);
+  });
+
+  // Negative: 200 with report null is not a saved report; the gateway passes it through untouched.
+  it("returns the NO_SHARED_CASES answer as it came", async () => {
+    const response = { report: null, warning: "NO_SHARED_CASES" };
+    fetchMock.mockResolvedValue(fakeResponse(200, response));
+
+    await expect(httpReportsGateway.create(body)).resolves.toEqual(response);
+  });
+
+  // Negative (AC9, AC14): the page explains a refused score type or label itself, no jump to /forbidden.
+  it.each(["REPORT_SCOPE_FORBIDDEN", "REPORT_LABEL_MODE_FORBIDDEN"])(
+    "rejects a 403 %s without redirecting to /forbidden",
+    async (code) => {
+      fetchMock.mockResolvedValue(fakeResponse(403, { code, message: "x" }));
+      const forbidden = listenForbidden();
+
+      await expect(httpReportsGateway.create(body)).rejects.toMatchObject({ status: 403, code });
+      expect(forbidden).not.toHaveBeenCalled();
+    },
+  );
 });

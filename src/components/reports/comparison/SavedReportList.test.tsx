@@ -23,7 +23,7 @@ function summary(overrides: Partial<ReportSummary> = {}): ReportSummary {
 }
 
 function gatewayWith(list: ReportsGateway["list"]): ReportsGateway {
-  return { list, detail: vi.fn(), pdf: vi.fn() };
+  return { list, detail: vi.fn(), pdf: vi.fn(), eligibleSessions: vi.fn(), create: vi.fn() };
 }
 
 // SCRUM-322 (D3 step 10): every report is saved when it is made, and readers reopen it from this list. The
