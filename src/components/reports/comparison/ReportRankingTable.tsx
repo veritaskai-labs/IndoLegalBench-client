@@ -39,7 +39,7 @@ export function ReportRankingTable({
             <th scope="col" className={`${CELL} sticky left-0 z-10 w-12 bg-slate-50 text-left font-semibold`}>
               {rank}
             </th>
-            <th scope="col" className={`${CELL} sticky left-12 z-10 bg-slate-50 text-left font-semibold`}>
+            <th scope="col" className={`${CELL} sticky left-12 z-10 min-w-24 bg-slate-50 text-left font-semibold`}>
               {product}
             </th>
             {rest.map((column, index) => (
