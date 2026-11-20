@@ -196,6 +196,41 @@ describe("useReportBuilder: Create (AC1, AC4, AC13)", () => {
     expect(result.current.outcome).toEqual({ kind: "saved", reportId: "r-1" });
   });
 
+  // Edge (AC5): what is sent must be what the page shows as kept. Sending the dropped session too would make
+  // the server drop it silently, which is exactly what the page warns about.
+  it("sends only the sessions the filter keeps, with that filter", async () => {
+    const { result, gateway } = await readyToCreate();
+    pick(result, autoC);
+
+    act(() => result.current.setFilter("automatic"));
+    expect(result.current.picked).toEqual([autoA, autoC]);
+    await act(async () => result.current.submit());
+
+    expect(gateway.create).toHaveBeenCalledWith(
+      expect.objectContaining({ session_ids: ["a-1", "c-1"], measurement_filter: "automatic" }),
+    );
+  });
+
+  // Edge (AC13 b): a dropped session does not take part, so its judge must not raise the warning.
+  it("ignores the judge of a session the filter drops", async () => {
+    const { result } = await readyBuilder();
+    pick(result, manualB, autoC); // judge-1 and judge-2
+
+    act(() => result.current.setFilter("manual"));
+
+    expect(result.current.judgeWarning).toBe(false);
+  });
+
+  // Negative (AC1): 200 with no report is not a saved report; the page must not redirect.
+  it("turns a 200 NO_SHARED_CASES answer into its own outcome", async () => {
+    const create = vi.fn().mockResolvedValue({ report: null, warning: "NO_SHARED_CASES" });
+    const { result } = await readyToCreate(fakeGateway({ create }));
+
+    await act(async () => result.current.submit());
+
+    expect(result.current.outcome).toEqual({ kind: "no_shared_cases" });
+  });
+
   // Negative (AC4, AC13): a 409 becomes every reason at once, not an error string.
   it("turns a 409 into the not comparable outcome with every reason", async () => {
     const conflict = new ApiError(409, "REPORT_NOT_COMPARABLE", null, null, [], null, {
@@ -226,6 +261,7 @@ describe("useReportBuilder: Create (AC1, AC4, AC13)", () => {
       void result.current.submit();
     });
     expect(result.current.submitting).toBe(true);
+    expect(result.current.canSubmit).toBe(false); // the button is disabled, not only guarded
     await act(async () => finish({ report: { id: "r-2" }, warning: null } as ReportCreateResponse));
 
     expect(create).toHaveBeenCalledTimes(1);
