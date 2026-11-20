@@ -43,8 +43,21 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     expect(sessionsRead).toHaveBeenCalledTimes(1);
   });
 
+  // SCRUM-322: Laporan is the menu entry to the saved comparison reports; without this link they open by URL only.
+  it.each<Role>(["viewer", "admin", "contributor"])("links %s to the saved comparison reports", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Laporan perbandingan" });
+    expect(within(section).getByRole("link", { name: "Buka laporan perbandingan" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons",
+    );
+  });
+
   // Developer AI has no Laporan list: the server refuses it (403), so the page keeps the placeholder
-  // and never asks for it.
+  // and never asks for it. Its comparison-report menu waits for an SA decision.
   it("keeps the placeholder for Developer AI and does not ask for the list", () => {
     signedInAs("developer_ai");
 
@@ -55,6 +68,7 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
       screen.getByText("Fitur laporan perbandingan belum tersedia dan akan hadir pada sprint berikutnya."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Hasil penilaian sesi" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Buka laporan perbandingan" })).not.toBeInTheDocument();
     expect(sessionsRead).not.toHaveBeenCalled();
   });
 
