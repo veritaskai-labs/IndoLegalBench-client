@@ -1,4 +1,4 @@
-import type { MeasurementKind, ReportLanguage, ReportMarker, ScoreSplit } from "@/types/reports";
+import type { MeasurementKind, ReportLanguage, ReportMarker, ReportSessionRead, ScoreSplit } from "@/types/reports";
 
 export const REPORT_CONTACT_EMAIL = "indolegalbench@veritask.ai";
 
@@ -14,6 +14,8 @@ export type ReportLabels = {
   devBanner: string;
   noResults: string;
   contact: string;
+  /** Tanda sesi Uji Coba (AC4), dari is_trial, bukan dari penanda D2. */
+  trial: string;
   /** Sebelas kolom tabel peringkat, urutannya sama dengan PDF. */
   columns: readonly string[];
   deterministic: string;
@@ -52,6 +54,7 @@ const TEXT: Readonly<Record<TextKey, Pair>> = {
     `Untuk mendapatkan isi kasus, kirim email ke ${REPORT_CONTACT_EMAIL}.`,
     `To get the case contents, email ${REPORT_CONTACT_EMAIL}.`,
   ],
+  trial: ["Uji Coba", "Trial"],
   deterministic: ["Skor deterministik", "Deterministic score"],
   llm: ["Skor penilai LLM", "LLM judge score"],
 };
@@ -79,7 +82,6 @@ const SPLITS: Readonly<Record<ScoreSplit, Pair>> = {
 
 /** Penanda D2 yang sudah punya label; kode lain tetap ditampilkan apa adanya (markerLabel). */
 const MARKERS: Readonly<Record<string, Pair>> = {
-  trial: ["Uji Coba", "Trial"],
   model_version_differs: ["Versi model berbeda", "Different model version"],
   repetitions_differ: ["Jumlah percobaan berbeda", "Different number of attempts"],
   manual_date_span_over_7_days: ["Rentang jawaban manual lebih dari 7 hari", "Manual answers span more than 7 days"],
@@ -132,7 +134,8 @@ export function markerLabel(marker: ReportMarker, language: ReportLanguage): str
   return marker.detail ? `${text} (${marker.detail})` : text;
 }
 
-/** Semua penanda satu produk untuk satu sel tabel, dipisah titik koma seperti di PDF. */
-export function markersText(markers: readonly ReportMarker[], language: ReportLanguage): string {
-  return markers.map((marker) => markerLabel(marker, language)).join("; ");
+/** Sel Penanda satu produk, sama dengan pdf.py _penanda_sesi: Uji Coba (is_trial) dulu, lalu penanda D2. */
+export function sessionMarkersText(session: ReportSessionRead, language: ReportLanguage): string {
+  const trial = session.is_trial ? [REPORT_LABELS[language].trial] : [];
+  return [...trial, ...(session.markers ?? []).map((marker) => markerLabel(marker, language))].join("; ");
 }

@@ -1,6 +1,6 @@
 import { formatScore } from "@/lib/grading/scoreFormat";
 import { failureRateText, modelVersionText, rankText } from "@/lib/reports/reportCells";
-import { markersText, measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
+import { measurementKindLabel, REPORT_LABELS, sessionMarkersText } from "@/lib/reports/reportLabels";
 import type { ReportRow } from "@/lib/reports/reportSections";
 import type { ReportLanguage } from "@/types/reports";
 
@@ -68,7 +68,7 @@ export function ReportRankingTable({
               <td className={NUMBER}>{failureRateText(session.measurement_kind, result.failure_rate, language)}</td>
               <td className={NUMBER}>{result.repetitions}</td>
               <td className={CELL}>{modelVersionText(result.product_model_version)}</td>
-              <td className={CELL}>{markersText(session.markers, language)}</td>
+              <td className={CELL}>{sessionMarkersText(session, language)}</td>
             </tr>
           ))}
         </tbody>
