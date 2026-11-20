@@ -48,11 +48,19 @@ describe("failureRateText (PBI-15 AC2)", () => {
 
 describe("modelVersionText", () => {
   it("shows the product model version as written", () => {
-    expect(modelVersionText("v2.1")).toBe("v2.1");
+    expect(modelVersionText("v2.1", "real_name", "en")).toBe("v2.1");
   });
 
   it.each([null, ""])("shows a dash for the empty version %j", (version) => {
-    expect(modelVersionText(version)).toBe("–");
+    expect(modelVersionText(version, "real_name", "en")).toBe("–");
+  });
+
+  // AC9: code mode empties the version on purpose; like pdf.py, it reads as hidden, not as never recorded.
+  it.each([
+    ["en", "Hidden"],
+    ["id", "Disamarkan"],
+  ] as const)("shows the version of a code-mode report as hidden in %s", (language, shown) => {
+    expect(modelVersionText(null, "code", language)).toBe(shown);
   });
 });
 

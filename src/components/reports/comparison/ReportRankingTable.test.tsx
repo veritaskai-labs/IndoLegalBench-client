@@ -3,13 +3,17 @@ import { describe, expect, it } from "vitest";
 
 import { reportSections } from "@/lib/reports/reportSections";
 import { firstReport, reportResult, reportSession } from "@/test/reportFixtures";
-import type { ReportLanguage } from "@/types/reports";
+import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
 
 import { ReportRankingTable } from "./ReportRankingTable";
 
-function renderTable(language: ReportLanguage = "en", sessions = firstReport().sessions) {
+function renderTable(
+  language: ReportLanguage = "en",
+  sessions = firstReport().sessions,
+  labelMode: ProductLabelMode = "real_name",
+) {
   const [section] = reportSections(sessions);
-  render(<ReportRankingTable rows={section.rows} language={language} caption="Test cases" />);
+  render(<ReportRankingTable rows={section.rows} language={language} labelMode={labelMode} caption="Test cases" />);
   return screen.getByRole("table", { name: "Test cases" });
 }
 
@@ -55,6 +59,16 @@ describe("ReportRankingTable", () => {
   it("writes one ranked automatic product like the PDF row", () => {
     const cells = within(rowOf(renderTable("en"), "AiYU")).getAllByRole("cell").map((cell) => cell.textContent);
     expect(cells).toEqual(["1", "Automatic", "0.91", "0.87", "50", "42", "1.20%", "3", "v2.1", ""]);
+  });
+
+  // AC9 and K6: a version hidden by code mode reads like the PDF, unlike a version that was never recorded.
+  it.each([
+    ["en", "Hidden"],
+    ["id", "Disamarkan"],
+  ] as const)("shows the model version of a code-mode report as hidden in %s", (language, shown) => {
+    const session = reportSession({ product_label: "Produk A", results: [reportResult({ product_model_version: null })] });
+    const cells = within(rowOf(renderTable(language, [session], "code"), "Produk A")).getAllByRole("cell");
+    expect(cells[8]).toHaveTextContent(shown);
   });
 
   // D1 and K7: no LLM score means no rank; AC2: the failure rate does not apply to a manual product.

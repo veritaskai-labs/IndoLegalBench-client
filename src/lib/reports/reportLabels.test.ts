@@ -62,6 +62,13 @@ describe("REPORT_LABELS parity with the server PDF", () => {
   });
 
   it.each([
+    ["en", "Hidden"],
+    ["id", "Disamarkan"],
+  ] as const)("has the PDF hidden model version label in %s", (language, hidden) => {
+    expect(REPORT_LABELS[language].hidden).toBe(hidden);
+  });
+
+  it.each([
     [
       "en",
       {

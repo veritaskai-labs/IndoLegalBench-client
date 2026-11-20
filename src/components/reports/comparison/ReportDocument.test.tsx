@@ -30,6 +30,11 @@ describe("ReportDocument", () => {
     ).toBeInTheDocument();
   });
 
+  it("hides the model versions of a code-mode report", () => {
+    render(<ReportDocument report={firstReport({ product_label_mode: "code", language: "id" })} />);
+    expect(screen.getAllByText("Disamarkan")).toHaveLength(firstReport().sessions.length);
+  });
+
   // AC7 / D9: a test report, as Viewer and Kontributor receive it, has no dev banner and one section.
   it("shows one Test cases section without a dev banner for a test report", () => {
     render(<ReportDocument report={firstReport()} />);
