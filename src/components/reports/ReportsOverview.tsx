@@ -22,6 +22,7 @@ export function ReportsOverview() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Laporan</h1>
       <ComparisonReportsSection />
+      <PublishedReportsSection />
       {canSeeGradedSessions(auth.user.role) && <GradedSessionsSection />}
     </div>
   );
@@ -43,6 +44,28 @@ function ComparisonReportsSection() {
         className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
       >
         Buka laporan perbandingan
+      </Link>
+    </section>
+  );
+}
+
+/** Laporan terbit untuk semua pengguna yang login (PBI-17 AC9). */
+function PublishedReportsSection() {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId} className="space-y-3">
+      <div>
+        <h2 id={headingId} className="text-base font-semibold text-slate-900">
+          Laporan terbit
+        </h2>
+        <p className="text-sm text-slate-600">Laporan perbandingan yang sudah diterbitkan Admin, versi yang sedang berlaku.</p>
+      </div>
+      <Link
+        href="/reports/published"
+        className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+      >
+        Buka laporan terbit
       </Link>
     </section>
   );

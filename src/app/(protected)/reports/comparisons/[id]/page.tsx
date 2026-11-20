@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 
 import { ReportDocument } from "@/components/reports/comparison/ReportDocument";
 import { ReportPdfActions } from "@/components/reports/comparison/ReportPdfActions";
+import { ReportPublishActions } from "@/components/reports/publication/ReportPublishActions";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
@@ -23,6 +24,7 @@ function currentLabel(report: ReturnType<typeof useReport>): string | null {
  * Satu laporan perbandingan yang dibuka ulang dari hasil beku (PBI-15, D3 langkah 10–15). Bagian aplikasi
  * (breadcrumb, status, tombol) berbahasa Indonesia; isi laporan mengikuti bahasa laporan (Fase 0 K3). Laporan
  * tersimpan milik orang lain hanya untuk Admin (D9): server menolaknya, dan halaman tidak menawarkan PDF.
+ * Penerbitan (PBI-17 SCRUM-335) ada di bawah tombol: Admin menerbitkan, semua peran melihat tanda versi lama.
  */
 export default function ComparisonReportPage() {
   const reportId = decodeRouteParam(useParams<{ id: string }>().id);
@@ -61,6 +63,7 @@ export default function ComparisonReportPage() {
             </div>
             <ReportPdfActions reportId={report.data.id} />
           </div>
+          <ReportPublishActions report={report.data} onChanged={report.reload} />
           <ReportDocument report={report.data} />
         </>
       )}
