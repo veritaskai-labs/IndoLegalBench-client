@@ -49,11 +49,12 @@ describe("httpReportsGateway.list (GET /reports, D3 step 10)", () => {
       created_by: report.created_by,
       created_at: report.created_at,
     };
-    fetchMock.mockResolvedValue(fakeResponse(200, [summary]));
+    // server#145: GET /reports is paged ({items, total, page, size}, size 20 by default, 100 at most).
+    fetchMock.mockResolvedValue(fakeResponse(200, { items: [summary], total: 1, page: 1, size: 100 }));
 
     await expect(httpReportsGateway.list()).resolves.toEqual([summary]);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/reports$/);
+    expect(url).toMatch(/\/reports\?size=100$/);
     expect(init).toMatchObject({ credentials: "include" });
   });
 });
