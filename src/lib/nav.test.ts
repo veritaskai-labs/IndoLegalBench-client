@@ -32,7 +32,12 @@ describe("navForRole", () => {
 
   // PBI-11 AC1 & D10: Admin and Developer AI can run automatic measurements.
   it("gives developer AI the suites, execution and report pages, without the dashboard (PBI-11, PBI-15)", () => {
-    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi", "Laporan"]);
+    expect(labels("developer_ai")).toEqual([
+      "Suite dan kasus",
+      "Eksekusi",
+      "Pemantauan AI",
+      "Laporan",
+    ]);
   });
 
   it("gives admin the admin pages and reports but not the review queue", () => {
@@ -41,6 +46,7 @@ describe("navForRole", () => {
       "Suite dan kasus",
       "Penyedia",
       "Eksekusi",
+      "Pemantauan AI",
       "Pengukuran manual",
       "Rubrik",
       "Laporan",
@@ -96,6 +102,12 @@ describe("navForRole", () => {
     const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
     const withRuns = roles.filter((role) => hrefs(role).includes("/runs"));
     expect(withRuns).toEqual(["admin", "developer_ai"]);
+  });
+
+  it("offers AI monitoring to admin and developer AI only", () => {
+    const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
+    const withMonitoring = roles.filter((role) => hrefs(role).includes("/ai-monitoring"));
+    expect(withMonitoring).toEqual(["admin", "developer_ai"]);
   });
 
   // PBI-22 AC11: Admin and Contributor can view manual measurements.
