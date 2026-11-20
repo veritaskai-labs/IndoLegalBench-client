@@ -37,7 +37,12 @@ export function ReportDocument({ report }: Readonly<{ report: ReportDetail }>) {
         sections.map((section) => (
           <section key={section.split} className="space-y-3">
             <h2 className="text-base font-semibold text-slate-900">{labels.splits[section.split]}</h2>
-            <ReportRankingTable rows={section.rows} language={language} caption={labels.splits[section.split]} />
+            <ReportRankingTable
+              rows={section.rows}
+              language={language}
+              labelMode={report.product_label_mode}
+              caption={labels.splits[section.split]}
+            />
             <ReportBarChart rows={section.rows} language={language} />
           </section>
         ))

@@ -1,5 +1,5 @@
 import { formatScore } from "@/lib/grading/scoreFormat";
-import type { MeasurementKind, ReportDetail, ReportLanguage } from "@/types/reports";
+import type { MeasurementKind, ProductLabelMode, ReportDetail, ReportLanguage } from "@/types/reports";
 
 import { REPORT_LABELS } from "./reportLabels";
 
@@ -21,11 +21,9 @@ export function failureRateText(kind: MeasurementKind, rate: string | null, lang
   return shown === DASH ? DASH : `${shown}%`;
 }
 
-/**
- * Versi model produk apa adanya, atau tanda pisah bila kosong (sama dengan pdf.py). String kosong juga jadi
- * tanda pisah, jadi sengaja tidak memakai ?? yang hanya menangkap null.
- */
-export function modelVersionText(version: string | null): string {
+/** Sama dengan pdf.py _versi_model: mode kode (AC9) menyamarkan versi, berbeda dari versi yang tidak tercatat. */
+export function modelVersionText(version: string | null, labelMode: ProductLabelMode, language: ReportLanguage): string {
+  if (labelMode === "code") return REPORT_LABELS[language].hidden;
   if (!version) return DASH;
   return version;
 }

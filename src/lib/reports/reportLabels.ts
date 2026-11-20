@@ -16,6 +16,7 @@ export type ReportLabels = {
   contact: string;
   /** Tanda sesi Uji Coba (AC4), dari is_trial, bukan dari penanda D2. */
   trial: string;
+  hidden: string;
   /** Sebelas kolom tabel peringkat, urutannya sama dengan PDF. */
   columns: readonly string[];
   deterministic: string;
@@ -55,6 +56,7 @@ const TEXT: Readonly<Record<TextKey, Pair>> = {
     `To get the case contents, email ${REPORT_CONTACT_EMAIL}.`,
   ],
   trial: ["Uji Coba", "Trial"],
+  hidden: ["Disamarkan", "Hidden"],
   deterministic: ["Skor deterministik", "Deterministic score"],
   llm: ["Skor penilai LLM", "LLM judge score"],
 };

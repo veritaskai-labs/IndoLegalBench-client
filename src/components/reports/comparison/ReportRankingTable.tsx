@@ -2,7 +2,7 @@ import { formatScore } from "@/lib/grading/scoreFormat";
 import { failureRateText, modelVersionText, rankText } from "@/lib/reports/reportCells";
 import { measurementKindLabel, REPORT_LABELS, sessionMarkersText } from "@/lib/reports/reportLabels";
 import type { ReportRow } from "@/lib/reports/reportSections";
-import type { ReportLanguage } from "@/types/reports";
+import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
 
 const CELL = "px-3 py-2 align-top";
 const NUMBER = `${CELL} text-right tabular-nums`;
@@ -23,8 +23,9 @@ export function ScoreCell({ score, language }: Readonly<{ score: string | null; 
 export function ReportRankingTable({
   rows,
   language,
+  labelMode,
   caption,
-}: Readonly<{ rows: readonly ReportRow[]; language: ReportLanguage; caption: string }>) {
+}: Readonly<{ rows: readonly ReportRow[]; language: ReportLanguage; labelMode: ProductLabelMode; caption: string }>) {
   const labels = REPORT_LABELS[language];
   const [rank, product, ...rest] = labels.columns;
 
@@ -67,7 +68,7 @@ export function ReportRankingTable({
               <td className={NUMBER}>{result.cases_basis_count}</td>
               <td className={NUMBER}>{failureRateText(session.measurement_kind, result.failure_rate, language)}</td>
               <td className={NUMBER}>{result.repetitions}</td>
-              <td className={CELL}>{modelVersionText(result.product_model_version)}</td>
+              <td className={CELL}>{modelVersionText(result.product_model_version, labelMode, language)}</td>
               <td className={CELL}>{sessionMarkersText(session, language)}</td>
             </tr>
           ))}
