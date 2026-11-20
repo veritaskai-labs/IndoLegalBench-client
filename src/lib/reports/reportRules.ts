@@ -17,12 +17,11 @@ export const SCORE_SCOPE_LABEL: Readonly<Record<ScoreScope, string>> = {
 
 const HIDDEN_REPORT = "Laporan tidak ditemukan atau Anda tidak punya akses untuk membukanya.";
 
-/**
- * Laporan tersimpan milik orang lain hanya bisa dibuka Admin (D9). Server bisa menjawab 403 atau 404, dan
- * keduanya diberi pesan yang sama supaya halaman tidak membocorkan bahwa laporan itu ada.
- */
+/** Satu pesan untuk semua status ini supaya halaman tidak membocorkan laporan milik orang lain (D9); 422 = id salah ketik. */
+const HIDDEN_STATUSES = new Set([403, 404, 422]);
+
 function isHiddenReport(error: unknown): boolean {
-  return error instanceof ApiError && (error.status === 403 || error.status === 404);
+  return error instanceof ApiError && HIDDEN_STATUSES.has(error.status);
 }
 
 export function reportErrorMessage(error: unknown): string {
