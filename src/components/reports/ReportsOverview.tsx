@@ -4,36 +4,25 @@ import Link from "next/link";
 import { useId } from "react";
 
 import { GradedSessionList } from "@/components/grading/GradedSessionList";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { useGradedSessions } from "@/hooks/useGradedSessions";
 import { canSeeGradedSessions } from "@/lib/grading/gradingRules";
 
 /**
- * Isi halaman Laporan. Admin, Viewer, dan Kontributor membaca hasil penilaian sesi di sini (PBI-14
- * AC8, PBI-24 AC10; keputusan PO: Viewer tidak membuka Eksekusi) dan laporan perbandingan (PBI-15). Peran lain
- * tetap melihat placeholder; menu Developer AI menunggu keputusan SA.
+ * Semua peran membuka laporan perbandingan (PBI-15, D9). Hasil penilaian sesi hanya untuk Admin, Viewer, dan
+ * Kontributor (PBI-14 AC8, PBI-24 AC10), karena server menolaknya untuk Developer AI.
  */
 export function ReportsOverview() {
   const auth = useAuth();
   if (auth.status === "loading") return <LoadingState />;
-
-  const role = auth.status === "authenticated" ? auth.user.role : null;
-  if (!canSeeGradedSessions(role)) {
-    return (
-      <PlaceholderPage
-        title="Halaman Laporan"
-        description="Fitur laporan perbandingan belum tersedia dan akan hadir pada sprint berikutnya."
-      />
-    );
-  }
+  if (auth.status !== "authenticated") return null;
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Laporan</h1>
       <ComparisonReportsSection />
-      <GradedSessionsSection />
+      {canSeeGradedSessions(auth.user.role) && <GradedSessionsSection />}
     </div>
   );
 }
