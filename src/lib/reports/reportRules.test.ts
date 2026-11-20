@@ -41,8 +41,15 @@ describe("reportErrorMessage", () => {
     );
   });
 
-  // Boundary: 402 and 405 sit next to 403 and 404 and must not be read as "not allowed".
-  it.each([400, 402, 405, 500])("falls back to a retry message for %s", (status) => {
+  // Negative: the id comes from the URL; the server answers 422 for one that is not a uuid, and a retry never helps.
+  it("explains a mistyped report address (422) as not found", () => {
+    expect(reportErrorMessage(new ApiError(422, "ANY"))).toBe(
+      "Laporan tidak ditemukan atau Anda tidak punya akses untuk membukanya.",
+    );
+  });
+
+  // Boundary: 402, 405, 421 and 423 sit next to the not-found codes and must not be read as "not found".
+  it.each([400, 402, 405, 421, 423, 500])("falls back to a retry message for %s", (status) => {
     expect(reportErrorMessage(new ApiError(status, "ANY"))).toBe("Gagal memuat laporan. Coba lagi.");
   });
 
