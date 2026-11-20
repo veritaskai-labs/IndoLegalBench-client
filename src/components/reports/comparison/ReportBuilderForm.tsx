@@ -344,9 +344,12 @@ export function ReportBuilderForm({ gateway = httpReportsGateway }: Readonly<{ g
           Pilih satu sesi untuk setiap produk yang ingin dibandingkan. Laporan langsung tersimpan saat dibuat.
         </p>
       </div>
-      {sessions.status === "loading" && <LoadingState label="Memuat daftar sesi…" />}
+      {/* Peran belum diketahui berarti belum ada jenis nilai yang boleh ditawarkan (allowedScoreScopes). */}
+      {role === null && <LoadingState label="Memuat akun Anda…" />}
+      {role !== null && sessions.status === "loading" && <LoadingState label="Memuat daftar sesi…" />}
       {sessions.status === "error" && <ErrorState variant="card" message={sessions.message} onRetry={sessions.reload} />}
-      {sessions.status === "ready" &&
+      {role !== null &&
+        sessions.status === "ready" &&
         (sessions.data.length === 0 ? (
           <EmptyState
             title="Belum ada sesi yang bisa dipilih"
