@@ -19,6 +19,10 @@ describe("entityLabel", () => {
     expect(entityLabel("judge_provider")).toBe("Provider penilai");
   });
 
+  it("names the report entity that the server audits since #146", () => {
+    expect(entityLabel("report")).toBe("Laporan");
+  });
+
   it("falls back to the raw type for an entity the client does not know yet", () => {
     expect(entityLabel("grading_run")).toBe("grading_run");
   });

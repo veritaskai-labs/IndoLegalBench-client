@@ -31,8 +31,8 @@ describe("navForRole", () => {
   });
 
   // PBI-11 AC1 & D10: Admin and Developer AI can run automatic measurements.
-  it("gives developer AI the suites and execution pages, without the dashboard (PBI-11, SCRUM-184)", () => {
-    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi"]);
+  it("gives developer AI the suites, execution and report pages, without the dashboard (PBI-11, PBI-15)", () => {
+    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi", "Laporan"]);
   });
 
   it("gives admin the admin pages and reports but not the review queue", () => {
@@ -68,13 +68,13 @@ describe("navForRole", () => {
     expect(withSuites).toEqual(["contributor", "admin", "developer_ai"]);
   });
 
-  // PBI-24 AC10: Contributor and Admin get the Viewer right to read reports.
-  it("offers the reports page to admin, contributor and viewer", () => {
+  // PBI-24 AC10: Contributor and Admin get the Viewer right to read reports. D9: Developer AI reads reports too.
+  it("offers the reports page to every role", () => {
     const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
 
     const withReports = roles.filter((role) => hrefs(role).includes("/reports"));
 
-    expect(withReports).toEqual(["contributor", "admin", "viewer"]);
+    expect(withReports).toEqual(["contributor", "admin", "viewer", "developer_ai"]);
   });
 
   // D10: Admin does not review cases, so the queue is for the contributor only.
