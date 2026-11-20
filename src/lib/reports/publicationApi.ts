@@ -27,16 +27,18 @@ const PAGE_SIZE = 100;
 
 /**
  * Semua versi yang sedang terbit, halaman demi halaman. Daftar terbit dan pilihan Ganti versi harus lengkap
- * (AC9), jadi halaman berikutnya diminta sampai jumlahnya mencapai total. Halaman kosong menghentikan perulangan,
- * supaya daftar yang menyusut di tengah jalan tidak membuat permintaan tanpa akhir.
+ * (AC9), jadi halaman berikutnya diminta sampai jumlahnya mencapai total. Halaman kosong atau tidak penuh
+ * menghentikan perulangan, supaya daftar yang berubah di tengah jalan tidak membuat permintaan tanpa akhir.
+ * Versi yang terbit di antara dua permintaan menggeser daftar, jadi baris yang sama bisa muncul lagi di halaman
+ * berikutnya; baris dengan id yang sudah ada dilewati.
  */
 async function readAllPublished(): Promise<PublishedReportListItem[]> {
-  const all: PublishedReportListItem[] = [];
+  const all = new Map<string, PublishedReportListItem>();
   for (let page = 1; ; page += 1) {
     const result = await apiFetch<PublishedReportPage>(`/published-reports?page=${page}&size=${PAGE_SIZE}`, {
       silentForbidden: true,
     });
-    all.push(...result.items);
-    if (result.items.length === 0 || all.length >= result.total) return all;
+    for (const item of result.items) if (!all.has(item.id)) all.set(item.id, item);
+    if (result.items.length < PAGE_SIZE || all.size >= result.total) return [...all.values()];
   }
 }
