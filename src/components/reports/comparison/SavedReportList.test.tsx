@@ -83,6 +83,20 @@ describe("SavedReportList", () => {
     expect(screen.getByText("Digantikan")).toBeInTheDocument();
   });
 
+  // SCRUM-321: every role may make a report (server _create_roles), so the way in is shown to everyone, in every
+  // state of the list. Edge: an empty list or a failed load is exactly when a reader looks for how to make one.
+  it.each([
+    ["loading", vi.fn(() => new Promise<ReportSummary[]>(() => {})), () => screen.findByRole("status")],
+    ["empty", vi.fn().mockResolvedValue([]), () => screen.findByText("Belum ada laporan tersimpan")],
+    ["failed", vi.fn().mockRejectedValue(new ApiError(500, "ANY")), () => screen.findByRole("alert")],
+    ["filled", vi.fn().mockResolvedValue([summary()]), () => screen.findByRole("table")],
+  ] as const)("links to the report builder when the list is %s", async (_state, list, inState) => {
+    render(<SavedReportList gateway={gatewayWith(list)} />);
+    // Wait until the list is really in that state, so the link is checked there and not only while loading.
+    await inState();
+    expect(screen.getByRole("link", { name: "Buat laporan" })).toHaveAttribute("href", "/reports/comparisons/new");
+  });
+
   // The id travels in the URL, so it is encoded the same way the page decodes it.
   it("links each title to its report page", async () => {
     render(<SavedReportList gateway={gatewayWith(vi.fn().mockResolvedValue([summary({ id: "a b/c" })]))} />);
