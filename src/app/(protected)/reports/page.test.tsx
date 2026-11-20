@@ -43,17 +43,28 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     expect(sessionsRead).toHaveBeenCalledTimes(1);
   });
 
-  // Developer AI has no Laporan list: the server refuses it (403), so the page keeps the placeholder
-  // and never asks for it.
-  it("keeps the placeholder for Developer AI and does not ask for the list", () => {
+  // SCRUM-322: Laporan is the menu entry to the saved comparison reports; without this link they open by URL only.
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the saved comparison reports", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Laporan perbandingan" });
+    expect(within(section).getByRole("link", { name: "Buka laporan perbandingan" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons",
+    );
+  });
+
+  // D9 (SA): Developer AI reads comparison reports, including dev-score ones, but the server refuses it the
+  // graded-session list (403), so that list is never asked for.
+  it("shows Developer AI the comparison reports without the graded sessions", () => {
     signedInAs("developer_ai");
 
     render(<ReportsPage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Halaman Laporan" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Fitur laporan perbandingan belum tersedia dan akan hadir pada sprint berikutnya."),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Laporan" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Laporan perbandingan" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Hasil penilaian sesi" })).not.toBeInTheDocument();
     expect(sessionsRead).not.toHaveBeenCalled();
   });

@@ -1317,6 +1317,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar laporan tersimpan dan terbit yang boleh dilihat */
+        get: operations["list_reports_reports_get"];
+        put?: never;
+        /**
+         * Buat laporan perbandingan dari sesi pengukuran
+         * @description Hitung dan simpan satu laporan beku (PBI-15 AC1, AC2, AC6, AC7, AC9, AC14).
+         */
+        post: operations["create_report_reports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/eligible-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar sesi beserta kelayakannya untuk laporan
+         * @description Semua sesi aktif dengan eligible dan alasannya, supaya halaman tidak menunggu 409.
+         *
+         *     eligible hanya menilai satu sesi; syarat antar sesi (rubrik, penilai, suite) tetap dicek
+         *     saat POST /reports (PBI-15 AC2, AC4).
+         */
+        get: operations["list_eligible_sessions_reports_eligible_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buka ulang satu laporan dari hasil beku */
+        get: operations["get_report_reports__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unduh laporan sebagai PDF */
+        get: operations["download_report_pdf_reports__report_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-logs": {
         parameters: {
             query?: never;
@@ -2014,7 +2092,7 @@ export interface components {
          * @description Jenis objek yang dicatat, sesuai katalog event D6a.
          * @enum {string}
          */
-        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log" | "measurement_session" | "rubric_version" | "judge_provider";
+        AuditEntityType: "case" | "case_version" | "review" | "suite" | "ai_product" | "user" | "call_log" | "measurement_session" | "rubric_version" | "judge_provider" | "report";
         /**
          * AuditLogRead
          * @description Satu catatan audit, lengkap untuk dibuka kembali sebagai bukti (AC4).
@@ -2558,6 +2636,66 @@ export interface components {
             needs_reassignment: number | null;
             /** @description Hanya Admin: sesi terbaru yang belum diarsipkan. null untuk peran lain atau bila belum ada pengukuran. */
             latest_run?: components["schemas"]["LatestRunSummary"] | null;
+        };
+        /**
+         * EligibleSessionRead
+         * @description Satu sesi dan apakah ia layak jadi dasar laporan.
+         *
+         *     eligible hanya soal sesi itu sendiri. Dua sesi layak masih bisa mendapat 409
+         *     REPORT_NOT_COMPARABLE bila rubrik, penilai, atau suite-nya berbeda.
+         */
+        EligibleSessionRead: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /**
+             * Label
+             * @description Nama sesi, untuk membedakan dua sesi dari produk yang sama
+             */
+            label: string;
+            /**
+             * Product Id
+             * Format: uuid
+             * @description Id produk; dua sesi dengan product_id sama tidak boleh dalam satu laporan
+             */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /**
+             * Created At
+             * @description Waktu sesi dibuat
+             */
+            created_at: string | null;
+            session_type: components["schemas"]["SessionType"];
+            purpose: components["schemas"]["SessionPurpose"];
+            status: components["schemas"]["SessionStatus"];
+            /**
+             * Judge Model Version
+             * @description Versi model penilai yang menilai sesi; kosong bila belum dinilai
+             */
+            judge_model_version: string | null;
+            /** Eligible */
+            eligible: boolean;
+            /**
+             * Reasons
+             * @description Semua alasan sesi belum layak; kosong bila eligible
+             */
+            reasons: components["schemas"]["EligibleSessionReasonRead"][];
+        };
+        /** EligibleSessionReasonRead */
+        EligibleSessionReasonRead: {
+            /**
+             * Code
+             * @description Kode alasan, misalnya SESSION_NOT_GRADED atau SESSION_CANCELLED
+             */
+            code: string;
+            /**
+             * Message
+             * @description Pesan siap tampil untuk pengguna
+             */
+            message: string;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -3699,6 +3837,17 @@ export interface components {
             role: components["schemas"]["Role"];
         };
         /**
+         * MeasurementFilter
+         * @enum {string}
+         */
+        MeasurementFilter: "automatic" | "manual" | "all";
+        /**
+         * MeasurementKind
+         * @description Label otomatis/manual per produk, salinan measurement_sessions.session_type (AC5).
+         * @enum {string}
+         */
+        MeasurementKind: "automatic" | "manual";
+        /**
          * MeasurementPurpose
          * @description Pengukuran Resmi atau Uji Coba (PBI-11 AC1, D2 measurement_sessions.purpose).
          * @enum {string}
@@ -3805,6 +3954,17 @@ export interface components {
             /** Size */
             size: number;
         };
+        /** Page[ReportSummary] */
+        Page_ReportSummary_: {
+            /** Items */
+            items: components["schemas"]["ReportSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
         /** Page[SuiteRead] */
         Page_SuiteRead_: {
             /** Items */
@@ -3851,6 +4011,12 @@ export interface components {
              */
             assigned_at: string;
         };
+        /**
+         * ProductLabelMode
+         * @description Nama asli atau kode produk, dipilih Admin saat membuat laporan (AC9).
+         * @enum {string}
+         */
+        ProductLabelMode: "real_name" | "code";
         /**
          * ProductPurpose
          * @description Untuk apa daftar pilihan produk dipakai.
@@ -4042,6 +4208,387 @@ export interface components {
              * @description ID penugasan lama yang digantikan
              */
             replaced_assignment_id: string;
+        };
+        /**
+         * ReportCaseBasisRead
+         * @description Satu kasus dasar perhitungan. Hanya kode dan versi, tanpa isi kasus (D9).
+         */
+        ReportCaseBasisRead: {
+            /** Case Code */
+            case_code: string;
+            /** Case Version No */
+            case_version_no: number;
+            split_tag: components["schemas"]["SplitTag"];
+        };
+        /**
+         * ReportCreate
+         * @description Permintaan membuat laporan perbandingan dari beberapa sesi pengukuran.
+         */
+        ReportCreate: {
+            /**
+             * Title
+             * @description Judul laporan. Karakter kosong di tepi, termasuk yang tak terlihat, dibuang.
+             */
+            title: string;
+            /**
+             * Session Ids
+             * @description Sesi yang dibandingkan, satu sesi per produk, urut seperti dikirim. Tidak ada batas jumlah. Minimal dua produk dicek server (409 NEED_AT_LEAST_TWO_PRODUCTS).
+             */
+            session_ids: string[];
+            /** @description Jenis nilai: test, dev, atau dev_test. dev dan dev_test hanya untuk Admin dan Developer AI; peran lain mendapat 403 REPORT_SCOPE_FORBIDDEN. */
+            score_scope: components["schemas"]["ScoreScope"];
+            /**
+             * @description Saring sesi otomatis atau manual saja; bawaannya semuanya.
+             * @default all
+             */
+            measurement_filter: components["schemas"]["MeasurementFilter"];
+            /**
+             * @description Nama asli (bawaan) atau kode Product A, B, ... Hanya Admin yang boleh memakai kode (403 REPORT_LABEL_MODE_FORBIDDEN).
+             * @default real_name
+             */
+            product_label_mode: components["schemas"]["ProductLabelMode"];
+            /**
+             * @description Bahasa laporan dan PDF-nya.
+             * @default en
+             */
+            language: components["schemas"]["ReportLanguage"];
+        };
+        /**
+         * ReportCreateResponse
+         * @description 201 bila laporan tersimpan. 200 dengan report kosong bila tidak ada kasus yang sama.
+         */
+        ReportCreateResponse: {
+            /** @description Laporan yang tersimpan; kosong bila hanya ada peringatan */
+            report: components["schemas"]["ReportRead"] | null;
+            /**
+             * Warning
+             * @description NO_SHARED_CASES: tidak ada kasus yang sama, tidak ada angka perbandingan
+             */
+            warning?: string | null;
+        };
+        /**
+         * ReportDetail
+         * @description Laporan lengkap untuk dibuka ulang dan dicetak ke PDF (GET /reports/{id}).
+         */
+        ReportDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            score_scope: components["schemas"]["ScoreScope"];
+            /** Has Dev Scores */
+            has_dev_scores: boolean;
+            status: components["schemas"]["ReportStatus"];
+            language: components["schemas"]["ReportLanguage"];
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            measurement_filter: components["schemas"]["MeasurementFilter"];
+            /** @default real_name */
+            product_label_mode: components["schemas"]["ProductLabelMode"];
+            /** Rubric Version No */
+            rubric_version_no: number | null;
+            /** Judge Model Name */
+            judge_model_name: string | null;
+            /** Case Basis Count */
+            case_basis_count: number;
+            /** Sessions */
+            sessions: components["schemas"]["ReportDetailSessionRead"][];
+            /** Case Basis */
+            case_basis: components["schemas"]["ReportCaseBasisRead"][];
+        };
+        /**
+         * ReportDetailResultRead
+         * @description Satu baris report_results di laporan tersimpan. Skor dua desimal, tanpa persen (AC6).
+         */
+        ReportDetailResultRead: {
+            score_split: components["schemas"]["ScoreSplit"];
+            /** Cases Graded Count */
+            cases_graded_count: number;
+            /** Cases Basis Count */
+            cases_basis_count: number;
+            /** Det Score */
+            det_score: string | null;
+            /** Llm Score */
+            llm_score: string | null;
+            /**
+             * Failure Rate
+             * @description Persen dari total upaya; NULL untuk manual
+             */
+            failure_rate: string | null;
+            /** Rank */
+            rank: number | null;
+            /** Repetitions */
+            repetitions: number;
+            /**
+             * Product Model Version
+             * @description NULL di laporan mode kode, karena versi model biasanya menyebut produknya
+             */
+            product_model_version: string | null;
+            /** Judge Model Version */
+            judge_model_version: string | null;
+        };
+        /**
+         * ReportDetailSessionRead
+         * @description Satu sesi (satu produk) di laporan tersimpan beserta hasil bekunya.
+         *
+         *     Tanpa session_id dan product_id: di laporan mode kode (AC9) keduanya membuka produk mana
+         *     yang ada di balik kode (review #145). Klien memakai product_label atau urutan daftar.
+         */
+        ReportDetailSessionRead: {
+            /**
+             * Product Label
+             * @description Nama asli atau kode, dipilih Admin saat membuat
+             */
+            product_label: string;
+            measurement_kind: components["schemas"]["MeasurementKind"];
+            /**
+             * Is Trial
+             * @default false
+             */
+            is_trial: boolean;
+            /** Markers */
+            markers?: components["schemas"]["ReportMarkerRead"][];
+            /** Results */
+            results: components["schemas"]["ReportDetailResultRead"][];
+        };
+        /**
+         * ReportLanguage
+         * @description Bahasa laporan dan PDF-nya. Bawaan Inggris (PBI-26 AC1).
+         * @enum {string}
+         */
+        ReportLanguage: "en" | "id";
+        /**
+         * ReportMarkerCode
+         * @description Kode penanda D2 per sesi di report_sessions.markers (keputusan SA, 19 Nov).
+         *
+         *     Uji Coba tidak punya kode di sini: disimpan hanya di is_trial supaya sumbernya satu.
+         * @enum {string}
+         */
+        ReportMarkerCode: "model_version_differs" | "repetitions_differ" | "manual_date_span_over_7_days" | "refusals";
+        /**
+         * ReportMarkerRead
+         * @description Satu penanda D2 dari report_sessions.markers. Dipakai POST dan riwayat (SCRUM-320).
+         */
+        ReportMarkerRead: {
+            code: components["schemas"]["ReportMarkerCode"];
+            /**
+             * Detail
+             * @description Keterangan tambahan, misalnya jumlah
+             */
+            detail?: string | null;
+        };
+        /**
+         * ReportNotComparableBody
+         * @description 409 REPORT_NOT_COMPARABLE: semua alasan sekaligus, bukan hanya yang pertama.
+         */
+        ReportNotComparableBody: {
+            /** Code */
+            code: string;
+            /**
+             * Message
+             * @example No platform account is mapped to this identity.
+             */
+            message: string;
+            /**
+             * Field
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].links[0].pasal
+             */
+            field?: string | null;
+            /**
+             * Selection Errors
+             * @description NEED_AT_LEAST_TWO_PRODUCTS atau DUPLICATE_PRODUCT
+             */
+            selection_errors: string[];
+            /**
+             * Ineligible
+             * @description Sesi yang belum layak dan kode alasannya, misalnya SESSION_CANCELLED
+             */
+            ineligible: {
+                [key: string]: string[];
+            };
+            /** Rejections */
+            rejections: components["schemas"]["ReportRejectionRead"][];
+        };
+        /** ReportRead */
+        ReportRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            score_scope: components["schemas"]["ScoreScope"];
+            /** Has Dev Scores */
+            has_dev_scores: boolean;
+            measurement_filter: components["schemas"]["MeasurementFilter"];
+            product_label_mode: components["schemas"]["ProductLabelMode"];
+            language: components["schemas"]["ReportLanguage"];
+            status: components["schemas"]["ReportStatus"];
+            /**
+             * Rubric Version Id
+             * Format: uuid
+             */
+            rubric_version_id: string;
+            /** Judge Model Name */
+            judge_model_name: string;
+            /**
+             * Case Basis Count
+             * @description Jumlah kasus yang dijawab semua produk
+             */
+            case_basis_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Sessions */
+            sessions: components["schemas"]["ReportSessionRead"][];
+        };
+        /** ReportRejectionRead */
+        ReportRejectionRead: {
+            /**
+             * Requirement
+             * @description RUBRIC_VERSION, JUDGE_MODEL, atau SUITE_VERSION
+             */
+            requirement: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * ReportResultRead
+         * @description Angka beku satu produk untuk satu jenis skor. Skor 0 sampai 1, dua digit desimal.
+         */
+        ReportResultRead: {
+            score_split: components["schemas"]["ScoreSplit"];
+            /**
+             * Cases Graded Count
+             * @description Kasus yang dinilai untuk produk ini
+             */
+            cases_graded_count: number;
+            /**
+             * Cases Basis Count
+             * @description Kasus yang menjadi dasar perbandingan
+             */
+            cases_basis_count: number;
+            /**
+             * Det Score
+             * @description Skor jalur deterministik
+             */
+            det_score: string | null;
+            /**
+             * Llm Score
+             * @description Skor penilai LLM, terpisah dari deterministik
+             */
+            llm_score: string | null;
+            /**
+             * Total Score
+             * @description Rata-rata kedua skor; dasar peringkat
+             */
+            total_score: string | null;
+            /**
+             * Failure Rate
+             * @description Persen upaya gagal teknis (percobaan ulang ikut dihitung); kosong untuk manual
+             */
+            failure_rate: string | null;
+            /**
+             * Rank
+             * @description Peringkat; kosong bila total skor kosong
+             */
+            rank: number | null;
+            /** Repetitions */
+            repetitions: number;
+            /** Product Model Version */
+            product_model_version: string | null;
+            /** Judge Model Version */
+            judge_model_version: string | null;
+        };
+        /**
+         * ReportSessionNotFoundBody
+         * @description 404 REPORT_SESSION_NOT_FOUND.
+         */
+        ReportSessionNotFoundBody: {
+            /** Code */
+            code: string;
+            /**
+             * Message
+             * @example No platform account is mapped to this identity.
+             */
+            message: string;
+            /**
+             * Field
+             * @description Lokasi field yang gagal, misalnya legal_refs[0].links[0].pasal
+             */
+            field?: string | null;
+            /**
+             * Missing
+             * @description Id sesi yang tidak ditemukan
+             */
+            missing: string[];
+        };
+        /** ReportSessionRead */
+        ReportSessionRead: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /** Product Label */
+            product_label: string;
+            measurement_kind: components["schemas"]["MeasurementKind"];
+            /**
+             * Is Trial
+             * @description Sesi Uji Coba wajib diberi tanda yang jelas
+             */
+            is_trial: boolean;
+            /** Markers */
+            markers: components["schemas"]["ReportMarkerRead"][];
+            /** Results */
+            results: components["schemas"]["ReportResultRead"][];
+        };
+        /**
+         * ReportStatus
+         * @enum {string}
+         */
+        ReportStatus: "saved" | "published" | "superseded";
+        /**
+         * ReportSummary
+         * @description Satu baris di daftar laporan tersimpan (GET /reports).
+         */
+        ReportSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            score_scope: components["schemas"]["ScoreScope"];
+            /** Has Dev Scores */
+            has_dev_scores: boolean;
+            status: components["schemas"]["ReportStatus"];
+            language: components["schemas"]["ReportLanguage"];
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * ReviewCopy
@@ -4362,6 +4909,18 @@ export interface components {
              */
             format?: string | null;
         };
+        /**
+         * ScoreScope
+         * @description Jenis nilai yang dipilih saat membuat laporan (AC14).
+         * @enum {string}
+         */
+        ScoreScope: "test" | "dev" | "dev_test";
+        /**
+         * ScoreSplit
+         * @description Satu baris report_results. Dev + Test menyimpan tiga baris per sesi (D1).
+         * @enum {string}
+         */
+        ScoreSplit: "test" | "dev" | "combined";
         /**
          * SessionAcceptRequest
          * @description Terima apa adanya (PBI-12 AC9). Alasan wajib; dicek di server supaya kodenya REASON_REQUIRED.
@@ -4743,6 +5302,12 @@ export interface components {
              */
             percent_cases_complete: number;
         };
+        /**
+         * SessionPurpose
+         * @description Pengukuran Resmi atau Uji Coba (AC1).
+         * @enum {string}
+         */
+        SessionPurpose: "official" | "trial";
         /**
          * SessionResumeRequest
          * @description Konfirmasi eksplisit Admin bila pernah sukses tetapi provider belum memberi versi.
@@ -9021,6 +9586,219 @@ export interface operations {
             };
             /** @description Sesi sudah Selesai (`MANUAL_SESSION_FINALIZED`) atau masih berstatus sesi otomatis (`MANUAL_SESSION_STATUS_INVALID`). */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_reports_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_ReportSummary_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_report_reports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Tidak ada kasus yang dijawab semua produk: hanya peringatan `NO_SHARED_CASES`, tidak ada angka dan tidak ada laporan yang tersimpan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportCreateResponse"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportCreateResponse"];
+                };
+            };
+            /** @description Jenis nilai atau label di luar hak peran (`REPORT_SCOPE_FORBIDDEN`, `REPORT_LABEL_MODE_FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Ada sesi yang dipilih tidak ditemukan (`REPORT_SESSION_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportSessionNotFoundBody"];
+                };
+            };
+            /** @description Pilihan belum bisa dibandingkan (`REPORT_NOT_COMPARABLE`): pilihan tidak sah, sesi tidak layak, atau syarat rubrik, penilai, dan suite tidak terpenuhi. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportNotComparableBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_eligible_sessions_reports_eligible_sessions_get: {
+        parameters: {
+            query?: {
+                /** @description Saring sesi otomatis atau manual saja; bawaannya semuanya. */
+                measurement_filter?: components["schemas"]["MeasurementFilter"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EligibleSessionRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDetail"];
+                };
+            };
+            /** @description Laporan tidak ada, atau tidak boleh dibuka peran ini (`REPORT_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_report_pdf_reports__report_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Berkas PDF laporan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Laporan tidak ada, atau tidak boleh dibuka peran ini (`REPORT_NOT_FOUND`) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
