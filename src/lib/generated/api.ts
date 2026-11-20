@@ -1395,6 +1395,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/{report_id}/results/{result_id}/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kasus dasar di balik satu angka laporan, tanpa isi kasus
+         * @description PBI-16 AC1: kode kasus, versi kasus, dan skor per kasus untuk semua peran (D9).
+         */
+        get: operations["list_result_cases_reports__report_id__results__result_id__cases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report_id}/results/{result_id}/cases/{case_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan
+         * @description PBI-16 AC2 dan AC3: jawaban asli, skor, alasan, versi rubrik, dan data jawaban manual.
+         */
+        get: operations["get_result_case_reports__report_id__results__result_id__cases__case_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report_id}/results/{result_id}/cases/{case_id}/attempts/{attempt_no}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bukti satu jawaban manual dari penelusuran laporan (Admin, Kontributor) */
+        get: operations["list_result_case_evidence_reports__report_id__results__result_id__cases__case_id__attempts__attempt_no__evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report_id}/results/{result_id}/cases/{case_id}/evidence/{evidence_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unduh berkas bukti jawaban manual dari penelusuran laporan (Admin, Kontributor) */
+        get: operations["download_result_case_evidence_reports__report_id__results__result_id__cases__case_id__evidence__evidence_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-logs": {
         parameters: {
             query?: never;
@@ -4210,6 +4284,63 @@ export interface components {
             replaced_assignment_id: string;
         };
         /**
+         * ReportAttemptRead
+         * @description Satu percobaan di balik skor satu kasus (AC2): jawaban asli, skor, dan alasannya.
+         */
+        ReportAttemptRead: {
+            /**
+             * Attempt Id
+             * Format: uuid
+             */
+            attempt_id: string;
+            /** Repetition No */
+            repetition_no: number;
+            /** @description automatic atau manual; manual diberi label (AC2) */
+            source: components["schemas"]["AttemptSource"];
+            status: components["schemas"]["AttemptStatus"];
+            /**
+             * Graded
+             * @description false untuk percobaan gagal teknis: tampilkan 'tidak dinilai' (AC2)
+             */
+            graded: boolean;
+            /** Det Score */
+            det_score: string | null;
+            /** Llm Score */
+            llm_score: string | null;
+            /**
+             * Answer Text
+             * @description Jawaban asli produk AI
+             */
+            answer_text: string | null;
+            /**
+             * Explanation
+             * @description Penjelasan penilai LLM
+             */
+            explanation: string | null;
+            /**
+             * Reasons
+             * @description Kode alasan penilaian per jalur
+             */
+            reasons: string[];
+            /**
+             * Criteria
+             * @description Hasil penilaian per kriteria rubrik
+             */
+            criteria: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Filled By Name
+             * @description Siapa yang mengisi jawaban manual; null untuk otomatis
+             */
+            filled_by_name?: string | null;
+            /**
+             * Answered At
+             * @description Tanggal jawaban manual diperoleh dari platform
+             */
+            answered_at?: string | null;
+        };
+        /**
          * ReportCaseBasisRead
          * @description Satu kasus dasar perhitungan. Hanya kode dan versi, tanpa isi kasus (D9).
          */
@@ -4219,6 +4350,97 @@ export interface components {
             /** Case Version No */
             case_version_no: number;
             split_tag: components["schemas"]["SplitTag"];
+        };
+        /**
+         * ReportCaseDetailRead
+         * @description Satu kasus di balik satu angka, dibuka sampai jawaban asli (D6 langkah 5-7).
+         *
+         *     Hanya dikirim ke peran yang boleh melihat isi kasus (AC3); peran lain mendapat 403.
+         */
+        ReportCaseDetailRead: {
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Case Code */
+            case_code: string;
+            /** Case Version No */
+            case_version_no: number;
+            split_tag: components["schemas"]["SplitTag"];
+            /** Title */
+            title: string;
+            /** Category */
+            category: string | null;
+            /**
+             * Question
+             * @description Isi kasus dari snapshot sesi
+             */
+            question: string | null;
+            /**
+             * Product Label
+             * @description Label beku di laporan: nama asli atau kode
+             */
+            product_label: string;
+            measurement_kind: components["schemas"]["MeasurementKind"];
+            /**
+             * Rubric Version
+             * @description Versi rubrik yang menilai percobaan-percobaan ini
+             */
+            rubric_version: string;
+            /** Det Score */
+            det_score: string | null;
+            /** Llm Score */
+            llm_score: string | null;
+            /** Attempts */
+            attempts: components["schemas"]["ReportAttemptRead"][];
+        };
+        /**
+         * ReportCaseScoreRead
+         * @description Satu kasus dasar di balik satu angka: kode, versi, dan skornya, tanpa isi (AC1).
+         *
+         *     Bentuknya sama untuk semua peran (D9: daftar kasus dan skor terbuka untuk semua).
+         *     Yang berbeda hanya kode kasus test untuk Developer AI dan content_visible.
+         */
+        ReportCaseScoreRead: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Case Code
+             * @description TERSEMBUNYI untuk kasus test bila dibaca Developer AI
+             */
+            case_code: string;
+            /** Case Version No */
+            case_version_no: number;
+            split_tag: components["schemas"]["SplitTag"];
+            /**
+             * Det Score
+             * @description Rata-rata skor deterministik percobaan
+             */
+            det_score: string | null;
+            /**
+             * Llm Score
+             * @description Rata-rata skor penilai LLM percobaan
+             */
+            llm_score: string | null;
+            /**
+             * Content Visible
+             * @description True bila peran ini boleh membuka isi kasus, jawaban, dan alasan (AC3)
+             */
+            content_visible: boolean;
         };
         /**
          * ReportCreate
@@ -4312,6 +4534,12 @@ export interface components {
          * @description Satu baris report_results di laporan tersimpan. Skor dua desimal, tanpa persen (AC6).
          */
         ReportDetailResultRead: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Id angka ini untuk GET /reports/{id}/results/{result_id}
+             */
+            id: string;
             score_split: components["schemas"]["ScoreSplit"];
             /** Cases Graded Count */
             cases_graded_count: number;
@@ -4465,6 +4693,36 @@ export interface components {
             requirement: string;
             /** Message */
             message: string;
+        };
+        /**
+         * ReportResultCasesRead
+         * @description Daftar kasus di balik satu angka laporan (GET /reports/{id}/results/{result_id}/cases).
+         */
+        ReportResultCasesRead: {
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /**
+             * Result Id
+             * Format: uuid
+             */
+            result_id: string;
+            /**
+             * Product Label
+             * @description Label beku di laporan: nama asli atau kode
+             */
+            product_label: string;
+            measurement_kind: components["schemas"]["MeasurementKind"];
+            score_split: components["schemas"]["ScoreSplit"];
+            /**
+             * Rubric Version
+             * @description Versi rubrik run penilaian di balik angka ini
+             */
+            rubric_version: string;
+            /** Cases */
+            cases: components["schemas"]["ReportCaseScoreRead"][];
         };
         /**
          * ReportResultRead
@@ -9798,6 +10056,204 @@ export interface operations {
                 };
             };
             /** @description Laporan tidak ada, atau tidak boleh dibuka peran ini (`REPORT_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_result_cases_reports__report_id__results__result_id__cases_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                result_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResultCasesRead"];
+                };
+            };
+            /** @description Laporan tidak boleh dibuka atau tidak ada (`REPORT_NOT_FOUND`), angka bukan milik laporan ini (`REPORT_RESULT_NOT_FOUND`), atau hasil penilaiannya tidak ditemukan (`REPORT_GRADES_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_result_case_reports__report_id__results__result_id__cases__case_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                result_id: string;
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportCaseDetailRead"];
+                };
+            };
+            /** @description Peran ini tidak boleh membuka isi kasus (`CASE_CONTENT_FORBIDDEN`): Viewer, Kontributor untuk kasus dev, Developer AI untuk kasus test. Pesannya menyebut email untuk meminta isi kasus. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Laporan tidak boleh dibuka atau tidak ada (`REPORT_NOT_FOUND`), angka bukan milik laporan ini (`REPORT_RESULT_NOT_FOUND`), kasus tidak ada di balik angka ini (`REPORT_CASE_NOT_FOUND`), atau hasil penilaiannya tidak ditemukan (`REPORT_GRADES_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_result_case_evidence_reports__report_id__results__result_id__cases__case_id__attempts__attempt_no__evidence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                result_id: string;
+                case_id: string;
+                attempt_no: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceRead"][];
+                };
+            };
+            /** @description Peran ini tidak boleh membuka bukti (`FORBIDDEN`) atau isi kasus (`CASE_CONTENT_FORBIDDEN`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Laporan, angka, kasus, percobaan, atau bukti tidak ditemukan di balik angka ini (`REPORT_NOT_FOUND`, `REPORT_RESULT_NOT_FOUND`, `REPORT_CASE_NOT_FOUND`, `REPORT_EVIDENCE_NOT_FOUND`, `EVIDENCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_result_case_evidence_reports__report_id__results__result_id__cases__case_id__evidence__evidence_id__file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                result_id: string;
+                case_id: string;
+                evidence_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Isi berkas, selalu sebagai lampiran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                    "image/jpeg": unknown;
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Peran ini tidak boleh membuka bukti (`FORBIDDEN`) atau isi kasus (`CASE_CONTENT_FORBIDDEN`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Laporan, angka, kasus, percobaan, atau bukti tidak ditemukan di balik angka ini (`REPORT_NOT_FOUND`, `REPORT_RESULT_NOT_FOUND`, `REPORT_CASE_NOT_FOUND`, `REPORT_EVIDENCE_NOT_FOUND`, `EVIDENCE_NOT_FOUND`) */
             404: {
                 headers: {
                     [name: string]: unknown;

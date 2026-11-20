@@ -17,3 +17,9 @@ export type ReportCaseBasisRead = components["schemas"]["ReportCaseBasisRead"];
 export type ReportSummary = components["schemas"]["ReportSummary"];
 export type ReportSummaryPage = components["schemas"]["Page_ReportSummary_"];
 export type ReportDetail = components["schemas"]["ReportDetail"];
+
+/** Penelusuran angka laporan (PBI-16, server#149): kasus di balik satu angka, lalu satu kasus sampai jawaban asli. */
+export type ReportResultCasesRead = components["schemas"]["ReportResultCasesRead"];
+export type ReportCaseScoreRead = components["schemas"]["ReportCaseScoreRead"];
+export type ReportCaseDetailRead = components["schemas"]["ReportCaseDetailRead"];
+export type ReportAttemptRead = components["schemas"]["ReportAttemptRead"];

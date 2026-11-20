@@ -12,8 +12,13 @@ import type {
  * pengukuran produk mana pun. Urutan sesi sengaja tidak sama dengan urutan peringkat, seperti data dari server.
  */
 
+let resultCounter = 0;
+
+/** Id angka laporan (server#149): kunci penelusuran PBI-16. Penghitung, bukan acak, supaya tes stabil. */
 export function reportResult(overrides: Partial<ReportDetailResultRead> = {}): ReportDetailResultRead {
+  resultCounter += 1;
   return {
+    id: `result-${resultCounter}`,
     score_split: "test",
     cases_graded_count: 50,
     cases_basis_count: 42,
