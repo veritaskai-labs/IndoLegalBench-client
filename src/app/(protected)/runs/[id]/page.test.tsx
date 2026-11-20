@@ -755,6 +755,38 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     expect(await within(results).findByRole("table", { name: "Skor per kasus" })).toBeInTheDocument();
   });
 
+  it("puts Unduh skor on the title row of a finished, graded session", async () => {
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
+    const button = await screen.findByRole("button", { name: "Unduh skor" });
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(heading.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("Sesi masih berjalan.")).not.toBeInTheDocument();
+  });
+
+  it("explains a running session beside a disabled Unduh skor", async () => {
+    get.mockResolvedValue(session({ status: "running", finished_at: null }));
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByRole("button", { name: "Unduh skor" })).toBeDisabled();
+    expect(screen.getByText("Sesi masih berjalan.")).toBeInTheDocument();
+  });
+
+  it("shows the same download control to a viewer", async () => {
+    signedInAs("viewer");
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled());
+  });
+
   // The page passes the signed-in role on; Developer AI never gets the action.
   it("offers Developer AI no Nilai", async () => {
     signedInAs("developer_ai");
