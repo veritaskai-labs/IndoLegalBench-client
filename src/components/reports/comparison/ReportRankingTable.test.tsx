@@ -106,4 +106,45 @@ describe("ReportRankingTable", () => {
     renderTable();
     expect(screen.getByRole("region", { name: "Test cases" }).tagName).toBe("SECTION");
   });
+
+  // PBI-16 AC1 (SCRUM-328): every score opens the cases behind it; the link carries the number's result id.
+  it("links each score to the cases behind it when a drill-down href is given", () => {
+    const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
+    const [section] = reportSections([session]);
+
+    render(
+      <ReportRankingTable
+        rows={section.rows}
+        language="en"
+        labelMode="real_name"
+        caption="Test cases"
+        scoreHref={(resultId) => `/drill/${resultId}`}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Telusuri kasus di balik skor deterministik AiYU" })).toHaveAttribute(
+      "href",
+      "/drill/res-9",
+    );
+    expect(screen.getByRole("link", { name: "Telusuri kasus di balik skor penilai LLM AiYU" })).toHaveTextContent("0.87");
+  });
+
+  // Edge: a dash is not a number, so an empty score is never a link (D1).
+  it("does not link an empty score", () => {
+    const session = reportSession({ product_label: "AiYU", results: [reportResult({ llm_score: null, rank: null })] });
+    const [section] = reportSections([session]);
+
+    render(
+      <ReportRankingTable rows={section.rows} language="en" labelMode="real_name" caption="Test cases" scoreHref={() => "/x"} />,
+    );
+
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+
+  // Negative: without a drill-down href (the development preview), scores stay plain text.
+  it("keeps scores as text without a drill-down href", () => {
+    renderTable("en");
+
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
 });

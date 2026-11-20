@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { formatScore } from "@/lib/grading/scoreFormat";
 import { failureRateText, modelVersionText, rankText } from "@/lib/reports/reportCells";
 import { measurementKindLabel, REPORT_LABELS, sessionMarkersText } from "@/lib/reports/reportLabels";
@@ -7,12 +9,28 @@ import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
 const CELL = "px-3 py-2 align-top";
 const NUMBER = `${CELL} text-right tabular-nums`;
 
+/** Membuat tautan penelusuran untuk satu angka (PBI-16 AC1); tanpa ini, misalnya di pratinjau, angka hanya teks. */
+export type ScoreHref = (resultId: string) => string;
+
 /**
- * Satu sel skor. Dipisah supaya PBI-16 cukup membungkusnya dengan tautan ke daftar kasus di balik angka,
- * tanpa mengubah tabel. Skor kosong tampil sebagai tanda pisah (D1).
+ * Satu sel skor. Dengan href, angkanya menjadi tautan ke kasus di balik angka itu (PBI-16 AC1, D6 langkah 1).
+ * Skor kosong tampil sebagai tanda pisah (D1) dan tidak ditautkan: tidak ada angka yang bisa ditelusuri.
  */
-export function ScoreCell({ score, language }: Readonly<{ score: string | null; language: ReportLanguage }>) {
-  return <td className={NUMBER}>{formatScore(score, language)}</td>;
+export function ScoreCell({
+  score,
+  language,
+  href,
+  label,
+}: Readonly<{ score: string | null; language: ReportLanguage; href?: string; label?: string }>) {
+  const text = formatScore(score, language);
+  if (!href || score === null) return <td className={NUMBER}>{text}</td>;
+  return (
+    <td className={NUMBER}>
+      <Link href={href} aria-label={label} className="text-indigo-700 underline decoration-dotted underline-offset-2 hover:decoration-solid">
+        {text}
+      </Link>
+    </td>
+  );
 }
 
 /**
@@ -25,7 +43,14 @@ export function ReportRankingTable({
   language,
   labelMode,
   caption,
-}: Readonly<{ rows: readonly ReportRow[]; language: ReportLanguage; labelMode: ProductLabelMode; caption: string }>) {
+  scoreHref,
+}: Readonly<{
+  rows: readonly ReportRow[];
+  language: ReportLanguage;
+  labelMode: ProductLabelMode;
+  caption: string;
+  scoreHref?: ScoreHref;
+}>) {
   const labels = REPORT_LABELS[language];
   const [rank, product, ...rest] = labels.columns;
 
@@ -62,8 +87,18 @@ export function ReportRankingTable({
                 {session.product_label}
               </th>
               <td className={CELL}>{measurementKindLabel(session.measurement_kind, language)}</td>
-              <ScoreCell score={result.det_score} language={language} />
-              <ScoreCell score={result.llm_score} language={language} />
+              <ScoreCell
+                score={result.det_score}
+                language={language}
+                href={scoreHref?.(result.id)}
+                label={`Telusuri kasus di balik skor deterministik ${session.product_label}`}
+              />
+              <ScoreCell
+                score={result.llm_score}
+                language={language}
+                href={scoreHref?.(result.id)}
+                label={`Telusuri kasus di balik skor penilai LLM ${session.product_label}`}
+              />
               <td className={NUMBER}>{result.cases_graded_count}</td>
               <td className={NUMBER}>{result.cases_basis_count}</td>
               <td className={NUMBER}>{failureRateText(session.measurement_kind, result.failure_rate, language)}</td>
