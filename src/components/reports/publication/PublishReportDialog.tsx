@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { httpPublicationGateway, type PublicationGateway } from "@/lib/reports/publicationApi";
 import { publishErrorMessage, publishedListErrorMessage, replaceOptionLabel } from "@/lib/reports/publicationRules";
@@ -49,11 +50,11 @@ export function PublishReportDialog({
         <legend className="font-medium">Cara terbit</legend>
         <label className="flex items-center gap-2">
           <input type="radio" name={name} checked={mode === "new"} onChange={() => setMode("new")} />
-          Terbitkan sebagai laporan baru
+          <span>Terbitkan sebagai laporan baru</span>
         </label>
         <label className="flex items-center gap-2">
           <input type="radio" name={name} checked={mode === "replace"} onChange={() => setMode("replace")} />
-          Ganti versi yang sedang terbit
+          <span>Ganti versi yang sedang terbit</span>
         </label>
       </fieldset>
       {mode === "replace" && <ReplaceChoice gateway={gateway} value={replaced} onChange={setReplaced} />}
@@ -78,7 +79,7 @@ function ReplaceChoice({
     <div className="mt-3 text-sm">
       <p className="text-slate-600">Versi lama tetap tersimpan dan masih bisa dibuka, tetapi tidak lagi ada di daftar terbit.</p>
       {current.status === "loading" && <p className="mt-2 text-slate-500">Memuat versi yang sedang terbit…</p>}
-      {current.status === "error" && <p className="mt-2 text-red-700">{current.message}</p>}
+      {current.status === "error" && <ErrorState className="mt-2" message={current.message} onRetry={current.reload} />}
       {current.status === "ready" && current.data.length === 0 && (
         <p className="mt-2 text-slate-600">Belum ada laporan yang sedang terbit.</p>
       )}

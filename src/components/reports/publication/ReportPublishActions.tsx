@@ -5,13 +5,17 @@ import { useId, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { httpPublicationGateway, type PublicationGateway } from "@/lib/reports/publicationApi";
+import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import { DEV_SCORES_MESSAGE, canPublish, publishState, versionLabel } from "@/lib/reports/publicationRules";
 import type { ReportSummary } from "@/types/reports";
 
 import { PublishReportDialog } from "./PublishReportDialog";
+import { ReplaceVersionDialog } from "./ReplaceVersionDialog";
 
 const PRIMARY =
   "rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50";
+const SECONDARY =
+  "rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50";
 const LINK = "text-sm font-medium text-indigo-700 hover:underline";
 
 type Report = Pick<ReportSummary, "id" | "title" | "status" | "has_dev_scores" | "score_scope">;
@@ -19,16 +23,19 @@ type Report = Pick<ReportSummary, "id" | "title" | "status" | "has_dev_scores" |
 /**
  * Bagian penerbitan di halaman satu laporan (PBI-17 SCRUM-335). Tombol Terbitkan hanya untuk Admin (AC9);
  * laporan dengan skor dev tidak bisa diterbitkan dan alasannya tampil sebelum diklik (AC12). Versi yang sudah
- * digantikan tetap bisa dibuka semua peran dan ditandai jelas. onChanged meminta halaman memuat ulang laporan.
+ * digantikan tetap bisa dibuka semua peran dan ditandai jelas. Di laporan yang sedang terbit, Admin mendapat tombol
+ * Ganti versi. onChanged meminta halaman memuat ulang laporan.
  */
 export function ReportPublishActions({
   report,
   gateway = httpPublicationGateway,
+  reportsGateway = httpReportsGateway,
   onChanged,
-}: Readonly<{ report: Report; gateway?: PublicationGateway; onChanged: () => void }>) {
+}: Readonly<{ report: Report; gateway?: PublicationGateway; reportsGateway?: ReportsGateway; onChanged: () => void }>) {
   const auth = useAuth();
   const reasonId = useId();
   const [open, setOpen] = useState(false);
+  const [replacing, setReplacing] = useState(false);
   const [published, setPublished] = useState<number | null>(null);
 
   if (auth.status !== "authenticated") return null;
@@ -49,14 +56,31 @@ export function ReportPublishActions({
   if (state === "already_published") {
     return (
       <div className="space-y-1 text-sm">
-        {published !== null && <p role="status" className="text-green-800">Laporan diterbitkan sebagai {versionLabel(published)}.</p>}
+        {published !== null && <output className="block text-green-800">Laporan diterbitkan sebagai {versionLabel(published)}.</output>}
         <Link href="/reports/published" className={LINK}>
           Lihat daftar laporan terbit
         </Link>
         {admin && (
-          <p className="text-slate-600">
-            Untuk mengganti versi ini, buat laporan baru lalu saat menerbitkannya pilih Ganti versi yang sedang terbit.
-          </p>
+          <div>
+            <button type="button" className={SECONDARY} onClick={() => setReplacing(true)}>
+              Ganti versi
+            </button>
+          </div>
+        )}
+        {replacing && (
+          <ReplaceVersionDialog
+            report={report}
+            gateway={gateway}
+            reportsGateway={reportsGateway}
+            onReplaced={() => {
+              setReplacing(false);
+              onChanged();
+            }}
+            onClose={(afterError) => {
+              setReplacing(false);
+              if (afterError) onChanged();
+            }}
+          />
         )}
       </div>
     );
@@ -80,7 +104,9 @@ export function ReportPublishActions({
           {DEV_SCORES_MESSAGE}
         </p>
       )}
-      {published !== null && <p role="status" className="text-sm text-green-800">Laporan diterbitkan sebagai {versionLabel(published)}.</p>}
+      {published !== null && (
+        <output className="block text-sm text-green-800">Laporan diterbitkan sebagai {versionLabel(published)}.</output>
+      )}
       {open && (
         <PublishReportDialog
           report={report}
