@@ -3,9 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { saveBlob } from "@/lib/browserDownload";
-import { SCORE_DOWNLOAD_REASON } from "@/lib/runs/scoreDownload";
+import { SCORE_DOWNLOAD_REASON, type ScoreDownloadSession, type ScoreGrading } from "@/lib/runs/scoreDownload";
 import type { ScoreFile } from "@/lib/runs/scoreDownloadApi";
-import type { ScoreDownloadSession } from "@/lib/runs/scoreDownload";
 import { ScoreDownloadButton } from "./ScoreDownloadButton";
 
 vi.mock("@/lib/browserDownload", () => ({ saveBlob: vi.fn() }));
@@ -42,11 +41,11 @@ describe("ScoreDownloadButton (SCRUM-329)", () => {
     expect(screen.queryByText(SCORE_DOWNLOAD_REASON.notAccepted)).not.toBeInTheDocument();
   });
 
-  it.each([
-    ["running", "graded" as const, SCORE_DOWNLOAD_REASON.inProgress],
-    ["cancelled", "graded" as const, SCORE_DOWNLOAD_REASON.resume],
-    ["finished_with_failures", "graded" as const, SCORE_DOWNLOAD_REASON.notAccepted],
-    ["finished", "ungraded" as const, SCORE_DOWNLOAD_REASON.notGraded],
+  it.each<[ScoreDownloadSession["status"], ScoreGrading, string]>([
+    ["running", "graded", SCORE_DOWNLOAD_REASON.inProgress],
+    ["cancelled", "graded", SCORE_DOWNLOAD_REASON.resume],
+    ["finished_with_failures", "graded", SCORE_DOWNLOAD_REASON.notAccepted],
+    ["finished", "ungraded", SCORE_DOWNLOAD_REASON.notGraded],
   ])("disables the button and explains a %s session", (status, grading, reason) => {
     render(
       <ScoreDownloadButton

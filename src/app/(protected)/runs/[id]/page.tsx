@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { SessionGradingSection } from "@/components/grading/SessionGradingSection";
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionControls } from "@/components/runs/SessionControls";
+import { SessionScoreDownload } from "@/components/runs/ScoreDownloadButton";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -78,7 +79,10 @@ function SessionDetailView({
   return (
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Eksekusi", href: "/runs" }, { label: session.label }]} />
-      <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
+        <SessionScoreDownload session={session} />
+      </div>
 
       {session.archived_at && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
