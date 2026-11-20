@@ -17,7 +17,7 @@ export type CreateOutcome =
       rejections: Rejection[];
     }
   | { kind: "sessions_missing"; sessionIds: string[] }
-  | { kind: "forbidden"; code: string }
+  | { kind: "forbidden"; code: ForbiddenCode }
   | { kind: "invalid"; message: string | null }
   | { kind: "failed"; message: string | null };
 
@@ -28,7 +28,14 @@ export interface CreateResponseBody {
 }
 
 const NO_SHARED_CASES = "NO_SHARED_CASES";
-const FORBIDDEN_CODES: readonly string[] = ["REPORT_SCOPE_FORBIDDEN", "REPORT_LABEL_MODE_FORBIDDEN"];
+const FORBIDDEN_CODES = ["REPORT_SCOPE_FORBIDDEN", "REPORT_LABEL_MODE_FORBIDDEN"] as const;
+
+/** 403 yang dikenal halaman (PBI-15 AC9, AC14); 403 lain menjadi kegagalan umum. */
+export type ForbiddenCode = (typeof FORBIDDEN_CODES)[number];
+
+function isForbiddenCode(code: string): code is ForbiddenCode {
+  return (FORBIDDEN_CODES as readonly string[]).includes(code);
+}
 
 /**
  * Hasil dari jawaban sukses. Laporan tanpa id tidak pernah dianggap tersimpan: tanpa ini halaman
@@ -56,7 +63,7 @@ export function outcomeFromError(error: unknown): CreateOutcome {
   if (error.status === 404 && error.code === "REPORT_SESSION_NOT_FOUND") {
     return { kind: "sessions_missing", sessionIds: stringList(details.missing) };
   }
-  if (error.status === 403 && FORBIDDEN_CODES.includes(error.code)) {
+  if (error.status === 403 && isForbiddenCode(error.code)) {
     return { kind: "forbidden", code: error.code };
   }
   if (error.status === 422) return { kind: "invalid", message: error.serverMessage };

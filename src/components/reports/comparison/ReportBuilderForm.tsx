@@ -10,7 +10,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { useReportBuilder, type ReportBuilder } from "@/hooks/useReportBuilder";
 import { REPORT_TITLE_MAX, type TitleProblem } from "@/lib/reports/builder/builderRules";
-import type { CreateOutcome } from "@/lib/reports/builder/createOutcome";
+import type { CreateOutcome, ForbiddenCode } from "@/lib/reports/builder/createOutcome";
 import { reasonText } from "@/lib/reports/builder/reasonText";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
@@ -37,10 +37,10 @@ const TITLE_TEXT: Readonly<Record<TitleProblem, string>> = {
   TITLE_TOO_LONG: `Judul paling panjang ${REPORT_TITLE_MAX} karakter.`,
 };
 
-const FORBIDDEN_TEXT: ReadonlyMap<string, string> = new Map([
-  ["REPORT_SCOPE_FORBIDDEN", "Peran Anda tidak boleh membuat laporan dengan jenis nilai ini. Pilih Test."],
-  ["REPORT_LABEL_MODE_FORBIDDEN", "Hanya Admin yang boleh memakai kode produk sebagai label. Pilih nama asli."],
-]);
+const FORBIDDEN_TEXT: Readonly<Record<ForbiddenCode, string>> = {
+  REPORT_SCOPE_FORBIDDEN: "Peran Anda tidak boleh membuat laporan dengan jenis nilai ini. Pilih Test.",
+  REPORT_LABEL_MODE_FORBIDDEN: "Hanya Admin yang boleh memakai kode produk sebagai label. Pilih nama asli.",
+};
 
 const FAILED = "Laporan gagal dibuat. Coba lagi.";
 const MISSING_ROW = "Sesi ini sudah tidak tersedia.";
@@ -205,7 +205,7 @@ function OutcomeMessage({ outcome, onReload }: Readonly<{ outcome: CreateOutcome
     case "forbidden":
       return (
         <div role="alert" className={box}>
-          {FORBIDDEN_TEXT.get(outcome.code) ?? FAILED}
+          {FORBIDDEN_TEXT[outcome.code]}
         </div>
       );
     case "invalid":
