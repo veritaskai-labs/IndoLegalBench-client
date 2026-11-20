@@ -22,7 +22,9 @@ function reportPath(reportId: string): string {
 }
 
 export const httpReportsGateway: ReportsGateway = {
-  list: () => apiFetch<ReportSummary[]>("/reports", { silentForbidden: true }),
+  // shortcut: only the first page of 100 (server maximum), add a pager with the PBI-25 table work if anyone has more.
+  list: () =>
+    apiFetch<{ items: ReportSummary[] }>("/reports?size=100", { silentForbidden: true }).then((page) => page.items),
   detail: (reportId) => apiFetch<ReportDetail>(reportPath(reportId), { silentForbidden: true }),
   pdf: (reportId) => apiFetchBlob(`${reportPath(reportId)}/pdf`, { silentForbidden: true }),
 };
