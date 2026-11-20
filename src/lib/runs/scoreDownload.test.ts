@@ -24,7 +24,21 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
     expect(decision({ status: "finished" }, "graded")).toEqual({ eligible: true });
   });
 
-  it("allows an automatic session accepted as-is when the reason has visible text", () => {
+  it("allows an automatic session accepted as-is when it is also graded", () => {
+    expect(
+      decision(
+        {
+          status: "finished_with_failures",
+          accepted_as_is_at: "2026-11-12T04:15:00Z",
+          accepted_as_is_reason: REASON,
+        },
+        "graded",
+      ),
+    ).toEqual({ eligible: true });
+  });
+
+  // D2: the accept mark is not a score. The file still needs a finished grading run.
+  it("explains an accepted session that has no grading result", () => {
     expect(
       decision(
         {
@@ -34,11 +48,10 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
         },
         "ungraded",
       ),
-    ).toEqual({ eligible: true });
+    ).toEqual({ eligible: false, reason: SCORE_DOWNLOAD_REASON.notGraded });
   });
 
-  // The exception in AC6 is the written accept mark, not a second grading requirement.
-  it("allows that accepted session before grading is known", () => {
+  it("waits, without a reason, while an accepted session's grading result is unknown", () => {
     expect(
       decision(
         {
@@ -48,7 +61,34 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
         },
         "unknown",
       ),
-    ).toEqual({ eligible: true });
+    ).toEqual({ eligible: false, reason: null });
+  });
+
+  // D2: a manual session is eligible once it is Selesai (finalized) and graded. Dinilai is not.
+  it("allows a finalized manual session that already has a grading result", () => {
+    expect(decision({ status: "finalized", session_type: "manual" }, "graded")).toEqual({ eligible: true });
+  });
+
+  it("explains a finalized session that has no grading result", () => {
+    expect(decision({ status: "finalized", session_type: "manual" }, "ungraded")).toEqual({
+      eligible: false,
+      reason: SCORE_DOWNLOAD_REASON.notGraded,
+    });
+  });
+
+  it("waits, without a reason, while a finalized session's grading result is unknown", () => {
+    expect(decision({ status: "finalized", session_type: "manual" }, "unknown")).toEqual({
+      eligible: false,
+      reason: null,
+    });
+  });
+
+  // The download route rejects an archived session even when it would otherwise be eligible.
+  it("explains an archived session instead of offering the file", () => {
+    expect(decision({ status: "finished", archived_at: "2026-11-12T04:15:00Z" }, "graded")).toEqual({
+      eligible: false,
+      reason: SCORE_DOWNLOAD_REASON.archived,
+    });
   });
 
   it("explains a running session, including one that was already graded", () => {
@@ -140,7 +180,6 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
     ["partially_filled", "graded", SCORE_DOWNLOAD_REASON.inProgress],
     ["complete", "graded", SCORE_DOWNLOAD_REASON.notGraded],
     ["graded", "graded", SCORE_DOWNLOAD_REASON.notGraded],
-    ["finalized", "graded", SCORE_DOWNLOAD_REASON.notGraded],
   ])("blocks %s (%s) with the same kind of explanation", (status, grading, reason) => {
     expect(decision({ status }, grading)).toEqual({ eligible: false, reason });
   });
