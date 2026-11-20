@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { markerLabel, markersText, measurementKindLabel, REPORT_CONTACT_EMAIL, REPORT_LABELS } from "./reportLabels";
+import { reportSession } from "@/test/reportFixtures";
+
+import { markerLabel, measurementKindLabel, REPORT_CONTACT_EMAIL, REPORT_LABELS, sessionMarkersText } from "./reportLabels";
 
 // SCRUM-322 (Fase 0 K3): the report body speaks the report's language, with the exact words of the server PDF
 // (PR #145, app/modules/reports/pdf.py _LABELS), so a reader sees the same text on the web and in the PDF.
@@ -45,11 +47,18 @@ describe("REPORT_LABELS parity with the server PDF", () => {
     expect(REPORT_LABELS[language].splits).toEqual(splits);
   });
 
+  // server#145 4e26ece: Uji Coba is no longer a D2 marker code; it comes from the session's is_trial flag.
+  it.each([
+    ["en", "Trial"],
+    ["id", "Uji Coba"],
+  ] as const)("has the PDF Uji Coba label in %s", (language, trial) => {
+    expect(REPORT_LABELS[language].trial).toBe(trial);
+  });
+
   it.each([
     [
       "en",
       {
-        trial: "Trial",
         model_version_differs: "Different model version",
         repetitions_differ: "Different number of attempts",
         manual_date_span_over_7_days: "Manual answers span more than 7 days",
@@ -59,14 +68,13 @@ describe("REPORT_LABELS parity with the server PDF", () => {
     [
       "id",
       {
-        trial: "Uji Coba",
         model_version_differs: "Versi model berbeda",
         repetitions_differ: "Jumlah percobaan berbeda",
         manual_date_span_over_7_days: "Rentang jawaban manual lebih dari 7 hari",
         refusals: "Menolak menjawab",
       },
     ],
-  ] as const)("names the five D2 markers like the PDF in %s", (language, markers) => {
+  ] as const)("names the four D2 markers like the PDF in %s", (language, markers) => {
     expect(REPORT_LABELS[language].markers).toEqual(markers);
   });
 
@@ -107,8 +115,8 @@ describe("measurementKindLabel (PBI-15 AC5)", () => {
 
 describe("markerLabel", () => {
   it.each([
-    ["trial", "en", "Trial"],
-    ["trial", "id", "Uji Coba"],
+    ["model_version_differs", "en", "Different model version"],
+    ["model_version_differs", "id", "Versi model berbeda"],
     ["repetitions_differ", "id", "Jumlah percobaan berbeda"],
   ] as const)("names the known marker %s in %s", (code, language, shown) => {
     expect(markerLabel({ code }, language)).toBe(shown);
@@ -140,18 +148,40 @@ describe("markerLabel", () => {
   });
 
   it.each([null, undefined, ""])("adds no brackets for the empty detail %j", (detail) => {
-    expect(markerLabel({ code: "trial", detail }, "en")).toBe("Trial");
+    expect(markerLabel({ code: "repetitions_differ", detail }, "en")).toBe("Different number of attempts");
   });
 });
 
-describe("markersText", () => {
+// The PDF markers cell (pdf.py _penanda_sesi): Uji Coba from is_trial first, then the D2 markers, joined by "; ".
+describe("sessionMarkersText", () => {
   it("joins every marker of a product with a semicolon, like the PDF cell", () => {
-    expect(markersText([{ code: "repetitions_differ" }, { code: "refusals", detail: "2" }], "en")).toBe(
-      "Different number of attempts; Refused to answer (2)",
-    );
+    const session = reportSession({ markers: [{ code: "repetitions_differ" }, { code: "refusals", detail: "2" }] });
+    expect(sessionMarkersText(session, "en")).toBe("Different number of attempts; Refused to answer (2)");
   });
 
-  it("is empty for a product with no markers", () => {
-    expect(markersText([], "id")).toBe("");
+  // AC4: a trial session must be marked clearly, and the PDF puts that mark first.
+  it.each([
+    ["en", "Trial; Different model version"],
+    ["id", "Uji Coba; Versi model berbeda"],
+  ] as const)("puts Uji Coba first for a trial session in %s", (language, shown) => {
+    const session = reportSession({ is_trial: true, markers: [{ code: "model_version_differs" }] });
+    expect(sessionMarkersText(session, language)).toBe(shown);
+  });
+
+  it("shows only Uji Coba for a trial session without other markers", () => {
+    expect(sessionMarkersText(reportSession({ is_trial: true, markers: [] }), "id")).toBe("Uji Coba");
+  });
+
+  // The server no longer sends "trial" as a code; if it ever did, it is just an unknown code, like in pdf.py.
+  it("does not read a trial code as the Uji Coba mark", () => {
+    expect(sessionMarkersText(reportSession({ markers: [{ code: "trial" }] }), "id")).toBe("trial");
+  });
+
+  // Both fields have server defaults (is_trial false, markers empty), so either may be missing.
+  it.each([
+    ["no markers", reportSession({ markers: [] })],
+    ["missing fields", reportSession({ markers: undefined, is_trial: undefined })],
+  ])("is empty for a product with %s", (_, session) => {
+    expect(sessionMarkersText(session, "id")).toBe("");
   });
 });

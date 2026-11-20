@@ -29,7 +29,10 @@ export type ReportStatus = "saved" | "published" | "superseded";
 /** Bahasa isi laporan dan PDF-nya, bawaan Inggris (PBI-26 AC1). */
 export type ReportLanguage = "en" | "id";
 
-/** Penanda D2, misalnya "trial" atau "repetitions_differ". `detail` berisi keterangan tambahan seperti jumlah. */
+/** Label produk di laporan, dipilih Admin saat membuat (PBI-15 AC9). */
+export type ProductLabelMode = "real_name" | "code";
+
+/** Penanda D2, misalnya "repetitions_differ". Uji Coba bukan penanda: ada di is_trial. `detail` berisi keterangan seperti jumlah. */
 export type ReportMarker = {
   code: string;
   detail?: string | null;
@@ -59,7 +62,10 @@ export type ReportSessionRead = {
   /** Nama asli atau kode produk, dipilih Admin saat membuat laporan. */
   product_label: string;
   measurement_kind: MeasurementKind;
-  markers: ReportMarker[];
+  /** Sesi Uji Coba (AC4), wajib ditandai jelas. Bawaan server false. */
+  is_trial?: boolean;
+  /** Bawaan server kosong. */
+  markers?: ReportMarker[];
   results: ReportResultRead[];
 };
 
@@ -85,6 +91,7 @@ export type ReportSummary = {
 /** Laporan lengkap untuk dibuka ulang dan dicetak ke PDF (GET /reports/{id}). */
 export type ReportDetail = ReportSummary & {
   measurement_filter: MeasurementFilter;
+  product_label_mode?: ProductLabelMode;
   rubric_version_no: number | null;
   judge_model_name: string | null;
   case_basis_count: number;

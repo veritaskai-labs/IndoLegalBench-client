@@ -70,7 +70,9 @@ function scoresOf(product: string, split: ScoreSplit): Partial<ReportResultRead>
   return { det_score, llm_score, total_score, rank, failure_rate };
 }
 
-const PRODUCTS: ReadonlyArray<Pick<ReportSessionRead, "product_label" | "measurement_kind" | "markers"> & { version: string | null }> = [
+const PRODUCTS: ReadonlyArray<
+  Pick<ReportSessionRead, "product_label" | "measurement_kind" | "is_trial" | "markers"> & { version: string | null }
+> = [
   { product_label: "Justisio", measurement_kind: "automatic", markers: [], version: "v1.4" },
   {
     product_label: "LegalHero",
@@ -80,7 +82,7 @@ const PRODUCTS: ReadonlyArray<Pick<ReportSessionRead, "product_label" | "measure
   },
   { product_label: "AiYU", measurement_kind: "automatic", markers: [], version: "v2.1" },
   { product_label: "DeepSeek", measurement_kind: "automatic", markers: [{ code: "model_version_differs" }], version: "V3" },
-  { product_label: "Gemini", measurement_kind: "automatic", markers: [{ code: "trial" }], version: "2.5" },
+  { product_label: "Gemini", measurement_kind: "automatic", is_trial: true, markers: [], version: "2.5" },
 ];
 
 function sessionsFor(splits: readonly ScoreSplit[]): ReportSessionRead[] {
