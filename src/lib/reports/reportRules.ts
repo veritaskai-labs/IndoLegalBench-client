@@ -15,7 +15,7 @@ export const SCORE_SCOPE_LABEL: Readonly<Record<ScoreScope, string>> = {
   dev_test: "Dev + Test",
 };
 
-const HIDDEN_REPORT = "Laporan tidak ditemukan atau Anda tidak punya akses untuk membukanya.";
+export const HIDDEN_REPORT = "Laporan tidak ditemukan atau Anda tidak punya akses untuk membukanya.";
 
 /** Satu pesan untuk semua status ini supaya halaman tidak membocorkan laporan milik orang lain (D9); 422 = id salah ketik. */
 const HIDDEN_STATUSES = new Set([403, 404, 422]);

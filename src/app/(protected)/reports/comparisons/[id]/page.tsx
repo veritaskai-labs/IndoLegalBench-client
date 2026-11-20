@@ -8,7 +8,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useReport } from "@/hooks/useReports";
-import { REPORT_STATUS_LABEL } from "@/lib/reports/reportRules";
+import { HIDDEN_REPORT, REPORT_STATUS_LABEL } from "@/lib/reports/reportRules";
 import { decodeRouteParam } from "@/lib/routeParams";
 
 const GENERAL_TITLE = "Laporan perbandingan";
@@ -40,7 +40,13 @@ export default function ComparisonReportPage() {
 
       {report.status !== "ready" && <h1 className="text-xl font-semibold text-slate-900">{GENERAL_TITLE}</h1>}
       {report.status === "loading" && <LoadingState label="Memuat laporan…" />}
-      {report.status === "error" && <ErrorState variant="card" message={report.message} onRetry={report.reload} />}
+      {report.status === "error" && (
+        <ErrorState
+          variant="card"
+          message={report.message}
+          onRetry={report.message === HIDDEN_REPORT ? undefined : report.reload}
+        />
+      )}
 
       {report.status === "ready" && (
         <>
