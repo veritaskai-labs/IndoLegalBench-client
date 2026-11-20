@@ -1,12 +1,13 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AiMonitoringPage from "./page";
 import type { Role } from "@/types";
 
-const { useAuthMock, replaceMock, apiFetchMock } = vi.hoisted(() => ({
+const { useAuthMock, replaceMock, apiFetchMock, locationReplace } = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
   replaceMock: vi.fn(),
   apiFetchMock: vi.fn(),
+  locationReplace: vi.fn(),
 }));
 
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
@@ -18,6 +19,7 @@ vi.mock("@/lib/apiClient", () => ({ apiFetch: apiFetchMock }));
 describe("AiMonitoringPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("location", { replace: locationReplace });
   });
 
   function setAuth(role: Role | null, status: "loading" | "authenticated" = "authenticated") {
@@ -38,13 +40,14 @@ describe("AiMonitoringPage", () => {
   });
 
   it.each(["admin", "developer_ai"] as const)(
-    "shows the Langfuse UI for %s when the local UI is up",
+    "opens the Langfuse UI for %s when the local UI is up",
     async (role) => {
       setAuth(role);
       apiFetchMock.mockResolvedValue({ url: "http://127.0.0.1:3000", reachable: true });
       render(<AiMonitoringPage />);
-      const frame = await screen.findByTitle("Langfuse");
-      expect(frame).toHaveAttribute("src", "http://127.0.0.1:3000");
+      await waitFor(() => {
+        expect(locationReplace).toHaveBeenCalledWith("http://127.0.0.1:3000");
+      });
       expect(replaceMock).not.toHaveBeenCalled();
     },
   );
@@ -54,7 +57,7 @@ describe("AiMonitoringPage", () => {
     apiFetchMock.mockResolvedValue({ url: null, reachable: false });
     render(<AiMonitoringPage />);
     expect(await screen.findByText("Antarmuka Langfuse lokal tidak terjangkau.")).toBeInTheDocument();
-    expect(screen.queryByTitle("Langfuse")).not.toBeInTheDocument();
+    expect(locationReplace).not.toHaveBeenCalled();
   });
 
   it.each(["contributor", "viewer"] as const)("sends %s to forbidden", (role) => {

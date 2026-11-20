@@ -45,6 +45,14 @@ export default function AiMonitoringPage() {
     };
   }, [isAllowed]);
 
+  // Langfuse mengirim frame-ancestors 'none', jadi antarmukanya tidak bisa
+  // disisipkan. Membuka URL lokal menampilkan UI yang sama, tanpa menggambar ulang.
+  useEffect(() => {
+    if (link?.url && link.reachable) {
+      window.location.replace(link.url);
+    }
+  }, [link]);
+
   if (!isAuthenticated || (isAllowed && link === null)) {
     return <LoadingState />;
   }
@@ -54,13 +62,7 @@ export default function AiMonitoringPage() {
   }
 
   if (link?.url && link.reachable) {
-    return (
-      <iframe
-        title="Langfuse"
-        src={link.url}
-        className="-m-4 h-[calc(100vh-4.5rem)] w-[calc(100%+2rem)] border-0 sm:-m-8 sm:w-[calc(100%+4rem)]"
-      />
-    );
+    return <LoadingState />;
   }
 
   return <p className="text-sm text-slate-600">Antarmuka Langfuse lokal tidak terjangkau.</p>;
