@@ -80,9 +80,10 @@ describe("ComparisonReportPage", () => {
     expect(detail).toHaveBeenCalledWith("a/b");
   });
 
-  // D9: someone else's saved report is hidden; the page does not say whether it exists, and offers no PDF.
-  it("explains a hidden or missing report, offers no PDF, and loads again on retry", async () => {
-    detail.mockRejectedValueOnce(new ApiError(404, "ANY")).mockResolvedValueOnce(firstReport());
+  // D9: someone else's saved report is hidden; the page does not say whether it exists, offers no PDF, and
+  // offers no retry, because loading again cannot change the answer.
+  it("explains a hidden or missing report without a PDF or a retry", async () => {
+    detail.mockRejectedValueOnce(new ApiError(404, "ANY"));
 
     render(<ComparisonReportPage />);
 
@@ -90,8 +91,15 @@ describe("ComparisonReportPage", () => {
       "Laporan tidak ditemukan atau Anda tidak punya akses untuk membukanya.",
     );
     expect(screen.queryByRole("button", { name: "Unduh PDF" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Coba lagi" })).toBeNull();
+  });
 
-    await userEvent.click(screen.getByRole("button", { name: "Coba lagi" }));
+  it("loads the report again on retry after a server error", async () => {
+    detail.mockRejectedValueOnce(new ApiError(500, "ANY")).mockResolvedValueOnce(firstReport());
+
+    render(<ComparisonReportPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Coba lagi" }));
     expect(await screen.findByRole("article")).toBeInTheDocument();
   });
 });
