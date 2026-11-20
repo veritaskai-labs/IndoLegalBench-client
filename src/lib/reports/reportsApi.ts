@@ -33,13 +33,15 @@ export const httpReportsGateway: ReportsGateway = {
     apiFetch<ReportSummaryPage>("/reports?size=100", { silentForbidden: true }).then((page) => page.items),
   detail: (reportId) => apiFetch<ReportDetail>(reportPath(reportId), { silentForbidden: true }),
   pdf: (reportId) => apiFetchBlob(`${reportPath(reportId)}/pdf`, { silentForbidden: true }),
-  // red skeleton (SCRUM-321 cycle 9): real signatures, no request yet.
-  eligibleSessions: (filter) => {
-    void filter;
-    return Promise.resolve([]);
-  },
-  create: (body) => {
-    void body;
-    return Promise.resolve({ report: null, warning: null });
-  },
+  eligibleSessions: (filter) =>
+    apiFetch<EligibleSession[]>(
+      `/reports/eligible-sessions?measurement_filter=${encodeURIComponent(filter)}`,
+    ),
+  // silentForbidden: a refused score type or label (AC9, AC14) is explained on the builder page itself.
+  create: (body) =>
+    apiFetch<ReportCreateResponse>("/reports", {
+      method: "POST",
+      body: JSON.stringify(body),
+      silentForbidden: true,
+    }),
 };
