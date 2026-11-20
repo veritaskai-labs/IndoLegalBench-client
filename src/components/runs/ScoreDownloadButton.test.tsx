@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/lib/apiClient";
 import { saveBlob } from "@/lib/browserDownload";
 import { SCORE_DOWNLOAD_REASON, type ScoreDownloadSession, type ScoreGrading } from "@/lib/runs/scoreDownload";
 import type { ScoreFile } from "@/lib/runs/scoreDownloadApi";
@@ -31,6 +32,19 @@ beforeEach(() => {
 });
 
 describe("ScoreDownloadButton (SCRUM-329)", () => {
+  it("offers Unduh skor for a finalized graded session", () => {
+    render(
+      <ScoreDownloadButton
+        session={session({ status: "finalized", session_type: "manual" })}
+        grading="graded"
+        download={() => Promise.resolve(file())}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled();
+    expect(screen.queryByText(SCORE_DOWNLOAD_REASON.notGraded)).not.toBeInTheDocument();
+  });
+
   it("offers Unduh skor with no explanation when the session can be downloaded", () => {
     render(<ScoreDownloadButton session={session()} grading="graded" download={() => Promise.resolve(file())} />);
 
@@ -101,5 +115,28 @@ describe("ScoreDownloadButton (SCRUM-329)", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Permintaan gagal. Coba lagi.");
     expect(screen.queryByText("Jawaban mentah bocor")).not.toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it("shows the server refusal when the download is rejected for a known reason", async () => {
+    const user = userEvent.setup();
+    const message = "Sesi ini tidak berisi kasus yang boleh Anda lihat, jadi tidak ada berkas skor yang bisa diunduh.";
+    const download = vi.fn().mockRejectedValue(new ApiError(409, "SCORE_FILE_NO_VISIBLE_CASES", message));
+    render(<ScoreDownloadButton session={session()} grading="graded" download={download} />);
+
+    await user.click(screen.getByRole("button", { name: "Unduh skor" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("does not show an unexpected server message", async () => {
+    const user = userEvent.setup();
+    const download = vi.fn().mockRejectedValue(new ApiError(500, "INTERNAL", "Jawaban mentah bocor"));
+    render(<ScoreDownloadButton session={session()} grading="graded" download={download} />);
+
+    await user.click(screen.getByRole("button", { name: "Unduh skor" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Permintaan gagal. Coba lagi.");
+    expect(screen.queryByText("Jawaban mentah bocor")).not.toBeInTheDocument();
   });
 });

@@ -211,7 +211,11 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     get.mockResolvedValue(session({ archived_at: "2026-11-03T03:00:00Z" }));
     render(<SessionDetailPage />);
 
-    expect(await screen.findByText(/Sesi ini sudah diarsipkan/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Sesi ini sudah diarsipkan dan tidak tampil di daftar. Datanya tetap tersimpan."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+    expect(screen.getByText("Sesi ini sudah diarsipkan, jadi berkas skornya tidak bisa diunduh.")).toBeInTheDocument();
   });
 
   // Edge: queued, the snapshot does not exist yet.

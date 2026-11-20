@@ -5,6 +5,7 @@ import { GradeSessionDialog } from "@/components/grading/GradeSessionDialog";
 import { GradingProgressBar } from "@/components/grading/GradingProgressBar";
 import { RETRY_GRADING_DIALOG } from "@/lib/grading/gradingRules";
 import { FinalizeSessionDialog } from "@/components/manual-runs/FinalizeSessionDialog";
+import { SessionScoreDownload } from "@/components/runs/ScoreDownloadButton";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { useToast } from "@/components/ui/Toast";
 import { useGradingProgress } from "@/hooks/useGradingProgress";
@@ -128,7 +129,17 @@ export function ManualSessionHeader({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <SessionScoreDownload
+              session={{
+                id: session.id,
+                status: session.status,
+                session_type: "manual",
+                accepted_as_is_at: null,
+                accepted_as_is_reason: null,
+              }}
+              gateway={gradingGateway}
+            />
             <SessionStatusBadge status={session.status} />
           </div>
         </div>

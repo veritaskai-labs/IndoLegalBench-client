@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualSessionHeader } from "./ManualSessionHeader";
 import { PROGRESS_POLL_MS } from "@/hooks/useMeasurementProgress";
+import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import { gradingProgress } from "@/test/gradingFixtures";
+import type { SessionGradingResponse } from "@/types/grading";
 import type { ManualSessionDetail } from "@/types/measurement";
 import type { Role } from "@/types";
 
@@ -12,6 +14,24 @@ const showToastMock = vi.fn();
 vi.mock("@/components/ui/Toast", () => ({
   useToast: () => ({ showToast: showToastMock }),
 }));
+
+// Unduh skor reads the latest grading result. Tests that don't pass a gateway must not hit the network.
+vi.mock("@/lib/grading/gradingApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/grading/gradingApi")>();
+  const { ApiError } = await import("@/lib/apiClient");
+  return {
+    ...actual,
+    httpGradingGateway: {
+      enqueue: vi.fn(),
+      progress: vi.fn().mockResolvedValue(null),
+      estimate: vi.fn(),
+      results: vi.fn().mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND")),
+      runs: vi.fn(),
+      run: vi.fn(),
+      sessions: vi.fn(),
+    },
+  };
+});
 
 vi.mock("./FinalizeSessionDialog", () => ({
   FinalizeSessionDialog: ({
@@ -91,7 +111,7 @@ function fakeGradingGateway(progress: GradingGateway["progress"] = () => Promise
     enqueue: vi.fn(),
     progress: vi.fn(progress),
     estimate: vi.fn(),
-    results: vi.fn(),
+    results: vi.fn().mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND")),
     runs: vi.fn(),
     run: vi.fn(),
     sessions: vi.fn(),
@@ -592,5 +612,23 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
 
     expect(screen.getByText(/08 Nov 2026/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tandai Selesai" })).not.toBeInTheDocument();
+  });
+
+  it("offers Unduh skor once a finalized session has a grading result", async () => {
+    const gradingGateway = fakeGradingGateway();
+    gradingGateway.results = vi.fn().mockResolvedValue({} as SessionGradingResponse);
+
+    render(
+      <ManualSessionHeader
+        session={createMockDetail({ status: "finalized", finalized_at: "2026-11-08T12:00:00Z" })}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+        gradingGateway={gradingGateway}
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: "Unduh skor" })).toBeEnabled();
   });
 });

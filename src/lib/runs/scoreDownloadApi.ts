@@ -1,7 +1,9 @@
+import { apiFetchBlob } from "@/lib/apiClient";
+
 /**
- * Unduhan skor satu sesi (SCRUM-329). SCRUM-327 belum menerbitkan rutenya di kontrak,
- * jadi pemanggilan bawaan ini tidak menyentuh jaringan dan tidak menyusun CSV dari
- * jawaban, skor, atau alasan yang ada di halaman. Ganti isi download bila rute itu ada.
+ * Unduhan skor satu sesi (SCRUM-329). Berkasnya disusun server
+ * (GET /reports/sessions/{id}/csv, SCRUM-327). Halaman tidak merakit CSV
+ * dari jawaban, skor, atau alasan yang sedang ditampilkan.
  */
 
 export type ScoreFile = {
@@ -16,17 +18,18 @@ export type ScoreDownload = {
 /** Hanya id yang aman dipakai sebagai nama berkas. Selain itu, nama tetap. */
 const SAFE_SESSION_ID = /^[A-Za-z0-9-]{1,64}$/;
 
-const HEADER = "kasus,produk,skor,jenis_pengukuran,versi_kasus,versi_rubrik,versi_model\n";
-
 export function scoreFileName(sessionId: string): string {
   return SAFE_SESSION_ID.test(sessionId) ? `skor-${sessionId}.csv` : "skor.csv";
 }
 
-export const pendingScoreDownload: ScoreDownload = {
-  download(sessionId) {
-    return Promise.resolve({
-      blob: new Blob([HEADER], { type: "text/csv;charset=utf-8" }),
-      fileName: scoreFileName(sessionId),
-    });
+/** Path unduhan. Id dikodekan supaya tidak mengubah segmen rute. */
+export function scoreDownloadPath(sessionId: string): string {
+  return `/reports/sessions/${encodeURIComponent(sessionId)}/csv`;
+}
+
+export const httpScoreDownload: ScoreDownload = {
+  async download(sessionId) {
+    const blob = await apiFetchBlob(scoreDownloadPath(sessionId), { silentForbidden: true });
+    return { blob, fileName: scoreFileName(sessionId) };
   },
 };
