@@ -6,6 +6,7 @@ import { firstReport } from "@/test/reportFixtures";
 import {
   DEV_SCORES_MESSAGE,
   canPublish,
+  candidateLabel,
   productLabelsText,
   publishErrorMessage,
   publishState,
@@ -73,6 +74,12 @@ describe("labels", () => {
   it("shows the frozen product labels exactly as the server sent them", () => {
     expect(productLabelsText(["AiYU", "Produk B"])).toBe("AiYU, Produk B");
     expect(productLabelsText([])).toBe("Tidak ada produk");
+  });
+
+  it("tells replacement candidates with the same title apart by date and language", () => {
+    expect(candidateLabel(firstReport({ title: "Perbandingan", created_at: "2026-11-19T03:15:00Z", language: "id" }))).toBe(
+      "Perbandingan · 19 Nov 2026 · ID",
+    );
   });
 
   it("has a retryable message for the published list", () => {

@@ -100,7 +100,7 @@ describe("ReportPublishActions", () => {
 
     await user.click(screen.getByRole("button", { name: "Ganti versi" }));
     const dialog = within(screen.getByRole("dialog", { name: "Ganti versi laporan?" }));
-    await user.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "November");
+    await user.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "r-new");
     await user.click(dialog.getByRole("button", { name: "Ganti versi" }));
 
     expect(gateway.publish).toHaveBeenCalledWith("r-new", "pub-1");

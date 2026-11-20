@@ -71,7 +71,8 @@ describe("ReplaceVersionDialog", () => {
 
     const choice = await dialog.findByRole("combobox", { name: "Laporan pengganti" });
     const options = within(choice).getAllByRole("option").map((option) => option.textContent);
-    expect(options).toEqual(["Pilih laporan…", "Perbandingan November"]);
+    // Re-review: same titles are told apart by date and language.
+    expect(options).toEqual(["Pilih laporan…", "Perbandingan November · 19 Nov 2026 · EN"]);
     expect(dialog.getByRole("button", { name: "Ganti versi" })).toBeDisabled();
   });
 
@@ -79,7 +80,7 @@ describe("ReplaceVersionDialog", () => {
     const user = userEvent.setup();
     const { dialog, publication, onReplaced } = renderDialog();
 
-    await user.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "Perbandingan November");
+    await user.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "r-new");
     await user.click(dialog.getByRole("button", { name: "Ganti versi" }));
 
     expect(publication.publish).toHaveBeenCalledWith("r-new", "pub-1");
