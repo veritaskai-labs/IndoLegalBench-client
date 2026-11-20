@@ -6,7 +6,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { httpPublicationGateway, type PublicationGateway } from "@/lib/reports/publicationApi";
-import { publishErrorMessage, publishState, versionLabel } from "@/lib/reports/publicationRules";
+import { candidateLabel, publishErrorMessage, publishState, versionLabel } from "@/lib/reports/publicationRules";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import type { PublicationRead, PublishedReportListItem, ReportSummary } from "@/types/reports";
 
@@ -95,7 +95,7 @@ export function ReplaceVersionDialog({
               <option value="">Pilih laporan…</option>
               {choices.data.candidates.map((candidate) => (
                 <option key={candidate.id} value={candidate.id}>
-                  {candidate.title}
+                  {candidateLabel(candidate)}
                 </option>
               ))}
             </select>

@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/apiClient";
+import { formatWibDate } from "@/lib/datetime/formatWib";
 import type { Role } from "@/lib/auth";
 import type { PublishedReportListItem, ReportSummary } from "@/types/reports";
 
@@ -55,6 +56,11 @@ export function versionLabel(versionNo: number): string {
 
 export function replaceOptionLabel(item: Pick<PublishedReportListItem, "title" | "version_no">): string {
   return `${item.title} (${versionLabel(item.version_no)})`;
+}
+
+/** Pilihan laporan pengganti: judul bisa sama, jadi tanggal dibuat dan bahasa ikut ditulis. */
+export function candidateLabel(report: Pick<ReportSummary, "title" | "created_at" | "language">): string {
+  return `${report.title} · ${formatWibDate(report.created_at)} · ${report.language.toUpperCase()}`;
 }
 
 /** AC10: nama sudah dibekukan server menurut aturan PBI-15 (nama asli atau kode); layar tidak mengubahnya. */
