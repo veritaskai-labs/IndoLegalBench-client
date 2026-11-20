@@ -21,7 +21,11 @@ describe("ReportDocument", () => {
   it("shows the logo, the title as typed and the PDF info line", () => {
     render(<ReportDocument report={firstReport()} />);
     const body = screen.getByRole("article");
-    expect(within(body).getByText("VERITASK")).toBeInTheDocument();
+    // AC8: the official Veritask logo, the same asset the server PDF uses.
+    expect(within(body).getByRole("img", { name: "Veritask" })).toHaveAttribute(
+      "src",
+      expect.stringContaining("veritask-logo.png"),
+    );
     expect(within(body).getByRole("heading", { level: 1, name: "Perbandingan 5 produk, Oktober 2026" })).toBeInTheDocument();
     expect(
       within(body).getByText(
