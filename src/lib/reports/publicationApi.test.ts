@@ -86,13 +86,44 @@ describe("httpPublicationGateway.publish (POST /reports/{id}/publish, AC9)", () 
   });
 });
 
+function publications(from: number, count: number): PublishedReportListItem[] {
+  return Array.from({ length: count }, (_, index) => ({ ...listed, id: `pub-${from + index}`, report_id: `r-${from + index}` }));
+}
+
 describe("httpPublicationGateway.listPublished (GET /published-reports, AC9)", () => {
   it("reads the current publications, newest first as the server sends them", async () => {
     fetchMock.mockResolvedValue(fakeResponse(200, { items: [listed], total: 1, page: 1, size: 100 }));
 
     await expect(httpPublicationGateway.listPublished()).resolves.toEqual([listed]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/published-reports\?size=100$/);
+    expect(url).toMatch(/\/published-reports\?page=1&size=100$/);
     expect(init).toMatchObject({ credentials: "include" });
+  });
+
+  // Review PR #106 blocker 1: the server caps a page at 100, so the 101st publication must not drop out of the
+  // list or out of the replacement choice.
+  it("follows every page until it has all current publications", async () => {
+    fetchMock
+      .mockResolvedValueOnce(fakeResponse(200, { items: publications(1, 100), total: 101, page: 1, size: 100 }))
+      .mockResolvedValueOnce(fakeResponse(200, { items: publications(101, 1), total: 101, page: 2, size: 100 }));
+
+    const all = await httpPublicationGateway.listPublished();
+
+    expect(all).toHaveLength(101);
+    expect(all.at(-1)?.id).toBe("pub-101");
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      expect.stringMatching(/\/published-reports\?page=1&size=100$/),
+      expect.stringMatching(/\/published-reports\?page=2&size=100$/),
+    ]);
+  });
+
+  it("stops on an empty page even if the total says more, so a shrinking list cannot loop", async () => {
+    fetchMock
+      .mockResolvedValueOnce(fakeResponse(200, { items: publications(1, 100), total: 150, page: 1, size: 100 }))
+      .mockResolvedValueOnce(fakeResponse(200, { items: [], total: 100, page: 2, size: 100 }));
+
+    await expect(httpPublicationGateway.listPublished()).resolves.toHaveLength(100);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
