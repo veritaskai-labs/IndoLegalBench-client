@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { reportInfoLine } from "@/lib/reports/reportCells";
 import { REPORT_LABELS } from "@/lib/reports/reportLabels";
 import { reportSections } from "@/lib/reports/reportSections";
@@ -7,10 +9,8 @@ import { ReportBarChart } from "./ReportBarChart";
 import { ReportRankingTable } from "./ReportRankingTable";
 
 /**
- * Isi laporan perbandingan, disusun seperti PDF (pdf.py render): logo dan judul, baris keterangan, banner
- * laporan dev, satu bagian per jenis nilai (tabel dan grafik), versi kasus, dan email kontak. Semuanya dalam
- * bahasa laporan (Fase 0 K3); atribut lang memberi tahu pembaca layar bahasanya. Judul diketik pengguna, jadi
- * tidak diterjemahkan. Logo resmi belum ada, jadi memakai tulisan VERITASK seperti PDF.
+ * Isi laporan perbandingan, disusun seperti PDF (pdf.py render), dalam bahasa laporan (Fase 0 K3). Judul
+ * diketik pengguna, jadi tidak diterjemahkan.
  */
 export function ReportDocument({ report }: Readonly<{ report: ReportDetail }>) {
   const language = report.language;
@@ -20,7 +20,7 @@ export function ReportDocument({ report }: Readonly<{ report: ReportDetail }>) {
   return (
     <article lang={language} className="space-y-5 rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
       <header className="space-y-1">
-        <p className="text-sm font-bold tracking-[0.18em] text-slate-900">VERITASK</p>
+        <Image src="/veritask-logo.png" alt="Veritask" width={1022} height={256} className="h-8 w-auto" />
         <h1 className="text-xl font-semibold text-slate-900">{report.title}</h1>
         <p className="text-sm text-slate-600">{reportInfoLine(report, language)}</p>
       </header>
