@@ -4,6 +4,7 @@ import { ApiError, onForbidden } from "@/lib/apiClient";
 import { firstReport } from "@/test/reportFixtures";
 import type { EligibleSession, ReportCreate, ReportSummary } from "@/types/reports";
 
+import { outcomeFromError } from "./builder/createOutcome";
 import { httpReportsGateway } from "./reportsApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire and that a 403 stays
@@ -177,4 +178,44 @@ describe("httpReportsGateway.create (POST /reports, SCRUM-321 / PBI-15 AC1)", ()
       expect(forbidden).not.toHaveBeenCalled();
     },
   );
+
+  // Negative (AC4, AC13): the server puts the reasons at the top level of the error body
+  // (server app/main.py domain_error_handler: {**details, code, message}). Bodies below copy
+  // report_generation.py. Built by hand, an ApiError would hide this; here the real apiFetch reads them.
+  async function outcomeOf(status: number, errorBody: unknown) {
+    fetchMock.mockResolvedValue(fakeResponse(status, errorBody));
+    try {
+      await httpReportsGateway.create(body);
+    } catch (error) {
+      return outcomeFromError(error);
+    }
+    throw new Error("create did not reject");
+  }
+
+  it("keeps every reason of a real 409 REPORT_NOT_COMPARABLE body", async () => {
+    const outcome = await outcomeOf(409, {
+      selection_errors: ["DUPLICATE_PRODUCT"],
+      ineligible: { "s-2": ["SESSION_CANCELLED", "SESSION_NOT_GRADED"] },
+      rejections: [{ requirement: "JUDGE_MODEL", message: "Model penilai berbeda." }],
+      code: "REPORT_NOT_COMPARABLE",
+      message: "Sesi yang dipilih belum bisa dibandingkan. Lihat alasannya satu per satu.",
+    });
+
+    expect(outcome).toEqual({
+      kind: "not_comparable",
+      selectionErrors: ["DUPLICATE_PRODUCT"],
+      ineligible: { "s-2": ["SESSION_CANCELLED", "SESSION_NOT_GRADED"] },
+      rejections: [{ requirement: "JUDGE_MODEL", message: "Model penilai berbeda." }],
+    });
+  });
+
+  it("keeps the missing session ids of a real 404 REPORT_SESSION_NOT_FOUND body", async () => {
+    const outcome = await outcomeOf(404, {
+      missing: ["s-2"],
+      code: "REPORT_SESSION_NOT_FOUND",
+      message: "Ada sesi yang dipilih tidak ditemukan.",
+    });
+
+    expect(outcome).toEqual({ kind: "sessions_missing", sessionIds: ["s-2"] });
+  });
 });
