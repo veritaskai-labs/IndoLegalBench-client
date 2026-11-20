@@ -247,6 +247,16 @@ describe("ReportBuilderForm: options per role (AC9, AC14)", () => {
     expect(within(group).getByRole("radio", { name: "Kode produk" })).not.toBeChecked();
   });
 
+  // Edge: before /me answers the role is unknown, so the role rules offer no score type at all. Showing the form
+  // then would mean an empty "Jenis nilai" group next to a Create that still sends Test. Wait for the role instead.
+  it("waits for the role before showing the form", async () => {
+    useAuthMock.mockReturnValue({ status: "loading" });
+    render(<ReportBuilderForm gateway={gatewayWith()} />);
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Memuat akun Anda"));
+    expect(screen.queryByRole("group", { name: "Jenis nilai" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Buat laporan" })).not.toBeInTheDocument();
+  });
+
   it.each<Role>(["developer_ai", "viewer", "contributor"])("hides the label choice from %s", async (role) => {
     signInAs(role);
     await renderReady();
