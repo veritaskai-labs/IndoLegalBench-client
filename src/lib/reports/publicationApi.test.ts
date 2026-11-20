@@ -118,6 +118,19 @@ describe("httpPublicationGateway.listPublished (GET /published-reports, AC9)", (
     ]);
   });
 
+  // Re-review non-blocker 3: a publication made between two page requests shifts the list by one, so the
+  // same row can come back on the next page. It is listed once.
+  it("lists a publication once even if the list shifts between two page requests", async () => {
+    fetchMock
+      .mockResolvedValueOnce(fakeResponse(200, { items: publications(1, 100), total: 101, page: 1, size: 100 }))
+      .mockResolvedValueOnce(fakeResponse(200, { items: publications(100, 2), total: 102, page: 2, size: 100 }));
+
+    const all = await httpPublicationGateway.listPublished();
+
+    expect(all.map((item) => item.id).filter((id) => id === "pub-100")).toHaveLength(1);
+    expect(all).toHaveLength(101);
+  });
+
   it("stops on an empty page even if the total says more, so a shrinking list cannot loop", async () => {
     fetchMock
       .mockResolvedValueOnce(fakeResponse(200, { items: publications(1, 100), total: 150, page: 1, size: 100 }))
