@@ -19,7 +19,24 @@ export const httpPublicationGateway: PublicationGateway = {
       body: JSON.stringify(supersedesId ? { supersedes_id: supersedesId } : {}),
       silentForbidden: true,
     }),
-  // shortcut: only the first page of 100 (server maximum), same as the saved report list.
-  listPublished: () =>
-    apiFetch<PublishedReportPage>("/published-reports?size=100", { silentForbidden: true }).then((page) => page.items),
+  listPublished: () => readAllPublished(),
 };
+
+// Server maximum per page (GET /published-reports size le=100).
+const PAGE_SIZE = 100;
+
+/**
+ * Semua versi yang sedang terbit, halaman demi halaman. Daftar terbit dan pilihan Ganti versi harus lengkap
+ * (AC9), jadi halaman berikutnya diminta sampai jumlahnya mencapai total. Halaman kosong menghentikan perulangan,
+ * supaya daftar yang menyusut di tengah jalan tidak membuat permintaan tanpa akhir.
+ */
+async function readAllPublished(): Promise<PublishedReportListItem[]> {
+  const all: PublishedReportListItem[] = [];
+  for (let page = 1; ; page += 1) {
+    const result = await apiFetch<PublishedReportPage>(`/published-reports?page=${page}&size=${PAGE_SIZE}`, {
+      silentForbidden: true,
+    });
+    all.push(...result.items);
+    if (result.items.length === 0 || all.length >= result.total) return all;
+  }
+}
