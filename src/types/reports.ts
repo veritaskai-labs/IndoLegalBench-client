@@ -17,3 +17,9 @@ export type ReportCaseBasisRead = components["schemas"]["ReportCaseBasisRead"];
 export type ReportSummary = components["schemas"]["ReportSummary"];
 export type ReportSummaryPage = components["schemas"]["Page_ReportSummary_"];
 export type ReportDetail = components["schemas"]["ReportDetail"];
+
+/** PBI-17 SCRUM-332: versi terbit baru dari POST /reports/{id}/publish. version_no diisi server. */
+export type PublicationRead = components["schemas"]["PublicationRead"];
+/** Satu baris GET /published-reports; product_labels sudah dibekukan server menurut aturan PBI-15 (AC10). */
+export type PublishedReportListItem = components["schemas"]["PublishedReportListItem"];
+export type PublishedReportPage = components["schemas"]["Page_PublishedReportListItem_"];
