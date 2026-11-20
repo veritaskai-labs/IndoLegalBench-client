@@ -1,4 +1,5 @@
 import type {
+  EligibleSession,
   ReportCaseBasisRead,
   ReportDetail,
   ReportDetailResultRead,
@@ -135,4 +136,22 @@ export function devTestReport(overrides: Partial<ReportDetail> = {}): ReportDeta
     sessions: sessionsFor(["test", "dev", "combined"]),
     ...overrides,
   });
+}
+
+/** One row of GET /reports/eligible-sessions (SCRUM-321): eligible, automatic, judge-1, product p-1. */
+export function eligibleSession(overrides: Partial<EligibleSession> = {}): EligibleSession {
+  return {
+    session_id: "s-1",
+    label: "Sesi A",
+    product_id: "p-1",
+    product_name: "Produk A",
+    created_at: "2026-11-18T09:00:00Z",
+    session_type: "automatic",
+    purpose: "measurement",
+    status: "completed",
+    judge_model_version: "judge-1",
+    eligible: true,
+    reasons: [],
+    ...overrides,
+  } as EligibleSession;
 }

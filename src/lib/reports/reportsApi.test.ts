@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
-import { firstReport } from "@/test/reportFixtures";
-import type { EligibleSession, ReportCreate, ReportSummary } from "@/types/reports";
+import { eligibleSession, firstReport } from "@/test/reportFixtures";
+import type { ReportCreate, ReportSummary } from "@/types/reports";
 
 import { outcomeFromError } from "./builder/createOutcome";
 import { httpReportsGateway } from "./reportsApi";
@@ -105,23 +105,6 @@ describe("httpReportsGateway.pdf (GET /reports/{id}/pdf, D3 step 13)", () => {
 });
 
 // SCRUM-321: the builder page reads every pickable session with its reasons, then sends one POST /reports.
-function eligibleSession(overrides: Partial<EligibleSession> = {}): EligibleSession {
-  return {
-    session_id: "s-1",
-    label: "Sesi A",
-    product_id: "p-1",
-    product_name: "Produk A",
-    created_at: "2026-11-18T09:00:00Z",
-    session_type: "automatic",
-    purpose: "measurement",
-    status: "completed",
-    judge_model_version: "judge-1",
-    eligible: true,
-    reasons: [],
-    ...overrides,
-  } as EligibleSession;
-}
-
 describe("httpReportsGateway.eligibleSessions (GET /reports/eligible-sessions, SCRUM-321)", () => {
   it.each(["all", "automatic", "manual"] as const)(
     "asks the server for the %s sessions with the session cookie",
