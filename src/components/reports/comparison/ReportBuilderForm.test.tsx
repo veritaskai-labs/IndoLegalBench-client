@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -146,8 +146,8 @@ describe("ReportBuilderForm: the session picker (AC1, AC4, AC5)", () => {
     for (const name of [/Produk A · Sesi A1/, /Produk A · Sesi A2/, /Produk B · Sesi B1/, /Produk C · Sesi C1/]) {
       expect(box(name)).toBeEnabled();
     }
-    expect(screen.getAllByText("Otomatis").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Manual").length).toBeGreaterThan(0);
+    expect(within(box(/Sesi A1/).closest("li") as HTMLElement).getByText("Otomatis")).toBeInTheDocument();
+    expect(within(box(/Sesi B1/).closest("li") as HTMLElement).getByText("Manual")).toBeInTheDocument();
   });
 
   // Positive (AC4): a trial session may be picked but is clearly marked.
@@ -210,6 +210,17 @@ describe("ReportBuilderForm: the session picker (AC1, AC4, AC5)", () => {
     await user.click(within(pickedRow("Produk A · Sesi A1")).getByRole("button", { name: /Lepas/ }));
     expect(box(/Sesi A1/)).not.toBeChecked();
     expect(screen.queryByRole("list", { name: "Sesi terpilih" })).not.toBeInTheDocument();
+  });
+
+  // Edge: the filter hides a picked session from the picker, so the picked list is the only place to let it go.
+  it("lets the user remove a session the filter hides", async () => {
+    const { user } = await renderReady();
+    await user.click(box(/Sesi A1/));
+    await user.click(box(/Sesi B1/));
+    await user.click(screen.getByRole("radio", { name: "Manual" }));
+    await user.click(within(pickedRow("Produk A · Sesi A1")).getByRole("button", { name: /Lepas/ }));
+    expect(screen.queryByText(/tidak ikut karena filter/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Sesi terpilih" })).getAllByRole("listitem")).toHaveLength(1);
   });
 });
 
@@ -296,6 +307,14 @@ describe("ReportBuilderForm: title and Create", () => {
     });
   });
 
+  // Edge: a native form submit would reload the page and lose every pick.
+  it("keeps the browser from reloading the page on submit", async () => {
+    const { user } = await renderReady();
+    await fillValidForm(user);
+    const form = createButton().closest("form") as HTMLFormElement;
+    expect(fireEvent.submit(form)).toBe(false);
+  });
+
   // Edge: each click is a new report on the server (no idempotency key), so Create is off while sending.
   it("turns Create off while the report is being made", async () => {
     const create = vi.fn(() => new Promise<ReportCreateResponse>(() => {}));
@@ -343,6 +362,7 @@ describe("ReportBuilderForm: answers of POST /reports", () => {
     expect(alert).toHaveTextContent("Pilih sesi dari minimal dua produk untuk dibandingkan.");
     expect(alert).toHaveTextContent("Versi rubrik berbeda.");
     expect(alert).toHaveTextContent("Kumpulan kasus uji berbeda.");
+    expect(alert).toHaveTextContent("Alasannya ada di daftar Sesi terpilih.");
     expect(within(pickedRow("Produk B · Sesi B1")).getByText(/belum dinilai/)).toBeInTheDocument();
     expect(within(pickedRow("Produk A · Sesi A1")).queryByText(/belum dinilai/)).not.toBeInTheDocument();
   });
@@ -378,6 +398,16 @@ describe("ReportBuilderForm: answers of POST /reports", () => {
   it("shows a general failure when the server breaks", async () => {
     await submitWith(vi.fn().mockRejectedValue(new Error("network")));
     expect(await screen.findByRole("alert")).toHaveTextContent("Laporan gagal dibuat. Coba lagi.");
+  });
+
+  // Negative: the server's own sentence is more precise than a general line, so it wins when there is one.
+  it.each([
+    [500, "INTERNAL", "Server sedang sibuk, coba beberapa menit lagi.", "Server sedang sibuk, coba beberapa menit lagi."],
+    [422, "VALIDATION_ERROR", "Judul tidak boleh kosong.", "Judul tidak boleh kosong."],
+    [422, "VALIDATION_ERROR", null, "Isian belum lengkap. Periksa judul dan sesi yang dipilih."],
+  ])("shows %i %s with the server message %j", async (status, code, serverMessage, text) => {
+    await submitWith(vi.fn().mockRejectedValue(new ApiError(status, code, serverMessage)));
+    expect(await screen.findByRole("alert")).toHaveTextContent(text);
   });
 
   // Edge: the answer belongs to the picks that were sent. Changing the picks clears it.
