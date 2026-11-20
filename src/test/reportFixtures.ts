@@ -14,6 +14,8 @@ import type {
 
 export function reportResult(overrides: Partial<ReportDetailResultRead> = {}): ReportDetailResultRead {
   return {
+    // server#149 (SCRUM-326) menambah id hasil untuk penelusuran sampai kasus.
+    id: "result-1",
     score_split: "test",
     cases_graded_count: 50,
     cases_basis_count: 42,
