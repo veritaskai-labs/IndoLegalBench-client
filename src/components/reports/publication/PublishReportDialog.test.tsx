@@ -89,13 +89,17 @@ describe("PublishReportDialog", () => {
     expect(dialog.getByRole("button", { name: "Terbitkan" })).toBeDisabled();
   });
 
-  it("says when the current versions could not be loaded", async () => {
+  it("says when the current versions could not be loaded and loads them again on retry", async () => {
     const user = userEvent.setup();
-    const { dialog } = renderDialog(fakeGateway({ listPublished: vi.fn().mockRejectedValue(new Error("down")) }));
+    const listPublished = vi.fn().mockRejectedValueOnce(new Error("down")).mockResolvedValueOnce([current]);
+    const { dialog } = renderDialog(fakeGateway({ listPublished }));
 
     await user.click(dialog.getByRole("radio", { name: "Ganti versi yang sedang terbit" }));
 
     expect(await dialog.findByText("Gagal memuat daftar laporan terbit. Coba lagi.")).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Coba lagi" }));
+    expect(await dialog.findByRole("combobox", { name: "Versi yang diganti" })).toBeInTheDocument();
+    expect(listPublished).toHaveBeenCalledTimes(2);
   });
 
   // AC12: a refusal because of dev scores reads clearly, inside the dialog.

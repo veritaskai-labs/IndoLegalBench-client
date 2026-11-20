@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,7 +34,9 @@ describe("ReportPublishActions", () => {
     await user.click(dialogs[dialogs.length - 1]);
 
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    // Native <output> (Sonar S6819) still reads as a status message.
     expect(screen.getByRole("status")).toHaveTextContent("Laporan diterbitkan sebagai Versi 2.");
+    expect(screen.getByRole("status").tagName).toBe("OUTPUT");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -63,21 +65,55 @@ describe("ReportPublishActions", () => {
     expect(button).toHaveAccessibleDescription(/memuat skor dev, jadi tidak bisa diterbitkan/);
   });
 
-  it("points a published report to the published list and tells Admin how to replace it", () => {
+  it("points a published report to the published list and gives Admin a Ganti versi button", () => {
     render(<ReportPublishActions report={firstReport({ status: "published" })} gateway={fakeGateway()} onChanged={vi.fn()} />);
 
     expect(screen.queryByRole("button", { name: "Terbitkan" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Lihat daftar laporan terbit" })).toHaveAttribute("href", "/reports/published");
-    expect(screen.getByText(/pilih Ganti versi yang sedang terbit/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ganti versi" })).toBeEnabled();
   });
 
-  it("does not show the replace hint to other roles", () => {
+  // SCRUM-335 "tombol ganti versi": Admin replaces this published report with a saved Test report.
+  it("replaces this published report from its own page", async () => {
+    const user = userEvent.setup();
+    const onChanged = vi.fn();
+    const gateway = fakeGateway();
+    vi.mocked(gateway.listPublished).mockResolvedValue([
+      { id: "pub-1", report_id: "r-pub", version_no: 1, title: "Oktober", published_at: "2026-11-18T03:00:00Z", published_by: "a", product_labels: [] },
+    ]);
+    const reports = {
+      list: vi.fn().mockResolvedValue([
+        { ...firstReport({ id: "r-new", title: "November" }) },
+        { ...devTestReport({ id: "r-dev", title: "Dev" }) },
+      ]),
+      detail: vi.fn(),
+      pdf: vi.fn(),
+    };
+    render(
+      <ReportPublishActions
+        report={firstReport({ id: "r-pub", status: "published" })}
+        gateway={gateway}
+        reportsGateway={reports}
+        onChanged={onChanged}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Ganti versi" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Ganti versi laporan?" }));
+    await user.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "November");
+    await user.click(dialog.getByRole("button", { name: "Ganti versi" }));
+
+    expect(gateway.publish).toHaveBeenCalledWith("r-new", "pub-1");
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it("does not show Ganti versi to other roles", () => {
     session.role = "viewer";
 
     render(<ReportPublishActions report={firstReport({ status: "published" })} gateway={fakeGateway()} onChanged={vi.fn()} />);
 
     expect(screen.getByRole("link", { name: "Lihat daftar laporan terbit" })).toBeInTheDocument();
-    expect(screen.queryByText(/pilih Ganti versi yang sedang terbit/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ganti versi" })).not.toBeInTheDocument();
   });
 
   // AC9: an old version stays readable and says it was replaced.
