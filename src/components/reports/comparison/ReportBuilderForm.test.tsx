@@ -367,6 +367,19 @@ describe("ReportBuilderForm: answers of POST /reports", () => {
     expect(within(pickedRow("Produk A · Sesi A1")).queryByText(/belum dinilai/)).not.toBeInTheDocument();
   });
 
+  // Edge: a 409 with only comparison rules. Pointing to session reasons that are not there sends the user looking.
+  it("does not point to session reasons when the 409 has none", async () => {
+    const error = reportError(409, "REPORT_NOT_COMPARABLE", {
+      selection_errors: [],
+      ineligible: {},
+      rejections: [{ requirement: "JUDGE_MODEL", message: "LLM judge berbeda." }],
+    });
+    await submitWith(vi.fn().mockRejectedValue(error));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("LLM judge berbeda.");
+    expect(alert).not.toHaveTextContent("Sesi terpilih");
+  });
+
   // Negative: a session was deleted or archived after the list loaded. Mark exactly that one and offer a reload.
   it("marks sessions that are gone (404) and offers to reload the list", async () => {
     const error = reportError(404, "REPORT_SESSION_NOT_FOUND", { missing: ["a-1"] });
