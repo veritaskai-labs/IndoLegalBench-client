@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 
 import {
-  attemptSourceLabel,
   canOpenEvidence,
   canRetryDrilldown,
   CONTENT_REQUEST_TEXT,
@@ -71,12 +70,5 @@ describe("canOpenEvidence (AC4)", () => {
     [null, false],
   ] as const)("%s → %s", (role, allowed) => {
     expect(canOpenEvidence(role)).toBe(allowed);
-  });
-});
-
-describe("attemptSourceLabel (AC2)", () => {
-  it("labels manual and automatic answers", () => {
-    expect(attemptSourceLabel({ source: "manual" })).toBe("Manual");
-    expect(attemptSourceLabel({ source: "automatic" })).toBe("Otomatis");
   });
 });

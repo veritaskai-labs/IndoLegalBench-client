@@ -1,6 +1,5 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/lib/auth";
-import type { ReportAttemptRead } from "@/types/reports";
 
 import { REPORT_CONTACT_EMAIL } from "./reportLabels";
 
@@ -47,11 +46,6 @@ const EVIDENCE_ROLES: ReadonlySet<Role> = new Set<Role>(["admin", "contributor"]
 
 export function canOpenEvidence(role: Role | null): boolean {
   return role !== null && EVIDENCE_ROLES.has(role);
-}
-
-/** Label asal jawaban (AC2): jawaban manual wajib diberi label. */
-export function attemptSourceLabel(attempt: Pick<ReportAttemptRead, "source">): string {
-  return attempt.source === "manual" ? "Manual" : "Otomatis";
 }
 
 /** Percobaan gagal teknis tidak punya skor dan ditandai "tidak dinilai", bukan skor 0 (AC2). */
