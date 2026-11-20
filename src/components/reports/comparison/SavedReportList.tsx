@@ -64,11 +64,7 @@ function ReportTable({ reports }: Readonly<{ reports: readonly ReportSummary[] }
   );
 }
 
-/**
- * Daftar laporan tersimpan (D3 langkah 10). Setiap laporan otomatis tersimpan saat dibuat; server menyaring,
- * jadi selain Admin hanya laporan sendiri yang tampil (D9). Halaman ini bagian aplikasi, jadi Bahasa Indonesia.
- * Tombol Terbitkan tidak ada di sini karena termasuk PBI-17.
- */
+/** Daftar laporan (D3 langkah 10), disaring server sesuai peran (D9). Tombol Terbitkan termasuk PBI-17. */
 export function SavedReportList({ gateway = httpReportsGateway }: Readonly<{ gateway?: ReportsGateway }>) {
   const reports = useReports(gateway);
 

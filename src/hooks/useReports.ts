@@ -13,7 +13,7 @@ export function useReport(reportId: string, gateway: ReportsGateway = httpReport
   return useAsyncResource<ReportDetail>(`report|${reportId}`, () => gateway.detail(reportId), reportErrorMessage);
 }
 
-/** Daftar laporan tersimpan. Server yang menyaring: selain Admin hanya laporan sendiri (D9). */
+/** Daftar laporan, disaring server sesuai peran (D9). */
 export function useReports(gateway: ReportsGateway = httpReportsGateway) {
   return useAsyncResource<ReportSummary[]>("reports", () => gateway.list(), reportListErrorMessage);
 }

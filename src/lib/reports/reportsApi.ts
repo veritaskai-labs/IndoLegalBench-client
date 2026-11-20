@@ -1,9 +1,9 @@
 import { apiFetch, apiFetchBlob } from "@/lib/apiClient";
 import type { ReportDetail, ReportSummary, ReportSummaryPage } from "@/types/reports";
 
-/** silentForbidden: laporan milik orang lain hanya untuk Admin (D9), dan halaman menjelaskannya sendiri tanpa /forbidden. */
+/** silentForbidden: laporan tersimpan milik orang lain hanya untuk Admin (D9); halaman menjelaskannya sendiri tanpa /forbidden. */
 export interface ReportsGateway {
-  /** Laporan tersimpan yang boleh dilihat: milik sendiri, atau semua untuk Admin (D3 langkah 10). */
+  /** Disaring server (D9): laporan sendiri ditambah laporan terbit dan digantikan milik orang lain; Admin melihat semua. */
   list(): Promise<ReportSummary[]>;
   /** Satu laporan dari hasil beku, tanpa hitung ulang (D3 langkah 11). */
   detail(reportId: string): Promise<ReportDetail>;
