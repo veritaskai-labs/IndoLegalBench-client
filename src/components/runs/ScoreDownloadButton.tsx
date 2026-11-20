@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 
 import { useSessionResults } from "@/hooks/useSessionResults";
+import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { saveBlob } from "@/lib/browserDownload";
 import {
   scoreDownloadDecision,
@@ -14,6 +15,12 @@ import { pendingScoreDownload, type ScoreDownload } from "@/lib/runs/scoreDownlo
 type Session = ScoreDownloadSession & { id: string };
 
 const DOWNLOAD_FAILED = "Permintaan gagal. Coba lagi.";
+
+function gradingOf(results: AsyncResource<unknown>): ScoreGrading {
+  if (results.status !== "ready") return "unknown";
+  if (results.data === null) return "ungraded";
+  return "graded";
+}
 
 /**
  * Unduh skor di baris judul detail sesi (SCRUM-329). Tombol yang tidak layak tetap
@@ -84,7 +91,5 @@ export function ScoreDownloadButton({
 /** Menempelkan tombol ke hasil penilaian yang sama dengan bagian Hasil penilaian. */
 export function SessionScoreDownload({ session }: Readonly<{ session: Session }>) {
   const results = useSessionResults(session.id);
-  const grading: ScoreGrading =
-    results.status !== "ready" ? "unknown" : results.data === null ? "ungraded" : "graded";
-  return <ScoreDownloadButton session={session} grading={grading} />;
+  return <ScoreDownloadButton session={session} grading={gradingOf(results)} />;
 }
