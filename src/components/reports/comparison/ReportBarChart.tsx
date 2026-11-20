@@ -64,7 +64,7 @@ export function ReportBarChart({ rows, language }: Readonly<{ rows: readonly Rep
       </div>
       <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 sm:grid-cols-[7rem_minmax(0,1fr)]">
         {rows.map(({ session, result }) => (
-          <Fragment key={session.session_id}>
+          <Fragment key={session.product_label}>
             <span className="break-words text-xs font-semibold text-slate-800">{session.product_label}</span>
             <div className="space-y-1">
               <Bar product={session.product_label} metric="det" score={result.det_score} scale={scale} language={language} />

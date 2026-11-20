@@ -1,4 +1,4 @@
-import type { MeasurementKind, ReportLanguage, ReportMarker, ReportSessionRead, ScoreSplit } from "@/types/reports";
+import type { MeasurementKind, ReportLanguage, ReportMarkerRead, ReportDetailSessionRead, ScoreSplit } from "@/types/reports";
 
 export const REPORT_CONTACT_EMAIL = "indolegalbench@veritask.ai";
 
@@ -128,14 +128,14 @@ export function measurementKindLabel(kind: MeasurementKind, language: ReportLang
  * pdf.py, supaya penanda baru dari server tidak hilang. Detail yang tidak kosong ditulis dalam kurung.
  * Object.hasOwn menjaga kode seperti "toString" agar tidak membaca properti bawaan objek.
  */
-export function markerLabel(marker: ReportMarker, language: ReportLanguage): string {
+export function markerLabel(marker: ReportMarkerRead, language: ReportLanguage): string {
   const labels = REPORT_LABELS[language].markers;
   const text = Object.hasOwn(labels, marker.code) ? labels[marker.code] : marker.code;
   return marker.detail ? `${text} (${marker.detail})` : text;
 }
 
 /** Sel Penanda satu produk, sama dengan pdf.py _penanda_sesi: Uji Coba (is_trial) dulu, lalu penanda D2. */
-export function sessionMarkersText(session: ReportSessionRead, language: ReportLanguage): string {
+export function sessionMarkersText(session: ReportDetailSessionRead, language: ReportLanguage): string {
   const trial = session.is_trial ? [REPORT_LABELS[language].trial] : [];
   return [...trial, ...(session.markers ?? []).map((marker) => markerLabel(marker, language))].join("; ");
 }

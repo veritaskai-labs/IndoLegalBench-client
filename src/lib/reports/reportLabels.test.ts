@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { reportSession } from "@/test/reportFixtures";
+import type { ReportMarkerRead } from "@/types/reports";
 
 import { markerLabel, measurementKindLabel, REPORT_CONTACT_EMAIL, REPORT_LABELS, sessionMarkersText } from "./reportLabels";
+
+// The contract lists four marker codes; a newer server can still send a fifth before the client regenerates.
+function unknownMarker(code: string): ReportMarkerRead {
+  return { code } as unknown as ReportMarkerRead;
+}
 
 // SCRUM-322 (Fase 0 K3): the report body speaks the report's language, with the exact words of the server PDF
 // (PR #145, app/modules/reports/pdf.py _LABELS), so a reader sees the same text on the web and in the PDF.
@@ -124,14 +130,14 @@ describe("markerLabel", () => {
 
   // A marker the server adds later must not disappear before it gets a label: show its code, like pdf.py does.
   it("shows the raw code of a marker it does not know yet", () => {
-    expect(markerLabel({ code: "judge_retried" }, "en")).toBe("judge_retried");
+    expect(markerLabel(unknownMarker("judge_retried"), "en")).toBe("judge_retried");
   });
 
   // Negative: a code that happens to name a built-in object property must not print that property.
   it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])(
     "shows the raw code %s instead of an inherited object property",
     (code) => {
-      expect(markerLabel({ code }, "en")).toBe(code);
+      expect(markerLabel(unknownMarker(code), "en")).toBe(code);
     },
   );
 
@@ -174,7 +180,7 @@ describe("sessionMarkersText", () => {
 
   // The server no longer sends "trial" as a code; if it ever did, it is just an unknown code, like in pdf.py.
   it("does not read a trial code as the Uji Coba mark", () => {
-    expect(sessionMarkersText(reportSession({ markers: [{ code: "trial" }] }), "id")).toBe("trial");
+    expect(sessionMarkersText(reportSession({ markers: [unknownMarker("trial")] }), "id")).toBe("trial");
   });
 
   // Both fields have server defaults (is_trial false, markers empty), so either may be missing.

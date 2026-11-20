@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import { reportSections } from "@/lib/reports/reportSections";
 import { firstReport, reportResult, reportSession } from "@/test/reportFixtures";
-import type { ReportLanguage, ReportSessionRead } from "@/types/reports";
+import type { ReportLanguage, ReportDetailSessionRead } from "@/types/reports";
 
 import { ReportBarChart } from "./ReportBarChart";
 
-function renderChart(language: ReportLanguage = "en", sessions: ReportSessionRead[] = firstReport().sessions) {
+function renderChart(language: ReportLanguage = "en", sessions: ReportDetailSessionRead[] = firstReport().sessions) {
   const [section] = reportSections(sessions);
   const { container } = render(<ReportBarChart rows={section.rows} language={language} />);
   return container.firstElementChild as HTMLElement;

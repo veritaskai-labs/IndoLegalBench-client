@@ -1,9 +1,9 @@
-import type { ReportResultRead, ReportSessionRead, ScoreSplit } from "@/types/reports";
+import type { ReportDetailResultRead, ReportDetailSessionRead, ScoreSplit } from "@/types/reports";
 
 /** Satu baris tabel: produk (sesi) dan hasil bekunya untuk satu jenis nilai. */
 export type ReportRow = {
-  session: ReportSessionRead;
-  result: ReportResultRead;
+  session: ReportDetailSessionRead;
+  result: ReportDetailResultRead;
 };
 
 export type ReportSection = {
@@ -26,7 +26,7 @@ function byRank(a: ReportRow, b: ReportRow): number {
   return a.result.rank - b.result.rank;
 }
 
-function rowsFor(sessions: readonly ReportSessionRead[], split: ScoreSplit): ReportRow[] {
+function rowsFor(sessions: readonly ReportDetailSessionRead[], split: ScoreSplit): ReportRow[] {
   const rows = sessions.flatMap((session) => {
     const result = session.results.find((item) => item.score_split === split);
     return result ? [{ session, result }] : [];
@@ -38,7 +38,7 @@ function rowsFor(sessions: readonly ReportSessionRead[], split: ScoreSplit): Rep
  * Bagian laporan untuk setiap jenis nilai yang benar-benar dikirim server. Viewer dan Kontributor hanya menerima
  * nilai test (D9), jadi untuk mereka hanya ada satu bagian; FE tidak menyaring per peran sendiri.
  */
-export function reportSections(sessions: readonly ReportSessionRead[]): ReportSection[] {
+export function reportSections(sessions: readonly ReportDetailSessionRead[]): ReportSection[] {
   return SPLIT_ORDER.map((split) => ({ split, rows: rowsFor(sessions, split) })).filter(
     (section) => section.rows.length > 0,
   );

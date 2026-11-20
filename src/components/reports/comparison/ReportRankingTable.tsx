@@ -55,7 +55,7 @@ export function ReportRankingTable({
         </thead>
         <tbody>
           {rows.map(({ session, result }) => (
-            <tr key={session.session_id} className="border-t border-slate-100">
+            <tr key={session.product_label} className="border-t border-slate-100">
               <td className={`${CELL} sticky left-0 z-10 bg-white tabular-nums`}>{rankText(result.rank)}</td>
               <th scope="row" className={`${CELL} sticky left-12 z-10 bg-white text-left font-semibold`}>
                 {session.product_label}
