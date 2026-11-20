@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AiMonitoringPage from "./page";
 import type { Role } from "@/types";
@@ -40,23 +40,27 @@ describe("AiMonitoringPage", () => {
   });
 
   it.each(["admin", "developer_ai"] as const)(
-    "opens the Langfuse UI for %s when the local UI is up",
+    "shows the local Langfuse UI for %s on this site",
     async (role) => {
       setAuth(role);
-      apiFetchMock.mockResolvedValue({ url: "http://127.0.0.1:3000", reachable: true });
-      render(<AiMonitoringPage />);
-      await waitFor(() => {
-        expect(locationReplace).toHaveBeenCalledWith("http://127.0.0.1:3000");
+      apiFetchMock.mockResolvedValue({
+        url: "javascript:alert(1)",
+        reachable: true,
       });
+      render(<AiMonitoringPage />);
+      const frame = await screen.findByTitle("Pemantauan AI");
+      expect(frame).toHaveAttribute("src", "/ai-monitoring/view/");
+      expect(locationReplace).not.toHaveBeenCalled();
       expect(replaceMock).not.toHaveBeenCalled();
     },
   );
 
   it("says the local UI is down and does not open another host", async () => {
     setAuth("admin");
-    apiFetchMock.mockResolvedValue({ url: null, reachable: false });
+    apiFetchMock.mockResolvedValue({ url: "https://cloud.langfuse.com", reachable: false });
     render(<AiMonitoringPage />);
     expect(await screen.findByText("Antarmuka Langfuse lokal tidak terjangkau.")).toBeInTheDocument();
+    expect(screen.queryByTitle("Pemantauan AI")).not.toBeInTheDocument();
     expect(locationReplace).not.toHaveBeenCalled();
   });
 

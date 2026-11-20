@@ -45,14 +45,6 @@ export default function AiMonitoringPage() {
     };
   }, [isAllowed]);
 
-  // Langfuse mengirim frame-ancestors 'none', jadi antarmukanya tidak bisa
-  // disisipkan. Membuka URL lokal menampilkan UI yang sama, tanpa menggambar ulang.
-  useEffect(() => {
-    if (link?.url && link.reachable) {
-      window.location.replace(link.url);
-    }
-  }, [link]);
-
   if (!isAuthenticated || (isAllowed && link === null)) {
     return <LoadingState />;
   }
@@ -61,8 +53,17 @@ export default function AiMonitoringPage() {
     return null;
   }
 
-  if (link?.url && link.reachable) {
-    return <LoadingState />;
+  // The address bar stays on /ai-monitoring. The frame is this same site,
+  // already signed in. `url` is not used for navigation.
+  if (link.reachable) {
+    return (
+      <iframe
+        title="Pemantauan AI"
+        src="/ai-monitoring/view/"
+        referrerPolicy="same-origin"
+        className="fixed inset-0 z-50 h-dvh w-screen border-0 bg-white"
+      />
+    );
   }
 
   return <p className="text-sm text-slate-600">Antarmuka Langfuse lokal tidak terjangkau.</p>;
