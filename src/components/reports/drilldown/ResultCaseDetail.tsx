@@ -4,14 +4,17 @@ import { MarkdownAnswer } from "@/components/runs/MarkdownAnswer";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { useAuth } from "@/hooks/useAuth";
 import { useResultCase } from "@/hooks/useReportDrilldown";
 import { formatWibDate } from "@/lib/datetime/formatWib";
 import { ATTEMPT_SOURCE_LABEL, reasonLabel } from "@/lib/grading/gradingView";
 import { formatScore } from "@/lib/grading/scoreFormat";
 import { httpDrilldownGateway, type DrilldownGateway } from "@/lib/reports/drilldownApi";
-import { canRetryDrilldown, NOT_GRADED, resultCasesHref } from "@/lib/reports/drilldownRules";
+import { canOpenEvidence, canRetryDrilldown, NOT_GRADED, resultCasesHref } from "@/lib/reports/drilldownRules";
 import { measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
 import type { ReportAttemptRead, ReportCaseDetailRead } from "@/types/reports";
+
+import { AttemptEvidence } from "./AttemptEvidence";
 
 // Bagian aplikasi berbahasa Indonesia (Fase 0 K3); jawaban asli tampil apa adanya.
 const LABELS = REPORT_LABELS.id;
@@ -52,7 +55,10 @@ function ManualFacts({ attempt }: Readonly<{ attempt: ReportAttemptRead }>) {
  * Satu percobaan: label asal, skor atau "Tidak dinilai", jawaban asli (markdown), penjelasan penilai, dan kode
  * alasan (AC2). Percobaan gagal teknis tidak punya skor, jadi tidak pernah tampil sebagai 0.
  */
-function AttemptCard({ attempt }: Readonly<{ attempt: ReportAttemptRead }>) {
+/** Penunjuk bukti untuk percobaan manual; null bila peran ini tidak boleh membuka bukti (AC4). */
+type EvidenceTarget = Readonly<{ reportId: string; resultId: string; caseId: string; gateway: DrilldownGateway }> | null;
+
+function AttemptCard({ attempt, evidence }: Readonly<{ attempt: ReportAttemptRead; evidence: EvidenceTarget }>) {
   const headingId = `attempt-${attempt.attempt_id}`;
   return (
     <article aria-labelledby={headingId} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
@@ -82,11 +88,12 @@ function AttemptCard({ attempt }: Readonly<{ attempt: ReportAttemptRead }>) {
           <span className="font-medium">Alasan:</span> {attempt.reasons.map(reasonLabel).join(", ")}
         </p>
       )}
+      {evidence && attempt.source === "manual" && <AttemptEvidence {...evidence} attemptNo={attempt.repetition_no} />}
     </article>
   );
 }
 
-function CaseBody({ data }: Readonly<{ data: ReportCaseDetailRead }>) {
+function CaseBody({ data, evidence }: Readonly<{ data: ReportCaseDetailRead; evidence: EvidenceTarget }>) {
   return (
     <div className="space-y-5">
       <header className="space-y-1">
@@ -113,7 +120,7 @@ function CaseBody({ data }: Readonly<{ data: ReportCaseDetailRead }>) {
           Percobaan ({data.attempts.length})
         </h2>
         {data.attempts.map((attempt) => (
-          <AttemptCard key={attempt.attempt_id} attempt={attempt} />
+          <AttemptCard key={attempt.attempt_id} attempt={attempt} evidence={evidence} />
         ))}
       </section>
     </div>
@@ -123,6 +130,7 @@ function CaseBody({ data }: Readonly<{ data: ReportCaseDetailRead }>) {
 /**
  * Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan (PBI-16 AC2, D6 langkah 4–7). Peran yang
  * tidak boleh melihat isinya mendapat pesan server dengan email untuk meminta isi kasus (AC3), tanpa Coba lagi.
+ * Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4).
  */
 export function ResultCaseDetail({
   reportId,
@@ -131,6 +139,9 @@ export function ResultCaseDetail({
   gateway = httpDrilldownGateway,
 }: Readonly<{ reportId: string; resultId: string; caseId: string; gateway?: DrilldownGateway }>) {
   const detail = useResultCase(reportId, resultId, caseId, gateway);
+  const auth = useAuth();
+  const role = auth.status === "authenticated" ? auth.user.role : null;
+  const evidence = canOpenEvidence(role) ? { reportId, resultId, caseId, gateway } : null;
 
   return (
     <div className="space-y-5">
@@ -151,7 +162,7 @@ export function ResultCaseDetail({
           onRetry={canRetryDrilldown(detail.message) ? detail.reload : undefined}
         />
       )}
-      {detail.status === "ready" && <CaseBody data={detail.data} />}
+      {detail.status === "ready" && <CaseBody data={detail.data} evidence={evidence} />}
     </div>
   );
 }
