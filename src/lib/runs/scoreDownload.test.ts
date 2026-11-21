@@ -3,6 +3,16 @@ import { describe, expect, it } from "vitest";
 import type { SessionStatus } from "@/types/measurement";
 import { SCORE_DOWNLOAD_REASON, scoreDownloadDecision, type ScoreDownloadSession, type ScoreGrading } from "./scoreDownload";
 
+/** Kalimat unduhan di server (score_files._PESAN_UNDUH), satu kode per status. */
+const NOT_FINISHED =
+  "Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai.";
+const CANCELLED =
+  "Sesi ini dibatalkan, jadi berkas skornya belum bisa diunduh. Lanjutkan sesi sampai selesai dulu.";
+const RUN_FAILED = "Proses run sesi ini gagal, jadi tidak ada skor yang bisa diunduh. Buat sesi baru.";
+const NOT_ACCEPTED =
+  "Sesi ini selesai dengan kegagalan dan belum diterima apa adanya oleh Admin, jadi berkas skornya belum bisa diunduh.";
+const NOT_GRADED = "Sesi ini belum dinilai, jadi berkas skornya belum bisa diunduh.";
+
 const REASON = "Dua kasus gagal karena batas penyedia.";
 
 function session(overrides: Partial<ScoreDownloadSession> = {}): ScoreDownloadSession {
@@ -48,7 +58,7 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
         },
         "ungraded",
       ),
-    ).toEqual({ eligible: false, reason: SCORE_DOWNLOAD_REASON.notGraded });
+    ).toEqual({ eligible: false, reason: NOT_GRADED });
   });
 
   it("waits, without a reason, while an accepted session's grading result is unknown", () => {
@@ -72,7 +82,7 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
   it("explains a finalized session that has no grading result", () => {
     expect(decision({ status: "finalized", session_type: "manual" }, "ungraded")).toEqual({
       eligible: false,
-      reason: SCORE_DOWNLOAD_REASON.notGraded,
+      reason: NOT_GRADED,
     });
   });
 
@@ -94,28 +104,28 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
   it("explains a running session, including one that was already graded", () => {
     expect(decision({ status: "running" }, "graded")).toEqual({
       eligible: false,
-      reason: SCORE_DOWNLOAD_REASON.inProgress,
+      reason: NOT_FINISHED,
     });
   });
 
   it("explains a cancelled session, including one that was already graded", () => {
     expect(decision({ status: "cancelled" }, "graded")).toEqual({
       eligible: false,
-      reason: SCORE_DOWNLOAD_REASON.resume,
+      reason: CANCELLED,
     });
   });
 
   it("explains a finished-with-failures session that has not been accepted", () => {
     expect(decision({ status: "finished_with_failures" }, "graded")).toEqual({
       eligible: false,
-      reason: SCORE_DOWNLOAD_REASON.notAccepted,
+      reason: NOT_ACCEPTED,
     });
   });
 
   it("explains a finished session that has no grading result", () => {
     expect(decision({ status: "finished" }, "ungraded")).toEqual({
       eligible: false,
-      reason: SCORE_DOWNLOAD_REASON.notGraded,
+      reason: NOT_GRADED,
     });
   });
 
@@ -140,7 +150,7 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
         },
         "graded",
       ),
-    ).toEqual({ eligible: false, reason: SCORE_DOWNLOAD_REASON.notAccepted });
+    ).toEqual({ eligible: false, reason: NOT_ACCEPTED });
   });
 
   it("refuses a written reason when the session was not actually accepted", () => {
@@ -153,7 +163,7 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
         },
         "graded",
       ),
-    ).toEqual({ eligible: false, reason: SCORE_DOWNLOAD_REASON.notAccepted });
+    ).toEqual({ eligible: false, reason: NOT_ACCEPTED });
   });
 
   // AC6 names automatic sessions for the accept exception.
@@ -168,19 +178,24 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
         },
         "graded",
       ),
-    ).toEqual({ eligible: false, reason: SCORE_DOWNLOAD_REASON.notAccepted });
+    ).toEqual({ eligible: false, reason: NOT_ACCEPTED });
   });
 
-  // Negative: no other status becomes eligible, graded or not.
+  // One sentence per status, the same one the download route returns for that code.
   it.each<[SessionStatus, ScoreGrading, string]>([
-    ["queued", "graded", SCORE_DOWNLOAD_REASON.inProgress],
-    ["paused", "graded", SCORE_DOWNLOAD_REASON.resume],
-    ["failed", "graded", SCORE_DOWNLOAD_REASON.notGraded],
-    ["not_filled", "ungraded", SCORE_DOWNLOAD_REASON.inProgress],
-    ["partially_filled", "graded", SCORE_DOWNLOAD_REASON.inProgress],
-    ["complete", "graded", SCORE_DOWNLOAD_REASON.notGraded],
-    ["graded", "graded", SCORE_DOWNLOAD_REASON.notGraded],
-  ])("blocks %s (%s) with the same kind of explanation", (status, grading, reason) => {
-    expect(decision({ status }, grading)).toEqual({ eligible: false, reason });
+    ["queued", "graded", NOT_FINISHED],
+    ["running", "graded", NOT_FINISHED],
+    ["paused", "graded", NOT_FINISHED],
+    ["cancelled", "graded", CANCELLED],
+    ["finished_with_failures", "graded", NOT_ACCEPTED],
+    ["failed", "graded", RUN_FAILED],
+    ["not_filled", "graded", NOT_FINISHED],
+    ["partially_filled", "graded", NOT_FINISHED],
+    ["complete", "graded", NOT_FINISHED],
+    ["graded", "graded", NOT_FINISHED],
+    ["finished", "ungraded", NOT_GRADED],
+    ["finalized", "ungraded", NOT_GRADED],
+  ])("explains %s (%s) with the server sentence", (status, grading, reason) => {
+    expect(decision({ status, session_type: "manual" }, grading)).toEqual({ eligible: false, reason });
   });
 });

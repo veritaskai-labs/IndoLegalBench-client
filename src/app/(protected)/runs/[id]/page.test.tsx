@@ -778,7 +778,9 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     render(<SessionDetailPage />);
 
     expect(await screen.findByRole("button", { name: "Unduh skor" })).toBeDisabled();
-    expect(screen.getByText("Sesi masih berjalan.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai."),
+    ).toBeInTheDocument();
   });
 
   it("shows the same download control to a viewer", async () => {

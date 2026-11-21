@@ -49,17 +49,17 @@ describe("ScoreDownloadButton (SCRUM-329)", () => {
     render(<ScoreDownloadButton session={session()} grading="graded" download={() => Promise.resolve(file())} />);
 
     expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled();
-    expect(screen.queryByText(SCORE_DOWNLOAD_REASON.notGraded)).not.toBeInTheDocument();
-    expect(screen.queryByText(SCORE_DOWNLOAD_REASON.inProgress)).not.toBeInTheDocument();
-    expect(screen.queryByText(SCORE_DOWNLOAD_REASON.resume)).not.toBeInTheDocument();
-    expect(screen.queryByText(SCORE_DOWNLOAD_REASON.notAccepted)).not.toBeInTheDocument();
+    expect(screen.queryByText(/berkas skornya/)).not.toBeInTheDocument();
   });
 
   it.each<[ScoreDownloadSession["status"], ScoreGrading, string]>([
-    ["running", "graded", SCORE_DOWNLOAD_REASON.inProgress],
-    ["cancelled", "graded", SCORE_DOWNLOAD_REASON.resume],
-    ["finished_with_failures", "graded", SCORE_DOWNLOAD_REASON.notAccepted],
-    ["finished", "ungraded", SCORE_DOWNLOAD_REASON.notGraded],
+    ["running", "graded", "Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai."],
+    ["cancelled", "graded", "Sesi ini dibatalkan, jadi berkas skornya belum bisa diunduh. Lanjutkan sesi sampai selesai dulu."],
+    ["failed", "graded", "Proses run sesi ini gagal, jadi tidak ada skor yang bisa diunduh. Buat sesi baru."],
+    ["complete", "graded", "Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai."],
+    ["graded", "graded", "Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai."],
+    ["finished_with_failures", "graded", "Sesi ini selesai dengan kegagalan dan belum diterima apa adanya oleh Admin, jadi berkas skornya belum bisa diunduh."],
+    ["finished", "ungraded", "Sesi ini belum dinilai, jadi berkas skornya belum bisa diunduh."],
   ])("disables the button and explains a %s session", (status, grading, reason) => {
     render(
       <ScoreDownloadButton
