@@ -122,11 +122,33 @@ describe("ReportRankingTable", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "Telusuri kasus di balik skor deterministik AiYU" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "0.91, telusuri kasus di balik skor deterministik AiYU" })).toHaveAttribute(
       "href",
       "/drill/res-9",
     );
-    expect(screen.getByRole("link", { name: "Telusuri kasus di balik skor penilai LLM AiYU" })).toHaveTextContent("0.87");
+    expect(screen.getByRole("link", { name: "0.87, telusuri kasus di balik skor penilai LLM AiYU" })).toHaveTextContent("0.87");
+  });
+
+  // Positive (WCAG 2.5.3 Label in Name, review #104): the link name starts with the number on screen, so a screen
+  // reader says it and voice control can click it; the Indonesian hint is marked lang="id" inside an English report.
+  it("keeps the visible number in the link name and marks the hint as Indonesian", () => {
+    const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
+    const [section] = reportSections([session]);
+
+    render(
+      <ReportRankingTable
+        rows={section.rows}
+        language="en"
+        labelMode="real_name"
+        caption="Test cases"
+        scoreHref={(resultId) => `/drill/${resultId}`}
+      />,
+    );
+
+    const [link] = screen.getAllByRole("link");
+    expect(link).not.toHaveAttribute("aria-label");
+    expect(link.firstChild?.textContent).toBe("0.91");
+    expect(within(link).getByText(/telusuri kasus di balik/)).toHaveAttribute("lang", "id");
   });
 
   // Edge: a dash is not a number, so an empty score is never a link (D1).

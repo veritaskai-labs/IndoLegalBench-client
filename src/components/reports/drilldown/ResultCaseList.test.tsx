@@ -30,6 +30,15 @@ describe("ResultCaseList", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Memuat kasus…");
   });
 
+  // Edge (review #104): the two report links in the trail have different names, so a screen reader can tell them apart.
+  it("names the report itself differently from the reports menu", () => {
+    renderList(vi.fn().mockReturnValue(new Promise(() => {})));
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(within(breadcrumb).getByRole("link", { name: "Laporan" })).toHaveAttribute("href", "/reports");
+    expect(within(breadcrumb).getByRole("link", { name: "Detail laporan" })).toHaveAttribute("href", "/reports/comparisons/r-1");
+  });
+
   // Positive: case code, version, split and both scores per case; the header names the number it came from.
   it("lists the cases behind the number with their version and scores", async () => {
     renderList(vi.fn().mockResolvedValue(resultCases()));
@@ -58,6 +67,16 @@ describe("ResultCaseList", () => {
     expect(screen.queryByRole("link", { name: "ILB-002" })).not.toBeInTheDocument();
     expect(screen.getByText("Tertutup")).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("indolegalbench@veritask.ai");
+  });
+
+  // Negative (review #104): Developer AI opens dev cases but not test cases, so the note must not name the roles
+  // that may open them; it follows the server's CASE_CONTENT_FORBIDDEN message.
+  it("explains closed cases without naming which roles may open them", async () => {
+    renderList(vi.fn().mockResolvedValue(resultCases()));
+
+    const note = await screen.findByRole("note");
+    expect(note).toHaveTextContent("Isi kasus yang tertutup tidak dapat dibuka dengan peran Anda.");
+    expect(note).not.toHaveTextContent(/Admin|Kontributor/);
   });
 
   // Edge: an empty score reads as a dash, not 0 (D1).

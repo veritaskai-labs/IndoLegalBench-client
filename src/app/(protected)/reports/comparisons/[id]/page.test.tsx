@@ -111,7 +111,7 @@ describe("ComparisonReportPage", () => {
     render(<ComparisonReportPage />);
 
     await screen.findByRole("article");
-    const [first] = screen.getAllByRole("link", { name: /^Telusuri kasus di balik skor deterministik/ });
+    const [first] = screen.getAllByRole("link", { name: /telusuri kasus di balik skor deterministik/ });
     expect(first.getAttribute("href")).toMatch(new RegExp(`^/reports/comparisons/${report.id}/results/result-\\d+$`));
   });
 });

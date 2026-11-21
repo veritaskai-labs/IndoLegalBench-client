@@ -105,7 +105,7 @@ export function ResultCaseList({
         items={[
           { label: "Laporan", href: "/reports" },
           { label: "Laporan perbandingan", href: "/reports/comparisons" },
-          { label: "Laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
+          { label: "Detail laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
           { label: "Kasus di balik angka" },
         ]}
       />

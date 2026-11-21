@@ -13,8 +13,12 @@ export function resultCaseHref(reportId: string, resultId: string, caseId: strin
   return `${resultCasesHref(reportId, resultId)}/cases/${encodeURIComponent(caseId)}`;
 }
 
-/** Teks di halaman penelusuran (AC3), sama dengan baris kontak laporan dan PDF. */
-export const CONTENT_REQUEST_TEXT = `Isi kasus dan jawaban asli hanya dapat dibuka Admin dan Kontributor. Untuk mendapatkan isi kasus, kirim email ke ${REPORT_CONTACT_EMAIL}.`;
+/**
+ * Teks untuk kasus yang tertutup (AC3). Tidak menyebut peran: hak membuka isi per peran dan jenis kasus berbeda
+ * (server case_visibility._DRILLDOWN_SPLITS: Admin semua, Kontributor test, Developer AI dev), jadi teksnya
+ * mengikuti pesan server CASE_CONTENT_FORBIDDEN (review #104).
+ */
+export const CONTENT_REQUEST_TEXT = `Isi kasus yang tertutup tidak dapat dibuka dengan peran Anda. Untuk mendapatkan isi kasus, kirim email ke ${REPORT_CONTACT_EMAIL}.`;
 
 export const HIDDEN_DRILLDOWN = "Data di balik angka ini tidak ditemukan atau Anda tidak punya akses untuk membukanya.";
 const LOAD_FAILED = "Gagal memuat data penelusuran. Coba lagi.";

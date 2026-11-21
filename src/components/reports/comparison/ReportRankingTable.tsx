@@ -15,6 +15,8 @@ export type ScoreHref = (resultId: string) => string;
 /**
  * Satu sel skor. Dengan href, angkanya menjadi tautan ke kasus di balik angka itu (PBI-16 AC1, D6 langkah 1).
  * Skor kosong tampil sebagai tanda pisah (D1) dan tidak ditautkan: tidak ada angka yang bisa ditelusuri.
+ * Nama tautan diawali angka yang terlihat (WCAG 2.5.3 Label in Name), lalu petunjuk sr-only berbahasa Indonesia
+ * dengan lang="id", supaya tidak dibaca suara Inggris di laporan berbahasa Inggris (review #104).
  */
 export function ScoreCell({
   score,
@@ -26,8 +28,13 @@ export function ScoreCell({
   if (!href || score === null) return <td className={NUMBER}>{text}</td>;
   return (
     <td className={NUMBER}>
-      <Link href={href} aria-label={label} className="text-indigo-700 underline decoration-dotted underline-offset-2 hover:decoration-solid">
+      <Link href={href} className="text-indigo-700 underline decoration-dotted underline-offset-2 hover:decoration-solid">
         {text}
+        {label && (
+          <span className="sr-only" lang="id">
+            , telusuri kasus di balik {label}
+          </span>
+        )}
       </Link>
     </td>
   );
@@ -81,7 +88,7 @@ export function ReportRankingTable({
         </thead>
         <tbody>
           {rows.map(({ session, result }) => (
-            <tr key={session.product_label} className="border-t border-slate-100">
+            <tr key={result.id} className="border-t border-slate-100">
               <td className={`${CELL} sticky left-0 z-10 bg-white tabular-nums`}>{rankText(result.rank)}</td>
               <th scope="row" className={`${CELL} sticky left-12 z-10 bg-white text-left font-semibold`}>
                 {session.product_label}
@@ -91,13 +98,13 @@ export function ReportRankingTable({
                 score={result.det_score}
                 language={language}
                 href={scoreHref?.(result.id)}
-                label={`Telusuri kasus di balik skor deterministik ${session.product_label}`}
+                label={`skor deterministik ${session.product_label}`}
               />
               <ScoreCell
                 score={result.llm_score}
                 language={language}
                 href={scoreHref?.(result.id)}
-                label={`Telusuri kasus di balik skor penilai LLM ${session.product_label}`}
+                label={`skor penilai LLM ${session.product_label}`}
               />
               <td className={NUMBER}>{result.cases_graded_count}</td>
               <td className={NUMBER}>{result.cases_basis_count}</td>

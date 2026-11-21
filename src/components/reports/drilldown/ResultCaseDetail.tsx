@@ -51,13 +51,13 @@ function ManualFacts({ attempt }: Readonly<{ attempt: ReportAttemptRead }>) {
   );
 }
 
+/** Penunjuk bukti untuk percobaan manual; null bila peran ini tidak boleh membuka bukti (AC4). */
+type EvidenceTarget = Readonly<{ reportId: string; resultId: string; caseId: string; gateway: DrilldownGateway }> | null;
+
 /**
  * Satu percobaan: label asal, skor atau "Tidak dinilai", jawaban asli (markdown), penjelasan penilai, dan kode
  * alasan (AC2). Percobaan gagal teknis tidak punya skor, jadi tidak pernah tampil sebagai 0.
  */
-/** Penunjuk bukti untuk percobaan manual; null bila peran ini tidak boleh membuka bukti (AC4). */
-type EvidenceTarget = Readonly<{ reportId: string; resultId: string; caseId: string; gateway: DrilldownGateway }> | null;
-
 function AttemptCard({ attempt, evidence }: Readonly<{ attempt: ReportAttemptRead; evidence: EvidenceTarget }>) {
   const headingId = `attempt-${attempt.attempt_id}`;
   return (
@@ -149,7 +149,7 @@ export function ResultCaseDetail({
         items={[
           { label: "Laporan", href: "/reports" },
           { label: "Laporan perbandingan", href: "/reports/comparisons" },
-          { label: "Laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
+          { label: "Detail laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
           { label: "Kasus di balik angka", href: resultCasesHref(reportId, resultId) },
           { label: detail.status === "ready" ? detail.data.case_code : "Kasus" },
         ]}
