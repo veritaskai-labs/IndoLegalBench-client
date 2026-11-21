@@ -13,6 +13,8 @@ function fakeGateway(overrides: Partial<ReportsGateway> = {}): ReportsGateway {
     list: vi.fn().mockResolvedValue([]),
     detail: vi.fn().mockResolvedValue(firstReport()),
     pdf: vi.fn().mockResolvedValue(new Blob()),
+    eligibleSessions: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({ report: null, warning: null }),
     ...overrides,
   };
 }
