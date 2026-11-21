@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
-import { gradeEstimate, gradingResponse } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingProgress, gradingResponse } from "@/test/gradingFixtures";
 import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
@@ -791,6 +791,50 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     render(<SessionDetailPage />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled());
+  });
+
+  // The title button and Hasil penilaian share one results read. When that run finishes, both update.
+  it("enables Unduh skor from the same grading result the section reloads", async () => {
+    vi.useFakeTimers();
+    const progress = vi.mocked(httpGradingGateway.progress);
+    try {
+      get.mockResolvedValue(session({ status: "finished" }));
+      progress
+        .mockResolvedValueOnce(gradingProgress({ status: "running", grading_run_id: "run-1" }))
+        .mockResolvedValue(
+          gradingProgress({
+            status: "finished",
+            grading_run_id: "run-1",
+            finished_at: "2026-11-15T03:05:00Z",
+            percent: 100,
+            attempts_graded: 12,
+            attempts_ungraded: 0,
+          }),
+        );
+      resultsRead.mockReset();
+      resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
+
+      render(<SessionDetailPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+      expect(resultsRead).toHaveBeenCalledTimes(1);
+
+      resultsRead.mockReset();
+      resultsRead.mockResolvedValue(gradingResponse());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled();
+      expect(resultsRead).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      progress.mockReset();
+      progress.mockResolvedValue(null);
+    }
   });
 
   // The page passes the signed-in role on; Developer AI never gets the action.

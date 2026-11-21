@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualSessionHeader } from "./ManualSessionHeader";
@@ -630,5 +630,52 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     );
 
     expect(await screen.findByRole("button", { name: "Unduh skor" })).toBeEnabled();
+  });
+
+  it("enables Unduh skor for a finalized session when that grading result reloads", async () => {
+    vi.useFakeTimers();
+    try {
+      const gradingGateway = fakeGradingGateway();
+      vi.mocked(gradingGateway.progress)
+        .mockResolvedValueOnce(gradingProgress({ status: "running", grading_run_id: "run-1" }))
+        .mockResolvedValue(
+          gradingProgress({
+            status: "finished",
+            grading_run_id: "run-1",
+            finished_at: "2026-11-15T03:05:00Z",
+            percent: 100,
+            attempts_graded: 12,
+            attempts_ungraded: 0,
+          }),
+        );
+      vi.mocked(gradingGateway.results).mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
+
+      render(
+        <ManualSessionHeader
+          session={createMockDetail({ status: "finalized", finalized_at: "2026-11-08T12:00:00Z" })}
+          role="admin"
+          unfilledOnly={false}
+          onToggleUnfilled={vi.fn()}
+          onSessionUpdated={vi.fn()}
+          gradingGateway={gradingGateway}
+        />,
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+      expect(gradingGateway.results).toHaveBeenCalledTimes(1);
+
+      vi.mocked(gradingGateway.results).mockResolvedValue({} as SessionGradingResponse);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled();
+      expect(gradingGateway.results).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
