@@ -102,4 +102,16 @@ describe("ComparisonReportPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Coba lagi" }));
     expect(await screen.findByRole("article")).toBeInTheDocument();
   });
+
+  // PBI-16 AC1 (SCRUM-328): the scores of a reopened report open the cases behind them.
+  it("links the scores to the drill-down of this report", async () => {
+    const report = firstReport();
+    detail.mockResolvedValue(report);
+
+    render(<ComparisonReportPage />);
+
+    await screen.findByRole("article");
+    const [first] = screen.getAllByRole("link", { name: /telusuri kasus di balik skor deterministik/ });
+    expect(first.getAttribute("href")).toMatch(new RegExp(`^/reports/comparisons/${report.id}/results/result-\\d+$`));
+  });
 });
