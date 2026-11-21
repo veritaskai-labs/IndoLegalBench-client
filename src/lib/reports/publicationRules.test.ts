@@ -48,6 +48,10 @@ describe("publishErrorMessage (server refusals in plain words)", () => {
     const failure = new ApiError(409, "REPORT_HAS_DEV_SCORES");
 
     expect(publishErrorMessage(failure)).toBe(DEV_SCORES_MESSAGE);
+    // Review #106: the server sentence wins when it is sent, so the two cannot drift apart.
+    expect(publishErrorMessage(new ApiError(409, "REPORT_HAS_DEV_SCORES", "Kalimat dari server."))).toBe(
+      "Kalimat dari server.",
+    );
     expect(DEV_SCORES_MESSAGE).toMatch(/skor dev/);
     expect(DEV_SCORES_MESSAGE).toMatch(/Test/);
   });

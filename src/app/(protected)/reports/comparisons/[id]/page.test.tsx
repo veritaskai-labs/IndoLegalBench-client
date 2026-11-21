@@ -143,6 +143,39 @@ describe("ComparisonReportPage publishing", () => {
     expect(publish).toHaveBeenCalledWith(firstReport().id, undefined);
     expect(await screen.findByText("Terbit")).toBeInTheDocument();
     expect(detail).toHaveBeenCalledTimes(2);
+    // Review #106 blocker: the new version number survives the reload.
+    const message = await screen.findByText("Laporan diterbitkan sebagai Versi 1.");
+    expect(message.tagName).toBe("OUTPUT");
+  });
+
+  it("after Ganti versi names the new version and links to the replacing report", async () => {
+    session.role = "admin";
+    const published = firstReport({ status: "published" });
+    detail.mockResolvedValueOnce(published).mockResolvedValueOnce(firstReport({ status: "superseded" }));
+    vi.mocked(httpPublicationGateway.listPublished).mockResolvedValue([
+      {
+        id: "pub-1",
+        report_id: published.id,
+        version_no: 1,
+        title: published.title,
+        published_at: "2026-11-18T03:00:00Z",
+        published_by: "admin-1",
+        product_labels: [],
+      },
+    ]);
+    vi.mocked(httpReportsGateway.list).mockResolvedValue([firstReport({ id: "r-new", title: "November" })]);
+    publish.mockResolvedValue({ id: "pub-2", report_id: "r-new", version_no: 2, supersedes_id: "pub-1" });
+
+    render(<ComparisonReportPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Ganti versi" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Ganti versi laporan?" }));
+    await userEvent.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "r-new");
+    await userEvent.click(dialog.getByRole("button", { name: "Ganti versi" }));
+
+    expect(await screen.findByText(/sudah digantikan versi yang lebih baru/)).toBeInTheDocument();
+    expect(screen.getByText(/Laporan pengganti diterbitkan sebagai Versi 2\./)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Buka versi baru" })).toHaveAttribute("href", "/reports/comparisons/r-new");
   });
 
   it("keeps Terbitkan off for a Dev + Test report and says why", async () => {

@@ -23,7 +23,9 @@ beforeEach(() => {
 
 // SCRUM-335 (PBI-17 AC9, AC12): the Terbitkan button on one report.
 describe("ReportPublishActions", () => {
-  it("offers Terbitkan to Admin on a saved Test report and reports the new version", async () => {
+  // Review #106: the page reloads the report after publishing, which unmounts this section, so the new version is
+  // handed to the page (which shows it) instead of being kept here.
+  it("offers Terbitkan to Admin on a saved Test report and hands the new version to the page", async () => {
     const user = userEvent.setup();
     const onChanged = vi.fn();
     render(<ReportPublishActions report={firstReport({ id: "r-1" })} gateway={fakeGateway()} onChanged={onChanged} />);
@@ -33,10 +35,10 @@ describe("ReportPublishActions", () => {
     const dialogs = screen.getAllByRole("button", { name: "Terbitkan" });
     await user.click(dialogs[dialogs.length - 1]);
 
-    await waitFor(() => expect(onChanged).toHaveBeenCalled());
-    // Native <output> (Sonar S6819) still reads as a status message.
-    expect(screen.getByRole("status")).toHaveTextContent("Laporan diterbitkan sebagai Versi 2.");
-    expect(screen.getByRole("status").tagName).toBe("OUTPUT");
+    await waitFor(() =>
+      expect(onChanged).toHaveBeenCalledWith({ id: "pub-9", report_id: "r-1", version_no: 2, supersedes_id: "pub-1" }),
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -104,7 +106,7 @@ describe("ReportPublishActions", () => {
     await user.click(dialog.getByRole("button", { name: "Ganti versi" }));
 
     expect(gateway.publish).toHaveBeenCalledWith("r-new", "pub-1");
-    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    await waitFor(() => expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({ id: "pub-9" })));
   });
 
   it("does not show Ganti versi to other roles", () => {
