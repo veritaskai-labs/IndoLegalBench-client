@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
-import { gradeEstimate, gradingResponse } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingProgress, gradingResponse } from "@/test/gradingFixtures";
 import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
@@ -211,7 +211,11 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     get.mockResolvedValue(session({ archived_at: "2026-11-03T03:00:00Z" }));
     render(<SessionDetailPage />);
 
-    expect(await screen.findByText(/Sesi ini sudah diarsipkan/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Sesi ini sudah diarsipkan dan tidak tampil di daftar. Datanya tetap tersimpan."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+    expect(screen.getByText("Sesi ini sudah diarsipkan, jadi berkas skornya tidak bisa diunduh.")).toBeInTheDocument();
   });
 
   // Edge: queued, the snapshot does not exist yet.
@@ -753,6 +757,84 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
 
     const results = await screen.findByRole("region", { name: "Hasil penilaian" });
     expect(await within(results).findByRole("table", { name: "Skor per kasus" })).toBeInTheDocument();
+  });
+
+  it("puts Unduh skor on the title row of a finished, graded session", async () => {
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
+    const button = await screen.findByRole("button", { name: "Unduh skor" });
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(heading.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("Sesi masih berjalan.")).not.toBeInTheDocument();
+  });
+
+  it("explains a running session beside a disabled Unduh skor", async () => {
+    get.mockResolvedValue(session({ status: "running", finished_at: null }));
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByRole("button", { name: "Unduh skor" })).toBeDisabled();
+    expect(
+      screen.getByText("Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the same download control to a viewer", async () => {
+    signedInAs("viewer");
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled());
+  });
+
+  // The title button and Hasil penilaian share one results read. When that run finishes, both update.
+  it("enables Unduh skor from the same grading result the section reloads", async () => {
+    vi.useFakeTimers();
+    const progress = vi.mocked(httpGradingGateway.progress);
+    try {
+      get.mockResolvedValue(session({ status: "finished" }));
+      progress
+        .mockResolvedValueOnce(gradingProgress({ status: "running", grading_run_id: "run-1" }))
+        .mockResolvedValue(
+          gradingProgress({
+            status: "finished",
+            grading_run_id: "run-1",
+            finished_at: "2026-11-15T03:05:00Z",
+            percent: 100,
+            attempts_graded: 12,
+            attempts_ungraded: 0,
+          }),
+        );
+      resultsRead.mockReset();
+      resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
+
+      render(<SessionDetailPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+      expect(resultsRead).toHaveBeenCalledTimes(1);
+
+      resultsRead.mockReset();
+      resultsRead.mockResolvedValue(gradingResponse());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled();
+      expect(resultsRead).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      progress.mockReset();
+      progress.mockResolvedValue(null);
+    }
   });
 
   // The page passes the signed-in role on; Developer AI never gets the action.

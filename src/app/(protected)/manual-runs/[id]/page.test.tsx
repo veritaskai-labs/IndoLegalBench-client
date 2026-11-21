@@ -39,9 +39,15 @@ const { gatewayMock } = vi.hoisted(() => ({
 }));
 
 // The header follows background grading for Admin (SCRUM-285); no run here, and no real request.
-vi.mock("@/lib/grading/gradingApi", () => ({
-  httpGradingGateway: { progress: vi.fn().mockResolvedValue(null) },
-}));
+vi.mock("@/lib/grading/gradingApi", async () => {
+  const { ApiError } = await import("@/lib/apiClient");
+  return {
+    httpGradingGateway: {
+      progress: vi.fn().mockResolvedValue(null),
+      results: vi.fn().mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND")),
+    },
+  };
+});
 
 vi.mock("@/lib/runs/manualAnswersApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/runs/manualAnswersApi")>()),
