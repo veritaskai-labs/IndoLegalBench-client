@@ -160,7 +160,8 @@ function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
 
 function OutcomeMessage({ outcome, onReload }: Readonly<{ outcome: CreateOutcome; onReload: () => void }>) {
   if (outcome.kind === "saved") {
-    return <p role="status" className="text-sm text-green-800">Laporan tersimpan. Membuka laporan…</p>;
+    // <output> has the status role built in (Sonar S6819), so no role attribute is needed.
+    return <output className="block text-sm text-green-800">Laporan tersimpan. Membuka laporan…</output>;
   }
   const box = "space-y-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800";
   switch (outcome.kind) {

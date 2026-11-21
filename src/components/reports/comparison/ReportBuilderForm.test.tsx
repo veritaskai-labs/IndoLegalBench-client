@@ -306,6 +306,8 @@ describe("ReportBuilderForm: title and Create", () => {
     await user.click(createButton());
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/reports/comparisons/r-1"));
+    // Screen readers hear the save before the next page loads (a status region, not an alert).
+    expect(screen.getByRole("status")).toHaveTextContent("Laporan tersimpan. Membuka laporan…");
     expect(gateway.create).toHaveBeenCalledTimes(1);
     expect(gateway.create).toHaveBeenCalledWith({
       title: "Perbandingan November",
