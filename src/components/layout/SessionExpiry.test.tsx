@@ -211,6 +211,27 @@ describe("SessionExpiry", () => {
     expect(activityHeader(0)).toBe("passive");
   });
 
+  // Edge (SCRUM-253 AC4): Back after leaving the app can restore this page from the browser's
+  // back/forward cache. The page comes back frozen as it was, with no reload, no /me and no
+  // visibilitychange; only `pageshow` fires. If that event were not handled, the old protected
+  // screen would stay visible until the next one-second tick or click, past the deadline.
+  it("logs out at once when Back restores the page from the back/forward cache after the deadline", async () => {
+    seed(IDLE);
+    await act(async () => {
+      render(<Harness />);
+    });
+
+    await act(async () => {
+      vi.setSystemTime(new Date(IDLE));
+      const restored = new Event("pageshow");
+      Object.defineProperty(restored, "persisted", { value: true });
+      window.dispatchEvent(restored);
+    });
+
+    expect(screen.queryByText("protected content")).not.toBeInTheDocument();
+    expect(screen.getByText("login")).toBeInTheDocument();
+  });
+
   it("logs out immediately when the deadlines are already past", async () => {
     vi.setSystemTime(new Date(IDLE));
     seed(IDLE);
