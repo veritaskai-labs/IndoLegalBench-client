@@ -1,5 +1,6 @@
 import { apiFetch, apiFetchBlob } from "@/lib/apiClient";
-import type { ReportDetail, ReportSummary, ReportSummaryPage } from "@/types/reports";
+import { readAllPages } from "@/lib/pagedList";
+import type { ReportDetail, ReportSummary } from "@/types/reports";
 
 /** silentForbidden: laporan tersimpan milik orang lain hanya untuk Admin (D9); halaman menjelaskannya sendiri tanpa /forbidden. */
 export interface ReportsGateway {
@@ -16,9 +17,9 @@ function reportPath(reportId: string): string {
 }
 
 export const httpReportsGateway: ReportsGateway = {
-  // shortcut: only the first page of 100 (server maximum), add a pager with the PBI-25 table work if anyone has more.
-  list: () =>
-    apiFetch<ReportSummaryPage>("/reports?size=100", { silentForbidden: true }).then((page) => page.items),
+  // Semua halaman: Ganti versi (SCRUM-335) memilih pengganti dari daftar ini, jadi laporan setelah 100 pertama
+  // tidak boleh hilang.
+  list: () => readAllPages<ReportSummary>("/reports"),
   detail: (reportId) => apiFetch<ReportDetail>(reportPath(reportId), { silentForbidden: true }),
   pdf: (reportId) => apiFetchBlob(`${reportPath(reportId)}/pdf`, { silentForbidden: true }),
 };

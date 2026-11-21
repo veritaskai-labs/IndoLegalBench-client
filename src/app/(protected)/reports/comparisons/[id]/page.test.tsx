@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
+import { httpPublicationGateway } from "@/lib/reports/publicationApi";
 import { httpReportsGateway } from "@/lib/reports/reportsApi";
+import { session } from "@/test/authMock";
 import { devTestReport, firstReport } from "@/test/reportFixtures";
 
 import ComparisonReportPage from "./page";
@@ -17,11 +19,20 @@ vi.mock("@/lib/reports/reportsApi", () => ({
   httpReportsGateway: { list: vi.fn(), detail: vi.fn(), pdf: vi.fn() },
 }));
 
+// SCRUM-335: the Terbitkan section reads the role; null keeps the session loading, as before.
+vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
+vi.mock("@/lib/reports/publicationApi", () => ({
+  httpPublicationGateway: { publish: vi.fn(), listPublished: vi.fn() },
+}));
+
 const detail = vi.mocked(httpReportsGateway.detail);
+const publish = vi.mocked(httpPublicationGateway.publish);
 
 beforeEach(() => {
   params.id = "r-1";
+  session.role = null;
   detail.mockReset();
+  publish.mockReset();
 });
 
 // SCRUM-322 (D3 steps 10-15): reopen one saved report from its frozen results, with the PDF next to it.
@@ -113,5 +124,86 @@ describe("ComparisonReportPage", () => {
     await screen.findByRole("article");
     const [first] = screen.getAllByRole("link", { name: /telusuri kasus di balik skor deterministik/ });
     expect(first.getAttribute("href")).toMatch(new RegExp(`^/reports/comparisons/${report.id}/results/result-\\d+$`));
+  });
+});
+
+// SCRUM-335 (PBI-17 AC9, AC12): publishing from the report page.
+describe("ComparisonReportPage publishing", () => {
+  it("lets Admin publish a saved Test report and reloads it as published", async () => {
+    session.role = "admin";
+    detail.mockResolvedValueOnce(firstReport()).mockResolvedValueOnce(firstReport({ status: "published" }));
+    publish.mockResolvedValue({ id: "pub-1", report_id: "r-1", version_no: 1, supersedes_id: null });
+
+    render(<ComparisonReportPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Terbitkan" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Terbitkan laporan?" }));
+    await userEvent.click(dialog.getByRole("button", { name: "Terbitkan" }));
+
+    expect(publish).toHaveBeenCalledWith(firstReport().id, undefined);
+    expect(await screen.findByText("Terbit")).toBeInTheDocument();
+    expect(detail).toHaveBeenCalledTimes(2);
+    // Review #106 blocker: the new version number survives the reload.
+    const message = await screen.findByText("Laporan diterbitkan sebagai Versi 1.");
+    expect(message.tagName).toBe("OUTPUT");
+  });
+
+  it("after Ganti versi names the new version and links to the replacing report", async () => {
+    session.role = "admin";
+    const published = firstReport({ status: "published" });
+    detail.mockResolvedValueOnce(published).mockResolvedValueOnce(firstReport({ status: "superseded" }));
+    vi.mocked(httpPublicationGateway.listPublished).mockResolvedValue([
+      {
+        id: "pub-1",
+        report_id: published.id,
+        version_no: 1,
+        title: published.title,
+        published_at: "2026-11-18T03:00:00Z",
+        published_by: "admin-1",
+        product_labels: [],
+      },
+    ]);
+    vi.mocked(httpReportsGateway.list).mockResolvedValue([firstReport({ id: "r-new", title: "November" })]);
+    publish.mockResolvedValue({ id: "pub-2", report_id: "r-new", version_no: 2, supersedes_id: "pub-1" });
+
+    render(<ComparisonReportPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Ganti versi" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Ganti versi laporan?" }));
+    await userEvent.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "r-new");
+    await userEvent.click(dialog.getByRole("button", { name: "Ganti versi" }));
+
+    expect(await screen.findByText(/sudah digantikan versi yang lebih baru/)).toBeInTheDocument();
+    expect(screen.getByText(/Laporan pengganti diterbitkan sebagai Versi 2\./)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Buka versi baru" })).toHaveAttribute("href", "/reports/comparisons/r-new");
+  });
+
+  it("keeps Terbitkan off for a Dev + Test report and says why", async () => {
+    session.role = "admin";
+    detail.mockResolvedValue(devTestReport());
+
+    render(<ComparisonReportPage />);
+
+    expect(await screen.findByRole("button", { name: "Terbitkan" })).toBeDisabled();
+    expect(screen.getByText(/memuat skor dev, jadi tidak bisa diterbitkan/)).toBeInTheDocument();
+  });
+
+  it("shows no Terbitkan to a Viewer", async () => {
+    session.role = "viewer";
+    detail.mockResolvedValue(firstReport());
+
+    render(<ComparisonReportPage />);
+
+    await screen.findByRole("article");
+    expect(screen.queryByRole("button", { name: "Terbitkan" })).toBeNull();
+  });
+
+  it("marks a replaced version for every role", async () => {
+    session.role = "viewer";
+    detail.mockResolvedValue(firstReport({ status: "superseded" }));
+
+    render(<ComparisonReportPage />);
+
+    expect(await screen.findByText(/sudah digantikan versi yang lebih baru/)).toBeInTheDocument();
   });
 });

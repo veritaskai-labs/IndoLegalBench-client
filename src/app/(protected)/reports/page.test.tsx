@@ -56,6 +56,16 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     );
   });
 
+  // SCRUM-335 (PBI-17 AC9): every signed-in role reads the published reports.
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the published reports", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Laporan terbit" });
+    expect(within(section).getByRole("link", { name: "Buka laporan terbit" })).toHaveAttribute("href", "/reports/published");
+  });
+
   // D9 (SA): Developer AI reads comparison reports, including dev-score ones, but the server refuses it the
   // graded-session list (403), so that list is never asked for.
   it("shows Developer AI the comparison reports without the graded sessions", () => {
