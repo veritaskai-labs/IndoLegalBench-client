@@ -34,7 +34,8 @@ export function publishState(report: Pick<ReportSummary, "status" | "has_dev_sco
 
 export function publishErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.code === REPORT_HAS_DEV_SCORES) return DEV_SCORES_MESSAGE;
+    // Kalimat server didahulukan supaya keduanya tidak berbeda; DEV_SCORES_MESSAGE untuk sebelum tombol ditekan.
+    if (error.code === REPORT_HAS_DEV_SCORES) return error.serverMessage ?? DEV_SCORES_MESSAGE;
     if (error.code === REPORT_NOT_PUBLISHABLE) {
       return "Laporan ini sudah terbit atau versi yang dipilih sudah diganti. Tutup dialog lalu muat ulang halaman.";
     }

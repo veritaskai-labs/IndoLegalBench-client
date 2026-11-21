@@ -6,8 +6,8 @@ import { useId, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { httpPublicationGateway, type PublicationGateway } from "@/lib/reports/publicationApi";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
-import { DEV_SCORES_MESSAGE, canPublish, publishState, versionLabel } from "@/lib/reports/publicationRules";
-import type { ReportSummary } from "@/types/reports";
+import { DEV_SCORES_MESSAGE, canPublish, publishState } from "@/lib/reports/publicationRules";
+import type { PublicationRead, ReportSummary } from "@/types/reports";
 
 import { PublishReportDialog } from "./PublishReportDialog";
 import { ReplaceVersionDialog } from "./ReplaceVersionDialog";
@@ -24,19 +24,24 @@ type Report = Pick<ReportSummary, "id" | "title" | "status" | "has_dev_scores" |
  * Bagian penerbitan di halaman satu laporan (PBI-17 SCRUM-335). Tombol Terbitkan hanya untuk Admin (AC9);
  * laporan dengan skor dev tidak bisa diterbitkan dan alasannya tampil sebelum diklik (AC12). Versi yang sudah
  * digantikan tetap bisa dibuka semua peran dan ditandai jelas. Di laporan yang sedang terbit, Admin mendapat tombol
- * Ganti versi. onChanged meminta halaman memuat ulang laporan.
+ * Ganti versi. onChanged meminta halaman memuat ulang laporan; setelah terbit atau ganti versi, versi barunya ikut
+ * diserahkan supaya halaman yang menampilkannya (bagian ini hilang sebentar saat laporan dimuat ulang).
  */
 export function ReportPublishActions({
   report,
   gateway = httpPublicationGateway,
   reportsGateway = httpReportsGateway,
   onChanged,
-}: Readonly<{ report: Report; gateway?: PublicationGateway; reportsGateway?: ReportsGateway; onChanged: () => void }>) {
+}: Readonly<{
+  report: Report;
+  gateway?: PublicationGateway;
+  reportsGateway?: ReportsGateway;
+  onChanged: (publication?: PublicationRead) => void;
+}>) {
   const auth = useAuth();
   const reasonId = useId();
   const [open, setOpen] = useState(false);
   const [replacing, setReplacing] = useState(false);
-  const [published, setPublished] = useState<number | null>(null);
 
   if (auth.status !== "authenticated") return null;
   const admin = canPublish(auth.user.role);
@@ -56,7 +61,6 @@ export function ReportPublishActions({
   if (state === "already_published") {
     return (
       <div className="space-y-1 text-sm">
-        {published !== null && <output className="block text-green-800">Laporan diterbitkan sebagai {versionLabel(published)}.</output>}
         <Link href="/reports/published" className={LINK}>
           Lihat daftar laporan terbit
         </Link>
@@ -72,9 +76,9 @@ export function ReportPublishActions({
             report={report}
             gateway={gateway}
             reportsGateway={reportsGateway}
-            onReplaced={() => {
+            onReplaced={(publication) => {
               setReplacing(false);
-              onChanged();
+              onChanged(publication);
             }}
             onClose={(afterError) => {
               setReplacing(false);
@@ -104,17 +108,13 @@ export function ReportPublishActions({
           {DEV_SCORES_MESSAGE}
         </p>
       )}
-      {published !== null && (
-        <output className="block text-sm text-green-800">Laporan diterbitkan sebagai {versionLabel(published)}.</output>
-      )}
       {open && (
         <PublishReportDialog
           report={report}
           gateway={gateway}
           onPublished={(publication) => {
             setOpen(false);
-            setPublished(publication.version_no);
-            onChanged();
+            onChanged(publication);
           }}
           onClose={(afterError) => {
             setOpen(false);
