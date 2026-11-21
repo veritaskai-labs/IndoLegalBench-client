@@ -1361,6 +1361,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tren skor satu produk antar bulan
+         * @description Satu titik per bulan dari sesi layak terbaru, hanya pada kasus yang sama (PBI-17).
+         */
+        get: operations["get_trend_reports_trend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports/{report_id}": {
         parameters: {
             query?: never;
@@ -1389,6 +1409,26 @@ export interface paths {
         get: operations["download_report_pdf_reports__report_id__pdf_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/{report_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Terbitkan laporan tersimpan, atau ganti satu versi yang masih berlaku
+         * @description Admin boleh menerbitkan laporan orang lain. version_no diisi server.
+         */
+        post: operations["publish_saved_report_reports__report_id__publish_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1461,6 +1501,46 @@ export interface paths {
         };
         /** Unduh berkas bukti jawaban manual dari penelusuran laporan (Admin, Kontributor) */
         get: operations["download_result_case_evidence_reports__report_id__results__result_id__cases__case_id__evidence__evidence_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reports/sessions/{session_id}/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unduh skor per kasus satu sesi sebagai CSV
+         * @description Semua kasus sesi ditulis; kasus tanpa skor berstatus `tidak dinilai`. Setiap berkas yang diserahkan disimpan selamanya (AC7), jadi permintaan ini menulis ke basis data; isi yang sama untuk sesi yang sama hanya disimpan sekali.
+         */
+        get: operations["download_session_score_file_reports_sessions__session_id__csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/published-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar laporan yang sedang terbit
+         * @description Versi yang sudah diganti tetap tersimpan, tetapi tidak muncul di daftar ini.
+         */
+        get: operations["list_published_reports_published_reports_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4028,6 +4108,17 @@ export interface components {
             /** Size */
             size: number;
         };
+        /** Page[PublishedReportListItem] */
+        Page_PublishedReportListItem_: {
+            /** Items */
+            items: components["schemas"]["PublishedReportListItem"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
         /** Page[ReportSummary] */
         Page_ReportSummary_: {
             /** Items */
@@ -4181,6 +4272,66 @@ export interface components {
          * @enum {string}
          */
         ProviderType: "openai_compatible" | "gemini_interactions" | "anthropic_messages";
+        /**
+         * PublicationRead
+         * @description Versi terbit yang baru dibuat.
+         */
+        PublicationRead: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /** Version No */
+            version_no: number;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+        };
+        /**
+         * PublishReport
+         * @description Badan POST /reports/{id}/publish. version_no diisi server, bukan klien.
+         */
+        PublishReport: {
+            /** Supersedes Id */
+            supersedes_id?: string | null;
+        };
+        /**
+         * PublishedReportListItem
+         * @description Satu baris GET /published-reports. Nama produk adalah label beku.
+         */
+        PublishedReportListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /** Version No */
+            version_no: number;
+            /** Title */
+            title: string;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /**
+             * Published By
+             * Format: uuid
+             */
+            published_by: string;
+            /** Product Labels */
+            product_labels: string[];
+        };
         /**
          * ReassignmentAssignmentRead
          * @description Ringkasan satu penugasan dalam putaran review.
@@ -5896,6 +6047,77 @@ export interface components {
             test: components["schemas"]["ScorePair"];
             /** @description Skor gabungan seluruh kasus */
             combined: components["schemas"]["ScorePair"];
+        };
+        /**
+         * TrendMetric
+         * @description Satu garis untuk satu metrik; skor tidak digabung (AC3).
+         * @enum {string}
+         */
+        TrendMetric: "total" | "deterministic" | "llm";
+        /**
+         * TrendPointRead
+         * @description Satu titik tren: sesi layak terbaru pada satu bulan. Tanpa id sesi.
+         */
+        TrendPointRead: {
+            /**
+             * Month
+             * Format: date
+             * @description Hari pertama bulan titik ini (YYYY-MM-01)
+             */
+            month: string;
+            /**
+             * Label
+             * @description Nama sesi yang menjadi titik bulan ini
+             */
+            label: string;
+            /**
+             * Value
+             * @description Skor 0 sampai 1, dua digit desimal; kosong bila tidak ada kasus yang sama atau skor jalur yang dipilih kosong
+             */
+            value: string | null;
+            /**
+             * Breaks
+             * @description Alasan garis diputus antara titik sebelumnya dan titik ini: RUBRIC_VERSION, JUDGE_MODEL, SUITE_VERSION (juga untuk versi kasus), atau MODEL_VERSION_DIFFERS. Kosong bila titik ini tersambung ke titik sebelumnya.
+             */
+            breaks: string[];
+            /**
+             * Markers
+             * @description Penanda titik: TRIAL_SESSION, MANUAL_ANSWER_RANGE_OVER_LIMIT, REPETITIONS_DIFFER (jumlah percobaan berbeda, hanya sesi manual)
+             */
+            markers: string[];
+        };
+        /**
+         * TrendRange
+         * @description Rentang bulan kalender terakhir; bawaannya semua sesi (AC2).
+         * @enum {string}
+         */
+        TrendRange: "3m" | "6m" | "12m" | "all";
+        /**
+         * TrendRead
+         * @description Tren satu metrik untuk satu produk. Skor dev hanya ada bila peran berhak memintanya.
+         */
+        TrendRead: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Product Name */
+            product_name: string;
+            /** @description test, dev, atau dev_test (All) */
+            score_scope: components["schemas"]["ScoreScope"];
+            metric: components["schemas"]["TrendMetric"];
+            range: components["schemas"]["TrendRange"];
+            /**
+             * Points
+             * @description Urut dari bulan paling awal
+             */
+            points: components["schemas"]["TrendPointRead"][];
+            /**
+             * Warnings
+             * @description NO_SHARED_CASES: ada garis tanpa kasus yang sama, nilainya tidak digambar
+             */
+            warnings: string[];
         };
         /** UnreadCount */
         UnreadCount: {
@@ -9995,6 +10217,62 @@ export interface operations {
             };
         };
     };
+    get_trend_reports_trend_get: {
+        parameters: {
+            query: {
+                /** @description Produk AI yang trennya dilihat. */
+                product_id: string;
+                /** @description Jenis kasus: `test` (bawaan, skor resmi), `dev`, atau `dev_test` (All). `dev` dan `dev_test` hanya untuk Admin dan Developer AI. */
+                score_scope?: components["schemas"]["ScoreScope"];
+                /** @description Satu metrik per grafik; skor tidak digabung. */
+                metric?: components["schemas"]["TrendMetric"];
+                /** @description Bulan kalender terakhir: `3m`, `6m`, `12m`, atau `all` (bawaan). */
+                range?: components["schemas"]["TrendRange"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrendRead"];
+                };
+            };
+            /** @description Peran tidak boleh melihat tren yang memuat skor dev (`TREND_SCOPE_FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Produk AI tidak ditemukan (`TREND_PRODUCT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_report_reports__report_id__get: {
         parameters: {
             query?: never;
@@ -10057,6 +10335,68 @@ export interface operations {
             };
             /** @description Laporan tidak ada, atau tidak boleh dibuka peran ini (`REPORT_NOT_FOUND`) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_saved_report_reports__report_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PublishReport"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicationRead"];
+                };
+            };
+            /** @description Bukan Admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Laporan atau versi yang diganti tidak ada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Tidak bisa diterbitkan */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10255,6 +10595,96 @@ export interface operations {
             };
             /** @description Laporan, angka, kasus, percobaan, atau bukti tidak ditemukan di balik angka ini (`REPORT_NOT_FOUND`, `REPORT_RESULT_NOT_FOUND`, `REPORT_CASE_NOT_FOUND`, `REPORT_EVIDENCE_NOT_FOUND`, `EVIDENCE_NOT_FOUND`) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_session_score_file_reports_sessions__session_id__csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Berkas CSV skor satu sesi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Sesi pengukuran tidak ada */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Sesi belum layak diunduh (D2), atau tidak ada kasus yang boleh dilihat peran ini (`SCORE_FILE_NO_VISIBLE_CASES`). `code` alasan pertama; `reasons` berisi semua alasan dengan kode dan kalimatnya. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_published_reports_published_reports_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Page_PublishedReportListItem_"];
+                };
+            };
+            /** @description Belum login */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
