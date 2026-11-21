@@ -9,6 +9,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useReport } from "@/hooks/useReports";
+import { resultCasesHref } from "@/lib/reports/drilldownRules";
 import { HIDDEN_REPORT, REPORT_STATUS_LABEL } from "@/lib/reports/reportRules";
 import { decodeRouteParam } from "@/lib/routeParams";
 
@@ -64,7 +65,7 @@ export default function ComparisonReportPage() {
             <ReportPdfActions reportId={report.data.id} />
           </div>
           <ReportPublishActions report={report.data} onChanged={report.reload} />
-          <ReportDocument report={report.data} />
+          <ReportDocument report={report.data} scoreHref={(resultId) => resultCasesHref(report.data.id, resultId)} />
         </>
       )}
     </div>
