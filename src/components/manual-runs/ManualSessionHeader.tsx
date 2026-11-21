@@ -5,10 +5,11 @@ import { GradeSessionDialog } from "@/components/grading/GradeSessionDialog";
 import { GradingProgressBar } from "@/components/grading/GradingProgressBar";
 import { RETRY_GRADING_DIALOG } from "@/lib/grading/gradingRules";
 import { FinalizeSessionDialog } from "@/components/manual-runs/FinalizeSessionDialog";
-import { SessionScoreDownload } from "@/components/runs/ScoreDownloadButton";
+import { ScoreDownloadButton, gradingOf } from "@/components/runs/ScoreDownloadButton";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { useToast } from "@/components/ui/Toast";
 import { useGradingProgress } from "@/hooks/useGradingProgress";
+import { useSessionResults } from "@/hooks/useSessionResults";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { unknownName } from "@/lib/runs/sessionRules";
@@ -49,10 +50,12 @@ export function ManualSessionHeader({
   const reportHref = `/reports/sessions/${encodeURIComponent(session.id)}`;
   // K-13 (SCRUM-285): penilaian berjalan di latar belakang. Halaman ini tidak punya tabel skor, jadi
   // saat run selesai sesi dimuat ulang (status Dinilai) dan laporannya ditawarkan lewat toast.
+  const results = useSessionResults(session.id, gradingGateway);
   const grading = useGradingProgress(session.id, {
     enabled: isAdmin,
     gateway: gradingGateway,
     onSettled: (run) => {
+      results.reload();
       onSessionUpdated();
       if (run.status === "finished") {
         showToast(`Sesi “${session.label}” selesai dinilai.`, { label: "Lihat laporan →", href: reportHref });
@@ -130,7 +133,7 @@ export function ManualSessionHeader({
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-3">
-            <SessionScoreDownload
+            <ScoreDownloadButton
               session={{
                 id: session.id,
                 status: session.status,
@@ -138,7 +141,7 @@ export function ManualSessionHeader({
                 accepted_as_is_at: null,
                 accepted_as_is_reason: null,
               }}
-              gateway={gradingGateway}
+              grading={gradingOf(results)}
             />
             <SessionStatusBadge status={session.status} />
           </div>

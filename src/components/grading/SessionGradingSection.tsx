@@ -30,22 +30,39 @@ type GradingSession = Pick<SessionDetail, "id" | "label" | "status" | "archived_
  * Penilaian berjalan di latar belakang (K-13, SCRUM-285): Admin melihat progresnya di sini, tombol
  * Nilai mati selama run antre atau berjalan, dan hasil dimuat ulang sendiri begitu run berakhir.
  */
-export function SessionGradingSection({
-  session,
-  role,
-  gateway = httpGradingGateway,
-  rubricsGateway = httpRubricsGateway,
-  judgeApi,
-}: Readonly<{
+type SessionResults = ReturnType<typeof useSessionResults>;
+
+type GradingSectionProps = Readonly<{
   session: GradingSession;
   role: Role | null;
   gateway?: GradingGateway;
   rubricsGateway?: RubricsGateway;
   judgeApi?: JudgeOptionsApi;
-}>) {
+}>;
+
+export function SessionGradingSection({
+  results,
+  ...props
+}: GradingSectionProps & { results?: SessionResults }) {
+  if (results !== undefined) return <SessionGradingBody {...props} results={results} />;
+  return <SessionGradingOwner {...props} />;
+}
+
+function SessionGradingOwner(props: GradingSectionProps) {
+  const results = useSessionResults(props.session.id, props.gateway);
+  return <SessionGradingBody {...props} results={results} />;
+}
+
+function SessionGradingBody({
+  session,
+  role,
+  gateway = httpGradingGateway,
+  rubricsGateway = httpRubricsGateway,
+  judgeApi,
+  results,
+}: GradingSectionProps & { results: SessionResults }) {
   const headingId = useId();
   const { showToast } = useToast();
-  const results = useSessionResults(session.id, gateway);
   const progress = useGradingProgress(session.id, {
     enabled: role === "admin",
     gateway,

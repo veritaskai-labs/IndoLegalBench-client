@@ -2,11 +2,9 @@
 
 import { useId, useRef, useState } from "react";
 
-import { useSessionResults } from "@/hooks/useSessionResults";
 import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { ApiError } from "@/lib/apiClient";
 import { saveBlob } from "@/lib/browserDownload";
-import type { GradingGateway } from "@/lib/grading/gradingApi";
 import {
   scoreDownloadDecision,
   type ScoreDownloadSession,
@@ -36,7 +34,7 @@ function failureText(error: unknown): string {
   return DOWNLOAD_FAILED;
 }
 
-function gradingOf(results: AsyncResource<unknown>): ScoreGrading {
+export function gradingOf(results: AsyncResource<unknown>): ScoreGrading {
   if (results.status !== "ready") return "unknown";
   if (results.data === null) return "ungraded";
   return "graded";
@@ -106,13 +104,4 @@ export function ScoreDownloadButton({
       </button>
     </div>
   );
-}
-
-/** Menempelkan tombol ke hasil penilaian yang sama dengan bagian Hasil penilaian. */
-export function SessionScoreDownload({
-  session,
-  gateway,
-}: Readonly<{ session: Session; gateway?: GradingGateway }>) {
-  const results = useSessionResults(session.id, gateway);
-  return <ScoreDownloadButton session={session} grading={gradingOf(results)} />;
 }
