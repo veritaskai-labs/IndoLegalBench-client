@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { SessionGradingSection } from "@/components/grading/SessionGradingSection";
 import { SessionCaseCard } from "@/components/runs/SessionCaseCard";
 import { SessionControls } from "@/components/runs/SessionControls";
+import { ScoreDownloadButton, gradingOf } from "@/components/runs/ScoreDownloadButton";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -23,6 +24,7 @@ import type { SessionDetail } from "@/types/measurement";
 import { MeasurementProgressPanel } from "@/components/runs/MeasurementProgressPanel";
 import { SessionErrorSummary } from "@/components/runs/SessionErrorSummary";
 import { useMeasurementProgress } from "@/hooks/useMeasurementProgress";
+import { useSessionResults } from "@/hooks/useSessionResults";
 import { failedAttempts } from "@/lib/runs/sessionErrors";
 
 /** Detail satu sesi pengukuran: snapshot kasus dan jawaban mentah (PBI-11 AC6–AC8, SCRUM-212). */
@@ -55,6 +57,7 @@ function SessionDetailView({
   viewerId,
 }: Readonly<{ session: SessionDetail; role: Role | null; viewerId: string | null }>) {
   const { session, stale, reload: reloadSession } = useLiveSession(initialSession);
+  const results = useSessionResults(session.id);
   // Sesi yang tidak berubah sendiri tidak perlu polling (berakhir atau dibatalkan).
   const ended = isSettled(session.status);
   const progress = useMeasurementProgress(session.id, { poll: !ended });
@@ -78,7 +81,10 @@ function SessionDetailView({
   return (
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Eksekusi", href: "/runs" }, { label: session.label }]} />
-      <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
+        <ScoreDownloadButton session={session} grading={gradingOf(results)} />
+      </div>
 
       {session.archived_at && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -119,7 +125,7 @@ function SessionDetailView({
       />
 
       {/* Nilai dan hasil per kasus (PBI-14). Penilaian ulang ada di SCRUM-228. */}
-      <SessionGradingSection session={session} role={role} />
+      <SessionGradingSection session={session} role={role} results={results} />
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
