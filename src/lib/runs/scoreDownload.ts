@@ -3,14 +3,15 @@ import type { SessionDetail, SessionStatus } from "@/types/measurement";
 
 /**
  * Kalimat di samping tombol Unduh skor (PBI-16 AC6, SCRUM-329).
- * Kelayakan mengikuti D2: sesi yang sudah ditutup dan sudah dinilai.
- * Status lain tetap tidak bisa diunduh, dengan kalimat yang sudah ada.
+ * Sama dengan kalimat 409 unduhan di server, satu kode per status.
  */
 export const SCORE_DOWNLOAD_REASON = {
-  inProgress: "Sesi masih berjalan.",
-  resume: "Lanjutkan sampai selesai.",
-  notAccepted: "Belum diterima apa adanya.",
-  notGraded: "Sesi ini belum dinilai.",
+  notFinished: "Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai.",
+  cancelled: "Sesi ini dibatalkan, jadi berkas skornya belum bisa diunduh. Lanjutkan sesi sampai selesai dulu.",
+  runFailed: "Proses run sesi ini gagal, jadi tidak ada skor yang bisa diunduh. Buat sesi baru.",
+  notAccepted:
+    "Sesi ini selesai dengan kegagalan dan belum diterima apa adanya oleh Admin, jadi berkas skornya belum bisa diunduh.",
+  notGraded: "Sesi ini belum dinilai, jadi berkas skornya belum bisa diunduh.",
   archived: "Sesi ini sudah diarsipkan, jadi berkas skornya tidak bisa diunduh.",
 } as const;
 
@@ -24,18 +25,19 @@ export type ScoreDownloadSession = Pick<
 
 export type ScoreDownloadDecision = { eligible: true } | { eligible: false; reason: string | null };
 
+/** Status yang belum layak. finished dan finalized ditangani setelahnya, karena keduanya layak begitu dinilai. */
 const BLOCKED: Record<SessionStatus, string> = {
-  queued: SCORE_DOWNLOAD_REASON.inProgress,
-  running: SCORE_DOWNLOAD_REASON.inProgress,
-  paused: SCORE_DOWNLOAD_REASON.resume,
-  cancelled: SCORE_DOWNLOAD_REASON.resume,
+  queued: SCORE_DOWNLOAD_REASON.notFinished,
+  running: SCORE_DOWNLOAD_REASON.notFinished,
+  paused: SCORE_DOWNLOAD_REASON.notFinished,
+  cancelled: SCORE_DOWNLOAD_REASON.cancelled,
   finished: SCORE_DOWNLOAD_REASON.notGraded,
   finished_with_failures: SCORE_DOWNLOAD_REASON.notAccepted,
-  failed: SCORE_DOWNLOAD_REASON.notGraded,
-  not_filled: SCORE_DOWNLOAD_REASON.inProgress,
-  partially_filled: SCORE_DOWNLOAD_REASON.inProgress,
-  complete: SCORE_DOWNLOAD_REASON.notGraded,
-  graded: SCORE_DOWNLOAD_REASON.notGraded,
+  failed: SCORE_DOWNLOAD_REASON.runFailed,
+  not_filled: SCORE_DOWNLOAD_REASON.notFinished,
+  partially_filled: SCORE_DOWNLOAD_REASON.notFinished,
+  complete: SCORE_DOWNLOAD_REASON.notFinished,
+  graded: SCORE_DOWNLOAD_REASON.notFinished,
   finalized: SCORE_DOWNLOAD_REASON.notGraded,
 };
 
