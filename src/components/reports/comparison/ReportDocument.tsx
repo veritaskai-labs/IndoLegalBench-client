@@ -6,13 +6,13 @@ import { reportSections } from "@/lib/reports/reportSections";
 import type { ReportDetail } from "@/types/reports";
 
 import { ReportBarChart } from "./ReportBarChart";
-import { ReportRankingTable } from "./ReportRankingTable";
+import { ReportRankingTable, type ScoreHref } from "./ReportRankingTable";
 
 /**
  * Isi laporan perbandingan, disusun seperti PDF (pdf.py render), dalam bahasa laporan (Fase 0 K3). Judul
  * diketik pengguna, jadi tidak diterjemahkan.
  */
-export function ReportDocument({ report }: Readonly<{ report: ReportDetail }>) {
+export function ReportDocument({ report, scoreHref }: Readonly<{ report: ReportDetail; scoreHref?: ScoreHref }>) {
   const language = report.language;
   const labels = REPORT_LABELS[language];
   const sections = reportSections(report.sessions);
@@ -42,6 +42,7 @@ export function ReportDocument({ report }: Readonly<{ report: ReportDetail }>) {
               language={language}
               labelMode={report.product_label_mode}
               caption={labels.splits[section.split]}
+              scoreHref={scoreHref}
             />
             <ReportBarChart rows={section.rows} language={language} />
           </section>

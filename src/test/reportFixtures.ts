@@ -1,8 +1,12 @@
 import type {
+  ReportAttemptRead,
   ReportCaseBasisRead,
+  ReportCaseDetailRead,
+  ReportCaseScoreRead,
   ReportDetail,
   ReportDetailResultRead,
   ReportDetailSessionRead,
+  ReportResultCasesRead,
   ScoreSplit,
 } from "@/types/reports";
 
@@ -12,8 +16,13 @@ import type {
  * pengukuran produk mana pun. Urutan sesi sengaja tidak sama dengan urutan peringkat, seperti data dari server.
  */
 
+let resultCounter = 0;
+
+/** Id angka laporan (server#149): kunci penelusuran PBI-16. Penghitung, bukan acak, supaya tes stabil. */
 export function reportResult(overrides: Partial<ReportDetailResultRead> = {}): ReportDetailResultRead {
+  resultCounter += 1;
   return {
+    id: `result-${resultCounter}`,
     score_split: "test",
     cases_graded_count: 50,
     cases_basis_count: 42,
@@ -136,3 +145,90 @@ export function devTestReport(overrides: Partial<ReportDetail> = {}): ReportDeta
     ...overrides,
   });
 }
+
+/** Satu kasus dasar di balik angka (PBI-16 AC1, server#149): kode, versi, dan skornya, tanpa isi. */
+export function caseScore(overrides: Partial<ReportCaseScoreRead> = {}): ReportCaseScoreRead {
+  return {
+    case_id: "c-1",
+    case_code: "ILB-001",
+    case_version_no: 2,
+    split_tag: "test",
+    det_score: "0.80",
+    llm_score: "0.75",
+    content_visible: true,
+    ...overrides,
+  };
+}
+
+/** Daftar kasus di balik angka test satu produk; satu kasus terbuka dan satu tertutup untuk peran ini (AC3). */
+export function resultCases(overrides: Partial<ReportResultCasesRead> = {}): ReportResultCasesRead {
+  return {
+    report_id: "r-1",
+    result_id: "res-1",
+    product_label: "AiYU",
+    measurement_kind: "manual",
+    score_split: "test",
+    rubric_version: "v3",
+    cases: [
+      caseScore(),
+      caseScore({ case_id: "c-2", case_code: "ILB-002", case_version_no: 1, det_score: null, content_visible: false }),
+    ],
+    ...overrides,
+  };
+}
+
+/** Satu percobaan yang dinilai (AC2); jawaban asli markdown, sintetis. */
+export function reportAttempt(overrides: Partial<ReportAttemptRead> = {}): ReportAttemptRead {
+  return {
+    attempt_id: "a-1",
+    repetition_no: 1,
+    source: "automatic",
+    status: "succeeded",
+    graded: true,
+    det_score: "0.80",
+    llm_score: "0.75",
+    answer_text: "**Pasal 151** UU Ketenagakerjaan mengatur PHK.",
+    explanation: "Pasal yang dikutip tepat.",
+    reasons: ["CITATION_OK"],
+    criteria: [],
+    filled_by_name: null,
+    answered_at: null,
+    ...overrides,
+  };
+}
+
+/** Satu kasus sampai jawaban asli: satu percobaan dinilai dan satu gagal teknis (AC2). */
+export function caseDetail(overrides: Partial<ReportCaseDetailRead> = {}): ReportCaseDetailRead {
+  return {
+    report_id: "r-1",
+    result_id: "res-1",
+    case_id: "c-1",
+    case_code: "ILB-001",
+    case_version_no: 2,
+    split_tag: "test",
+    title: "PHK sepihak",
+    category: "Ketenagakerjaan",
+    question: "Apakah PHK sepihak sah?",
+    product_label: "AiYU",
+    measurement_kind: "automatic",
+    rubric_version: "v3",
+    det_score: "0.80",
+    llm_score: "0.75",
+    attempts: [
+      reportAttempt(),
+      reportAttempt({
+        attempt_id: "a-2",
+        repetition_no: 2,
+        status: "technical_failure",
+        graded: false,
+        det_score: null,
+        llm_score: null,
+        answer_text: null,
+        explanation: null,
+        reasons: [],
+      }),
+    ],
+    ...overrides,
+  };
+}
+

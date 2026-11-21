@@ -5486,6 +5486,105 @@
         }
       }
     },
+    "/reports/trend": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Tren skor satu produk antar bulan",
+        "description": "Satu titik per bulan dari sesi layak terbaru, hanya pada kasus yang sama (PBI-17).",
+        "operationId": "get_trend_reports_trend_get",
+        "parameters": [
+          {
+            "name": "product_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Produk AI yang trennya dilihat.",
+              "title": "Product Id"
+            },
+            "description": "Produk AI yang trennya dilihat."
+          },
+          {
+            "name": "score_scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ScoreScope",
+              "description": "Jenis kasus: `test` (bawaan, skor resmi), `dev`, atau `dev_test` (All). `dev` dan `dev_test` hanya untuk Admin dan Developer AI.",
+              "default": "test"
+            },
+            "description": "Jenis kasus: `test` (bawaan, skor resmi), `dev`, atau `dev_test` (All). `dev` dan `dev_test` hanya untuk Admin dan Developer AI."
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TrendMetric",
+              "description": "Satu metrik per grafik; skor tidak digabung.",
+              "default": "total"
+            },
+            "description": "Satu metrik per grafik; skor tidak digabung."
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TrendRange",
+              "description": "Bulan kalender terakhir: `3m`, `6m`, `12m`, atau `all` (bawaan).",
+              "default": "all"
+            },
+            "description": "Bulan kalender terakhir: `3m`, `6m`, `12m`, atau `all` (bawaan)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrendRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran tidak boleh melihat tren yang memuat skor dev (`TREND_SCOPE_FORBIDDEN`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produk AI tidak ditemukan (`TREND_PRODUCT_NOT_FOUND`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/reports/{report_id}": {
       "get": {
         "tags": [
@@ -5567,6 +5666,559 @@
           },
           "404": {
             "description": "Laporan tidak ada, atau tidak boleh dibuka peran ini (`REPORT_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report_id}/publish": {
+      "post": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Terbitkan laporan tersimpan, atau ganti satu versi yang masih berlaku",
+        "description": "Admin boleh menerbitkan laporan orang lain. version_no diisi server.",
+        "operationId": "publish_saved_report_reports__report_id__publish_post",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PublishReport"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Bukan Admin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Laporan atau versi yang diganti tidak ada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Tidak bisa diterbitkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report_id}/results/{result_id}/cases": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Kasus dasar di balik satu angka laporan, tanpa isi kasus",
+        "description": "PBI-16 AC1: kode kasus, versi kasus, dan skor per kasus untuk semua peran (D9).",
+        "operationId": "list_result_cases_reports__report_id__results__result_id__cases_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "result_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Result Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportResultCasesRead"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Laporan tidak boleh dibuka atau tidak ada (`REPORT_NOT_FOUND`), angka bukan milik laporan ini (`REPORT_RESULT_NOT_FOUND`), atau hasil penilaiannya tidak ditemukan (`REPORT_GRADES_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report_id}/results/{result_id}/cases/{case_id}": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan",
+        "description": "PBI-16 AC2 dan AC3: jawaban asli, skor, alasan, versi rubrik, dan data jawaban manual.",
+        "operationId": "get_result_case_reports__report_id__results__result_id__cases__case_id__get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "result_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Result Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCaseDetailRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran ini tidak boleh membuka isi kasus (`CASE_CONTENT_FORBIDDEN`): Viewer, Kontributor untuk kasus dev, Developer AI untuk kasus test. Pesannya menyebut email untuk meminta isi kasus.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Laporan tidak boleh dibuka atau tidak ada (`REPORT_NOT_FOUND`), angka bukan milik laporan ini (`REPORT_RESULT_NOT_FOUND`), kasus tidak ada di balik angka ini (`REPORT_CASE_NOT_FOUND`), atau hasil penilaiannya tidak ditemukan (`REPORT_GRADES_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report_id}/results/{result_id}/cases/{case_id}/attempts/{attempt_no}/evidence": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Bukti satu jawaban manual dari penelusuran laporan (Admin, Kontributor)",
+        "operationId": "list_result_case_evidence_reports__report_id__results__result_id__cases__case_id__attempts__attempt_no__evidence_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "result_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Result Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "attempt_no",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Attempt No"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvidenceRead"
+                  },
+                  "title": "Response List Result Case Evidence Reports  Report Id  Results  Result Id  Cases  Case Id  Attempts  Attempt No  Evidence Get"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Peran ini tidak boleh membuka bukti (`FORBIDDEN`) atau isi kasus (`CASE_CONTENT_FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Laporan, angka, kasus, percobaan, atau bukti tidak ditemukan di balik angka ini (`REPORT_NOT_FOUND`, `REPORT_RESULT_NOT_FOUND`, `REPORT_CASE_NOT_FOUND`, `REPORT_EVIDENCE_NOT_FOUND`, `EVIDENCE_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/{report_id}/results/{result_id}/cases/{case_id}/evidence/{evidence_id}/file": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Unduh berkas bukti jawaban manual dari penelusuran laporan (Admin, Kontributor)",
+        "operationId": "download_result_case_evidence_reports__report_id__results__result_id__cases__case_id__evidence__evidence_id__file_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "result_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Result Id"
+            }
+          },
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Isi berkas, selalu sebagai lampiran",
+            "content": {
+              "image/png": {},
+              "image/jpeg": {},
+              "application/pdf": {}
+            }
+          },
+          "403": {
+            "description": "Peran ini tidak boleh membuka bukti (`FORBIDDEN`) atau isi kasus (`CASE_CONTENT_FORBIDDEN`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Laporan, angka, kasus, percobaan, atau bukti tidak ditemukan di balik angka ini (`REPORT_NOT_FOUND`, `REPORT_RESULT_NOT_FOUND`, `REPORT_CASE_NOT_FOUND`, `REPORT_EVIDENCE_NOT_FOUND`, `EVIDENCE_NOT_FOUND`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/sessions/{session_id}/csv": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Unduh skor per kasus satu sesi sebagai CSV",
+        "description": "Semua kasus sesi ditulis; kasus tanpa skor berstatus `tidak dinilai`. Setiap berkas yang diserahkan disimpan selamanya (AC7), jadi permintaan ini menulis ke basis data; isi yang sama untuk sesi yang sama hanya disimpan sekali.",
+        "operationId": "download_session_score_file_reports_sessions__session_id__csv_get",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Berkas CSV skor satu sesi",
+            "content": {
+              "text/csv": {}
+            }
+          },
+          "404": {
+            "description": "Sesi pengukuran tidak ada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sesi belum layak diunduh (D2), atau tidak ada kasus yang boleh dilihat peran ini (`SCORE_FILE_NO_VISIBLE_CASES`). `code` alasan pertama; `reasons` berisi semua alasan dengan kode dan kalimatnya.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/published-reports": {
+      "get": {
+        "tags": [
+          "reports"
+        ],
+        "summary": "Daftar laporan yang sedang terbit",
+        "description": "Versi yang sudah diganti tetap tersimpan, tetapi tidak muncul di daftar ini.",
+        "operationId": "list_published_reports_published_reports_get",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_PublishedReportListItem_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Belum login",
             "content": {
               "application/json": {
                 "schema": {
@@ -11874,6 +12526,37 @@
         ],
         "title": "Page[NotificationRead]"
       },
+      "Page_PublishedReportListItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublishedReportListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size"
+        ],
+        "title": "Page[PublishedReportListItem]"
+      },
       "Page_ReportSummary_": {
         "properties": {
           "items": {
@@ -12119,6 +12802,116 @@
         "title": "ProviderType",
         "description": "ProviderType:\n- openai_compatible: OpenAI chat completions (DeepSeek, GPT). Bearer auth. The stored URL is posted as-is.\n- gemini_interactions: Gemini Interactions API. Header x-goog-api-key.\n- anthropic_messages: Anthropic Messages API. Headers x-api-key and anthropic-version."
       },
+      "PublicationRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "version_no": {
+            "type": "integer",
+            "title": "Version No"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "report_id",
+          "version_no",
+          "supersedes_id"
+        ],
+        "title": "PublicationRead",
+        "description": "Versi terbit yang baru dibuat."
+      },
+      "PublishReport": {
+        "properties": {
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PublishReport",
+        "description": "Badan POST /reports/{id}/publish. version_no diisi server, bukan klien."
+      },
+      "PublishedReportListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "version_no": {
+            "type": "integer",
+            "title": "Version No"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "published_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Published By"
+          },
+          "product_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Product Labels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "report_id",
+          "version_no",
+          "title",
+          "published_at",
+          "published_by",
+          "product_labels"
+        ],
+        "title": "PublishedReportListItem",
+        "description": "Satu baris GET /published-reports. Nama produk adalah label beku."
+      },
       "ReassignmentAssignmentRead": {
         "properties": {
           "id": {
@@ -12320,6 +13113,137 @@
         "title": "ReplaceReviewerResponse",
         "description": "Response sukses POST /reviews/{assignment_id}/replace."
       },
+      "ReportAttemptRead": {
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Attempt Id"
+          },
+          "repetition_no": {
+            "type": "integer",
+            "title": "Repetition No"
+          },
+          "source": {
+            "$ref": "#/components/schemas/AttemptSource",
+            "description": "automatic atau manual; manual diberi label (AC2)"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttemptStatus"
+          },
+          "graded": {
+            "type": "boolean",
+            "title": "Graded",
+            "description": "false untuk percobaan gagal teknis: tampilkan 'tidak dinilai' (AC2)"
+          },
+          "det_score": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Det Score"
+          },
+          "llm_score": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Score"
+          },
+          "answer_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Text",
+            "description": "Jawaban asli produk AI"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation",
+            "description": "Penjelasan penilai LLM"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons",
+            "description": "Kode alasan penilaian per jalur"
+          },
+          "criteria": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Criteria",
+            "description": "Hasil penilaian per kriteria rubrik"
+          },
+          "filled_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filled By Name",
+            "description": "Siapa yang mengisi jawaban manual; null untuk otomatis"
+          },
+          "answered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At",
+            "description": "Tanggal jawaban manual diperoleh dari platform"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt_id",
+          "repetition_no",
+          "source",
+          "status",
+          "graded",
+          "det_score",
+          "llm_score",
+          "answer_text",
+          "explanation",
+          "reasons",
+          "criteria"
+        ],
+        "title": "ReportAttemptRead",
+        "description": "Satu percobaan di balik skor satu kasus (AC2): jawaban asli, skor, dan alasannya."
+      },
       "ReportCaseBasisRead": {
         "properties": {
           "case_code": {
@@ -12342,6 +13266,191 @@
         ],
         "title": "ReportCaseBasisRead",
         "description": "Satu kasus dasar perhitungan. Hanya kode dan versi, tanpa isi kasus (D9)."
+      },
+      "ReportCaseDetailRead": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "result_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Result Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "case_code": {
+            "type": "string",
+            "title": "Case Code"
+          },
+          "case_version_no": {
+            "type": "integer",
+            "title": "Case Version No"
+          },
+          "split_tag": {
+            "$ref": "#/components/schemas/SplitTag"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question",
+            "description": "Isi kasus dari snapshot sesi"
+          },
+          "product_label": {
+            "type": "string",
+            "title": "Product Label",
+            "description": "Label beku di laporan: nama asli atau kode"
+          },
+          "measurement_kind": {
+            "$ref": "#/components/schemas/MeasurementKind"
+          },
+          "rubric_version": {
+            "type": "string",
+            "title": "Rubric Version",
+            "description": "Versi rubrik yang menilai percobaan-percobaan ini"
+          },
+          "det_score": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Det Score"
+          },
+          "llm_score": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Score"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/ReportAttemptRead"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "result_id",
+          "case_id",
+          "case_code",
+          "case_version_no",
+          "split_tag",
+          "title",
+          "category",
+          "question",
+          "product_label",
+          "measurement_kind",
+          "rubric_version",
+          "det_score",
+          "llm_score",
+          "attempts"
+        ],
+        "title": "ReportCaseDetailRead",
+        "description": "Satu kasus di balik satu angka, dibuka sampai jawaban asli (D6 langkah 5-7).\n\nHanya dikirim ke peran yang boleh melihat isi kasus (AC3); peran lain mendapat 403."
+      },
+      "ReportCaseScoreRead": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "case_code": {
+            "type": "string",
+            "title": "Case Code",
+            "description": "TERSEMBUNYI untuk kasus test bila dibaca Developer AI"
+          },
+          "case_version_no": {
+            "type": "integer",
+            "title": "Case Version No"
+          },
+          "split_tag": {
+            "$ref": "#/components/schemas/SplitTag"
+          },
+          "det_score": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Det Score",
+            "description": "Rata-rata skor deterministik percobaan"
+          },
+          "llm_score": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Score",
+            "description": "Rata-rata skor penilai LLM percobaan"
+          },
+          "content_visible": {
+            "type": "boolean",
+            "title": "Content Visible",
+            "description": "True bila peran ini boleh membuka isi kasus, jawaban, dan alasan (AC3)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "case_code",
+          "case_version_no",
+          "split_tag",
+          "det_score",
+          "llm_score",
+          "content_visible"
+        ],
+        "title": "ReportCaseScoreRead",
+        "description": "Satu kasus dasar di balik satu angka: kode, versi, dan skornya, tanpa isi (AC1).\n\nBentuknya sama untuk semua peran (D9: daftar kasus dan skor terbuka untuk semua).\nYang berbeda hanya kode kasus test untuk Developer AI dan content_visible."
       },
       "ReportCreate": {
         "properties": {
@@ -12529,6 +13638,12 @@
       },
       "ReportDetailResultRead": {
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Id angka ini untuk GET /reports/{id}/results/{result_id}"
+          },
           "score_split": {
             "$ref": "#/components/schemas/ScoreSplit"
           },
@@ -12618,6 +13733,7 @@
         },
         "type": "object",
         "required": [
+          "id",
           "score_split",
           "cases_graded_count",
           "cases_basis_count",
@@ -12875,6 +13991,55 @@
           "message"
         ],
         "title": "ReportRejectionRead"
+      },
+      "ReportResultCasesRead": {
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Report Id"
+          },
+          "result_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Result Id"
+          },
+          "product_label": {
+            "type": "string",
+            "title": "Product Label",
+            "description": "Label beku di laporan: nama asli atau kode"
+          },
+          "measurement_kind": {
+            "$ref": "#/components/schemas/MeasurementKind"
+          },
+          "score_split": {
+            "$ref": "#/components/schemas/ScoreSplit"
+          },
+          "rubric_version": {
+            "type": "string",
+            "title": "Rubric Version",
+            "description": "Versi rubrik run penilaian di balik angka ini"
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/ReportCaseScoreRead"
+            },
+            "type": "array",
+            "title": "Cases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "report_id",
+          "result_id",
+          "product_label",
+          "measurement_kind",
+          "score_split",
+          "rubric_version",
+          "cases"
+        ],
+        "title": "ReportResultCasesRead",
+        "description": "Daftar kasus di balik satu angka laporan (GET /reports/{id}/results/{result_id}/cases)."
       },
       "ReportResultRead": {
         "properties": {
@@ -15196,6 +16361,132 @@
         ],
         "title": "ThreeScores",
         "description": "Tiga skor terpisah yang diminta PBI-11 AC9: dev, test, dan gabungan."
+      },
+      "TrendMetric": {
+        "type": "string",
+        "enum": [
+          "total",
+          "deterministic",
+          "llm"
+        ],
+        "title": "TrendMetric",
+        "description": "Satu garis untuk satu metrik; skor tidak digabung (AC3)."
+      },
+      "TrendPointRead": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "format": "date",
+            "title": "Month",
+            "description": "Hari pertama bulan titik ini (YYYY-MM-01)"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Nama sesi yang menjadi titik bulan ini"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Skor 0 sampai 1, dua digit desimal; kosong bila tidak ada kasus yang sama atau skor jalur yang dipilih kosong"
+          },
+          "breaks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Breaks",
+            "description": "Alasan garis diputus antara titik sebelumnya dan titik ini: RUBRIC_VERSION, JUDGE_MODEL, SUITE_VERSION (juga untuk versi kasus), atau MODEL_VERSION_DIFFERS. Kosong bila titik ini tersambung ke titik sebelumnya."
+          },
+          "markers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Markers",
+            "description": "Penanda titik: TRIAL_SESSION, MANUAL_ANSWER_RANGE_OVER_LIMIT, REPETITIONS_DIFFER (jumlah percobaan berbeda, hanya sesi manual)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "label",
+          "value",
+          "breaks",
+          "markers"
+        ],
+        "title": "TrendPointRead",
+        "description": "Satu titik tren: sesi layak terbaru pada satu bulan. Tanpa id sesi."
+      },
+      "TrendRange": {
+        "type": "string",
+        "enum": [
+          "3m",
+          "6m",
+          "12m",
+          "all"
+        ],
+        "title": "TrendRange",
+        "description": "Rentang bulan kalender terakhir; bawaannya semua sesi (AC2)."
+      },
+      "TrendRead": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Product Id"
+          },
+          "product_name": {
+            "type": "string",
+            "title": "Product Name"
+          },
+          "score_scope": {
+            "$ref": "#/components/schemas/ScoreScope",
+            "description": "test, dev, atau dev_test (All)"
+          },
+          "metric": {
+            "$ref": "#/components/schemas/TrendMetric"
+          },
+          "range": {
+            "$ref": "#/components/schemas/TrendRange"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPointRead"
+            },
+            "type": "array",
+            "title": "Points",
+            "description": "Urut dari bulan paling awal"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings",
+            "description": "NO_SHARED_CASES: ada garis tanpa kasus yang sama, nilainya tidak digambar"
+          }
+        },
+        "type": "object",
+        "required": [
+          "product_id",
+          "product_name",
+          "score_scope",
+          "metric",
+          "range",
+          "points",
+          "warnings"
+        ],
+        "title": "TrendRead",
+        "description": "Tren satu metrik untuk satu produk. Skor dev hanya ada bila peran berhak memintanya."
       },
       "UnreadCount": {
         "properties": {
