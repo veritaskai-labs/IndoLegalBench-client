@@ -15,15 +15,10 @@ const FORBIDDEN_SCOPE_MESSAGE = "Peran Anda hanya boleh melihat tren skor test."
 const MISSING_PRODUCT_MESSAGE = "Produk tidak ditemukan.";
 
 /**
- * Filter jenis kasus hanya untuk peran yang boleh lebih dari skor test (PBI-17 AC1, AC12). Daftarnya sama dengan
- * pembuat laporan (allowedScoreScopes), jadi aturan skor dev tetap di satu tempat. Ini hanya tampilan: server
- * tetap menolak dengan 403.
+ * Jenis kasus yang benar-benar dikirim: pilihan yang tidak lagi boleh diganti ke test, skor resmi (PBI-17 AC1,
+ * AC12). Daftar yang boleh dipilih sama dengan pembuat laporan (allowedScoreScopes), jadi aturan skor dev tetap di
+ * satu tempat. Ini hanya tampilan: server tetap menolak dengan 403.
  */
-export function canFilterTrendScope(role: Role | null): boolean {
-  return allowedScoreScopes(role).length > 1;
-}
-
-/** Jenis kasus yang benar-benar dikirim: pilihan yang tidak lagi boleh diganti ke test, skor resmi. */
 export function effectiveTrendScope(role: Role | null, scope: ScoreScope): ScoreScope {
   return allowedScoreScopes(role).includes(scope) ? scope : "test";
 }

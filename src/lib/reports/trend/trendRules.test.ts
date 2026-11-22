@@ -5,7 +5,6 @@ import { eligibleSession } from "@/test/reportFixtures";
 import { trendPoint, trendRead } from "@/test/trendFixtures";
 
 import {
-  canFilterTrendScope,
   effectiveTrendScope,
   hasDrawablePoint,
   pointNotes,
@@ -17,19 +16,6 @@ import {
 } from "./trendRules";
 
 const FORBIDDEN_TEXT = "Peran Anda hanya boleh melihat tren skor test.";
-
-describe("canFilterTrendScope (AC1, AC12)", () => {
-  // Positive and negative, one row per role
-  it.each([
-    ["admin", true],
-    ["developer_ai", true],
-    ["viewer", false],
-    ["contributor", false],
-    [null, false],
-  ] as const)("for %s the case type filter is shown: %s", (role, expected) => {
-    expect(canFilterTrendScope(role)).toBe(expected);
-  });
-});
 
 describe("effectiveTrendScope", () => {
   // Positive
