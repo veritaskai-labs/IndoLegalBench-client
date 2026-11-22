@@ -4,7 +4,7 @@ import type { ReportRow } from "./reportSections";
 const DECIMAL_TEXT = /^-?\d+(\.\d+)?$/;
 const TICK_FRACTIONS = [0, 0.25, 0.5, 0.75, 1] as const;
 
-function toNumber(score: string | null): number | null {
+export function toNumber(score: string | null): number | null {
   return score !== null && DECIMAL_TEXT.test(score) ? Number(score) : null;
 }
 
