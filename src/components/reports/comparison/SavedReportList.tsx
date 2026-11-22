@@ -64,7 +64,7 @@ function ReportTable({ reports }: Readonly<{ reports: readonly ReportSummary[] }
   );
 }
 
-/** Daftar laporan (D3 langkah 10), disaring server sesuai peran (D9). Tombol Terbitkan termasuk PBI-17. */
+/** Daftar laporan (D3 langkah 10), disaring server sesuai peran (D9). Tombol Terbitkan ada di halaman satu laporan (PBI-17 SCRUM-335). */
 export function SavedReportList({ gateway = httpReportsGateway }: Readonly<{ gateway?: ReportsGateway }>) {
   const reports = useReports(gateway);
 

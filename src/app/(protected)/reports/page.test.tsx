@@ -56,6 +56,16 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     );
   });
 
+  // SCRUM-335 (PBI-17 AC9): every signed-in role reads the published reports.
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the published reports", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Laporan terbit" });
+    expect(within(section).getByRole("link", { name: "Buka laporan terbit" })).toHaveAttribute("href", "/reports/published");
+  });
+
   // SCRUM-334 (PBI-17): Laporan is also the menu entry to the monthly trend; every role may read it (the
   // case type filter on that page is what differs per role).
   it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the monthly quality trend", (role) => {

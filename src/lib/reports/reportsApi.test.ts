@@ -55,8 +55,35 @@ describe("httpReportsGateway.list (GET /reports, D3 step 10)", () => {
 
     await expect(httpReportsGateway.list()).resolves.toEqual([summary]);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toMatch(/\/reports\?size=100$/);
+    expect(url).toMatch(/\/reports\?page=1&size=100$/);
     expect(init).toMatchObject({ credentials: "include" });
+  });
+
+  // SCRUM-335 re-review blocker: Ganti versi picks its replacement from this list, so a saved Test report on
+  // page 2 must not drop out (the server caps a page at 100).
+  it("follows every page, so a report beyond the first 100 is still listed", async () => {
+    const report = firstReport();
+    const row = (id: string): ReportSummary => ({
+      id,
+      title: report.title,
+      score_scope: "dev_test",
+      has_dev_scores: true,
+      status: "saved",
+      language: report.language,
+      created_by: report.created_by,
+      created_at: report.created_at,
+    });
+    const firstPage = Array.from({ length: 100 }, (_, index) => row(`r-${index + 1}`));
+    const savedTest = { ...row("r-101"), score_scope: "test" as const, has_dev_scores: false };
+    fetchMock
+      .mockResolvedValueOnce(fakeResponse(200, { items: firstPage, total: 101, page: 1, size: 100 }))
+      .mockResolvedValueOnce(fakeResponse(200, { items: [savedTest], total: 101, page: 2, size: 100 }));
+
+    const all = await httpReportsGateway.list();
+
+    expect(all).toHaveLength(101);
+    expect(all.at(-1)).toEqual(savedTest);
+    expect(fetchMock.mock.calls[1][0]).toMatch(/\/reports\?page=2&size=100$/);
   });
 });
 
