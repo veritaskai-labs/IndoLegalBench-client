@@ -1381,6 +1381,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/trend/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unduh tren skor satu produk sebagai PDF
+         * @description Tren yang sama dengan GET /reports/trend sebagai PDF (PBI-17 AC8, D4 langkah 8).
+         *
+         *     Aturan peran sama karena lewat TrendService: Viewer dan Kontributor yang meminta skor dev
+         *     ditolak 403 sebelum sesi dibaca.
+         */
+        get: operations["download_trend_pdf_reports_trend_pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports/{report_id}": {
         parameters: {
             query?: never;
@@ -6085,6 +6108,11 @@ export interface components {
              * @description Penanda titik: TRIAL_SESSION, MANUAL_ANSWER_RANGE_OVER_LIMIT, REPETITIONS_DIFFER (jumlah percobaan berbeda, hanya sesi manual)
              */
             markers: string[];
+            /**
+             * Case Count
+             * @description Jumlah kasus yang sama pada segmen garis titik ini; semua titik di satu segmen memakai kumpulan kasus yang sama, jadi nilainya sama. 0 bila tidak ada kasus yang sama
+             */
+            case_count: number;
         };
         /**
          * TrendRange
@@ -10242,6 +10270,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrendRead"];
+                };
+            };
+            /** @description Peran tidak boleh melihat tren yang memuat skor dev (`TREND_SCOPE_FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Produk AI tidak ditemukan (`TREND_PRODUCT_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_trend_pdf_reports_trend_pdf_get: {
+        parameters: {
+            query: {
+                /** @description Bahasa PDF: `en` (bawaan) atau `id`. Disiapkan untuk PBI-26. */
+                language?: components["schemas"]["ReportLanguage"];
+                /** @description Produk AI yang trennya dilihat. */
+                product_id: string;
+                /** @description Jenis kasus: `test` (bawaan, skor resmi), `dev`, atau `dev_test` (All). `dev` dan `dev_test` hanya untuk Admin dan Developer AI. */
+                score_scope?: components["schemas"]["ScoreScope"];
+                /** @description Satu metrik per grafik; skor tidak digabung. */
+                metric?: components["schemas"]["TrendMetric"];
+                /** @description Bulan kalender terakhir: `3m`, `6m`, `12m`, atau `all` (bawaan). */
+                range?: components["schemas"]["TrendRange"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Berkas PDF tren */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
                 };
             };
             /** @description Peran tidak boleh melihat tren yang memuat skor dev (`TREND_SCOPE_FORBIDDEN`). */
