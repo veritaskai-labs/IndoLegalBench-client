@@ -248,7 +248,7 @@ describe("TrendView result states", () => {
 
     // Assert
     const warning = await screen.findByText("Tidak ada kasus yang sama antar sesi, jadi garis tren tidak digambar.");
-    expect(warning.closest("[role='status']")).not.toBeNull();
+    expect(warning.closest("output")).not.toBeNull();
     expect(container.querySelectorAll("circle[data-point]")).toHaveLength(0);
     expect(container.querySelectorAll("line[data-segment]")).toHaveLength(0);
   });
