@@ -28,3 +28,9 @@ export type ReportResultCasesRead = components["schemas"]["ReportResultCasesRead
 export type ReportCaseScoreRead = components["schemas"]["ReportCaseScoreRead"];
 export type ReportCaseDetailRead = components["schemas"]["ReportCaseDetailRead"];
 export type ReportAttemptRead = components["schemas"]["ReportAttemptRead"];
+
+/** Tren skor satu produk antar bulan (PBI-17, server#150 dan server#153). */
+export type TrendRead = components["schemas"]["TrendRead"];
+export type TrendPointRead = components["schemas"]["TrendPointRead"];
+export type TrendMetric = components["schemas"]["TrendMetric"];
+export type TrendRange = components["schemas"]["TrendRange"];
