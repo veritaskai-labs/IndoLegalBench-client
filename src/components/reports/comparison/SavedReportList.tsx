@@ -71,9 +71,18 @@ export function SavedReportList({ gateway = httpReportsGateway }: Readonly<{ gat
   return (
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Laporan", href: "/reports" }, { label: "Laporan perbandingan" }]} />
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Laporan perbandingan</h1>
-        <p className="text-sm text-slate-600">Setiap laporan tersimpan otomatis saat dibuat dan bisa dibuka ulang di sini.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Laporan perbandingan</h1>
+          <p className="text-sm text-slate-600">Setiap laporan tersimpan otomatis saat dibuat dan bisa dibuka ulang di sini.</p>
+        </div>
+        {/* Semua peran boleh membuat laporan (SCRUM-321), jadi tautan ini tampil di setiap keadaan daftar. */}
+        <Link
+          href="/reports/comparisons/new"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+        >
+          Buat laporan
+        </Link>
       </div>
       {reports.status === "loading" && <LoadingState label="Memuat daftar laporan…" />}
       {reports.status === "error" && <ErrorState variant="card" message={reports.message} onRetry={reports.reload} />}

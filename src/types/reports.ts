@@ -18,6 +18,11 @@ export type ReportSummary = components["schemas"]["ReportSummary"];
 export type ReportSummaryPage = components["schemas"]["Page_ReportSummary_"];
 export type ReportDetail = components["schemas"]["ReportDetail"];
 
+export type ReportCreate = components["schemas"]["ReportCreate"];
+export type ReportCreateResponse = components["schemas"]["ReportCreateResponse"];
+/** Satu sesi dari GET /reports/eligible-sessions: layak atau tidak, dengan alasan siap tampil (SCRUM-321). */
+export type EligibleSession = components["schemas"]["EligibleSessionRead"];
+export type EligibleSessionReason = components["schemas"]["EligibleSessionReasonRead"];
 /** Penelusuran angka laporan (PBI-16, server#149): kasus di balik satu angka, lalu satu kasus sampai jawaban asli. */
 export type ReportResultCasesRead = components["schemas"]["ReportResultCasesRead"];
 export type ReportCaseScoreRead = components["schemas"]["ReportCaseScoreRead"];
@@ -28,3 +33,9 @@ export type PublicationRead = components["schemas"]["PublicationRead"];
 /** Satu baris GET /published-reports; product_labels sudah dibekukan server menurut aturan PBI-15 (AC10). */
 export type PublishedReportListItem = components["schemas"]["PublishedReportListItem"];
 export type PublishedReportPage = components["schemas"]["Page_PublishedReportListItem_"];
+
+/** Tren skor satu produk antar bulan (PBI-17, server#150 dan server#153). */
+export type TrendRead = components["schemas"]["TrendRead"];
+export type TrendPointRead = components["schemas"]["TrendPointRead"];
+export type TrendMetric = components["schemas"]["TrendMetric"];
+export type TrendRange = components["schemas"]["TrendRange"];

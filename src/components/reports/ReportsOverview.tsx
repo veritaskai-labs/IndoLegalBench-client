@@ -23,6 +23,7 @@ export function ReportsOverview() {
       <h1 className="text-xl font-semibold text-slate-900">Laporan</h1>
       <ComparisonReportsSection />
       <PublishedReportsSection />
+      <TrendSection />
       {canSeeGradedSessions(auth.user.role) && <GradedSessionsSection />}
     </div>
   );
@@ -66,6 +67,28 @@ function PublishedReportsSection() {
         className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
       >
         Buka laporan terbit
+      </Link>
+    </section>
+  );
+}
+
+/** Semua peran membuka tren; filter jenis kasus di halamannya yang berbeda per peran (PBI-17 AC1, AC12). */
+function TrendSection() {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId} className="space-y-3">
+      <div>
+        <h2 id={headingId} className="text-base font-semibold text-slate-900">
+          Tren kualitas produk
+        </h2>
+        <p className="text-sm text-slate-600">Perkembangan skor satu produk AI dari bulan ke bulan, lengkap dengan PDF-nya.</p>
+      </div>
+      <Link
+        href="/reports/trend"
+        className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+      >
+        Buka tren kualitas
       </Link>
     </section>
   );

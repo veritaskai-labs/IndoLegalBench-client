@@ -66,6 +66,17 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     expect(within(section).getByRole("link", { name: "Buka laporan terbit" })).toHaveAttribute("href", "/reports/published");
   });
 
+  // SCRUM-334 (PBI-17): Laporan is also the menu entry to the monthly trend; every role may read it (the
+  // case type filter on that page is what differs per role).
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the monthly quality trend", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Tren kualitas produk" });
+    expect(within(section).getByRole("link", { name: "Buka tren kualitas" })).toHaveAttribute("href", "/reports/trend");
+  });
+
   // D9 (SA): Developer AI reads comparison reports, including dev-score ones, but the server refuses it the
   // graded-session list (403), so that list is never asked for.
   it("shows Developer AI the comparison reports without the graded sessions", () => {

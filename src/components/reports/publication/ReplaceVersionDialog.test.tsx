@@ -27,7 +27,13 @@ function gateways({
     publish: vi.fn().mockResolvedValue({ id: "pub-2", report_id: "r-new", version_no: 4, supersedes_id: "pub-1" }),
     listPublished: vi.fn().mockResolvedValue(publications),
   };
-  const saved: ReportsGateway = { list: vi.fn().mockResolvedValue(reports), detail: vi.fn(), pdf: vi.fn() };
+  const saved: ReportsGateway = {
+    list: vi.fn().mockResolvedValue(reports),
+    detail: vi.fn(),
+    pdf: vi.fn(),
+    eligibleSessions: vi.fn(),
+    create: vi.fn(),
+  };
   return { publication, saved };
 }
 
