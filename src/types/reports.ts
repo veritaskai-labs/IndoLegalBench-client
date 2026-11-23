@@ -7,6 +7,8 @@ export type MeasurementKind = components["schemas"]["MeasurementKind"];
 export type ReportStatus = components["schemas"]["ReportStatus"];
 export type ReportLanguage = components["schemas"]["ReportLanguage"];
 export type ProductLabelMode = components["schemas"]["ProductLabelMode"];
+/** Satu kode produk dengan nama aslinya; hanya dikirim server ke Admin pada laporan mode kode (SCRUM-363). */
+export type ProductLabelMapping = components["schemas"]["ProductLabelMappingRead"];
 
 export type ReportMarkerRead = components["schemas"]["ReportMarkerRead"];
 export type ReportDetailResultRead = components["schemas"]["ReportDetailResultRead"];

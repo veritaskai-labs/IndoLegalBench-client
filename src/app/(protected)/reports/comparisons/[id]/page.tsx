@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { ProductMappingPanel } from "@/components/reports/comparison/ProductMappingPanel";
 import { ReportDocument } from "@/components/reports/comparison/ReportDocument";
 import { ReportPdfActions } from "@/components/reports/comparison/ReportPdfActions";
 import { ReportPublishActions } from "@/components/reports/publication/ReportPublishActions";
@@ -29,6 +30,7 @@ function currentLabel(report: ReturnType<typeof useReport>): string | null {
  * Satu laporan perbandingan yang dibuka ulang dari hasil beku (PBI-15, D3 langkah 10–15). Bagian aplikasi
  * (breadcrumb, status, tombol) berbahasa Indonesia; isi laporan mengikuti bahasa laporan (Fase 0 K3). Laporan
  * tersimpan milik orang lain hanya untuk Admin (D9): server menolaknya, dan halaman tidak menawarkan PDF.
+ * Pemetaan kode ke nama asli (SCRUM-367) tampil di bawah isi laporan bila server mengirimnya (Admin saja).
  * Penerbitan (PBI-17 SCRUM-335) ada di bawah tombol: Admin menerbitkan, semua peran melihat tanda versi lama.
  * Pesan versi baru disimpan di halaman, bukan di bagian penerbitan, karena bagian itu hilang sebentar saat laporan
  * dimuat ulang sesudah terbit.
@@ -77,6 +79,8 @@ export default function ComparisonReportPage() {
             }}
           />
           <ReportDocument report={report.data} scoreHref={(resultId) => resultCasesHref(report.data.id, resultId)} />
+          {/* Outside ReportDocument on purpose: the mapping is Admin only and must stay out of the PDF and publication. */}
+          <ProductMappingPanel mapping={report.data.product_mapping} />
         </>
       )}
     </div>

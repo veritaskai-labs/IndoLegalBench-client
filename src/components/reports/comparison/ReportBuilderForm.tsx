@@ -15,10 +15,12 @@ import type { CreateOutcome, ForbiddenCode } from "@/lib/reports/builder/createO
 import { reasonText } from "@/lib/reports/builder/reasonText";
 import type { SessionTab } from "@/lib/reports/builder/sessionSearch";
 import type { ScopeOption } from "@/lib/reports/builder/validationView";
+import { LABEL_MODE_TEXT } from "@/lib/reports/labelPreview";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import type { EligibleSession, MeasurementFilter, ProductLabelMode } from "@/types/reports";
 
+import { ProductLabelPreview } from "./ProductLabelPreview";
 import { ValidationPanel } from "./ValidationPanel";
 
 const FILTER_OPTIONS: ReadonlyArray<readonly [MeasurementFilter, string]> = [
@@ -32,10 +34,9 @@ const KIND_LABEL: Readonly<Record<EligibleSession["session_type"], string>> = {
   manual: "Manual",
 };
 
-const LABEL_OPTIONS: ReadonlyArray<readonly [ProductLabelMode, string]> = [
-  ["real_name", "Nama asli"],
-  ["code", "Kode produk"],
-];
+const LABEL_OPTIONS: ReadonlyArray<RadioOption<ProductLabelMode>> = (["real_name", "code"] as const).map(
+  (mode) => ({ value: mode, label: LABEL_MODE_TEXT[mode].label, reason: LABEL_MODE_TEXT[mode].help }),
+);
 
 const TITLE_TEXT: Readonly<Record<TitleProblem, string>> = {
   TITLE_REQUIRED: "Isi judul laporan.",
@@ -417,9 +418,15 @@ function BuilderForm({ builder }: Readonly<{ builder: ReportBuilder }>) {
           <RadioGroup
             legend="Label produk"
             name="product-label"
-            options={plain(LABEL_OPTIONS)}
+            options={LABEL_OPTIONS}
             value={builder.productLabelMode}
             onChange={builder.setProductLabelMode}
+          />
+        )}
+        {builder.canChooseLabel && (
+          <ProductLabelPreview
+            mode={builder.productLabelMode}
+            productNames={builder.picked.map((session) => session.product_name)}
           />
         )}
       </div>

@@ -268,7 +268,47 @@ describe("ReportBuilderForm: options per role (AC9, AC14)", () => {
     await renderReady();
     const group = screen.getByRole("group", { name: "Label produk" });
     expect(within(group).getByRole("radio", { name: "Nama asli" })).toBeChecked();
-    expect(within(group).getByRole("radio", { name: "Kode produk" })).not.toBeChecked();
+    expect(within(group).getByRole("radio", { name: "Kode (anonim)" })).not.toBeChecked();
+  });
+
+  // Positive (SCRUM-367): each label option explains what happens in the report, read out with the radio.
+  it("explains what each label option does in the report", async () => {
+    await renderReady();
+    const group = screen.getByRole("group", { name: "Label produk" });
+    expect(within(group).getByRole("radio", { name: "Nama asli" })).toHaveAccessibleDescription(
+      /sesuai penulisan aslinya/,
+    );
+    expect(within(group).getByRole("radio", { name: "Kode (anonim)" })).toHaveAccessibleDescription(
+      /Product A.*hanya Admin/,
+    );
+  });
+
+  // Positive (SCRUM-367): the preview follows the picked sessions and the chosen label.
+  it("previews the label of each picked product and follows the choice", async () => {
+    const { user } = await renderReady();
+    expect(screen.getByText("Pilih sesi untuk melihat pratinjau label.")).toBeInTheDocument();
+
+    await user.click(box(/Sesi B1/));
+    await user.click(box(/Sesi A1/));
+    const preview = () => within(screen.getByRole("list", { name: "Pratinjau label produk" }));
+    expect(preview().getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "Produk B → Produk B",
+      "Produk A → Produk A",
+    ]);
+
+    await user.click(screen.getByRole("radio", { name: "Kode (anonim)" }));
+    expect(preview().getAllByRole("listitem").map((li) => li.textContent)).toEqual([
+      "Produk B → Product A",
+      "Produk A → Product B",
+    ]);
+  });
+
+  // Negative: the label choice is Admin only, so the preview is not offered to other roles either.
+  it.each<Role>(["developer_ai", "viewer", "contributor"])("hides the label preview from %s", async (role) => {
+    signInAs(role);
+    const { user } = await renderReady();
+    await user.click(box(/Sesi A1/));
+    expect(screen.queryByRole("list", { name: "Pratinjau label produk" })).not.toBeInTheDocument();
   });
 
   // Edge: before /me answers the role is unknown, so the role rules offer no score type at all. Showing the form
@@ -326,7 +366,7 @@ describe("ReportBuilderForm: title and Create", () => {
     const { user, gateway } = await renderReady();
     await fillValidForm(user);
     await user.click(screen.getByRole("radio", { name: "Dev + Test" }));
-    await user.click(screen.getByRole("radio", { name: "Kode produk" }));
+    await user.click(screen.getByRole("radio", { name: "Kode (anonim)" }));
     await createReady(); // a new score type is checked again before Create
     await user.click(createButton());
 
