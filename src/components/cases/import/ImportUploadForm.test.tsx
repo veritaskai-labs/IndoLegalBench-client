@@ -114,6 +114,42 @@ describe("ImportUploadForm (AC4)", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  // Edge: the user opens the dialog again and cancels it; the browser reports no file.
+  it("forgets the file when the file dialog is cancelled", async () => {
+    // Arrange
+    const { user, uploadCsv, input } = setup();
+    await user.upload(input, csv());
+
+    // Act
+    await user.upload(input, []);
+    await user.click(screen.getByRole("button", { name: "Impor" }));
+
+    // Assert
+    expect(screen.queryByText(/^Dipilih:/)).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Pilih berkas CSV untuk diimpor.");
+    expect(uploadCsv).not.toHaveBeenCalled();
+  });
+
+  // Edge: a server message hidden by choosing another file comes back when the next try fails the same way.
+  it("shows the same server message again after a second failed try", async () => {
+    // Arrange
+    const refusal = new ApiError(422, "IMPORT_FILE_NOT_UTF8", "Berkas harus berpengkodean UTF-8.");
+    const { user, uploadCsv, input } = setup(vi.fn().mockRejectedValue(refusal));
+    await user.upload(input, csv());
+    await user.click(screen.getByRole("button", { name: "Impor" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("UTF-8");
+
+    // Act
+    await user.upload(input, csv("lagi.csv"));
+    const hidden = screen.queryByRole("alert");
+    await user.click(screen.getByRole("button", { name: "Impor" }));
+
+    // Assert
+    expect(hidden).toBeNull();
+    expect(await screen.findByRole("alert")).toHaveTextContent("UTF-8");
+    expect(uploadCsv).toHaveBeenCalledTimes(2);
+  });
+
   // Edge: the upload can take up to 30 s; a second press must not send the file twice.
   it("shows progress, locks the form and ignores a second press while uploading", async () => {
     // Arrange

@@ -20,6 +20,18 @@ const FALLBACK: Readonly<Record<string, string>> = {
   IMPORT_BATCH_NOT_FOUND: "Ringkasan impor tidak ditemukan.",
 };
 
+/** Kode 422 yang berarti seluruh berkas ditolak (csv_import.py dan import_router.py server #157). */
+const WHOLE_FILE_CODES: ReadonlySet<string> = new Set([
+  "IMPORT_FILE_REQUIRED",
+  "IMPORT_FILE_NOT_CSV",
+  "IMPORT_FILE_NOT_UTF8",
+  "IMPORT_FILE_TOO_LARGE",
+  "IMPORT_FILE_UNREADABLE",
+  "IMPORT_HEADER_MISMATCH",
+  "IMPORT_FILE_EMPTY",
+  "IMPORT_TOO_MANY_ROWS",
+]);
+
 const FORBIDDEN = "Hanya Kontributor dan Admin yang boleh mengimpor kasus.";
 const SERVER_ERROR = "Impor gagal karena kesalahan server. Coba lagi.";
 const NETWORK =
@@ -52,6 +64,6 @@ export function importErrorMessage(error: unknown): string {
 }
 
 /** true bila server menolak seluruh berkas (422 IMPORT_*): tidak ada batch, suite, atau kasus yang dibuat (D7). */
-export function isFileRejected(_error: unknown): boolean {
-  return false;
+export function isFileRejected(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 422 && WHOLE_FILE_CODES.has(error.code);
 }
