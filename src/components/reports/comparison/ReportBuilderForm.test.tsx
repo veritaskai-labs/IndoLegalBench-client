@@ -561,8 +561,9 @@ describe("ReportBuilderForm: live validation (SCRUM-366)", () => {
 
     await user.click(screen.getByRole("button", { name: "Periksa lagi" }));
 
+    // The quick picks were one request, then the retry; the failure note goes once the retry has answered.
+    await waitFor(() => expect(validate).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByText(/Pemeriksaan pilihan gagal/)).not.toBeInTheDocument());
-    expect(validate).toHaveBeenCalledTimes(3);
   });
 
   // The old local message about judges is gone: the same fact now comes from the server as a violation.
