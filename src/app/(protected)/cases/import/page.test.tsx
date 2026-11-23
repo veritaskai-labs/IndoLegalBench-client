@@ -148,8 +148,12 @@ describe("CaseImportPage upload flow (AC4, AC7, AC10)", () => {
   it("shows the summary after an upload and puts the batch in the address", async () => {
     // Arrange
     signedInAs("admin");
+    // Like Next: router.replace changes what useSearchParams returns on the next render.
+    replaceMock.mockImplementation((url: string) => {
+      searchParams.current = new URLSearchParams(url.split("?")[1] ?? "");
+    });
     const upload = vi.spyOn(importGateway, "uploadCsv").mockResolvedValue(SUMMARY);
-    const read = vi.spyOn(importGateway, "readSummary");
+    const read = vi.spyOn(importGateway, "readSummary").mockResolvedValue(SUMMARY);
     render(<CaseImportPage />);
 
     // Act
@@ -208,13 +212,15 @@ describe("CaseImportPage upload flow (AC4, AC7, AC10)", () => {
     );
     render(<CaseImportPage />);
 
-    // Act
     const alert = await screen.findByRole("alert");
+    expect(within(alert).getByText("Batch impor tidak ditemukan")).toBeInTheDocument();
+
+    // Act
     await userEvent.click(screen.getByRole("button", { name: "Kembali ke formulir" }));
 
-    // Assert
-    expect(within(alert).getByText("Batch impor tidak ditemukan")).toBeInTheDocument();
+    // Assert: the form is back even though the mocked address still holds ?batch=b-x.
     expect(replaceMock).toHaveBeenCalledWith("/cases/import");
+    expect(screen.getByLabelText("Berkas CSV")).toBeInTheDocument();
   });
 
   // Negative: a refused file keeps the user on the form with the reason (nothing stored, D7).
