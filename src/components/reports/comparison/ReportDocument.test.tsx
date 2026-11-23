@@ -7,14 +7,19 @@ import { ReportDocument } from "./ReportDocument";
 
 // SCRUM-322: the report body as the PDF lays it out (pdf.py render): logo and title, info line, dev banner,
 // one section per score split with its table and bar chart, case versions and the contact line. It speaks the
-// report's language (Fase 0 K3) and says so with a lang attribute for screen readers (WCAG 3.1.2).
+// report's language (Fase 0 K3) and says so with a lang attribute for screen readers (WCAG 3.1.2). SCRUM-363 took
+// the language out of the detail, so the body is English like every report the builder makes, unless told.
 describe("ReportDocument", () => {
-  it.each([
-    ["en", firstReport()],
-    ["id", devTestReport()],
-  ] as const)("marks the whole body with lang=%s", (language, report) => {
-    render(<ReportDocument report={report} />);
-    expect(screen.getByRole("article")).toHaveAttribute("lang", language);
+  // Positive: English by default, the language of the PDF of every report made from the builder.
+  it("is English when no language is given", () => {
+    render(<ReportDocument report={firstReport()} />);
+    expect(screen.getByRole("article")).toHaveAttribute("lang", "en");
+  });
+
+  // Positive: the language stays a parameter, ready for PBI-26.
+  it("speaks the language it is given", () => {
+    render(<ReportDocument report={devTestReport()} language="id" />);
+    expect(screen.getByRole("article")).toHaveAttribute("lang", "id");
   });
 
   // The title is typed by a person, so an English report keeps its Indonesian title (PBI-26 AC3).
@@ -35,7 +40,7 @@ describe("ReportDocument", () => {
   });
 
   it("hides the model versions of a code-mode report", () => {
-    render(<ReportDocument report={firstReport({ product_label_mode: "code", language: "id" })} />);
+    render(<ReportDocument report={firstReport({ product_label_mode: "code" })} language="id" />);
     expect(screen.getAllByText("Disamarkan")).toHaveLength(firstReport().sessions.length);
   });
 
@@ -48,7 +53,7 @@ describe("ReportDocument", () => {
   });
 
   it("shows the dev banner and three sections for a Dev + Test report", () => {
-    render(<ReportDocument report={devTestReport()} />);
+    render(<ReportDocument report={devTestReport()} language="id" />);
     expect(screen.getByRole("note")).toHaveTextContent(
       "Laporan berisi skor dev, hanya untuk internal dan tidak dapat diterbitkan.",
     );
@@ -82,10 +87,10 @@ describe("ReportDocument", () => {
 
   // PBI-16 AC3-4: readers who cannot open case contents are told where to ask.
   it.each([
-    [firstReport(), "To get the case contents, email indolegalbench@veritask.ai."],
-    [devTestReport(), "Untuk mendapatkan isi kasus, kirim email ke indolegalbench@veritask.ai."],
-  ])("ends with the contact line in the report's language", (report, line) => {
-    render(<ReportDocument report={report} />);
+    ["en", "To get the case contents, email indolegalbench@veritask.ai."],
+    ["id", "Untuk mendapatkan isi kasus, kirim email ke indolegalbench@veritask.ai."],
+  ] as const)("ends with the contact line in the report's language (%s)", (language, line) => {
+    render(<ReportDocument report={devTestReport()} language={language} />);
     expect(screen.getByText(line)).toBeInTheDocument();
   });
 });

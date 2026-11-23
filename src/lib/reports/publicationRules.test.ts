@@ -80,9 +80,10 @@ describe("labels", () => {
     expect(productLabelsText([])).toBe("Tidak ada produk");
   });
 
-  it("tells replacement candidates with the same title apart by date and language", () => {
-    expect(candidateLabel(firstReport({ title: "Perbandingan", created_at: "2026-11-19T03:15:00Z", language: "id" }))).toBe(
-      "Perbandingan · 19 Nov 2026 · ID",
+  // SCRUM-363 dropped the language from the report list (AC10), so only the date tells same titles apart.
+  it("tells replacement candidates with the same title apart by date", () => {
+    expect(candidateLabel(firstReport({ title: "Perbandingan", created_at: "2026-11-19T03:15:00Z" }))).toBe(
+      "Perbandingan · 19 Nov 2026",
     );
   });
 

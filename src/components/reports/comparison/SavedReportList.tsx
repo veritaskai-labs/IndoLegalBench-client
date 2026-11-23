@@ -12,6 +12,8 @@ import { REPORT_STATUS_LABEL, SCORE_SCOPE_LABEL } from "@/lib/reports/reportRule
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import type { ReportStatus, ReportSummary } from "@/types/reports";
 
+import { ProductListCell } from "./ProductListCell";
+
 const STATUS_CHIP: Readonly<Record<ReportStatus, string>> = {
   saved: "bg-slate-100 text-slate-700",
   published: "bg-green-100 text-green-800",
@@ -31,9 +33,9 @@ function ReportTable({ reports }: Readonly<{ reports: readonly ReportSummary[] }
         <thead className="bg-slate-50 text-left text-xs text-slate-600">
           <tr>
             <th scope="col" className={CELL}>Judul</th>
+            <th scope="col" className={CELL}>Produk</th>
             <th scope="col" className={CELL}>Nilai</th>
             <th scope="col" className={CELL}>Status</th>
-            <th scope="col" className={CELL}>Bahasa</th>
             <th scope="col" className={CELL}>Dibuat</th>
           </tr>
         </thead>
@@ -48,13 +50,15 @@ function ReportTable({ reports }: Readonly<{ reports: readonly ReportSummary[] }
                   {report.title}
                 </Link>
               </th>
+              <td className={CELL}>
+                <ProductListCell labels={report.products} />
+              </td>
               <td className={CELL}>{SCORE_SCOPE_LABEL[report.score_scope]}</td>
               <td className={CELL}>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_CHIP[report.status]}`}>
                   {REPORT_STATUS_LABEL[report.status]}
                 </span>
               </td>
-              <td className={CELL}>{report.language.toUpperCase()}</td>
               <td className={`${CELL} whitespace-nowrap`}>{formatWibDate(report.created_at)}</td>
             </tr>
           ))}
@@ -64,7 +68,10 @@ function ReportTable({ reports }: Readonly<{ reports: readonly ReportSummary[] }
   );
 }
 
-/** Daftar laporan (D3 langkah 10), disaring server sesuai peran (D9). Tombol Terbitkan ada di halaman satu laporan (PBI-17 SCRUM-335). */
+/**
+ * Daftar laporan (D3 langkah 10), disaring server sesuai peran (D9). Tombol Terbitkan ada di halaman satu laporan
+ * (PBI-17 SCRUM-335). Kolom Produk menggantikan kolom bahasa (SCRUM-364, AC9 dan AC10).
+ */
 export function SavedReportList({ gateway = httpReportsGateway }: Readonly<{ gateway?: ReportsGateway }>) {
   const reports = useReports(gateway);
 

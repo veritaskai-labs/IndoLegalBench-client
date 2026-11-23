@@ -1,9 +1,9 @@
 import Image from "next/image";
 
 import { reportInfoLine } from "@/lib/reports/reportCells";
-import { REPORT_LABELS } from "@/lib/reports/reportLabels";
+import { REPORT_LANGUAGE, REPORT_LABELS } from "@/lib/reports/reportLabels";
 import { reportSections } from "@/lib/reports/reportSections";
-import type { ReportDetail } from "@/types/reports";
+import type { ReportDetail, ReportLanguage } from "@/types/reports";
 
 import { ReportBarChart } from "./ReportBarChart";
 import { ReportRankingTable, type ScoreHref } from "./ReportRankingTable";
@@ -12,8 +12,11 @@ import { ReportRankingTable, type ScoreHref } from "./ReportRankingTable";
  * Isi laporan perbandingan, disusun seperti PDF (pdf.py render), dalam bahasa laporan (Fase 0 K3). Judul
  * diketik pengguna, jadi tidak diterjemahkan.
  */
-export function ReportDocument({ report, scoreHref }: Readonly<{ report: ReportDetail; scoreHref?: ScoreHref }>) {
-  const language = report.language;
+export function ReportDocument({
+  report,
+  scoreHref,
+  language = REPORT_LANGUAGE,
+}: Readonly<{ report: ReportDetail; scoreHref?: ScoreHref; language?: ReportLanguage }>) {
   const labels = REPORT_LABELS[language];
   const sections = reportSections(report.sessions);
 
