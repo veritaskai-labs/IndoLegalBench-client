@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SuiteCaseNav } from "@/components/cases/SuiteCaseNav";
 import { SuiteFormDialog } from "@/components/suites/SuiteFormDialog";
 import { SuiteList } from "@/components/suites/SuiteList";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,7 +50,7 @@ export default function SuitesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Suite</h1>
+        <h1 className="text-xl font-semibold text-slate-900">{canCreate ? "Suite dan kasus" : "Suite"}</h1>
         {canManage && (
           <button
             type="button"
@@ -60,6 +61,8 @@ export default function SuitesPage() {
           </button>
         )}
       </div>
+
+      {canCreate && <SuiteCaseNav current="/suites" />}
 
       <div
         role="tablist"
