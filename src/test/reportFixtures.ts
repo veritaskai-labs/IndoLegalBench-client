@@ -1,5 +1,6 @@
 import type {
   EligibleSession,
+  ReportValidation,
   ReportAttemptRead,
   ReportCaseBasisRead,
   ReportCaseDetailRead,
@@ -163,6 +164,17 @@ export function eligibleSession(overrides: Partial<EligibleSession> = {}): Eligi
     reasons: [],
     ...overrides,
   } as EligibleSession;
+}
+
+/** Jawaban POST /reports/validate (SCRUM-366): pilihan yang sah dengan semua jenis nilai tersedia, kecuali diganti. */
+export function reportValidation(overrides: Partial<ReportValidation> = {}): ReportValidation {
+  return {
+    valid: true,
+    violations: [],
+    warnings: [],
+    available_scopes: ["test", "dev", "dev_test"],
+    ...overrides,
+  } as ReportValidation;
 }
 
 /** Satu kasus dasar di balik angka (PBI-16 AC1, server#149): kode, versi, dan skornya, tanpa isi. */
