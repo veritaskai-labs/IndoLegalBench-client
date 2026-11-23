@@ -547,6 +547,25 @@ describe("ReportBuilderForm: live validation (SCRUM-366)", () => {
     expect(createButton()).toBeDisabled();
   });
 
+  // Accessibility: a screen reader should hear the result of a check, not "Memeriksa pilihan" after every click.
+  it("does not announce the checking note", async () => {
+    const waiting = gatewayWith({ validate: vi.fn(() => new Promise<ReportValidation>(() => {})) });
+    const { user } = await renderReady(waiting);
+
+    await user.click(box(/Sesi A1/));
+
+    expect((await screen.findByText("Memeriksa pilihan…")).closest("[aria-live]")).toBeNull();
+  });
+
+  it("announces the result of a check", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [rubric] })));
+
+    await user.click(box(/Sesi A1/));
+
+    const violation = await screen.findByText(rubric.message);
+    expect(violation.closest("[aria-live]")).toHaveAttribute("aria-live", "polite");
+  });
+
   // Negative: the check itself fails. The user can retry, and Create stays on because the server checks again.
   it("shows a failed check with a retry and keeps Create on", async () => {
     const validate = vi
