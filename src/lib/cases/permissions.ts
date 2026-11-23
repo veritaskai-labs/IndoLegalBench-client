@@ -53,6 +53,6 @@ export function canSubmitForReview(
  * Halaman impor CSV (PBI-4, D9 baris "Impor CSV, unduh template, duplikasi kasus"): Kontributor dan Admin.
  * Hanya menentukan tampilan; server tetap menjawab 403 untuk peran lain.
  */
-export function canImportCases(_role: Role | null): boolean {
-  return false;
+export function canImportCases(role: Role | null): boolean {
+  return role === "contributor" || role === "admin";
 }
