@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/apiClient";
+import { productLabelsText } from "@/lib/reports/publicationRules";
 import type { ReportStatus, ScoreScope } from "@/types/reports";
 
 /** Label status di bagian aplikasi (Bahasa Indonesia sampai PBI-26, Fase 0 K3). */
@@ -51,4 +52,25 @@ export function supportsInlinePdf(nav: { pdfViewerEnabled?: boolean } | undefine
  */
 export function reportPdfFileName(reportId: string): string {
   return `laporan-${reportId.replaceAll(/[^A-Za-z0-9_-]/g, "-")}.pdf`;
+}
+
+/** Sampai jumlah ini semua produk ditulis; lebih dari itu dipotong, karena "A, B +1" tidak menghemat apa pun. */
+const PRODUCTS_IN_FULL = 3;
+const PRODUCTS_WHEN_CUT = 2;
+
+export type ProductColumn = { shown: string; hiddenCount: number; full: string };
+
+/**
+ * Kolom Produk di daftar laporan (SCRUM-364, PBI-15 AC9): daftar panjang dipotong jadi "A, B" plus jumlah sisanya,
+ * dan daftar lengkapnya untuk tooltip. Label sudah dibekukan server (nama asli atau kode), jadi urutan dan
+ * namanya tidak diubah di layar.
+ */
+export function productColumn(labels: readonly string[]): ProductColumn {
+  const full = productLabelsText(labels);
+  if (labels.length <= PRODUCTS_IN_FULL) return { shown: full, hiddenCount: 0, full };
+  return {
+    shown: labels.slice(0, PRODUCTS_WHEN_CUT).join(", "),
+    hiddenCount: labels.length - PRODUCTS_WHEN_CUT,
+    full,
+  };
 }

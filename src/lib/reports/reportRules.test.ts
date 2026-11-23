@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/apiClient";
 
 import {
   pdfErrorMessage,
+  productColumn,
   REPORT_STATUS_LABEL,
   reportErrorMessage,
   reportListErrorMessage,
@@ -105,5 +106,29 @@ describe("reportPdfFileName", () => {
     ["a/b\\c", "laporan-a-b-c.pdf"],
   ])("keeps the unsafe id %j out of the file name", (id, name) => {
     expect(reportPdfFileName(id)).toBe(name);
+  });
+});
+
+// SCRUM-364 (PBI-15 AC9): the saved-report list shows which products were compared. A long list is cut to
+// "A, B +2" so the column stays narrow, and the full list stays available as a tooltip. The labels are frozen
+// by the server (real name or code); the screen never reorders or renames them.
+describe("productColumn", () => {
+  // Positive: up to three products fit, so nothing is hidden; "A, B +1" would hide a name to save nothing.
+  it.each([
+    [["AiYU"], "AiYU"],
+    [["Product A", "Product B"], "Product A, Product B"],
+    [["A", "B", "C"], "A, B, C"],
+  ])("shows %j in full", (labels, shown) => {
+    expect(productColumn(labels)).toEqual({ shown, hiddenCount: 0, full: shown });
+  });
+
+  // Positive: from four products on, the first two are shown and the rest is counted.
+  it("cuts a long list to the first two and counts the rest", () => {
+    expect(productColumn(["A", "B", "C", "D"])).toEqual({ shown: "A, B", hiddenCount: 2, full: "A, B, C, D" });
+  });
+
+  // Edge: a report whose sessions were all removed has no labels; say so instead of an empty cell.
+  it("says when a report has no products", () => {
+    expect(productColumn([])).toEqual({ shown: "Tidak ada produk", hiddenCount: 0, full: "Tidak ada produk" });
   });
 });
