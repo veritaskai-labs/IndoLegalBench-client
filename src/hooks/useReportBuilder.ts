@@ -13,11 +13,7 @@ import {
   type BuilderChoices,
   type TitleProblem,
 } from "@/lib/reports/builder/builderRules";
-import {
-  applyFilter,
-  matchesFilter,
-  toggleSession,
-} from "@/lib/reports/builder/builderSelection";
+import { applyFilter, toggleSession } from "@/lib/reports/builder/builderSelection";
 import {
   chooseScope,
   scopeOptions as scopeOptionsOf,
@@ -25,6 +21,12 @@ import {
   type ScopeOption,
   type ValidationView,
 } from "@/lib/reports/builder/validationView";
+import {
+  productOptions as productOptionsOf,
+  searchSessions,
+  type ProductOption,
+  type SessionTab,
+} from "@/lib/reports/builder/sessionSearch";
 import { outcomeFromError, outcomeFromResponse, type CreateOutcome } from "@/lib/reports/builder/createOutcome";
 import { REPORT_LANGUAGE } from "@/lib/reports/reportLabels";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
@@ -42,8 +44,22 @@ import type {
 export interface ReportBuilder {
   /** Every session the user may see, eligible or not, with the server's reasons (AC4). */
   sessions: AsyncResource<EligibleSession[]> & { reload: () => void };
-  /** Sessions of the kind the filter shows (AC5). */
+  /** Sessions the field shows: the kind the filter shows (AC5), the search, the chosen products and the tab. */
   visibleSessions: EligibleSession[];
+  /** SCRUM-365: search bar text (session name, session id or product name). */
+  query: string;
+  setQuery: (query: string) => void;
+  /** SCRUM-365: "Valid" or "Tidak valid"; invalid sessions stay visible there with their reasons (AC4). */
+  tab: SessionTab;
+  setTab: (tab: SessionTab) => void;
+  /** Sessions per tab after the search and filters, for the tab labels. */
+  tabCounts: Record<SessionTab, number>;
+  /** SCRUM-365: the products of the dropdown, and the ones chosen (none chosen = every product). */
+  productOptions: ProductOption[];
+  productIds: readonly string[];
+  toggleProduct: (productId: string) => void;
+  /** Empties the search bar and the product choice; the tab and the measurement filter stay. */
+  clearSearch: () => void;
   /** Picked sessions that go into the report (the filter keeps them). */
   picked: EligibleSession[];
   /** Picked sessions the filter leaves out; the server would drop them without a word. */
@@ -93,6 +109,9 @@ export function useReportBuilder(
     listErrorMessage,
   );
   const [filter, setFilter] = useState<MeasurementFilter>("all");
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<SessionTab>("valid");
+  const [productIds, setProductIds] = useState<readonly string[]>([]);
   const [allPicked, setAllPicked] = useState<EligibleSession[]>([]);
   const [rawChoices, setRawChoices] = useState<BuilderChoices>({ scoreScope: "test", productLabelMode: "real_name" });
   const [title, setTitle] = useState("");
@@ -100,7 +119,10 @@ export function useReportBuilder(
 
   const choices = normalizeChoices(role, rawChoices);
   const { kept, dropped } = applyFilter(allPicked, filter);
-  const visibleSessions = sessions.status === "ready" ? sessions.data.filter((s) => matchesFilter(s, filter)) : [];
+  // Search, tab and products only change what the field shows; picks stay in allPicked, so switching never
+  // loses them (SCRUM-365). Only the measurement filter takes picks out of the report, as the server would.
+  const loaded = sessions.status === "ready" ? sessions.data : [];
+  const found = searchSessions(loaded, { measurement: filter, query, tab, productIds });
   const titleProblem = titleProblemOf(title);
 
   // The check asks with the score type the form will actually use. When the user's own choice is not offered, the
@@ -149,7 +171,22 @@ export function useReportBuilder(
 
   return {
     sessions,
-    visibleSessions,
+    visibleSessions: found.shown,
+    query,
+    setQuery,
+    tab,
+    setTab,
+    tabCounts: found.counts,
+    productOptions: productOptionsOf(loaded),
+    productIds,
+    toggleProduct: (productId) =>
+      setProductIds((current) =>
+        current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId],
+      ),
+    clearSearch: () => {
+      setQuery("");
+      setProductIds([]);
+    },
     picked: kept,
     dropped,
     toggle,

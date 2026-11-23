@@ -148,7 +148,7 @@ export function devTestReport(overrides: Partial<ReportDetail> = {}): ReportDeta
   });
 }
 
-/** One row of GET /reports/eligible-sessions (SCRUM-321): eligible, automatic, judge-1, product p-1. */
+/** One row of GET /reports/eligible-sessions (SCRUM-321, case_kinds from SCRUM-361): eligible, automatic, judge-1, product p-1. */
 export function eligibleSession(overrides: Partial<EligibleSession> = {}): EligibleSession {
   return {
     session_id: "s-1",
@@ -157,13 +157,14 @@ export function eligibleSession(overrides: Partial<EligibleSession> = {}): Eligi
     product_name: "Produk A",
     created_at: "2026-11-18T09:00:00Z",
     session_type: "automatic",
-    purpose: "measurement",
-    status: "completed",
+    purpose: "official",
+    status: "finished",
     judge_model_version: "judge-1",
+    case_kinds: ["test"],
     eligible: true,
     reasons: [],
     ...overrides,
-  } as EligibleSession;
+  };
 }
 
 /** Jawaban POST /reports/validate (SCRUM-366): pilihan yang sah dengan semua jenis nilai tersedia, kecuali diganti. */

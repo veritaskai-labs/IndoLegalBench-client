@@ -188,9 +188,12 @@ describe("ReportBuilderForm: the session picker (AC1, AC4, AC5)", () => {
     expect(within(row as HTMLElement).getByText("Uji Coba")).toBeInTheDocument();
   });
 
-  // Negative (AC4): an ineligible session can't be picked, and the server's reason sits next to it.
+  // Negative (AC4): an ineligible session can't be picked, and the server's reason sits next to it. SCRUM-365
+  // moved it to the "Tidak valid" tab, where it stays visible instead of being hidden.
   it("disables an ineligible session and shows the server's reason next to it", async () => {
-    await renderReady();
+    const { user } = await renderReady();
+    expect(screen.queryByRole("checkbox", { name: /Sesi X1/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Tidak valid (1)" }));
     expect(box(/Sesi X1/)).toBeDisabled();
     const row = box(/Sesi X1/).closest("li") as HTMLElement;
     expect(within(row).getByText("Sesi ini dibatalkan dari server.")).toBeInTheDocument();
@@ -595,5 +598,118 @@ describe("ReportBuilderForm: live validation (SCRUM-366)", () => {
 
     await createReady();
     expect(screen.queryByText(/LLM judge yang berbeda/)).not.toBeInTheDocument();
+  });
+});
+
+// SCRUM-365 (PBI-15 AC1, AC4, AC5): the session field gets a search bar, "Valid" / "Tidak valid" tabs and a
+// product filter that takes more than one product. The rules are tested in sessionSearch.test.ts and the state
+// in useReportBuilder.test.tsx; these tests check what the user sees and that picks survive every switch.
+describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () => {
+  const searchBar = () => screen.getByRole("searchbox", { name: "Cari sesi" });
+  const productBox = (name: string) =>
+    within(screen.getByRole("group", { name: "Filter produk" })).getByRole("checkbox", { name });
+
+  it("Positif: opens on the Valid tab, with a count on each tab", async () => {
+    await renderReady();
+
+    const tabs = screen.getByRole("tablist", { name: "Kelayakan sesi" });
+    expect(within(tabs).getAllByRole("tab").map((tab) => tab.textContent)).toEqual(["Valid (4)", "Tidak valid (1)"]);
+    expect(screen.getByRole("tab", { name: "Valid (4)" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveAccessibleName("Valid (4)");
+  });
+
+  it("Positif: the search bar finds sessions by product name and session name", async () => {
+    const { user } = await renderReady();
+
+    await user.type(searchBar(), "produk b");
+    const shown = within(screen.getByRole("tabpanel")).getAllByRole("checkbox");
+    expect(shown.map((session) => session.closest("label")?.textContent)).toEqual(["Produk B · Sesi B1"]);
+
+    await user.clear(searchBar());
+    await user.type(searchBar(), "SESI A2");
+    expect(box(/Sesi A2/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Sesi A1/ })).not.toBeInTheDocument();
+  });
+
+  it("Positif: the product dropdown takes more than one product and says how many are chosen", async () => {
+    const { user } = await renderReady();
+    expect(screen.getByText("Produk: semua")).toBeInTheDocument();
+
+    await user.click(productBox("Produk A"));
+    await user.click(productBox("Produk C"));
+
+    expect(screen.getByText("Produk: 2 dipilih")).toBeInTheDocument();
+    expect(box(/Sesi A1/)).toBeInTheDocument();
+    expect(box(/Sesi C1/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Sesi B1/ })).not.toBeInTheDocument();
+  });
+
+  // The existing automatic/manual filter stays and combines with the product filter.
+  it("Positif: keeps the Otomatis / Manual filter next to the new ones", async () => {
+    const { user } = await renderReady();
+    await user.click(productBox("Produk A"));
+    await user.click(productBox("Produk B"));
+
+    await user.click(screen.getByRole("radio", { name: "Manual" }));
+
+    expect(box(/Sesi B1/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Sesi A1/ })).not.toBeInTheDocument();
+  });
+
+  // The subtask: picks are kept when the tab or a filter changes. A picked session hidden by the search is still
+  // in the report and in "Sesi terpilih", and is still ticked when it comes back.
+  it("Positif: keeps the picks while the search, the products and the tab change", async () => {
+    const { user } = await renderReady();
+    await fillValidForm(user);
+
+    await user.type(searchBar(), "C1");
+    await user.click(productBox("Produk C"));
+    await user.click(screen.getByRole("tab", { name: /Tidak valid/ }));
+
+    expect(pickedRow("Produk A · Sesi A1")).toBeInTheDocument();
+    expect(pickedRow("Produk B · Sesi B1")).toBeInTheDocument();
+    expect(createButton()).toBeEnabled();
+
+    await user.click(screen.getByRole("tab", { name: /^Valid/ }));
+    await user.clear(searchBar());
+    await user.click(productBox("Produk C"));
+    expect(box(/Sesi A1/)).toBeChecked();
+    expect(box(/Sesi B1/)).toBeChecked();
+  });
+
+  // Empty state: a search without hits says so, points to the other tab when that one has the hit, and offers
+  // a way back.
+  it("Negatif: explains a search without hits and points to the tab that has it", async () => {
+    const { user } = await renderReady();
+
+    await user.type(searchBar(), "Sesi X1");
+
+    expect(screen.getByText("Tidak ada sesi yang cocok dengan pencarian atau filter produk ini.")).toBeInTheDocument();
+    expect(screen.getByText("Ada 1 sesi yang cocok di tab Tidak valid.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Hapus pencarian" }));
+    expect(searchBar()).toHaveValue("");
+    expect(box(/Sesi A1/)).toBeInTheDocument();
+  });
+
+  it("Edge: a search that no tab can answer does not point anywhere", async () => {
+    const { user } = await renderReady();
+
+    await user.type(searchBar(), "tidak ada");
+
+    expect(screen.getByText("Tidak ada sesi yang cocok dengan pencarian atau filter produk ini.")).toBeInTheDocument();
+    expect(screen.queryByText(/cocok di tab/)).not.toBeInTheDocument();
+  });
+
+  // Edge: an empty tab without any search is not a "no hits" message; it says what the tab means.
+  it("Edge: an empty Tidak valid tab says every session is valid", async () => {
+    const user = userEvent.setup();
+    render(<ReportBuilderForm gateway={gatewayWith({ eligibleSessions: vi.fn().mockResolvedValue([a1, b1]) })} />);
+    await screen.findByRole("checkbox", { name: /Sesi A1/ });
+
+    await user.click(screen.getByRole("tab", { name: "Tidak valid (0)" }));
+
+    expect(screen.getByText("Tidak ada sesi yang tidak valid.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Hapus pencarian" })).not.toBeInTheDocument();
   });
 });
