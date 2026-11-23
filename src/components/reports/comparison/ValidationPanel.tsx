@@ -10,26 +10,29 @@ const NOTE = "text-sm text-amber-800";
 export function ValidationPanel({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const { validation, view } = builder;
   return (
-    <div className="space-y-2" aria-live="polite">
+    <div className="space-y-2">
       {validation.status === "checking" && <p className="text-sm text-slate-600">Memeriksa pilihan…</p>}
-      {validation.status === "error" && (
-        <div className="space-y-1 text-sm text-red-800">
-          <p>{validation.message}</p>
-          <button type="button" className="font-semibold underline" onClick={validation.reload}>
-            Periksa lagi
-          </button>
-        </div>
-      )}
-      {view.general.map((violation) => (
-        <p key={violation.code} className="text-sm text-red-700">
-          {violation.message}
-        </p>
-      ))}
-      {view.warnings.map((warning) => (
-        <p key={`${warning.code}:${warning.session_id ?? ""}`} className={NOTE}>
-          {warning.message}
-        </p>
-      ))}
+      {/* Only the result is announced; the checking note above changes after every click. */}
+      <div className="space-y-2" aria-live="polite">
+        {validation.status === "error" && (
+          <div className="space-y-1 text-sm text-red-800">
+            <p>{validation.message}</p>
+            <button type="button" className="font-semibold underline" onClick={validation.reload}>
+              Periksa lagi
+            </button>
+          </div>
+        )}
+        {view.general.map((violation) => (
+          <p key={violation.code} className="text-sm text-red-700">
+            {violation.message}
+          </p>
+        ))}
+        {view.warnings.map((warning) => (
+          <p key={`${warning.code}:${warning.session_id ?? ""}`} className={NOTE}>
+            {warning.message}
+          </p>
+        ))}
+      </div>
     </div>
   );
 }
