@@ -41,7 +41,10 @@ describe("importGateway.downloadTemplate (AC6)", () => {
     expect(url).toBe(`${BASE_URL}/case-imports/template`);
     expect(init.credentials).toBe("include");
     expect(init.method ?? "GET").toBe("GET");
-    expect(await file.text()).toBe(TEMPLATE);
+    // Bytes, not file.text(): text() decodes UTF-8 and drops the BOM, which Google Sheets/Excel rely on.
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+    expect(Array.from(bytes)).toEqual(Array.from(new TextEncoder().encode(TEMPLATE)));
   });
 
   // Negative: a role the server refuses reaches the caller as an ApiError with its code.
