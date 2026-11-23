@@ -53,7 +53,7 @@ describe("ComparisonReportPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Memuat laporan…");
   });
 
-  it("shows the report body, its status, its language and the PDF actions once loaded", async () => {
+  it("shows the report body, its status and the PDF actions once loaded", async () => {
     detail.mockResolvedValue(firstReport());
 
     render(<ComparisonReportPage />);
@@ -66,18 +66,19 @@ describe("ComparisonReportPage", () => {
       "page",
     );
     expect(screen.getByText("Tersimpan")).toBeInTheDocument();
-    expect(screen.getByText("Bahasa laporan: EN")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unduh PDF" })).toBeInTheDocument();
   });
 
-  // The page chrome stays Indonesian; only the report body follows the report's language (K3).
-  it("keeps the page chrome Indonesian for an Indonesian Dev + Test report", async () => {
+  // SCRUM-364 (AC10): the "Bahasa laporan" chip is gone, because the detail no longer carries the language.
+  // The page chrome stays Indonesian and the body is English, like the PDF of every report from the builder (K3).
+  it("shows no language chip and keeps the chrome Indonesian around an English body", async () => {
     detail.mockResolvedValue(devTestReport());
 
     render(<ComparisonReportPage />);
 
-    expect(await screen.findByRole("article")).toHaveAttribute("lang", "id");
-    expect(screen.getByText("Bahasa laporan: ID")).toBeInTheDocument();
+    expect(await screen.findByRole("article")).toHaveAttribute("lang", "en");
+    expect(screen.queryByText(/Bahasa laporan/)).toBeNull();
+    expect(screen.getByText("Tersimpan")).toBeInTheDocument();
     expect(screen.getByRole("note")).toBeInTheDocument();
   });
 

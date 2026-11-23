@@ -119,8 +119,9 @@ export function firstReport(overrides: Partial<ReportDetail> = {}): ReportDetail
     score_scope: "test",
     has_dev_scores: false,
     status: "saved",
-    language: "en",
     created_by: "user-viewer",
+    // Same order as the server: report_sessions.product_label, alphabetical (SCRUM-363).
+    products: PRODUCTS.map((product) => product.product_label).sort((a, b) => a.localeCompare(b)),
     created_at: "2026-11-19T03:15:00Z",
     measurement_filter: "all",
     product_label_mode: "real_name",
@@ -140,7 +141,6 @@ export function devTestReport(overrides: Partial<ReportDetail> = {}): ReportDeta
     title: "Uji internal AiYU dan pesaing",
     score_scope: "dev_test",
     has_dev_scores: true,
-    language: "id",
     created_by: "user-admin",
     sessions: sessionsFor(["test", "dev", "combined"]),
     ...overrides,

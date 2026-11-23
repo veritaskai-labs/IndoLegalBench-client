@@ -114,6 +114,13 @@ function labelsFor(language: ReportLanguage): ReportLabels {
   };
 }
 
+/**
+ * Bahasa isi laporan di web. Detail laporan tidak lagi membawa bahasanya (server #161, SCRUM-363 AC10), dan
+ * report builder selalu membuat laporan berbahasa Inggris, sama dengan bawaan server, jadi isi web sama dengan
+ * PDF-nya. Pilihan bahasa laporan kembali di PBI-26.
+ */
+export const REPORT_LANGUAGE: ReportLanguage = "en";
+
 export const REPORT_LABELS: Readonly<Record<ReportLanguage, ReportLabels>> = {
   id: labelsFor("id"),
   en: labelsFor("en"),
