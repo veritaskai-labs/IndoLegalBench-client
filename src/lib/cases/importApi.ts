@@ -1,4 +1,4 @@
-import { apiFetchBlob } from "@/lib/apiClient";
+import { apiFetch, apiFetchBlob } from "@/lib/apiClient";
 import type { ImportSummary } from "@/types/caseImport";
 
 /**
@@ -21,8 +21,15 @@ export interface ImportGateway {
  */
 export const TEMPLATE_FILE_NAME = "template-impor-kasus.csv";
 
+/** Satu field "file", sesuai requestBody multipart di kontrak. */
+function csvForm(file: File): FormData {
+  const form = new FormData();
+  form.append("file", file);
+  return form;
+}
+
 export const importGateway: ImportGateway = {
   downloadTemplate: () => apiFetchBlob("/case-imports/template"),
-  uploadCsv: () => Promise.reject(new Error("not implemented")),
-  readSummary: () => Promise.reject(new Error("not implemented")),
+  uploadCsv: (file) => apiFetch<ImportSummary>("/case-imports", { method: "POST", body: csvForm(file) }),
+  readSummary: (batchId) => apiFetch<ImportSummary>(`/case-imports/${encodeURIComponent(batchId)}`),
 };
