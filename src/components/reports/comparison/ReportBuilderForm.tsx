@@ -7,11 +7,13 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { tabElementId, tabPanelId, Tabs } from "@/components/ui/Tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useReportBuilder, type ReportBuilder } from "@/hooks/useReportBuilder";
 import { REPORT_TITLE_MAX, type TitleProblem } from "@/lib/reports/builder/builderRules";
 import type { CreateOutcome, ForbiddenCode } from "@/lib/reports/builder/createOutcome";
 import { reasonText } from "@/lib/reports/builder/reasonText";
+import type { SessionTab } from "@/lib/reports/builder/sessionSearch";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import type { EligibleSession, MeasurementFilter, ProductLabelMode } from "@/types/reports";
@@ -46,6 +48,16 @@ const FAILED = "Laporan gagal dibuat. Coba lagi.";
 const MISSING_ROW = "Sesi ini sudah tidak tersedia.";
 
 const sessionName = (s: EligibleSession) => `${s.product_name} · ${s.label}`;
+
+const SESSION_TABS = "report-builder-sessions";
+const SESSION_TAB_ORDER: readonly SessionTab[] = ["valid", "invalid"];
+const TAB_LABEL: Readonly<Record<SessionTab, string>> = { valid: "Valid", invalid: "Tidak valid" };
+
+/** Tab kosong tanpa pencarian: tab Valid kosong berarti belum ada sesi yang bisa dipilih dengan filter ini. */
+const EMPTY_TAB_TEXT: Readonly<Record<SessionTab, string>> = {
+  valid: "Belum ada sesi valid untuk jenis pengukuran ini.",
+  invalid: "Tidak ada sesi yang tidak valid.",
+};
 
 const CARD = "space-y-3 rounded-lg border border-slate-200 bg-white p-4";
 const LEGEND = "text-sm font-semibold text-slate-900";
@@ -90,35 +102,116 @@ function RadioGroup<T extends string>({
   );
 }
 
+/** Dropdown filter produk (SCRUM-365): bisa memilih lebih dari satu; tidak memilih apa pun berarti semua produk. */
+function ProductFilter({ builder }: Readonly<{ builder: ReportBuilder }>) {
+  const chosen = builder.productIds.length;
+  return (
+    <details className="relative">
+      <summary className="cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800">
+        {chosen === 0 ? "Produk: semua" : `Produk: ${chosen} dipilih`}
+      </summary>
+      <fieldset className="absolute right-0 z-10 mt-1 max-h-64 w-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 shadow-md">
+        <legend className="sr-only">Filter produk</legend>
+        {builder.productOptions.map((product) => (
+          <label key={product.id} className="flex items-center gap-2 text-sm text-slate-800">
+            <input
+              type="checkbox"
+              checked={builder.productIds.includes(product.id)}
+              onChange={() => builder.toggleProduct(product.id)}
+            />
+            {product.name}
+          </label>
+        ))}
+      </fieldset>
+    </details>
+  );
+}
+
+/**
+ * Isi tab yang kosong. Dengan pencarian atau filter produk aktif, jelaskan bahwa tidak ada yang cocok, sebut bila
+ * tab lain punya hasil, dan beri jalan untuk menghapus pencarian (state empty SCRUM-365).
+ */
+function EmptyTab({ builder }: Readonly<{ builder: ReportBuilder }>) {
+  const searching = builder.query.trim() !== "" || builder.productIds.length > 0;
+  if (!searching) return <p className="px-3 py-4 text-sm text-slate-600">{EMPTY_TAB_TEXT[builder.tab]}</p>;
+  const other: SessionTab = builder.tab === "valid" ? "invalid" : "valid";
+  const elsewhere = builder.tabCounts[other];
+  return (
+    <div className="space-y-1 px-3 py-4 text-sm text-slate-600">
+      <p>Tidak ada sesi yang cocok dengan pencarian atau filter produk ini.</p>
+      {elsewhere > 0 && <p>{`Ada ${elsewhere} sesi yang cocok di tab ${TAB_LABEL[other]}.`}</p>}
+      <button type="button" className="font-medium text-indigo-700 hover:underline" onClick={builder.clearSearch}>
+        Hapus pencarian
+      </button>
+    </div>
+  );
+}
+
+function SessionRows({ builder, pickedIds }: Readonly<{ builder: ReportBuilder; pickedIds: ReadonlySet<string> }>) {
+  return (
+    <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+      {builder.visibleSessions.map((session) => (
+        <li key={session.session_id} className="space-y-1 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-900">
+              <input
+                type="checkbox"
+                checked={pickedIds.has(session.session_id)}
+                disabled={!session.eligible}
+                onChange={() => builder.toggle(session)}
+              />
+              {sessionName(session)}
+            </label>
+            <Badge tone="slate">{KIND_LABEL[session.session_type]}</Badge>
+            {session.purpose === "trial" && <Badge tone="amber">Uji Coba</Badge>}
+          </div>
+          {session.reasons.map((reason) => (
+            <p key={reason.code} className="pl-6 text-sm text-red-700">
+              {reason.message}
+            </p>
+          ))}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Field sesi (SCRUM-321, diperluas SCRUM-365): pencarian, filter produk, dan tab Valid / Tidak valid. Sesi tidak
+ * valid tetap terlihat di tabnya, nonaktif, dengan alasan dari server (AC4). Pencarian, tab, dan filter produk
+ * hanya mengubah yang tampil; sesi terpilih tetap ada di daftar Sesi terpilih di bawahnya.
+ */
 function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const pickedIds = new Set([...builder.picked, ...builder.dropped].map((s) => s.session_id));
   return (
     <fieldset className="space-y-2">
       <legend className={LEGEND}>Sesi</legend>
-      <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
-        {builder.visibleSessions.map((session) => (
-          <li key={session.session_id} className="space-y-1 px-3 py-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-900">
-                <input
-                  type="checkbox"
-                  checked={pickedIds.has(session.session_id)}
-                  disabled={!session.eligible}
-                  onChange={() => builder.toggle(session)}
-                />
-                {sessionName(session)}
-              </label>
-              <Badge tone="slate">{KIND_LABEL[session.session_type]}</Badge>
-              {session.purpose === "trial" && <Badge tone="amber">Uji Coba</Badge>}
-            </div>
-            {session.reasons.map((reason) => (
-              <p key={reason.code} className="pl-6 text-sm text-red-700">
-                {reason.message}
-              </p>
-            ))}
-          </li>
-        ))}
-      </ul>
+      <div className="flex flex-wrap items-start gap-2">
+        <input
+          type="search"
+          aria-label="Cari sesi"
+          placeholder="Cari nama sesi, id sesi, atau produk"
+          maxLength={200}
+          className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          value={builder.query}
+          onChange={(event) => builder.setQuery(event.target.value)}
+        />
+        <ProductFilter builder={builder} />
+      </div>
+      <Tabs
+        label="Kelayakan sesi"
+        idPrefix={SESSION_TABS}
+        active={builder.tab}
+        onChange={builder.setTab}
+        tabs={SESSION_TAB_ORDER.map((tab) => ({ id: tab, label: `${TAB_LABEL[tab]} (${builder.tabCounts[tab]})` }))}
+      />
+      <div role="tabpanel" id={tabPanelId(SESSION_TABS, builder.tab)} aria-labelledby={tabElementId(SESSION_TABS, builder.tab)}>
+        {builder.visibleSessions.length === 0 ? (
+          <EmptyTab builder={builder} />
+        ) : (
+          <SessionRows builder={builder} pickedIds={pickedIds} />
+        )}
+      </div>
     </fieldset>
   );
 }
