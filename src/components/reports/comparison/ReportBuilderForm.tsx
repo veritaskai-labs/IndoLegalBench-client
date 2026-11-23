@@ -228,7 +228,7 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
           aria-label="Cari sesi"
           placeholder="Cari nama sesi, id sesi, atau produk"
           maxLength={200}
-          className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
           value={builder.query}
           onChange={(event) => builder.setQuery(event.target.value)}
         />
@@ -379,7 +379,7 @@ function BuilderForm({ builder }: Readonly<{ builder: ReportBuilder }>) {
           <span className={LEGEND}>Judul laporan</span>
           <input
             type="text"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900"
             value={builder.title}
             onChange={(event) => builder.setTitle(event.target.value)}
             onBlur={() => setTitleTouched(true)}
