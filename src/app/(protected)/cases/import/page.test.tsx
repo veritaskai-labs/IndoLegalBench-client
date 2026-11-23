@@ -73,6 +73,20 @@ describe("CaseImportPage (PBI-4 AC4-AC6)", () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
+  // Positive: the page is one of the "Suite dan kasus" tabs (entry point next to the case list).
+  it("shows the Suite dan kasus tabs with Impor CSV as the current one", () => {
+    // Arrange
+    signedInAs("contributor");
+
+    // Act
+    render(<CaseImportPage />);
+
+    // Assert
+    const tabs = screen.getByRole("navigation", { name: "Suite dan kasus" });
+    expect(within(tabs).getByRole("link", { name: "Impor CSV" })).toHaveAttribute("aria-current", "page");
+    expect(within(tabs).getByRole("link", { name: "Daftar kasus" })).not.toHaveAttribute("aria-current");
+  });
+
   // Negative: other roles are sent to /forbidden and see nothing of the page (the server still answers 403).
   it.each(["viewer", "developer_ai"] as const)("sends the %s to /forbidden without rendering the page", (role) => {
     // Arrange

@@ -5,7 +5,9 @@ const LINKS = [
   { href: "/cases", label: "Daftar kasus" },
 ] as const;
 
-export function SuiteCaseNav({ current }: Readonly<{ current: (typeof LINKS)[number]["href"] }>) {
+type SuiteCaseHref = "/suites" | "/cases" | "/cases/import";
+
+export function SuiteCaseNav({ current }: Readonly<{ current: SuiteCaseHref }>) {
   return (
     <nav aria-label="Suite dan kasus" className="flex gap-1 border-b border-slate-200">
       {LINKS.map(({ href, label }) => (

@@ -50,3 +50,7 @@ export function navForRole(role: Role): NavGroup[] {
     items: group.items.filter((item) => item.roles.includes(role)),
   })).filter((group) => group.items.length > 0);
 }
+/** Apakah item menu sedang aktif untuk alamat ini. */
+export function isNavItemActive(_href: string, _pathname: string): boolean {
+  return false;
+}
