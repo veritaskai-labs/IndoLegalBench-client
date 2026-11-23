@@ -52,12 +52,15 @@ function pick(result: { current: ReturnType<typeof useReportBuilder> }, ...sessi
 
 describe("useReportBuilder: loading the picker (AC1, AC4)", () => {
   // Positive: one request for every session; the filter works on the page so picks never vanish unseen.
-  it("loads every session once, eligible or not, and shows them all", async () => {
+  // SCRUM-365: the field opens on the Valid tab, and the invalid ones wait on their own tab.
+  it("loads every session once, eligible or not, and opens on the Valid tab", async () => {
     const { result, gateway } = await readyBuilder();
 
     expect(gateway.eligibleSessions).toHaveBeenCalledTimes(1);
     expect(gateway.eligibleSessions).toHaveBeenCalledWith("all");
-    expect(result.current.visibleSessions).toEqual(rows);
+    expect(result.current.tab).toBe("valid");
+    expect(result.current.visibleSessions).toEqual([autoA, autoA2, manualB, autoC]);
+    expect(result.current.tabCounts).toEqual({ valid: 4, invalid: 1 });
   });
 
   // Negative: the list fails; the page needs a message and a way to try again.
@@ -287,5 +290,83 @@ describe("useReportBuilder: Create (AC1, AC4, AC13)", () => {
     pick(result, autoC);
 
     expect(result.current.outcome).toBeNull();
+  });
+});
+
+// SCRUM-365 (PBI-15 AC1, AC4, AC5): search bar, Valid / Tidak valid tabs and a product filter on the session
+// field. The rules are tested in sessionSearch.test.ts; these tests check the hook keeps them as state and that
+// they only change what is shown, never what is picked.
+describe("useReportBuilder: search, tabs and product filter (SCRUM-365)", () => {
+  it("Positif: the Tidak valid tab shows the invalid sessions with their reasons", async () => {
+    const { result } = await readyBuilder();
+
+    act(() => result.current.setTab("invalid"));
+
+    expect(result.current.visibleSessions).toEqual([cancelled]);
+    expect(result.current.visibleSessions[0].reasons).toEqual([{ code: "SESSION_CANCELLED", message: "Sesi dibatalkan." }]);
+  });
+
+  it("Positif: narrows the field by search text and by more than one product", async () => {
+    const { result } = await readyBuilder();
+
+    act(() => result.current.setQuery("C-1"));
+    expect(result.current.visibleSessions).toEqual([autoC]);
+
+    act(() => result.current.setQuery(""));
+    act(() => result.current.toggleProduct("p-a"));
+    act(() => result.current.toggleProduct("p-b"));
+    expect(result.current.productIds).toEqual(["p-a", "p-b"]);
+    expect(result.current.visibleSessions).toEqual([autoA, autoA2, manualB]);
+
+    // Choosing a product again takes it back out of the filter.
+    act(() => result.current.toggleProduct("p-a"));
+    expect(result.current.visibleSessions).toEqual([manualB]);
+  });
+
+  it("Positif: offers every product once in the dropdown, valid or not", async () => {
+    const { result } = await readyBuilder();
+    expect(result.current.productOptions.map((option) => option.id).sort()).toEqual(["p-a", "p-b", "p-c", "p-x"]);
+  });
+
+  // The subtask asks that picks survive switching tab or filter: a picked session hidden by the search is
+  // still in the report, so the user does not have to pick it again.
+  it("Positif: keeps the picked sessions while the tab, the search and the products change", async () => {
+    const { result } = await readyBuilder();
+    act(() => result.current.setTitle("Perbandingan"));
+    pick(result, autoA, manualB);
+
+    act(() => result.current.setQuery("tidak ada yang cocok"));
+    act(() => result.current.setTab("invalid"));
+    act(() => result.current.toggleProduct("p-x"));
+
+    expect(result.current.visibleSessions).toEqual([]);
+    expect(result.current.picked).toEqual([autoA, manualB]);
+    expect(result.current.dropped).toEqual([]);
+    expect(result.current.canSubmit).toBe(true);
+  });
+
+  it("Positif: Hapus pencarian empties the search and the products but keeps the tab and the filter", async () => {
+    const { result } = await readyBuilder();
+    act(() => result.current.setFilter("automatic"));
+    act(() => result.current.setTab("invalid"));
+    act(() => result.current.setQuery("x"));
+    act(() => result.current.toggleProduct("p-x"));
+
+    act(() => result.current.clearSearch());
+
+    expect(result.current.query).toBe("");
+    expect(result.current.productIds).toEqual([]);
+    expect(result.current.tab).toBe("invalid");
+    expect(result.current.filter).toBe("automatic");
+  });
+
+  // Edge: the tab counts follow the search, so an empty tab can say the other tab has the hit.
+  it("Edge: counts each tab after the search", async () => {
+    const { result } = await readyBuilder();
+
+    act(() => result.current.setQuery("x-1"));
+
+    expect(result.current.visibleSessions).toEqual([]);
+    expect(result.current.tabCounts).toEqual({ valid: 0, invalid: 1 });
   });
 });
