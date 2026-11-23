@@ -50,3 +50,8 @@ export function importErrorMessage(error: unknown): string {
   if (error instanceof TypeError) return NETWORK;
   return GENERIC;
 }
+
+/** true bila server menolak seluruh berkas (422 IMPORT_*): tidak ada batch, suite, atau kasus yang dibuat (D7). */
+export function isFileRejected(_error: unknown): boolean {
+  return false;
+}
