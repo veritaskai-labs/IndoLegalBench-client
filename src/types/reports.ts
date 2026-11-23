@@ -20,6 +20,11 @@ export type ReportDetail = components["schemas"]["ReportDetail"];
 
 export type ReportCreate = components["schemas"]["ReportCreate"];
 export type ReportCreateResponse = components["schemas"]["ReportCreateResponse"];
+/** Pilihan sesi yang diperiksa tanpa disimpan (POST /reports/validate, SCRUM-366). */
+export type ReportValidateRequest = components["schemas"]["ReportValidateRequest"];
+export type ReportValidation = components["schemas"]["ReportValidationRead"];
+export type ReportViolation = components["schemas"]["ReportViolationRead"];
+export type ReportWarning = components["schemas"]["ReportWarningRead"];
 /** Satu sesi dari GET /reports/eligible-sessions: layak atau tidak, dengan alasan siap tampil (SCRUM-321). */
 export type EligibleSession = components["schemas"]["EligibleSessionRead"];
 export type EligibleSessionReason = components["schemas"]["EligibleSessionReasonRead"];

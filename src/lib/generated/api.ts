@@ -1338,6 +1338,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Periksa pilihan sesi untuk laporan tanpa menyimpan (dry-run)
+         * @description Semua pelanggaran sekaligus saat sesi dipilih, bukan setelah klik Buat Laporan.
+         *
+         *     Aturannya sama dengan POST /reports (PBI-15 AC1, AC4, AC5, AC13, AC14), tetapi tidak
+         *     menyimpan apa pun dan selalu 200 untuk pilihan yang bisa dibaca. POST /reports tetap
+         *     memeriksa ulang di server.
+         */
+        post: operations["validate_report_selection_reports_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports/eligible-sessions": {
         parameters: {
             query?: never;
@@ -5023,6 +5047,91 @@ export interface components {
             created_at: string;
         };
         /**
+         * ReportValidateRequest
+         * @description Pilihan sesi yang diperiksa tanpa menyimpan laporan (dry-run).
+         */
+        ReportValidateRequest: {
+            /**
+             * Session Ids
+             * @description Sesi yang dipilih sejauh ini. Boleh kosong atau satu sesi: itu dijawab sebagai pelanggaran NEED_AT_LEAST_TWO_PRODUCTS, bukan galat, karena halaman memanggil ini tiap pilihan berubah.
+             */
+            session_ids: string[];
+            /**
+             * @description Jenis nilai yang ingin dibuat. dev dan dev_test hanya untuk Admin dan Developer AI; peran lain mendapat 403 REPORT_SCOPE_FORBIDDEN.
+             * @default test
+             */
+            score_scope: components["schemas"]["ScoreScope"];
+            /**
+             * @description Saring sesi otomatis atau manual saja; bawaannya semuanya.
+             * @default all
+             */
+            measurement_filter: components["schemas"]["MeasurementFilter"];
+        };
+        /**
+         * ReportValidationRead
+         * @description Hasil dry-run. Server tetap memeriksa ulang saat POST /reports (tidak percaya FE).
+         */
+        ReportValidationRead: {
+            /**
+             * Valid
+             * @description True bila tidak ada pelanggaran; peringatan tidak dihitung
+             */
+            valid: boolean;
+            /**
+             * Violations
+             * @description Semua pelanggaran sekaligus; POST /reports akan menolak selama ada isinya
+             */
+            violations: components["schemas"]["ReportViolationRead"][];
+            /**
+             * Warnings
+             * @description Penanda yang tidak memblokir; tetap tampil di laporan
+             */
+            warnings: components["schemas"]["ReportWarningRead"][];
+            /**
+             * Available Scopes
+             * @description Jenis nilai yang boleh dipilih peran ini, dihitung dari jenis kasus (dev, test) pada irisan kasus sesi yang layak. Kosong bila tidak ada irisan.
+             */
+            available_scopes: components["schemas"]["ScoreScope"][];
+        };
+        /** ReportViolationRead */
+        ReportViolationRead: {
+            /** @description selection (kombinasi sesi), session (satu sesi tidak layak), requirement (rubrik, penilai, suite), atau case_slice (irisan kasus kosong) */
+            kind: components["schemas"]["ViolationKind"];
+            /**
+             * Code
+             * @description Kode stabil, misalnya SESSION_CANCELLED atau RUBRIC_VERSION
+             */
+            code: string;
+            /**
+             * Message
+             * @description Pesan siap tampil untuk pengguna
+             */
+            message: string;
+            /**
+             * Session Id
+             * @description Sesi yang bermasalah; hanya terisi untuk kind session
+             */
+            session_id?: string | null;
+        };
+        /** ReportWarningRead */
+        ReportWarningRead: {
+            /**
+             * Code
+             * @description REPETITIONS_DIFFER, MANUAL_ANSWER_RANGE_OVER_LIMIT, MODEL_VERSION_DIFFERS, atau TRIAL_SESSION
+             */
+            code: string;
+            /**
+             * Message
+             * @description Pesan siap tampil untuk pengguna
+             */
+            message: string;
+            /**
+             * Session Id
+             * @description Sesi yang ditandai; kosong bila berlaku untuk seluruh pilihan
+             */
+            session_id?: string | null;
+        };
+        /**
          * ReviewCopy
          * @description One version as a reviewer reads it (PBI-6, SCRUM-145).
          *
@@ -6314,6 +6423,11 @@ export interface components {
             /** Changed */
             changed: string[];
         };
+        /**
+         * ViolationKind
+         * @enum {string}
+         */
+        ViolationKind: "selection" | "session" | "requirement" | "case_slice";
     };
     responses: never;
     parameters: never;
@@ -10200,6 +10314,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportNotComparableBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_report_selection_reports_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportValidationRead"];
+                };
+            };
+            /** @description Jenis nilai atau label di luar hak peran (`REPORT_SCOPE_FORBIDDEN`, `REPORT_LABEL_MODE_FORBIDDEN`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Ada sesi yang dipilih tidak ditemukan (`REPORT_SESSION_NOT_FOUND`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportSessionNotFoundBody"];
                 };
             };
             /** @description Validation Error */
