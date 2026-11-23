@@ -1,8 +1,5 @@
 import type { MeasurementFilter, PickableSession } from "./builderTypes";
 
-/** Masalah kombinasi sesi yang dipilih; kode sama dengan selection_errors di server (#147). */
-export type SelectionProblem = "NEED_AT_LEAST_TWO_PRODUCTS";
-
 /**
  * Pilih atau lepas satu sesi. Satu produk hanya diwakili satu sesi (server: DUPLICATE_PRODUCT,
  * diputuskan lewat product_id), jadi memilih sesi lain dari produk yang sama menggantikan yang
@@ -16,12 +13,6 @@ export function toggleSession<T extends PickableSession>(picked: readonly T[], s
   }
   if (!session.eligible) return [...picked];
   return [...picked.filter((s) => s.product_id !== session.product_id), session];
-}
-
-/** Perbandingan butuh minimal dua produk berbeda (dihitung lewat product_id, bukan jumlah sesi). */
-export function selectionProblems(picked: readonly PickableSession[]): SelectionProblem[] {
-  const products = new Set(picked.map((s) => s.product_id));
-  return products.size < 2 ? ["NEED_AT_LEAST_TWO_PRODUCTS"] : [];
 }
 
 /** Sesi tampil di pilihan bila jenisnya cocok dengan filter (PBI-15 AC5); "all" menampilkan semua. */
@@ -41,15 +32,4 @@ export function applyFilter<T extends PickableSession>(
   const dropped: T[] = [];
   for (const session of picked) (matchesFilter(session, filter) ? kept : dropped).push(session);
   return { kept, dropped };
-}
-
-/**
- * true bila sesi terpilih dinilai LLM judge yang berbeda (PBI-15 AC13 b), untuk peringatan
- * sebelum Create. Judge yang tidak diketahui (null) dilewati: server yang memutuskan.
- */
-export function judgeDiffers(picked: readonly PickableSession[]): boolean {
-  const judges = new Set(
-    picked.map((s) => s.judge_model_version).filter((judge): judge is string => judge !== null),
-  );
-  return judges.size > 1;
 }

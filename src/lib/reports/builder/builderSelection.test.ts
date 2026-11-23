@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PickableSession } from "./builderTypes";
-import {
-  applyFilter,
-  judgeDiffers,
-  matchesFilter,
-  selectionProblems,
-  toggleSession,
-} from "./builderSelection";
+import { applyFilter, matchesFilter, toggleSession } from "./builderSelection";
 
 function session(id: string, productId: string, overrides: Partial<PickableSession> = {}): PickableSession {
   return {
@@ -108,38 +102,6 @@ describe("toggleSession", () => {
   });
 });
 
-describe("selectionProblems", () => {
-  // Positive: two different products is the smallest valid comparison.
-  it("has no problem with two products", () => {
-    // Arrange / Act
-    const problems = selectionProblems([deepseek, aiyu]);
-
-    // Assert
-    expect(problems).toEqual([]);
-  });
-
-  // Negative: server NEED_AT_LEAST_TWO_PRODUCTS.
-  it.each([
-    ["nothing", []],
-    ["one product", [deepseek]],
-  ])("needs at least two products when %s is picked", (_name, picked) => {
-    // Arrange / Act
-    const problems = selectionProblems(picked as PickableSession[]);
-
-    // Assert
-    expect(problems).toEqual(["NEED_AT_LEAST_TWO_PRODUCTS"]);
-  });
-
-  // Edge: two sessions of one product are still one product (counted by product_id).
-  it("counts two sessions of the same product as one product", () => {
-    // Arrange / Act
-    const problems = selectionProblems([geminiOct, geminiNov]);
-
-    // Assert
-    expect(problems).toEqual(["NEED_AT_LEAST_TWO_PRODUCTS"]);
-  });
-});
-
 describe("matchesFilter", () => {
   const manual = session("s-manual", "p-legalhero", { session_type: "manual" });
 
@@ -193,59 +155,5 @@ describe("applyFilter", () => {
     // Assert
     expect(ids(kept)).toEqual(["s-gemini-oct", "s-manual"]);
     expect(dropped).toEqual([]);
-  });
-
-  // Edge: a filter can leave only one product, which then needs a second one.
-  it("can leave too few products after filtering", () => {
-    // Arrange / Act
-    const { kept } = applyFilter([geminiOct, manual], "manual");
-
-    // Assert
-    expect(selectionProblems(kept)).toEqual(["NEED_AT_LEAST_TWO_PRODUCTS"]);
-  });
-});
-
-describe("judgeDiffers", () => {
-  // Positive: same judge everywhere is comparable (AC13 b).
-  it("is false when every session used the same judge", () => {
-    // Arrange / Act
-    const differs = judgeDiffers([geminiOct, deepseek, aiyu]);
-
-    // Assert
-    expect(differs).toBe(false);
-  });
-
-  // Negative: different judges end in 409 JUDGE_MODEL, so warn before Create.
-  it("is true when two sessions used different judges", () => {
-    // Arrange
-    const otherJudge = session("s-other", "p-other", { judge_model_version: "judge-v2" });
-
-    // Act
-    const differs = judgeDiffers([geminiOct, otherJudge]);
-
-    // Assert
-    expect(differs).toBe(true);
-  });
-
-  // Edge: an unknown judge (null) is not proof of a difference; the server decides. A false
-  // warning would scare users away from a valid report.
-  it("ignores sessions whose judge is not known", () => {
-    // Arrange
-    const unknown = session("s-unknown", "p-unknown", { judge_model_version: null });
-
-    // Act
-    const differs = judgeDiffers([geminiOct, unknown]);
-
-    // Assert
-    expect(differs).toBe(false);
-  });
-
-  // Edge: nothing or one session can't differ.
-  it.each([[[]], [[geminiOct]]])("is false for %j", (picked) => {
-    // Arrange / Act
-    const differs = judgeDiffers(picked);
-
-    // Assert
-    expect(differs).toBe(false);
   });
 });

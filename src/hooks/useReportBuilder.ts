@@ -15,11 +15,8 @@ import {
 } from "@/lib/reports/builder/builderRules";
 import {
   applyFilter,
-  judgeDiffers,
   matchesFilter,
-  selectionProblems as selectionProblemsOf,
   toggleSession,
-  type SelectionProblem,
 } from "@/lib/reports/builder/builderSelection";
 import {
   chooseScope,
@@ -52,7 +49,6 @@ export interface ReportBuilder {
   toggle: (session: EligibleSession) => void;
   filter: MeasurementFilter;
   setFilter: (filter: MeasurementFilter) => void;
-  scoreScopes: readonly ScoreScope[];
   /** Live answer of POST /reports/validate for the picked sessions (SCRUM-366). */
   validation: ReportValidationState;
   view: ValidationView;
@@ -65,9 +61,6 @@ export interface ReportBuilder {
   title: string;
   setTitle: (title: string) => void;
   titleProblem: TitleProblem | null;
-  selectionProblems: SelectionProblem[];
-  /** Picked sessions were graded by different judges (AC13 b): warn, the server decides. */
-  judgeWarning: boolean;
   canSubmit: boolean;
   submitting: boolean;
   submit: () => Promise<void>;
@@ -107,7 +100,6 @@ export function useReportBuilder(
   const { kept, dropped } = applyFilter(allPicked, filter);
   const visibleSessions = sessions.status === "ready" ? sessions.data.filter((s) => matchesFilter(s, filter)) : [];
   const titleProblem = titleProblemOf(title);
-  const selectionProblems = selectionProblemsOf(kept);
 
   // The check asks with the user's own score type, not the one the options switched to: the switch is derived
   // from the answer, so asking with it would make every switch start another request.
@@ -152,7 +144,6 @@ export function useReportBuilder(
     toggle,
     filter,
     setFilter,
-    scoreScopes: allowedScoreScopes(role),
     validation,
     view,
     scopeOptions,
@@ -164,8 +155,6 @@ export function useReportBuilder(
     title,
     setTitle,
     titleProblem,
-    selectionProblems,
-    judgeWarning: judgeDiffers(kept),
     canSubmit,
     submitting: action.pending,
     submit: async () => {
