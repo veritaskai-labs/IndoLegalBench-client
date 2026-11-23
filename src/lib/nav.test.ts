@@ -145,6 +145,8 @@ describe("isNavItemActive", () => {
     ["/dashboard", "/cases"],
     ["/reports", "/cases/import"],
     ["/suites", "/suites-lama"],
+    ["/suites", "/cases-lama"],
+    ["/suites", "/cases/c-1/edit"],
   ])("does not mark %s active on %s", (href, pathname) => {
     // Arrange / Act / Assert
     expect(isNavItemActive(href, pathname)).toBe(false);

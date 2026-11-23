@@ -26,9 +26,9 @@ describe("SuiteCaseNav", () => {
     render(<SuiteCaseNav current={current} />);
 
     // Assert
-    for (const link of screen.getAllByRole("link")) {
-      expect(link).toHaveAttribute("aria-current", link.textContent === name ? "page" : undefined);
-    }
+    const others = screen.getAllByRole("link").filter((link) => link.textContent !== name);
     expect(screen.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
+    expect(others).toHaveLength(2);
+    for (const link of others) expect(link).not.toHaveAttribute("aria-current");
   });
 });

@@ -50,7 +50,10 @@ export function navForRole(role: Role): NavGroup[] {
     items: group.items.filter((item) => item.roles.includes(role)),
   })).filter((group) => group.items.length > 0);
 }
+/** Halaman di bawah "Suite dan kasus" yang tidak punya item menu sendiri (SCRUM-341, SCRUM-340). */
+const UNDER_SUITES: readonly string[] = ["/cases", "/cases/import"];
+
 /** Apakah item menu sedang aktif untuk alamat ini. */
-export function isNavItemActive(_href: string, _pathname: string): boolean {
-  return false;
+export function isNavItemActive(href: string, pathname: string): boolean {
+  return pathname === href || (href === "/suites" && UNDER_SUITES.includes(pathname));
 }

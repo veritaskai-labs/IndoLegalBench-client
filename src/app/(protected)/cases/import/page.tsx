@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ImportGuide } from "@/components/cases/import/ImportGuide";
+import { SuiteCaseNav } from "@/components/cases/SuiteCaseNav";
 import { ImportSummaryView } from "@/components/cases/import/ImportSummaryView";
 import { ImportUploadForm } from "@/components/cases/import/ImportUploadForm";
 import { TemplateDownloadButton } from "@/components/cases/import/TemplateDownloadButton";
@@ -116,6 +117,8 @@ export default function CaseImportPage() {
           lalu dilengkapi dan diajukan review.
         </p>
       </header>
+
+      <SuiteCaseNav current="/cases/import" />
 
       <section aria-labelledby="langkah-template" className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
         <h2 id="langkah-template" className="text-base font-semibold text-slate-900">

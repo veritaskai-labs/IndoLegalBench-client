@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { MOBILE_NAV_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/hooks/useAuth";
-import { navForRole, type NavGroup } from "@/lib/nav";
+import { isNavItemActive, navForRole, type NavGroup } from "@/lib/nav";
 import { ROLE_LABEL } from "@/types";
 
 const COLUMN = "flex-col justify-between border-r border-slate-200 bg-white p-4";
@@ -95,7 +95,7 @@ function NavLinks({
             </p>
             <ul className="space-y-1">
               {group.items.map((item) => {
-                const active = pathname === item.href || (item.href === "/suites" && pathname === "/cases");
+                const active = isNavItemActive(item.href, pathname);
                 return (
                   <li key={item.href}>
                     <Link
