@@ -10,7 +10,7 @@ import type { ReportValidateRequest, ReportValidation } from "@/types/reports";
 export const VALIDATE_DELAY_MS = 300;
 
 const FAILED = "Pemeriksaan pilihan gagal. Coba lagi.";
-const SESSIONS_GONE = "Sebagian sesi sudah tidak tersedia. Muat ulang daftar sesi lalu pilih lagi.";
+const SESSIONS_GONE = "Sebagian sesi sudah tidak tersedia. Lepas sesi yang sudah tidak tersedia dari pilihan.";
 
 const errorText = (error: unknown) => (error instanceof ApiError && error.status === 404 ? SESSIONS_GONE : FAILED);
 
@@ -40,7 +40,8 @@ interface Settled {
 /**
  * Menanyakan POST /reports/validate tiap pilihan sesi berubah (SCRUM-366). Aturannya ada di server; hook ini
  * hanya mengatur waktu: jeda, membuang balasan yang terlambat, dan memuat ulang. Permintaan dibaca lewat ref
- * supaya pemanggil tidak perlu membungkusnya dengan useMemo; kuncinya isi permintaan itu sendiri.
+ * supaya pemanggil tidak perlu membungkusnya dengan useMemo; kuncinya isi permintaan itu sendiri. Selama
+ * enabled false (daftar sesi atau peran belum siap) tidak ada permintaan dan statusnya tetap "checking".
  */
 export function useReportValidation(
   request: ReportValidateRequest,
@@ -48,7 +49,6 @@ export function useReportValidation(
   delayMs: number = VALIDATE_DELAY_MS,
   enabled = true,
 ): ReportValidationState {
-  void enabled;
   const [nonce, setNonce] = useState(0);
   const [settled, setSettled] = useState<Settled | null>(null);
   const latest = useRef({ request, gateway });
@@ -59,6 +59,7 @@ export function useReportValidation(
   });
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     const timer = setTimeout(() => {
       latest.current.gateway.validate(latest.current.request).then(
@@ -74,7 +75,7 @@ export function useReportValidation(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [key, delayMs]);
+  }, [key, delayMs, enabled]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
