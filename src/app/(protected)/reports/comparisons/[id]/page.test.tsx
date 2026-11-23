@@ -208,3 +208,51 @@ describe("ComparisonReportPage publishing", () => {
     expect(await screen.findByText(/sudah digantikan versi yang lebih baru/)).toBeInTheDocument();
   });
 });
+
+// SCRUM-367 (PBI-15 AC9): Admin traces a code back to the real product. The server decides who gets the mapping
+// (null for every other role), so the page shows the panel exactly when the report carries one.
+describe("ComparisonReportPage product mapping", () => {
+  const codeReport = () =>
+    firstReport({
+      product_label_mode: "code",
+      product_mapping: [
+        { label: "Product A", real_name: "AiYU" },
+        { label: "Product B", real_name: "Gemini" },
+      ],
+    });
+
+  it("shows the mapping panel for a code report that carries one, outside the report body", async () => {
+    session.role = "admin";
+    detail.mockResolvedValue(codeReport());
+
+    render(<ComparisonReportPage />);
+
+    const article = await screen.findByRole("article");
+    const table = screen.getByRole("table", { name: "Pemetaan kode produk" });
+    expect(within(table).getByText("AiYU")).toBeInTheDocument();
+    expect(within(table).getByText("Gemini")).toBeInTheDocument();
+    // Outside ReportDocument, so the real names are not part of the report body that the PDF mirrors.
+    expect(article).not.toContainElement(table);
+  });
+
+  it("shows no panel when the server sent no mapping, as for every other role", async () => {
+    session.role = "viewer";
+    detail.mockResolvedValue(firstReport({ product_label_mode: "code", product_mapping: null }));
+
+    render(<ComparisonReportPage />);
+
+    await screen.findByRole("article");
+    expect(screen.queryByRole("table", { name: "Pemetaan kode produk" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Pemetaan kode produk" })).toBeNull();
+  });
+
+  it("shows no panel for a real-name report", async () => {
+    session.role = "admin";
+    detail.mockResolvedValue(firstReport());
+
+    render(<ComparisonReportPage />);
+
+    await screen.findByRole("article");
+    expect(screen.queryByRole("heading", { name: "Pemetaan kode produk" })).toBeNull();
+  });
+});
