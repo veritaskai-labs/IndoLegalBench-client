@@ -8,7 +8,7 @@ import { TEMPLATE_FILE_NAME, importGateway } from "./importApi";
  */
 const fetchMock = vi.fn();
 
-const TEMPLATE = "﻿title,question,category,split_tag,legal_refs,must_contain,must_not_contain,expected_conclusion\r\n";
+const TEMPLATE = "\uFEFFtitle,question,category,split_tag,legal_refs,must_contain,must_not_contain,expected_conclusion\r\n";
 
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
