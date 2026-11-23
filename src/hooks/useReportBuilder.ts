@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { useAsyncResource, type AsyncResource } from "@/hooks/useAsyncResource";
+import type { ReportValidationState } from "@/hooks/useReportValidation";
 import {
   allowedScoreScopes,
   canChooseProductLabel,
@@ -20,6 +21,12 @@ import {
   toggleSession,
   type SelectionProblem,
 } from "@/lib/reports/builder/builderSelection";
+import {
+  scopeOptions as scopeOptionsOf,
+  validationView,
+  type ScopeOption,
+  type ValidationView,
+} from "@/lib/reports/builder/validationView";
 import { outcomeFromError, outcomeFromResponse, type CreateOutcome } from "@/lib/reports/builder/createOutcome";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import { stripBlank } from "@/lib/text";
@@ -45,6 +52,10 @@ export interface ReportBuilder {
   filter: MeasurementFilter;
   setFilter: (filter: MeasurementFilter) => void;
   scoreScopes: readonly ScoreScope[];
+  /** Live answer of POST /reports/validate for the picked sessions (SCRUM-366). */
+  validation: ReportValidationState;
+  view: ValidationView;
+  scopeOptions: ScopeOption[];
   scoreScope: ScoreScope;
   setScoreScope: (scope: ScoreScope) => void;
   canChooseLabel: boolean;
@@ -75,7 +86,12 @@ const unusedCreateMessage = () => "";
  * filter change never hides a picked session without saying so. Role-dependent options are derived on every
  * render (normalizeChoices), so a role change can never leave a forbidden choice in the request.
  */
-export function useReportBuilder(role: Role | null, gateway: ReportsGateway = httpReportsGateway): ReportBuilder {
+export function useReportBuilder(
+  role: Role | null,
+  gateway: ReportsGateway = httpReportsGateway,
+  validateDelayMs?: number,
+): ReportBuilder {
+  void validateDelayMs;
   const sessions = useAsyncResource<EligibleSession[]>(
     "report-builder-sessions",
     () => gateway.eligibleSessions("all"),
@@ -125,6 +141,9 @@ export function useReportBuilder(role: Role | null, gateway: ReportsGateway = ht
     filter,
     setFilter,
     scoreScopes: allowedScoreScopes(role),
+    validation: { verdict: null, status: "checking", message: null, reload: () => undefined },
+    view: validationView(null),
+    scopeOptions: scopeOptionsOf(allowedScoreScopes(role), null),
     scoreScope: choices.scoreScope,
     setScoreScope: (scoreScope) => setRawChoices((c) => ({ ...c, scoreScope })),
     canChooseLabel: canChooseProductLabel(role),
