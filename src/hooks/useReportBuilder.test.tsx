@@ -381,29 +381,70 @@ describe("useReportBuilder: live validation (SCRUM-366, AC1 AC4 AC5 AC13 AC14)",
     expect(result.current.scopeOptions.find((o) => o.scope === "test")?.disabled).toBe(false);
   });
 
-  // AC14: the picked slice only has dev cases, so the active Test choice moves to Dev by itself and Create uses it.
-  it("moves to an available score type when the chosen one is not available", async () => {
-    const validate = vi.fn().mockResolvedValue(reportValidation({ available_scopes: ["dev"] }));
-    const { result, gateway } = await readyToCheck(validate);
+  // AC14 as the server really answers it (server #160): when the sessions share only dev cases and the request
+  // asks for Test, the answer is NO_SHARED_CASES together with available_scopes ["dev"].
+  const sliceViolation = {
+    kind: "case_slice",
+    code: "NO_SHARED_CASES",
+    message: "Sesi terpilih tidak punya kasus yang sama.",
+  } as const;
+  function devOnlyWhenPicked(devOnlyId: string): ReportsGateway["validate"] {
+    return vi.fn((request: ReportValidateRequest) => {
+      if (!request.session_ids.includes(devOnlyId)) return answerLikeServer(request);
+      return Promise.resolve(
+        request.score_scope === "dev"
+          ? reportValidation({ available_scopes: ["dev"] })
+          : reportValidation({ valid: false, violations: [sliceViolation], available_scopes: ["dev"] }),
+      );
+    });
+  }
 
+  // Blocking review point: the form moves to Dev, so the check must be asked again as Dev. Otherwise the Test
+  // answer's violation stays, Create stays off, and Test is disabled so the user cannot get out.
+  it("checks the score type it switched to, so Create is not stuck on the old answer", async () => {
+    const validate = devOnlyWhenPicked("b-1");
+    const { result } = await readyToCheck(validate);
+
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
     expect(result.current.scoreScope).toBe("dev");
+    expect(result.current.view.blocking).toBe(false);
+    expect(validate).toHaveBeenLastCalledWith(expect.objectContaining({ score_scope: "dev" }));
+  });
+
+  it("sends Create with the score type it switched to", async () => {
+    const validate = devOnlyWhenPicked("b-1");
+    const { result, gateway } = await readyToCheck(validate);
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
+
     await act(async () => result.current.submit());
+
     expect(gateway.create).toHaveBeenCalledWith(expect.objectContaining({ score_scope: "dev" }));
   });
 
-  // Edge: the user's own choice comes back when it is available again, and the check never asks with the switched
-  // value, so the automatic switch cannot start a loop of new requests.
-  it("goes back to the chosen score type when it is available again and never asks with the switched one", async () => {
-    const validate = vi
-      .fn()
-      .mockResolvedValueOnce(reportValidation({ available_scopes: ["dev"] }))
-      .mockResolvedValue(reportValidation());
+  // Edge (no loop): Test then Dev is two requests, and nothing more is asked once the answer is valid.
+  it("settles after two requests and does not keep asking", async () => {
+    const validate = devOnlyWhenPicked("b-1");
     const { result } = await readyToCheck(validate);
-    act(() => result.current.setScoreScope("dev_test"));
-    await validated(result);
-    expect(result.current.scoreScope).toBe("dev_test");
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
 
-    expect(validate.mock.calls.every(([req]) => req.score_scope !== "dev")).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(validate).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(validate).mock.calls.map(([req]) => req.score_scope)).toEqual(["test", "dev"]);
+  });
+
+  // Edge: when the cases allow the user's own choice again, the form goes back to it and Create is on.
+  it("goes back to the chosen score type when it is available again", async () => {
+    const validate = devOnlyWhenPicked("b-1");
+    const { result } = await readyToCheck(validate);
+    await waitFor(() => expect(result.current.scoreScope).toBe("dev"));
+
+    act(() => result.current.toggle(manualB)); // drop the dev-only session
+    pick(result, autoC);
+
+    await waitFor(() => expect(result.current.scoreScope).toBe("test"));
+    await waitFor(() => expect(result.current.canSubmit).toBe(true));
+    expect(validate).toHaveBeenLastCalledWith(expect.objectContaining({ score_scope: "test" }));
   });
 
   // Edge: nothing is offered (empty slice), so the choice stays and the violations keep Create off.
@@ -436,5 +477,26 @@ describe("useReportBuilder: live validation (SCRUM-366, AC1 AC4 AC5 AC13 AC14)",
 
     expect(result.current.scopeOptions.map((o) => o.scope)).toEqual(["test"]);
     expect(validate).toHaveBeenLastCalledWith(expect.objectContaining({ score_scope: "test" }));
+  });
+
+  // Review: the first check used to go out with an empty pick before the list and the role had loaded.
+  it("asks nothing before the session list has loaded", async () => {
+    const eligibleSessions = vi.fn(() => new Promise<EligibleSession[]>(() => undefined));
+    const gateway = fakeGateway({ eligibleSessions });
+    renderHook(() => useReportBuilder("admin", gateway, 0));
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(gateway.validate).not.toHaveBeenCalled();
+  });
+
+  it("asks nothing while the role is not known", async () => {
+    const gateway = fakeGateway();
+    const { result } = renderHook(() => useReportBuilder(null, gateway, 0));
+    await waitFor(() => expect(result.current.sessions.status).toBe("ready"));
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(gateway.validate).not.toHaveBeenCalled();
   });
 });
