@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { useAsyncResource, type AsyncResource } from "@/hooks/useAsyncResource";
-import type { ReportValidationState } from "@/hooks/useReportValidation";
+import { useReportValidation, type ReportValidationState } from "@/hooks/useReportValidation";
 import {
   allowedScoreScopes,
   canChooseProductLabel,
@@ -22,6 +22,7 @@ import {
   type SelectionProblem,
 } from "@/lib/reports/builder/builderSelection";
 import {
+  chooseScope,
   scopeOptions as scopeOptionsOf,
   validationView,
   type ScopeOption,
@@ -91,7 +92,6 @@ export function useReportBuilder(
   gateway: ReportsGateway = httpReportsGateway,
   validateDelayMs?: number,
 ): ReportBuilder {
-  void validateDelayMs;
   const sessions = useAsyncResource<EligibleSession[]>(
     "report-builder-sessions",
     () => gateway.eligibleSessions("all"),
@@ -109,10 +109,21 @@ export function useReportBuilder(
   const titleProblem = titleProblemOf(title);
   const selectionProblems = selectionProblemsOf(kept);
 
+  // The check asks with the user's own score type, not the one the options switched to: the switch is derived
+  // from the answer, so asking with it would make every switch start another request.
+  const validation = useReportValidation(
+    { session_ids: kept.map((s) => s.session_id), score_scope: choices.scoreScope, measurement_filter: filter },
+    gateway,
+    validateDelayMs,
+  );
+  const view = validationView(validation.verdict);
+  const scopeOptions = scopeOptionsOf(allowedScoreScopes(role), validation.verdict);
+  const scoreScope = chooseScope(choices.scoreScope, scopeOptions);
+
   const body: ReportCreate = {
     title: stripBlank(title),
     session_ids: kept.map((s) => s.session_id),
-    score_scope: choices.scoreScope,
+    score_scope: scoreScope,
     measurement_filter: filter,
     product_label_mode: choices.productLabelMode,
     // Server default. Letting the user choose the report language is PBI-26, not this task.
@@ -125,7 +136,8 @@ export function useReportBuilder(
       outcomeFromError,
     );
   const action = useAsyncAction(create, setOutcome, unusedCreateMessage);
-  const canSubmit = titleProblem === null && selectionProblems.length === 0 && !action.pending;
+  // Create waits for the answer to the latest selection. A failed check does not block: the server checks again.
+  const canSubmit = titleProblem === null && validation.status !== "checking" && !view.blocking && !action.pending;
 
   const toggle = (session: EligibleSession) => {
     setAllPicked((current) => toggleSession(current, session));
@@ -141,10 +153,10 @@ export function useReportBuilder(
     filter,
     setFilter,
     scoreScopes: allowedScoreScopes(role),
-    validation: { verdict: null, status: "checking", message: null, reload: () => undefined },
-    view: validationView(null),
-    scopeOptions: scopeOptionsOf(allowedScoreScopes(role), null),
-    scoreScope: choices.scoreScope,
+    validation,
+    view,
+    scopeOptions,
+    scoreScope,
     setScoreScope: (scoreScope) => setRawChoices((c) => ({ ...c, scoreScope })),
     canChooseLabel: canChooseProductLabel(role),
     productLabelMode: choices.productLabelMode,

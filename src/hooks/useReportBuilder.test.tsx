@@ -197,6 +197,7 @@ describe("useReportBuilder: Create (AC1, AC4, AC13)", () => {
     const { result, gateway } = await readyToCreate();
     act(() => result.current.setScoreScope("dev"));
     act(() => result.current.setProductLabelMode("code"));
+    await validated(result); // a new score type is checked again before Create
 
     await act(async () => result.current.submit());
 

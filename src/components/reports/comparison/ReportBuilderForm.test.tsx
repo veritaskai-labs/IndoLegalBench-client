@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { ReportsGateway } from "@/lib/reports/reportsApi";
-import { eligibleSession } from "@/test/reportFixtures";
+import { eligibleSession, reportValidation } from "@/test/reportFixtures";
 import type { Role } from "@/types";
-import type { EligibleSession, ReportCreateResponse } from "@/types/reports";
+import type { EligibleSession, ReportCreateResponse, ReportValidateRequest } from "@/types/reports";
 
 import { ReportBuilderForm } from "./ReportBuilderForm";
 
@@ -46,6 +46,26 @@ const x1 = eligibleSession({
 });
 const rows = [a1, a2, b1, c1, x1];
 
+// A small stand-in for the server's check: fewer than two products is a violation (POST /reports/validate).
+function answerLikeServer(request: ReportValidateRequest) {
+  const products = new Set(request.session_ids.map((id) => rows.find((r) => r.session_id === id)?.product_id));
+  return Promise.resolve(
+    products.size < 2
+      ? reportValidation({
+          valid: false,
+          violations: [
+            {
+              kind: "selection",
+              code: "NEED_AT_LEAST_TWO_PRODUCTS",
+              message: "Pilih sesi dari minimal dua produk untuk dibandingkan.",
+            },
+          ],
+          available_scopes: [],
+        })
+      : reportValidation(),
+  );
+}
+
 function gatewayWith(overrides: Partial<ReportsGateway> = {}): ReportsGateway {
   return {
     list: vi.fn(),
@@ -53,6 +73,7 @@ function gatewayWith(overrides: Partial<ReportsGateway> = {}): ReportsGateway {
     pdf: vi.fn(),
     eligibleSessions: vi.fn().mockResolvedValue(rows),
     create: vi.fn().mockResolvedValue({ report: { id: "r-1" }, warning: null }),
+    validate: vi.fn(answerLikeServer),
     ...overrides,
   } as ReportsGateway;
 }
@@ -78,6 +99,8 @@ function reportError(status: number, code: string, details: Record<string, unkno
 
 const box = (label: RegExp) => screen.getByRole("checkbox", { name: label });
 const createButton = () => screen.getByRole("button", { name: "Buat laporan" });
+/** Create stays off until the server has answered the latest selection. */
+const createReady = () => waitFor(() => expect(createButton()).toBeEnabled());
 
 /** The row of the "Sesi terpilih" list that holds this session (reasons from the server appear there). */
 function pickedRow(label: string) {
@@ -93,6 +116,7 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Judul laporan"), "  Perbandingan November  ");
   await user.click(box(/Sesi A1/));
   await user.click(box(/Sesi B1/));
+  await createReady();
 }
 
 beforeEach(() => {
@@ -273,9 +297,9 @@ describe("ReportBuilderForm: title and Create", () => {
     await user.type(screen.getByLabelText("Judul laporan"), "Laporan");
     await user.click(box(/Sesi A1/));
     expect(createButton()).toBeDisabled();
-    expect(screen.getByText("Pilih sesi dari minimal dua produk untuk dibandingkan.")).toBeInTheDocument();
+    expect(await screen.findByText("Pilih sesi dari minimal dua produk untuk dibandingkan.")).toBeInTheDocument();
     await user.click(box(/Sesi B1/));
-    expect(createButton()).toBeEnabled();
+    await createReady();
   });
 
   // Edge: a title of spaces passes `length` but the server rejects it. Told after the user leaves the field,
@@ -303,6 +327,7 @@ describe("ReportBuilderForm: title and Create", () => {
     await fillValidForm(user);
     await user.click(screen.getByRole("radio", { name: "Dev + Test" }));
     await user.click(screen.getByRole("radio", { name: "Kode produk" }));
+    await createReady(); // a new score type is checked again before Create
     await user.click(createButton());
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/reports/comparisons/r-1"));
