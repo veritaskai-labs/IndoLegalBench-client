@@ -429,8 +429,8 @@ describe("useReportBuilder: live validation (SCRUM-366, AC1 AC4 AC5 AC13 AC14)",
 
     await new Promise((resolve) => setTimeout(resolve, 30));
 
-    expect(validate).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(validate).mock.calls.map(([req]) => req.score_scope)).toEqual(["test", "dev"]);
+    const forThisPick = vi.mocked(validate).mock.calls.filter(([req]) => req.session_ids.length === 2);
+    expect(forThisPick.map(([req]) => req.score_scope)).toEqual(["test", "dev"]);
   });
 
   // Edge: when the cases allow the user's own choice again, the form goes back to it and Create is on.

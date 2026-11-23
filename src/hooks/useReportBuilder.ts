@@ -34,6 +34,7 @@ import type {
   MeasurementFilter,
   ProductLabelMode,
   ReportCreate,
+  ReportValidation,
   ScoreScope,
 } from "@/types/reports";
 
@@ -101,15 +102,24 @@ export function useReportBuilder(
   const visibleSessions = sessions.status === "ready" ? sessions.data.filter((s) => matchesFilter(s, filter)) : [];
   const titleProblem = titleProblemOf(title);
 
-  // The check asks with the user's own score type, not the one the options switched to: the switch is derived
-  // from the answer, so asking with it would make every switch start another request.
+  // The check asks with the score type the form will actually use. When the user's own choice is not offered, the
+  // form moves to one that is, and that one must be checked too: the answer for the old choice still holds its
+  // violations (the server says NO_SHARED_CASES for a score type the cases do not have), so Create would stay off.
+  // It settles in at most two requests: the offered scope types do not depend on the score type that was asked.
+  // verdictSeen mirrors the last answer so the request can depend on it in the same render (React's "adjust state
+  // while rendering" pattern); both sides are the same object after one extra render, so it cannot loop.
+  const [verdictSeen, setVerdictSeen] = useState<ReportValidation | null>(null);
+  const allowedScopes = allowedScoreScopes(role);
+  const askedScope = chooseScope(choices.scoreScope, scopeOptionsOf(allowedScopes, verdictSeen));
   const validation = useReportValidation(
-    { session_ids: kept.map((s) => s.session_id), score_scope: choices.scoreScope, measurement_filter: filter },
+    { session_ids: kept.map((s) => s.session_id), score_scope: askedScope, measurement_filter: filter },
     gateway,
     validateDelayMs,
+    sessions.status === "ready" && role !== null,
   );
+  if (validation.verdict !== verdictSeen) setVerdictSeen(validation.verdict);
   const view = validationView(validation.verdict);
-  const scopeOptions = scopeOptionsOf(allowedScoreScopes(role), validation.verdict);
+  const scopeOptions = scopeOptionsOf(allowedScopes, validation.verdict);
   const scoreScope = chooseScope(choices.scoreScope, scopeOptions);
 
   const body: ReportCreate = {
