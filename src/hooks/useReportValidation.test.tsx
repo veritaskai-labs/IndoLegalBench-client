@@ -117,13 +117,13 @@ describe("useReportValidation (SCRUM-366, AC1 AC4 AC13)", () => {
     expect(result.current.message).toMatch(/Pemeriksaan/);
   });
 
-  it("explains a 404 as sessions that are gone", async () => {
+  it("tells the user to remove the sessions that are gone on a 404", async () => {
     const validate = vi.fn().mockRejectedValue(new ApiError(404, "REPORT_SESSION_NOT_FOUND"));
 
     const { result } = render(request, { validate });
 
     await waitFor(() => expect(result.current.status).toBe("error"));
-    expect(result.current.message).toMatch(/tidak tersedia/);
+    expect(result.current.message).toMatch(/Lepas sesi yang sudah tidak tersedia/);
   });
 
   it("asks again for the same selection on reload", async () => {
@@ -136,5 +136,23 @@ describe("useReportValidation (SCRUM-366, AC1 AC4 AC13)", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(validate).toHaveBeenCalledTimes(2);
     expect(result.current.verdict).toEqual(verdictA);
+  });
+
+  // Edge: the first check must wait for the session list and the role; before that the pick is empty by default.
+  it("asks nothing while disabled and asks once when enabled", async () => {
+    const gateway = gatewayAnswering(verdictA);
+    const { result, rerender } = renderHook(
+      ({ on }) => useReportValidation(request, gateway, 0, on),
+      { initialProps: { on: false } },
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(gateway.validate).not.toHaveBeenCalled();
+    expect(result.current.status).toBe("checking");
+
+    rerender({ on: true });
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(gateway.validate).toHaveBeenCalledTimes(1);
   });
 });

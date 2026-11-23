@@ -46,7 +46,9 @@ export function useReportValidation(
   request: ReportValidateRequest,
   gateway: Pick<ReportsGateway, "validate">,
   delayMs: number = VALIDATE_DELAY_MS,
+  enabled = true,
 ): ReportValidationState {
+  void enabled;
   const [nonce, setNonce] = useState(0);
   const [settled, setSettled] = useState<Settled | null>(null);
   const latest = useRef({ request, gateway });
