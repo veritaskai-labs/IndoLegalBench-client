@@ -34,6 +34,13 @@ describe("SplitTagBadge", () => {
   });
 
   // Edge
+  it("marks an untagged draft explicitly and retains the prior dev marker", () => {
+    render(<SplitTagBadge tag={null} wasDev />);
+
+    expect(screen.getByText("Belum ditetapkan")).toBeInTheDocument();
+    expect(screen.getByText("pernah dev set")).toBeInTheDocument();
+  });
+
   it("does not repeat the marker while the case is dev again", () => {
     // Act
     render(<SplitTagBadge tag="dev" wasDev />);

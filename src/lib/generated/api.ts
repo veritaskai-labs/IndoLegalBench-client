@@ -338,6 +338,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases/{case_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplikasi kasus menjadi kasus baru berstatus draf
+         * @description PBI-4 AC2 (D8, D9): Kontributor dan Admin menyalin kasus sebagai titik awal kasus baru.
+         *
+         *     Salinan memakai id dan case_code baru (`<kode asal>-SALIN`, lalu `-SALIN-2`, ...),
+         *     berstatus draf, tanpa tag dev/test, dengan origin `duplicate` dan source_case_id kasus asal.
+         *     Salinan kasus dev (atau kasus yang sudah was_dev) ikut ditandai `was_dev`. Tanpa body.
+         */
+        post: operations["duplicate_case_cases__case_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cases/{case_id}/submit-review": {
         parameters: {
             query?: never;
@@ -2537,6 +2561,12 @@ export interface components {
             missing: components["schemas"]["CompletenessIssue"][];
         };
         /**
+         * CaseOrigin
+         * @description Cara kasus masuk ke platform (D8). Kasus lama sebelum PBI-4 semuanya manual.
+         * @enum {string}
+         */
+        CaseOrigin: "manual" | "import" | "duplicate";
+        /**
          * CaseRead
          * @description Full case returned by create, read, and update.
          */
@@ -2557,13 +2587,26 @@ export interface components {
             /** Legal Refs */
             legal_refs: components["schemas"]["LegalRefRead"][];
             answer_criteria: components["schemas"]["AnswerCriteria"];
-            split_tag: components["schemas"]["SplitTag"];
+            /** @description Kosong hanya pada draft hasil impor atau duplikasi (PBI-4 AC2, AC8). Wajib dipilih sebelum diajukan review; selama kosong, kasus tertutup untuk Developer AI. */
+            split_tag: components["schemas"]["SplitTag"] | null;
             status: components["schemas"]["CaseStatus"];
             /**
              * Was Dev
-             * @description Kasus ini pernah berada di dev set (PBI-9 AC3); tidak pernah kembali false
+             * @description Teks kasus ini sudah pernah terlihat Developer AI: kasus pernah berada di dev set (PBI-9 AC3), atau salinan dari kasus seperti itu (PBI-4). Tidak pernah kembali false
              */
             was_dev: boolean;
+            /** @description Cara kasus masuk: manual, import, atau duplicate (D8) */
+            origin: components["schemas"]["CaseOrigin"];
+            /**
+             * Source Case Id
+             * @description Kasus asal bila origin = duplicate
+             */
+            source_case_id?: string | null;
+            /**
+             * Import Batch Id
+             * @description Batch impor CSV bila origin = import
+             */
+            import_batch_id?: string | null;
             /** Completeness Pct */
             completeness_pct: number;
             /** Version */
@@ -2625,8 +2668,11 @@ export interface components {
             case_code: string;
             /** Title */
             title: string;
-            split_tag: components["schemas"]["SplitTag"];
+            /** @description Kosong hanya pada draft hasil impor atau duplikasi (PBI-4 AC2, AC8) */
+            split_tag: components["schemas"]["SplitTag"] | null;
             status: components["schemas"]["CaseStatus"];
+            /** @default manual */
+            origin: components["schemas"]["CaseOrigin"];
             /** Completeness Pct */
             completeness_pct: number;
             /**
@@ -6422,7 +6468,7 @@ export interface components {
             /** Case Code */
             case_code: string;
             /** Split Tag */
-            split_tag: string;
+            split_tag: string | null;
             /** Legal Refs */
             legal_refs: components["schemas"]["LegalRefRead"][];
             /** Answer Criteria */
@@ -7414,6 +7460,64 @@ export interface operations {
                 };
             };
             /** @description Suite tidak aktif (`SUITE_NOT_ACTIVE`), tag kosong (`SPLIT_TAG_REQUIRED`), pola case_code ditolak (`CASE_CODE_INVALID`), atau field wajib kosong (`field`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    duplicate_case_cases__case_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseRead"];
+                };
+            };
+            /** @description Bukan Kontributor atau Admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kasus tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Kode salinan baru saja dipakai salinan lain (`CASE_CODE_TAKEN`); ulangi permintaan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Suite kasus asal sudah tidak aktif (`SUITE_NOT_ACTIVE`). */
             422: {
                 headers: {
                     [name: string]: unknown;

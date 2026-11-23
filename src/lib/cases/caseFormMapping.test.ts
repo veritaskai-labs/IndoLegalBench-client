@@ -426,6 +426,7 @@ function savedLink(overrides: Partial<SavedLink> = {}): SavedLink {
 
 function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
   return {
+    origin: "manual",
     id: "22222222-2222-2222-2222-222222222222",
     suite_id: "11111111-1111-1111-1111-111111111111",
     case_code: "ILB-PT-0142",
@@ -459,6 +460,10 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
 }
 
 describe("fromCaseRead", () => {
+  it("opens an untagged copy without selecting a dev or test tag", () => {
+    expect(fromCaseRead(savedCase({ status: "draft", split_tag: null })).split_tag).toBe("");
+  });
+
   // Positive
   it("fills every form field from a saved case", () => {
     expect(fromCaseRead(savedCase())).toEqual({
