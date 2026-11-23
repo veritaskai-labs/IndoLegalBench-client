@@ -46,7 +46,7 @@ describe("httpReportsGateway.list (GET /reports, D3 step 10)", () => {
       score_scope: report.score_scope,
       has_dev_scores: report.has_dev_scores,
       status: report.status,
-      language: report.language,
+      products: report.products,
       created_by: report.created_by,
       created_at: report.created_at,
     };
@@ -69,7 +69,7 @@ describe("httpReportsGateway.list (GET /reports, D3 step 10)", () => {
       score_scope: "dev_test",
       has_dev_scores: true,
       status: "saved",
-      language: report.language,
+      products: report.products,
       created_by: report.created_by,
       created_at: report.created_at,
     });

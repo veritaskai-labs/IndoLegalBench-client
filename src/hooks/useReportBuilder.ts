@@ -26,6 +26,7 @@ import {
   type ValidationView,
 } from "@/lib/reports/builder/validationView";
 import { outcomeFromError, outcomeFromResponse, type CreateOutcome } from "@/lib/reports/builder/createOutcome";
+import { REPORT_LANGUAGE } from "@/lib/reports/reportLabels";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import { stripBlank } from "@/lib/text";
 import type { Role } from "@/types";
@@ -128,8 +129,8 @@ export function useReportBuilder(
     score_scope: scoreScope,
     measurement_filter: filter,
     product_label_mode: choices.productLabelMode,
-    // Server default. Letting the user choose the report language is PBI-26, not this task.
-    language: "en",
+    // Server default, and the language the web report body uses. Letting the user choose it is PBI-26.
+    language: REPORT_LANGUAGE,
   };
 
   const create = () =>

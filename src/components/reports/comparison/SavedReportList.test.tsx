@@ -15,7 +15,7 @@ function summary(overrides: Partial<ReportSummary> = {}): ReportSummary {
     score_scope: "test",
     has_dev_scores: false,
     status: "saved",
-    language: "en",
+    products: ["AiYU", "DeepSeek"],
     created_by: "user-viewer",
     created_at: "2026-11-19T03:15:00Z",
     ...overrides,
@@ -54,17 +54,41 @@ describe("SavedReportList", () => {
     expect(list).toHaveBeenCalledTimes(2);
   });
 
-  it("shows each report with its scope, status, language and WIB date", async () => {
+  // SCRUM-364 (AC9, AC10): the products compared sit next to the title, and the language column is gone,
+  // because nothing in the app sets the language yet (PBI-26).
+  it("Positif: shows each report with its products, scope, status and WIB date, without a language column", async () => {
     render(
       <SavedReportList
-        gateway={gatewayWith(
-          vi.fn().mockResolvedValue([summary({ score_scope: "dev_test", status: "published", language: "id" })]),
-        )}
+        gateway={gatewayWith(vi.fn().mockResolvedValue([summary({ score_scope: "dev_test", status: "published" })]))}
       />,
     );
     const link = await screen.findByRole("link", { name: "Perbandingan 5 produk, Oktober 2026" });
     const cells = within(link.closest("tr") as HTMLElement).getAllByRole("cell").map((cell) => cell.textContent);
-    expect(cells).toEqual(["Dev + Test", "Terbit", "ID", "19 Nov 2026"]);
+    expect(cells).toEqual(["AiYU, DeepSeek", "Dev + Test", "Terbit", "19 Nov 2026"]);
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Judul",
+      "Produk",
+      "Nilai",
+      "Status",
+      "Dibuat",
+    ]);
+  });
+
+  // SCRUM-364: a long list is cut so the row stays one line, and the full list is one Tab away (tooltip).
+  // Code labels are shown as the server froze them; the list never adds real names (only the detail does, Admin).
+  it("Positif: cuts a long product list and keeps the full list as a tooltip", async () => {
+    const codes = ["Product A", "Product B", "Product C", "Product D", "Product E"];
+    render(<SavedReportList gateway={gatewayWith(vi.fn().mockResolvedValue([summary({ products: codes })]))} />);
+
+    const more = await screen.findByRole("button", { name: "+3 produk lain" });
+    const row = more.closest("tr") as HTMLElement;
+    expect(within(row).getByText("Product A, Product B")).toBeInTheDocument();
+    expect(more).toHaveAccessibleDescription(codes.join(", "));
+  });
+
+  it("Edge: says when a report has no products", async () => {
+    render(<SavedReportList gateway={gatewayWith(vi.fn().mockResolvedValue([summary({ products: [] })]))} />);
+    expect(await screen.findByText("Tidak ada produk")).toBeInTheDocument();
   });
 
   it("lists the newest report first", async () => {

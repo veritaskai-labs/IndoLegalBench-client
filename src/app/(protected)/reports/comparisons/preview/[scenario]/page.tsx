@@ -5,14 +5,17 @@ import { notFound, useParams } from "next/navigation";
 
 import { ReportDocument } from "@/components/reports/comparison/ReportDocument";
 import { devTestReport, firstReport } from "@/test/reportFixtures";
-import type { ReportDetail } from "@/types/reports";
+import type { ReportDetail, ReportLanguage } from "@/types/reports";
 
 /** Skenario data contoh sintetis (L3) dari fixture bersama; bukan hasil pengukuran produk mana pun. */
-const SCENARIOS: Readonly<Record<string, () => ReportDetail>> = {
-  first: () => firstReport(),
-  "first-id": () => firstReport({ language: "id" }),
-  "dev-test": () => devTestReport(),
-  empty: () => firstReport({ sessions: [], case_basis: [] }),
+// Bahasa tidak lagi ada di detail laporan (SCRUM-363), jadi skenario berbahasa Indonesia membawanya sendiri.
+type Scenario = { report: ReportDetail; language?: ReportLanguage };
+
+const SCENARIOS: Readonly<Record<string, () => Scenario>> = {
+  first: () => ({ report: firstReport() }),
+  "first-id": () => ({ report: firstReport(), language: "id" }),
+  "dev-test": () => ({ report: devTestReport(), language: "id" }),
+  empty: () => ({ report: firstReport({ sessions: [], case_basis: [] }) }),
 };
 
 /**
@@ -23,7 +26,7 @@ const SCENARIOS: Readonly<Record<string, () => ReportDetail>> = {
 export default function ReportPreviewPage() {
   const { scenario } = useParams<{ scenario: string }>();
   if (process.env.NODE_ENV !== "development" || !Object.hasOwn(SCENARIOS, scenario)) notFound();
-  const report = SCENARIOS[scenario]();
+  const { report, language } = SCENARIOS[scenario]();
 
   return (
     <div className="space-y-5">
@@ -43,7 +46,7 @@ export default function ReportPreviewPage() {
           </Link>
         ))}
       </nav>
-      <ReportDocument report={report} />
+      <ReportDocument report={report} language={language} />
     </div>
   );
 }

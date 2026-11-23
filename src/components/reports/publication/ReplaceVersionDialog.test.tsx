@@ -78,8 +78,8 @@ describe("ReplaceVersionDialog", () => {
 
     const choice = await dialog.findByRole("combobox", { name: "Laporan pengganti" });
     const options = within(choice).getAllByRole("option").map((option) => option.textContent);
-    // Re-review: same titles are told apart by date and language.
-    expect(options).toEqual(["Pilih laporan…", "Perbandingan November · 19 Nov 2026 · EN"]);
+    // Re-review: same titles are told apart by date. SCRUM-363 dropped the language from the list.
+    expect(options).toEqual(["Pilih laporan…", "Perbandingan November · 19 Nov 2026"]);
     expect(dialog.getByRole("button", { name: "Ganti versi" })).toBeDisabled();
   });
 

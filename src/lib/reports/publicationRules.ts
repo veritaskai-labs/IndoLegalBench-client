@@ -59,9 +59,12 @@ export function replaceOptionLabel(item: Pick<PublishedReportListItem, "title" |
   return `${item.title} (${versionLabel(item.version_no)})`;
 }
 
-/** Pilihan laporan pengganti: judul bisa sama, jadi tanggal dibuat dan bahasa ikut ditulis. */
-export function candidateLabel(report: Pick<ReportSummary, "title" | "created_at" | "language">): string {
-  return `${report.title} · ${formatWibDate(report.created_at)} · ${report.language.toUpperCase()}`;
+/**
+ * Pilihan laporan pengganti: judul bisa sama, jadi tanggal dibuat ikut ditulis. Bahasa tidak lagi dikirim
+ * daftar laporan (SCRUM-363 AC10), dan sampai PBI-26 semua laporan berbahasa sama, jadi tidak membedakan apa pun.
+ */
+export function candidateLabel(report: Pick<ReportSummary, "title" | "created_at">): string {
+  return `${report.title} · ${formatWibDate(report.created_at)}`;
 }
 
 /** AC10: nama sudah dibekukan server menurut aturan PBI-15 (nama asli atau kode); layar tidak mengubahnya. */

@@ -1374,7 +1374,8 @@ export interface paths {
          * @description Semua sesi aktif dengan eligible dan alasannya, supaya halaman tidak menunggu 409.
          *
          *     eligible hanya menilai satu sesi; syarat antar sesi (rubrik, penilai, suite) tetap dicek
-         *     saat POST /reports (PBI-15 AC2, AC4).
+         *     saat POST /reports (PBI-15 AC2, AC4). q, validity, dan product menyaring daftar untuk
+         *     pemilih sesi (SCRUM-361); semuanya digabung dengan AND.
          */
         get: operations["list_eligible_sessions_reports_eligible_sessions_get"];
         put?: never;
@@ -2877,6 +2878,11 @@ export interface components {
              * @description Versi model penilai yang menilai sesi; kosong bila belum dinilai
              */
             judge_model_version: string | null;
+            /**
+             * Case Kinds
+             * @description Jenis kasus di sesi ini: dev, test, atau keduanya; kosong bila tanpa kasus
+             */
+            case_kinds: components["schemas"]["SplitTag"][];
             /** Eligible */
             eligible: boolean;
             /**
@@ -4224,6 +4230,22 @@ export interface components {
             assigned_at: string;
         };
         /**
+         * ProductLabelMappingRead
+         * @description Satu kode produk di laporan mode kode beserta nama aslinya (hanya untuk Admin).
+         */
+        ProductLabelMappingRead: {
+            /**
+             * Label
+             * @description Kode di laporan, mis. Product A
+             */
+            label: string;
+            /**
+             * Real Name
+             * @description Nama asli produk; kosong bila produknya tidak ada
+             */
+            real_name: string | null;
+        };
+        /**
          * ProductLabelMode
          * @description Nama asli atau kode produk, dipilih Admin saat membuat laporan (AC9).
          * @enum {string}
@@ -4702,7 +4724,6 @@ export interface components {
             /** Has Dev Scores */
             has_dev_scores: boolean;
             status: components["schemas"]["ReportStatus"];
-            language: components["schemas"]["ReportLanguage"];
             /**
              * Created By
              * Format: uuid
@@ -4713,6 +4734,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Products
+             * @description Label produk yang dibandingkan, beku di laporan: nama asli atau kode
+             */
+            products: string[];
             measurement_filter: components["schemas"]["MeasurementFilter"];
             /** @default real_name */
             product_label_mode: components["schemas"]["ProductLabelMode"];
@@ -4726,6 +4752,11 @@ export interface components {
             sessions: components["schemas"]["ReportDetailSessionRead"][];
             /** Case Basis */
             case_basis: components["schemas"]["ReportCaseBasisRead"][];
+            /**
+             * Product Mapping
+             * @description Pemetaan kode ke nama asli. Hanya diisi untuk Admin pada laporan mode kode, dijaga di server; selain itu null.
+             */
+            product_mapping?: components["schemas"]["ProductLabelMappingRead"][] | null;
         };
         /**
          * ReportDetailResultRead
@@ -5034,7 +5065,6 @@ export interface components {
             /** Has Dev Scores */
             has_dev_scores: boolean;
             status: components["schemas"]["ReportStatus"];
-            language: components["schemas"]["ReportLanguage"];
             /**
              * Created By
              * Format: uuid
@@ -5045,6 +5075,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Products
+             * @description Label produk yang dibandingkan, beku di laporan: nama asli atau kode
+             */
+            products: string[];
         };
         /**
          * ReportValidateRequest
@@ -5939,6 +5974,11 @@ export interface components {
             id: string;
             status: components["schemas"]["SessionStatus"];
         };
+        /**
+         * SessionValidity
+         * @enum {string}
+         */
+        SessionValidity: "all" | "valid" | "invalid";
         /**
          * SplitTag
          * @description Dataset split stored on a version. Only dev and test are valid.
@@ -10383,6 +10423,12 @@ export interface operations {
             query?: {
                 /** @description Saring sesi otomatis atau manual saja; bawaannya semuanya. */
                 measurement_filter?: components["schemas"]["MeasurementFilter"];
+                /** @description Cari nama sesi, id sesi, atau nama produk; huruf besar/kecil tidak dibedakan. */
+                q?: string | null;
+                /** @description valid: hanya sesi layak. invalid: hanya sesi belum layak. all: semuanya. */
+                validity?: components["schemas"]["SessionValidity"];
+                /** @description Hanya sesi milik produk dengan id ini. */
+                product?: string | null;
             };
             header?: never;
             path?: never;

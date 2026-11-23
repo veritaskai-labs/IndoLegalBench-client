@@ -66,9 +66,6 @@ export default function ComparisonReportPage() {
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
                 {REPORT_STATUS_LABEL[report.data.status]}
               </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">
-                Bahasa laporan: {report.data.language.toUpperCase()}
-              </span>
             </div>
             <ReportPdfActions reportId={report.data.id} />
           </div>

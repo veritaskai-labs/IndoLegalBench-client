@@ -5505,7 +5505,7 @@
           "reports"
         ],
         "summary": "Daftar sesi beserta kelayakannya untuk laporan",
-        "description": "Semua sesi aktif dengan eligible dan alasannya, supaya halaman tidak menunggu 409.\n\neligible hanya menilai satu sesi; syarat antar sesi (rubrik, penilai, suite) tetap dicek\nsaat POST /reports (PBI-15 AC2, AC4).",
+        "description": "Semua sesi aktif dengan eligible dan alasannya, supaya halaman tidak menunggu 409.\n\neligible hanya menilai satu sesi; syarat antar sesi (rubrik, penilai, suite) tetap dicek\nsaat POST /reports (PBI-15 AC2, AC4). q, validity, dan product menyaring daftar untuk\npemilih sesi (SCRUM-361); semuanya digabung dengan AND.",
         "operationId": "list_eligible_sessions_reports_eligible_sessions_get",
         "parameters": [
           {
@@ -5518,6 +5518,55 @@
               "default": "all"
             },
             "description": "Saring sesi otomatis atau manual saja; bawaannya semuanya."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cari nama sesi, id sesi, atau nama produk; huruf besar/kecil tidak dibedakan.",
+              "title": "Q"
+            },
+            "description": "Cari nama sesi, id sesi, atau nama produk; huruf besar/kecil tidak dibedakan."
+          },
+          {
+            "name": "validity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SessionValidity",
+              "description": "valid: hanya sesi layak. invalid: hanya sesi belum layak. all: semuanya.",
+              "default": "all"
+            },
+            "description": "valid: hanya sesi layak. invalid: hanya sesi belum layak. all: semuanya."
+          },
+          {
+            "name": "product",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Hanya sesi milik produk dengan id ini.",
+              "title": "Product"
+            },
+            "description": "Hanya sesi milik produk dengan id ini."
           }
         ],
         "responses": {
@@ -10175,6 +10224,14 @@
             "title": "Judge Model Version",
             "description": "Versi model penilai yang menilai sesi; kosong bila belum dinilai"
           },
+          "case_kinds": {
+            "items": {
+              "$ref": "#/components/schemas/SplitTag"
+            },
+            "type": "array",
+            "title": "Case Kinds",
+            "description": "Jenis kasus di sesi ini: dev, test, atau keduanya; kosong bila tanpa kasus"
+          },
           "eligible": {
             "type": "boolean",
             "title": "Eligible"
@@ -10199,6 +10256,7 @@
           "purpose",
           "status",
           "judge_model_version",
+          "case_kinds",
           "eligible",
           "reasons"
         ],
@@ -12835,6 +12893,34 @@
         "title": "PendingReview",
         "description": "Satu baris antrean dashboard reviewer (PBI-19 AC6, SCRUM-154).\n\nwaiting_since adalah saat round dibuka; antrean diurutkan dari yang\nterlama. assigned_at bisa lebih baru bila reviewer ini pengganti."
       },
+      "ProductLabelMappingRead": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Kode di laporan, mis. Product A"
+          },
+          "real_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Real Name",
+            "description": "Nama asli produk; kosong bila produknya tidak ada"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "real_name"
+        ],
+        "title": "ProductLabelMappingRead",
+        "description": "Satu kode produk di laporan mode kode beserta nama aslinya (hanya untuk Admin)."
+      },
       "ProductLabelMode": {
         "type": "string",
         "enum": [
@@ -13723,9 +13809,6 @@
           "status": {
             "$ref": "#/components/schemas/ReportStatus"
           },
-          "language": {
-            "$ref": "#/components/schemas/ReportLanguage"
-          },
           "created_by": {
             "type": "string",
             "format": "uuid",
@@ -13735,6 +13818,14 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "products": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Products",
+            "description": "Label produk yang dibandingkan, beku di laporan: nama asli atau kode"
           },
           "measurement_filter": {
             "$ref": "#/components/schemas/MeasurementFilter"
@@ -13782,6 +13873,21 @@
             },
             "type": "array",
             "title": "Case Basis"
+          },
+          "product_mapping": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProductLabelMappingRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Mapping",
+            "description": "Pemetaan kode ke nama asli. Hanya diisi untuk Admin pada laporan mode kode, dijaga di server; selain itu null."
           }
         },
         "type": "object",
@@ -13791,9 +13897,9 @@
           "score_scope",
           "has_dev_scores",
           "status",
-          "language",
           "created_by",
           "created_at",
+          "products",
           "measurement_filter",
           "rubric_version_no",
           "judge_model_name",
@@ -14451,9 +14557,6 @@
           "status": {
             "$ref": "#/components/schemas/ReportStatus"
           },
-          "language": {
-            "$ref": "#/components/schemas/ReportLanguage"
-          },
           "created_by": {
             "type": "string",
             "format": "uuid",
@@ -14463,6 +14566,14 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "products": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Products",
+            "description": "Label produk yang dibandingkan, beku di laporan: nama asli atau kode"
           }
         },
         "type": "object",
@@ -14472,9 +14583,9 @@
           "score_scope",
           "has_dev_scores",
           "status",
-          "language",
           "created_by",
-          "created_at"
+          "created_at",
+          "products"
         ],
         "title": "ReportSummary",
         "description": "Satu baris di daftar laporan tersimpan (GET /reports)."
@@ -16270,6 +16381,15 @@
         ],
         "title": "SessionUnarchiveResponse",
         "description": "Hasil unarchive. Sesinya tampil lagi di GET /measurements, status tidak berubah (AC10)."
+      },
+      "SessionValidity": {
+        "type": "string",
+        "enum": [
+          "all",
+          "valid",
+          "invalid"
+        ],
+        "title": "SessionValidity"
       },
       "SplitTag": {
         "type": "string",
