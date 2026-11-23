@@ -4,9 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { ReportsGateway } from "@/lib/reports/reportsApi";
-import { eligibleSession } from "@/test/reportFixtures";
+import { SCOPE_UNAVAILABLE } from "@/lib/reports/builder/validationView";
+import { eligibleSession, reportValidation } from "@/test/reportFixtures";
 import type { Role } from "@/types";
-import type { EligibleSession, ReportCreateResponse } from "@/types/reports";
+import type {
+  EligibleSession,
+  ReportCreateResponse,
+  ReportValidateRequest,
+  ReportValidation,
+} from "@/types/reports";
 
 import { ReportBuilderForm } from "./ReportBuilderForm";
 
@@ -46,6 +52,26 @@ const x1 = eligibleSession({
 });
 const rows = [a1, a2, b1, c1, x1];
 
+// A small stand-in for the server's check: fewer than two products is a violation (POST /reports/validate).
+function answerLikeServer(request: ReportValidateRequest) {
+  const products = new Set(request.session_ids.map((id) => rows.find((r) => r.session_id === id)?.product_id));
+  return Promise.resolve(
+    products.size < 2
+      ? reportValidation({
+          valid: false,
+          violations: [
+            {
+              kind: "selection",
+              code: "NEED_AT_LEAST_TWO_PRODUCTS",
+              message: "Pilih sesi dari minimal dua produk untuk dibandingkan.",
+            },
+          ],
+          available_scopes: [],
+        })
+      : reportValidation(),
+  );
+}
+
 function gatewayWith(overrides: Partial<ReportsGateway> = {}): ReportsGateway {
   return {
     list: vi.fn(),
@@ -53,6 +79,7 @@ function gatewayWith(overrides: Partial<ReportsGateway> = {}): ReportsGateway {
     pdf: vi.fn(),
     eligibleSessions: vi.fn().mockResolvedValue(rows),
     create: vi.fn().mockResolvedValue({ report: { id: "r-1" }, warning: null }),
+    validate: vi.fn(answerLikeServer),
     ...overrides,
   } as ReportsGateway;
 }
@@ -78,6 +105,8 @@ function reportError(status: number, code: string, details: Record<string, unkno
 
 const box = (label: RegExp) => screen.getByRole("checkbox", { name: label });
 const createButton = () => screen.getByRole("button", { name: "Buat laporan" });
+/** Create stays off until the server has answered the latest selection. */
+const createReady = () => waitFor(() => expect(createButton()).toBeEnabled());
 
 /** The row of the "Sesi terpilih" list that holds this session (reasons from the server appear there). */
 function pickedRow(label: string) {
@@ -93,6 +122,7 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Judul laporan"), "  Perbandingan November  ");
   await user.click(box(/Sesi A1/));
   await user.click(box(/Sesi B1/));
+  await createReady();
 }
 
 beforeEach(() => {
@@ -196,15 +226,6 @@ describe("ReportBuilderForm: the session picker (AC1, AC4, AC5)", () => {
     expect(screen.getByText(/tidak ikut karena filter/)).toHaveTextContent("Produk A · Sesi A1");
   });
 
-  // Edge (AC13 b): different judges are warned about before Create; the server still decides.
-  it("warns when picked sessions were graded by different judges", async () => {
-    const { user } = await renderReady();
-    await user.click(box(/Sesi A1/));
-    expect(screen.queryByText(/LLM judge yang berbeda/)).not.toBeInTheDocument();
-    await user.click(box(/Sesi C1/));
-    expect(screen.getByText(/LLM judge yang berbeda/)).toBeInTheDocument();
-  });
-
   // Edge: a picked session can always be removed from the "Sesi terpilih" list, even when the filter hides it
   // or a reload no longer lists it (404 missing). Otherwise the user is stuck with a session they can't see.
   it("lets the user remove a picked session from the picked list", async () => {
@@ -276,9 +297,9 @@ describe("ReportBuilderForm: title and Create", () => {
     await user.type(screen.getByLabelText("Judul laporan"), "Laporan");
     await user.click(box(/Sesi A1/));
     expect(createButton()).toBeDisabled();
-    expect(screen.getByText("Pilih sesi dari minimal dua produk untuk dibandingkan.")).toBeInTheDocument();
+    expect(await screen.findByText("Pilih sesi dari minimal dua produk untuk dibandingkan.")).toBeInTheDocument();
     await user.click(box(/Sesi B1/));
-    expect(createButton()).toBeEnabled();
+    await createReady();
   });
 
   // Edge: a title of spaces passes `length` but the server rejects it. Told after the user leaves the field,
@@ -306,6 +327,7 @@ describe("ReportBuilderForm: title and Create", () => {
     await fillValidForm(user);
     await user.click(screen.getByRole("radio", { name: "Dev + Test" }));
     await user.click(screen.getByRole("radio", { name: "Kode produk" }));
+    await createReady(); // a new score type is checked again before Create
     await user.click(createButton());
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/reports/comparisons/r-1"));
@@ -444,6 +466,138 @@ describe("ReportBuilderForm: answers of POST /reports", () => {
     await screen.findByRole("alert");
     await user.click(box(/Sesi C1/));
     expect(screen.queryByText("Laporan gagal dibuat. Coba lagi.")).not.toBeInTheDocument();
+  });
+});
+
+// SCRUM-366: the page shows the server's check while the sessions are picked, not after Create. The rules are the
+// server's (tested there); these tests check that every answer shows next to the thing it is about.
+describe("ReportBuilderForm: live validation (SCRUM-366)", () => {
+  const rubric = { kind: "requirement", code: "RUBRIC_VERSION", message: "Versi rubrik sesi terpilih berbeda." } as const;
+  const slice = { kind: "case_slice", code: "NO_SHARED_CASES", message: "Sesi terpilih tidak punya kasus yang sama." } as const;
+  const cancelled = { kind: "session", code: "SESSION_CANCELLED", message: "Sesi ini dibatalkan.", session_id: "b-1" } as const;
+
+  const answering = (verdict: ReportValidation) => gatewayWith({ validate: vi.fn().mockResolvedValue(verdict) });
+
+  async function pickTwo(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(box(/Sesi A1/));
+    await user.click(box(/Sesi B1/));
+  }
+
+  // AC1 AC13: all problems at once, before anyone clicks Create.
+  it("shows every violation as soon as the sessions are picked and keeps Create off", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [rubric, slice] })));
+
+    await pickTwo(user);
+
+    expect(await screen.findByText(rubric.message)).toBeInTheDocument();
+    expect(screen.getByText(slice.message)).toBeInTheDocument();
+    expect(createButton()).toBeDisabled();
+  });
+
+  // AC4: a session that cannot be used is explained on its own row.
+  it("shows a session violation on that session's row", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [cancelled] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    expect(await within(row).findByText(cancelled.message)).toBeInTheDocument();
+    expect(within(pickedRow("Produk A · Sesi A1")).queryByText(cancelled.message)).not.toBeInTheDocument();
+  });
+
+  // AC5: warnings inform, they do not stop Create.
+  it("shows a warning without turning Create off", async () => {
+    const warning = { code: "REPETITIONS_DIFFER", message: "Jumlah percobaan sesi berbeda." };
+    const { user } = await renderReady(answering(reportValidation({ warnings: [warning] })));
+
+    await fillValidForm(user);
+
+    expect(await screen.findByText(warning.message)).toBeInTheDocument();
+    expect(createButton()).toBeEnabled();
+  });
+
+  // AC14: a score type the picked cases cannot give is off, with the reason beside it.
+  it("disables a score type the server does not offer and gives the reason", async () => {
+    const { user } = await renderReady(answering(reportValidation({ available_scopes: ["test"] })));
+
+    await pickTwo(user);
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Dev" })).toBeDisabled());
+    expect(screen.getByRole("radio", { name: "Dev" })).toHaveAccessibleDescription(SCOPE_UNAVAILABLE.dev);
+    expect(screen.getByRole("radio", { name: "Test" })).toBeEnabled();
+  });
+
+  // AC14: the picked cases are dev only, so the active Test choice moves to Dev by itself.
+  it("moves the active score type to one that is available", async () => {
+    const { user } = await renderReady(answering(reportValidation({ available_scopes: ["dev"] })));
+
+    await pickTwo(user);
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Dev" })).toBeChecked());
+    expect(screen.getByRole("radio", { name: "Test" })).not.toBeChecked();
+    expect(screen.getByRole("radio", { name: "Test" })).toBeDisabled();
+  });
+
+  // Edge: Create must not look ready while the latest selection is still being checked.
+  it("says it is checking and keeps Create off until the answer arrives", async () => {
+    const waiting = gatewayWith({ validate: vi.fn(() => new Promise<ReportValidation>(() => {})) });
+    const { user } = await renderReady(waiting);
+    await user.type(screen.getByLabelText("Judul laporan"), "Laporan");
+
+    await pickTwo(user);
+
+    expect(await screen.findByText("Memeriksa pilihan…")).toBeInTheDocument();
+    expect(createButton()).toBeDisabled();
+  });
+
+  // Accessibility: a screen reader should hear the result of a check, not "Memeriksa pilihan" after every click.
+  it("does not announce the checking note", async () => {
+    const waiting = gatewayWith({ validate: vi.fn(() => new Promise<ReportValidation>(() => {})) });
+    const { user } = await renderReady(waiting);
+
+    await user.click(box(/Sesi A1/));
+
+    expect((await screen.findByText("Memeriksa pilihan…")).closest("[aria-live]")).toBeNull();
+  });
+
+  it("announces the result of a check", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [rubric] })));
+
+    await user.click(box(/Sesi A1/));
+
+    const violation = await screen.findByText(rubric.message);
+    expect(violation.closest("[aria-live]")).toHaveAttribute("aria-live", "polite");
+  });
+
+  // Negative: the check itself fails. The user can retry, and Create stays on because the server checks again.
+  it("shows a failed check with a retry and keeps Create on", async () => {
+    const validate = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(500, "X"))
+      .mockResolvedValue(reportValidation());
+    const { user } = await renderReady(gatewayWith({ validate }));
+    await fillValidForm(user);
+
+    expect(await screen.findByText(/Pemeriksaan pilihan gagal/)).toBeInTheDocument();
+    expect(createButton()).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Periksa lagi" }));
+
+    // The quick picks were one request, then the retry; the failure note goes once the retry has answered.
+    await waitFor(() => expect(validate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText(/Pemeriksaan pilihan gagal/)).not.toBeInTheDocument());
+  });
+
+  // The old local message about judges is gone: the same fact now comes from the server as a violation.
+  it("does not warn about judges by itself", async () => {
+    const { user } = await renderReady();
+    await user.type(screen.getByLabelText("Judul laporan"), "Laporan");
+
+    await user.click(box(/Sesi A1/));
+    await user.click(box(/Sesi C1/));
+
+    await createReady();
+    expect(screen.queryByText(/LLM judge yang berbeda/)).not.toBeInTheDocument();
   });
 });
 

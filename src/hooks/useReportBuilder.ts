@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { useAsyncResource, type AsyncResource } from "@/hooks/useAsyncResource";
+import { useReportValidation, type ReportValidationState } from "@/hooks/useReportValidation";
 import {
   allowedScoreScopes,
   canChooseProductLabel,
@@ -12,13 +13,14 @@ import {
   type BuilderChoices,
   type TitleProblem,
 } from "@/lib/reports/builder/builderRules";
+import { applyFilter, toggleSession } from "@/lib/reports/builder/builderSelection";
 import {
-  applyFilter,
-  judgeDiffers,
-  selectionProblems as selectionProblemsOf,
-  toggleSession,
-  type SelectionProblem,
-} from "@/lib/reports/builder/builderSelection";
+  chooseScope,
+  scopeOptions as scopeOptionsOf,
+  validationView,
+  type ScopeOption,
+  type ValidationView,
+} from "@/lib/reports/builder/validationView";
 import {
   productOptions as productOptionsOf,
   searchSessions,
@@ -35,6 +37,7 @@ import type {
   MeasurementFilter,
   ProductLabelMode,
   ReportCreate,
+  ReportValidation,
   ScoreScope,
 } from "@/types/reports";
 
@@ -64,7 +67,10 @@ export interface ReportBuilder {
   toggle: (session: EligibleSession) => void;
   filter: MeasurementFilter;
   setFilter: (filter: MeasurementFilter) => void;
-  scoreScopes: readonly ScoreScope[];
+  /** Live answer of POST /reports/validate for the picked sessions (SCRUM-366). */
+  validation: ReportValidationState;
+  view: ValidationView;
+  scopeOptions: ScopeOption[];
   scoreScope: ScoreScope;
   setScoreScope: (scope: ScoreScope) => void;
   canChooseLabel: boolean;
@@ -73,9 +79,6 @@ export interface ReportBuilder {
   title: string;
   setTitle: (title: string) => void;
   titleProblem: TitleProblem | null;
-  selectionProblems: SelectionProblem[];
-  /** Picked sessions were graded by different judges (AC13 b): warn, the server decides. */
-  judgeWarning: boolean;
   canSubmit: boolean;
   submitting: boolean;
   submit: () => Promise<void>;
@@ -95,7 +98,11 @@ const unusedCreateMessage = () => "";
  * filter change never hides a picked session without saying so. Role-dependent options are derived on every
  * render (normalizeChoices), so a role change can never leave a forbidden choice in the request.
  */
-export function useReportBuilder(role: Role | null, gateway: ReportsGateway = httpReportsGateway): ReportBuilder {
+export function useReportBuilder(
+  role: Role | null,
+  gateway: ReportsGateway = httpReportsGateway,
+  validateDelayMs?: number,
+): ReportBuilder {
   const sessions = useAsyncResource<EligibleSession[]>(
     "report-builder-sessions",
     () => gateway.eligibleSessions("all"),
@@ -117,12 +124,31 @@ export function useReportBuilder(role: Role | null, gateway: ReportsGateway = ht
   const loaded = sessions.status === "ready" ? sessions.data : [];
   const found = searchSessions(loaded, { measurement: filter, query, tab, productIds });
   const titleProblem = titleProblemOf(title);
-  const selectionProblems = selectionProblemsOf(kept);
+
+  // The check asks with the score type the form will actually use. When the user's own choice is not offered, the
+  // form moves to one that is, and that one must be checked too: the answer for the old choice still holds its
+  // violations (the server says NO_SHARED_CASES for a score type the cases do not have), so Create would stay off.
+  // It settles in at most two requests: the offered scope types do not depend on the score type that was asked.
+  // verdictSeen mirrors the last answer so the request can depend on it in the same render (React's "adjust state
+  // while rendering" pattern); both sides are the same object after one extra render, so it cannot loop.
+  const [verdictSeen, setVerdictSeen] = useState<ReportValidation | null>(null);
+  const allowedScopes = allowedScoreScopes(role);
+  const askedScope = chooseScope(choices.scoreScope, scopeOptionsOf(allowedScopes, verdictSeen));
+  const validation = useReportValidation(
+    { session_ids: kept.map((s) => s.session_id), score_scope: askedScope, measurement_filter: filter },
+    gateway,
+    validateDelayMs,
+    sessions.status === "ready" && role !== null,
+  );
+  if (validation.verdict !== verdictSeen) setVerdictSeen(validation.verdict);
+  const view = validationView(validation.verdict);
+  const scopeOptions = scopeOptionsOf(allowedScopes, validation.verdict);
+  const scoreScope = chooseScope(choices.scoreScope, scopeOptions);
 
   const body: ReportCreate = {
     title: stripBlank(title),
     session_ids: kept.map((s) => s.session_id),
-    score_scope: choices.scoreScope,
+    score_scope: scoreScope,
     measurement_filter: filter,
     product_label_mode: choices.productLabelMode,
     // Server default, and the language the web report body uses. Letting the user choose it is PBI-26.
@@ -135,7 +161,8 @@ export function useReportBuilder(role: Role | null, gateway: ReportsGateway = ht
       outcomeFromError,
     );
   const action = useAsyncAction(create, setOutcome, unusedCreateMessage);
-  const canSubmit = titleProblem === null && selectionProblems.length === 0 && !action.pending;
+  // Create waits for the answer to the latest selection. A failed check does not block: the server checks again.
+  const canSubmit = titleProblem === null && validation.status !== "checking" && !view.blocking && !action.pending;
 
   const toggle = (session: EligibleSession) => {
     setAllPicked((current) => toggleSession(current, session));
@@ -165,8 +192,10 @@ export function useReportBuilder(role: Role | null, gateway: ReportsGateway = ht
     toggle,
     filter,
     setFilter,
-    scoreScopes: allowedScoreScopes(role),
-    scoreScope: choices.scoreScope,
+    validation,
+    view,
+    scopeOptions,
+    scoreScope,
     setScoreScope: (scoreScope) => setRawChoices((c) => ({ ...c, scoreScope })),
     canChooseLabel: canChooseProductLabel(role),
     productLabelMode: choices.productLabelMode,
@@ -174,8 +203,6 @@ export function useReportBuilder(role: Role | null, gateway: ReportsGateway = ht
     title,
     setTitle,
     titleProblem,
-    selectionProblems,
-    judgeWarning: judgeDiffers(kept),
     canSubmit,
     submitting: action.pending,
     submit: async () => {

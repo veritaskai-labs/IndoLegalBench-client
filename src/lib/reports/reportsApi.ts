@@ -7,6 +7,8 @@ import type {
   ReportCreateResponse,
   ReportDetail,
   ReportSummary,
+  ReportValidateRequest,
+  ReportValidation,
 } from "@/types/reports";
 
 /** silentForbidden: laporan tersimpan milik orang lain hanya untuk Admin (D9); halaman menjelaskannya sendiri tanpa /forbidden. */
@@ -21,6 +23,8 @@ export interface ReportsGateway {
   eligibleSessions(filter: MeasurementFilter): Promise<EligibleSession[]>;
   /** Buat laporan (PBI-15 AC1). 200 tanpa laporan berarti NO_SHARED_CASES, tidak ada yang disimpan. */
   create(body: ReportCreate): Promise<ReportCreateResponse>;
+  /** Periksa pilihan sesi tanpa menyimpan: semua pelanggaran, peringatan, dan jenis nilai yang tersedia (SCRUM-366). */
+  validate(body: ReportValidateRequest): Promise<ReportValidation>;
 }
 
 function reportPath(reportId: string): string {
@@ -40,6 +44,13 @@ export const httpReportsGateway: ReportsGateway = {
   // silentForbidden: a refused score type or label (AC9, AC14) is explained on the builder page itself.
   create: (body) =>
     apiFetch<ReportCreateResponse>("/reports", {
+      method: "POST",
+      body: JSON.stringify(body),
+      silentForbidden: true,
+    }),
+  // silentForbidden: a refused score type (AC14) is explained on the builder page itself.
+  validate: (body) =>
+    apiFetch<ReportValidation>("/reports/validate", {
       method: "POST",
       body: JSON.stringify(body),
       silentForbidden: true,

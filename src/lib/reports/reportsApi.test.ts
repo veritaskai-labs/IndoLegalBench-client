@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, onForbidden } from "@/lib/apiClient";
-import { eligibleSession, firstReport } from "@/test/reportFixtures";
-import type { ReportCreate, ReportSummary } from "@/types/reports";
+import { eligibleSession, firstReport, reportValidation } from "@/test/reportFixtures";
+import type { ReportCreate, ReportSummary, ReportValidateRequest } from "@/types/reports";
 
 import { outcomeFromError } from "./builder/createOutcome";
 import { httpReportsGateway } from "./reportsApi";
@@ -227,5 +227,57 @@ describe("httpReportsGateway.create (POST /reports, SCRUM-321 / PBI-15 AC1)", ()
     });
 
     expect(outcome).toEqual({ kind: "sessions_missing", sessionIds: ["s-2"] });
+  });
+});
+
+// SCRUM-366: the builder asks the server to check the picked sessions every time the selection changes.
+describe("httpReportsGateway.validate (POST /reports/validate, SCRUM-366)", () => {
+  const body: ReportValidateRequest = {
+    session_ids: ["s-1", "s-2"],
+    score_scope: "dev",
+    measurement_filter: "automatic",
+  };
+
+  it("sends the selection as JSON in one POST and returns the server's verdict", async () => {
+    const verdict = reportValidation({
+      valid: false,
+      violations: [{ kind: "requirement", code: "RUBRIC_VERSION", message: "Versi rubrik berbeda." }],
+      available_scopes: ["test"],
+    });
+    fetchMock.mockResolvedValue(fakeResponse(200, verdict));
+
+    await expect(httpReportsGateway.validate(body)).resolves.toEqual(verdict);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/reports\/validate$/);
+    expect(init).toMatchObject({ method: "POST", credentials: "include" });
+    expect(JSON.parse(init.body)).toEqual(body);
+  });
+
+  // Edge: an empty or one-session pick is a normal question for the server, not an error.
+  it("sends an empty selection without failing", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, reportValidation({ valid: false })));
+
+    await httpReportsGateway.validate({ ...body, session_ids: [] });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).session_ids).toEqual([]);
+  });
+
+  // Negative: the page explains a refused score type itself, so a 403 must not jump to /forbidden.
+  it("rejects a 403 REPORT_SCOPE_FORBIDDEN without redirecting to /forbidden", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "REPORT_SCOPE_FORBIDDEN", message: "x" }));
+    const forbidden = listenForbidden();
+
+    await expect(httpReportsGateway.validate(body)).rejects.toMatchObject({
+      status: 403,
+      code: "REPORT_SCOPE_FORBIDDEN",
+    });
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it("rejects a 404 REPORT_SESSION_NOT_FOUND with the missing ids", async () => {
+    fetchMock.mockResolvedValue(
+      fakeResponse(404, { code: "REPORT_SESSION_NOT_FOUND", message: "x", session_ids: ["s-2"] }),
+    );
+
+    await expect(httpReportsGateway.validate(body)).rejects.toMatchObject({ status: 404 });
   });
 });

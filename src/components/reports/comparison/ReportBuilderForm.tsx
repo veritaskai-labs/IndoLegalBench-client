@@ -14,9 +14,12 @@ import { REPORT_TITLE_MAX, type TitleProblem } from "@/lib/reports/builder/build
 import type { CreateOutcome, ForbiddenCode } from "@/lib/reports/builder/createOutcome";
 import { reasonText } from "@/lib/reports/builder/reasonText";
 import type { SessionTab } from "@/lib/reports/builder/sessionSearch";
+import type { ScopeOption } from "@/lib/reports/builder/validationView";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import type { EligibleSession, MeasurementFilter, ProductLabelMode } from "@/types/reports";
+
+import { ValidationPanel } from "./ValidationPanel";
 
 const FILTER_OPTIONS: ReadonlyArray<readonly [MeasurementFilter, string]> = [
   ["all", "Semua"],
@@ -68,6 +71,17 @@ function Badge({ children, tone }: Readonly<{ children: string; tone: "slate" | 
   return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${colors}`}>{children}</span>;
 }
 
+interface RadioOption<T extends string> {
+  value: T;
+  label: string;
+  disabled?: boolean;
+  /** Keterangan untuk opsi yang nonaktif; dibacakan sebagai deskripsi radio. */
+  reason?: string | null;
+}
+
+const plain = <T extends string>(options: ReadonlyArray<readonly [T, string]>): RadioOption<T>[] =>
+  options.map(([value, label]) => ({ value, label }));
+
 function RadioGroup<T extends string>({
   legend,
   name,
@@ -77,7 +91,7 @@ function RadioGroup<T extends string>({
 }: Readonly<{
   legend: string;
   name: string;
-  options: ReadonlyArray<readonly [T, string]>;
+  options: ReadonlyArray<RadioOption<T>>;
   value: T;
   onChange: (value: T) => void;
 }>) {
@@ -85,22 +99,43 @@ function RadioGroup<T extends string>({
     <fieldset className="space-y-2">
       <legend className={LEGEND}>{legend}</legend>
       <div className="flex flex-wrap gap-4">
-        {options.map(([option, text]) => (
-          <label key={option} className="flex items-center gap-2 text-sm text-slate-800">
-            <input
-              type="radio"
-              name={name}
-              value={option}
-              checked={value === option}
-              onChange={() => onChange(option)}
-            />
-            {text}
-          </label>
-        ))}
+        {options.map((option) => {
+          const reasonId = `${name}-${option.value}-reason`;
+          return (
+            <div key={option.value} className="space-y-0.5">
+              <label
+                className={`flex items-center gap-2 text-sm ${option.disabled ? "text-slate-400" : "text-slate-800"}`}
+              >
+                <input
+                  type="radio"
+                  name={name}
+                  value={option.value}
+                  checked={value === option.value}
+                  disabled={option.disabled}
+                  aria-describedby={option.reason ? reasonId : undefined}
+                  onChange={() => onChange(option.value)}
+                />
+                {option.label}
+              </label>
+              {option.reason && (
+                <p id={reasonId} className="pl-6 text-xs text-slate-500">
+                  {option.reason}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </fieldset>
   );
 }
+
+const scopeRadio = (option: ScopeOption): RadioOption<ScopeOption["scope"]> => ({
+  value: option.scope,
+  label: SCORE_SCOPE_LABEL[option.scope],
+  disabled: option.disabled,
+  reason: option.reason,
+});
 
 /** Dropdown filter produk (SCRUM-365): bisa memilih lebih dari satu; tidak memilih apa pun berarti semua produk. */
 function ProductFilter({ builder }: Readonly<{ builder: ReportBuilder }>) {
@@ -217,10 +252,16 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
 }
 
 /** Reasons the last Create gave for one picked session (409 ineligible, 404 missing). */
-function sessionProblems(outcome: CreateOutcome | null, sessionId: string): string[] {
+function createProblems(outcome: CreateOutcome | null, sessionId: string): string[] {
   if (outcome?.kind === "not_comparable") return (outcome.ineligible[sessionId] ?? []).map(reasonText);
   if (outcome?.kind === "sessions_missing" && outcome.sessionIds.includes(sessionId)) return [MISSING_ROW];
   return [];
+}
+
+/** What the live check said about this session now, then what the last Create said (no repeats). */
+function sessionProblems(builder: ReportBuilder, sessionId: string): string[] {
+  const live = (builder.view.bySession.get(sessionId) ?? []).map((violation) => violation.message);
+  return [...new Set([...live, ...createProblems(builder.outcome, sessionId)])];
 }
 
 function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
@@ -240,7 +281,7 @@ function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
               Lepas <span className="sr-only">{sessionName(session)}</span>
             </button>
           </div>
-          {sessionProblems(builder.outcome, session.session_id).map((text) => (
+          {sessionProblems(builder, session.session_id).map((text) => (
             <p key={text} className="text-red-700">
               {text}
             </p>
@@ -350,7 +391,7 @@ function BuilderForm({ builder }: Readonly<{ builder: ReportBuilder }>) {
         <RadioGroup
           legend="Jenis pengukuran"
           name="measurement-filter"
-          options={FILTER_OPTIONS}
+          options={plain(FILTER_OPTIONS)}
           value={builder.filter}
           onChange={builder.setFilter}
         />
@@ -361,24 +402,14 @@ function BuilderForm({ builder }: Readonly<{ builder: ReportBuilder }>) {
             {`${builder.dropped.length} sesi terpilih tidak ikut karena filter: ${builder.dropped.map(sessionName).join(", ")}.`}
           </p>
         )}
-        {builder.selectionProblems.map((problem) => (
-          <p key={problem} className="text-sm text-slate-600">
-            {reasonText(problem)}
-          </p>
-        ))}
-        {builder.judgeWarning && (
-          <p className={NOTE}>
-            Sesi terpilih dinilai oleh LLM judge yang berbeda, jadi perbandingan kemungkinan ditolak. Pilih sesi dengan
-            judge yang sama.
-          </p>
-        )}
+        <ValidationPanel builder={builder} />
       </div>
 
       <div className={CARD}>
         <RadioGroup
           legend="Jenis nilai"
           name="score-scope"
-          options={builder.scoreScopes.map((scope) => [scope, SCORE_SCOPE_LABEL[scope]] as const)}
+          options={builder.scopeOptions.map(scopeRadio)}
           value={builder.scoreScope}
           onChange={builder.setScoreScope}
         />
@@ -386,7 +417,7 @@ function BuilderForm({ builder }: Readonly<{ builder: ReportBuilder }>) {
           <RadioGroup
             legend="Label produk"
             name="product-label"
-            options={LABEL_OPTIONS}
+            options={plain(LABEL_OPTIONS)}
             value={builder.productLabelMode}
             onChange={builder.setProductLabelMode}
           />
