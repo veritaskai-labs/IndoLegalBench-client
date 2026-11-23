@@ -92,6 +92,7 @@ describe("ReportPublishActions", () => {
       pdf: vi.fn(),
       eligibleSessions: vi.fn(),
       create: vi.fn(),
+      validate: vi.fn(),
     };
     render(
       <ReportPublishActions

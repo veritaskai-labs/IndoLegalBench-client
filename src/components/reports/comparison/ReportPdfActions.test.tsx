@@ -22,6 +22,7 @@ function gatewayWith(pdf: ReportsGateway["pdf"]): ReportsGateway {
     pdf,
     eligibleSessions: vi.fn(),
     create: vi.fn(),
+    validate: vi.fn(),
   };
 }
 

@@ -33,6 +33,7 @@ function gateways({
     pdf: vi.fn(),
     eligibleSessions: vi.fn(),
     create: vi.fn(),
+    validate: vi.fn(),
   };
   return { publication, saved };
 }
