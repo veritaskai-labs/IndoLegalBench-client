@@ -24,18 +24,20 @@ describe("BarChart", () => {
     render(<BarChart groups={groups} />);
 
     const veritask = screen.getByRole("group", { name: "Veritask" });
-    expect(within(veritask).getByRole("img", { name: "Deterministic score 0.85" })).toBeInTheDocument();
-    expect(within(veritask).getByRole("img", { name: "LLM judge score 0.50" })).toBeInTheDocument();
+    const bar = within(veritask).getByRole("meter", { name: "Deterministic score 0.85" });
+    expect(bar).toHaveAttribute("value", "0.85");
+    expect(bar).toHaveAttribute("min", "0");
+    expect(bar).toHaveAttribute("max", "1");
+    expect(within(veritask).getByRole("meter", { name: "LLM judge score 0.50" })).toBeInTheDocument();
   });
 
   it("sizes each bar to its score and colours it by series", () => {
     render(<BarChart groups={groups} />);
 
-    const deterministic = screen.getByRole("img", { name: "Deterministic score 0.85" });
-    const fill = deterministic.firstElementChild as HTMLElement;
+    const fill = screen.getByTestId("fill-Veritask-deterministic");
     expect(fill).toHaveStyle({ width: "85%" });
     expect(fill).toHaveClass("bg-chart-deterministic");
-    const llm = screen.getByRole("img", { name: "LLM judge score 0.50" }).firstElementChild as HTMLElement;
+    const llm = screen.getByTestId("fill-Veritask-llm");
     expect(llm).toHaveClass("bg-chart-llm");
     expect(llm).toHaveStyle({ width: "50%" });
   });
@@ -43,8 +45,9 @@ describe("BarChart", () => {
   it("shows a dash and no fill when a score is missing", () => {
     render(<BarChart groups={groups} />);
 
-    const missing = screen.getByRole("img", { name: "LLM judge score –" });
-    expect(missing.firstElementChild).toHaveStyle({ width: "0%" });
+    expect(screen.getByText("LLM judge score –", { selector: ".sr-only" })).toBeInTheDocument();
+    expect(screen.queryByRole("meter", { name: "LLM judge score –" })).toBeNull();
+    expect(screen.getByTestId("fill-Justisio-llm")).toHaveStyle({ width: "0%" });
   });
 
   it("prints the legend and the 0 to 1 axis", () => {
