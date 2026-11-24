@@ -707,15 +707,16 @@ describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () =>
       expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
-    it("Positif: is reached with Tab right before the search bar", async () => {
+    // Tab from the measurement radios until one of the two toolbar controls has focus: it must be the filter.
+    // (Not Shift+Tab from the search: jsdom keeps the checkboxes of a closed <details> focusable, browsers do not.)
+    it("Positif: is reached with Tab before the search bar", async () => {
       const { user } = await renderReady();
+      const toolbar = [filterButton(), searchBar()];
 
-      await user.click(searchBar());
-      await user.tab({ shift: true });
+      screen.getByRole("radio", { name: "Semua" }).focus();
+      for (let i = 0; i < 5 && !toolbar.includes(document.activeElement as HTMLElement); i += 1) await user.tab();
+
       expect(filterButton()).toHaveFocus();
-
-      await user.tab();
-      expect(searchBar()).toHaveFocus();
     });
 
     // The icon is drawn in the page (no icon library) and is decoration only: a screen reader reads the label.
@@ -724,7 +725,8 @@ describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () =>
 
       const button = filterButton();
       const icons = button.querySelectorAll("svg");
-      expect(button.firstElementChild?.tagName.toLowerCase()).toBe("svg");
+      // firstChild, not firstElementChild: the icon must come before the label text node.
+      expect(button.firstChild?.nodeName.toLowerCase()).toBe("svg");
       expect(icons.length).toBeGreaterThan(0);
       for (const icon of icons) {
         expect(icon).toHaveAttribute("aria-hidden", "true");

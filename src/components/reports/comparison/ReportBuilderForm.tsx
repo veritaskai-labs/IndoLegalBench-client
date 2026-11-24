@@ -138,15 +138,50 @@ const scopeRadio = (option: ScopeOption): RadioOption<ScopeOption["scope"]> => (
   reason: option.reason,
 });
 
-/** Dropdown filter produk (SCRUM-365): bisa memilih lebih dari satu; tidak memilih apa pun berarti semua produk. */
+/** Ikon corong (filter), digambar sendiri; hiasan saja, nama tombol tetap dari teksnya. */
+function FilterIcon() {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+      <path d="M3 4.5a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .38.82L12 10.6v4.4a.5.5 0 0 1-.28.45l-3 1.5A.5.5 0 0 1 8 16.5v-5.9L3.12 4.82A.5.5 0 0 1 3 4.5Z" />
+    </svg>
+  );
+}
+
+/** Panah kecil ke bawah, berputar saat panel terbuka; menandai bahwa tombol ini membuka daftar. */
+function ChevronIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+    >
+      <path d="M5.5 8 10 12.5 14.5 8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * Dropdown filter produk (SCRUM-365): bisa memilih lebih dari satu; tidak memilih apa pun berarti semua produk.
+ * SCRUM-368 (UAT): diberi ikon filter dan tampilan aktif saat ada produk dipilih, diletakkan di kiri kotak cari,
+ * dan panelnya terbuka dari tepi kiri tombol supaya tidak terpotong di layar HP.
+ */
 function ProductFilter({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const chosen = builder.productIds.length;
+  const look = chosen > 0 ? "border-indigo-600 text-indigo-700" : "border-slate-300 text-slate-800";
   return (
-    <details className="relative">
-      <summary className="cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800">
+    <details className="group relative shrink-0">
+      <summary
+        className={`flex cursor-pointer list-none items-center gap-2 whitespace-nowrap rounded-md border bg-white px-3 py-2 text-sm [&::-webkit-details-marker]:hidden ${look}`}
+      >
+        <FilterIcon />
         {chosen === 0 ? "Produk: semua" : `Produk: ${chosen} dipilih`}
+        <ChevronIcon />
       </summary>
-      <fieldset className="absolute right-0 z-10 mt-1 max-h-64 w-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 shadow-md">
+      <fieldset className="absolute left-0 z-10 mt-1 max-h-64 w-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 shadow-md">
         <legend className="sr-only">Filter produk</legend>
         {builder.productOptions.map((product) => (
           <label key={product.id} className="flex items-center gap-2 text-sm text-slate-800">
@@ -223,6 +258,7 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
     <fieldset className="space-y-2">
       <legend className={LEGEND}>Sesi</legend>
       <div className="flex flex-wrap items-start gap-2">
+        <ProductFilter builder={builder} />
         <input
           type="search"
           aria-label="Cari sesi"
@@ -232,7 +268,6 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
           value={builder.query}
           onChange={(event) => builder.setQuery(event.target.value)}
         />
-        <ProductFilter builder={builder} />
       </div>
       <Tabs
         label="Kelayakan sesi"
