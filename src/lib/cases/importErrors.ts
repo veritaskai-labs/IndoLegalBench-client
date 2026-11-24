@@ -4,10 +4,10 @@ import { NO_FILE_MESSAGE, NOT_CSV_MESSAGE } from "./importRules";
 const TOO_LARGE = "Berkas terlalu besar. Pecah menjadi beberapa berkas.";
 
 /**
- * Cadangan per kode impor CSV (server #157), dipakai hanya bila server tidak mengirim pesan. Pesan server
- * didahulukan karena lebih spesifik (jumlah baris, batas MB). Batasnya sendiri tidak disalin ke client.
+ * Kode 422 yang berarti seluruh berkas ditolak (csv_import.py dan import_router.py server #157), dengan
+ * pesan cadangannya. Satu daftar untuk keduanya, supaya kode baru tidak lupa ditambahkan di salah satunya.
  */
-const FALLBACK: Readonly<Record<string, string>> = {
+const FILE_REJECTION_FALLBACK: Readonly<Record<string, string>> = {
   IMPORT_FILE_REQUIRED: NO_FILE_MESSAGE,
   IMPORT_FILE_NOT_CSV: NOT_CSV_MESSAGE,
   IMPORT_FILE_NOT_UTF8: "Berkas harus berpengkodean UTF-8. Ekspor ulang dari Google Sheets.",
@@ -17,20 +17,18 @@ const FALLBACK: Readonly<Record<string, string>> = {
     "Header tidak sama dengan template. Pakai template dari sistem tanpa mengubah nama atau urutan kolom.",
   IMPORT_FILE_EMPTY: "Berkas tidak berisi baris kasus.",
   IMPORT_TOO_MANY_ROWS: "Berkas berisi lebih dari 500 baris kasus. Pecah menjadi beberapa berkas.",
-  IMPORT_BATCH_NOT_FOUND: "Ringkasan impor tidak ditemukan.",
 };
 
-/** Kode 422 yang berarti seluruh berkas ditolak (csv_import.py dan import_router.py server #157). */
-const WHOLE_FILE_CODES: ReadonlySet<string> = new Set([
-  "IMPORT_FILE_REQUIRED",
-  "IMPORT_FILE_NOT_CSV",
-  "IMPORT_FILE_NOT_UTF8",
-  "IMPORT_FILE_TOO_LARGE",
-  "IMPORT_FILE_UNREADABLE",
-  "IMPORT_HEADER_MISMATCH",
-  "IMPORT_FILE_EMPTY",
-  "IMPORT_TOO_MANY_ROWS",
-]);
+const WHOLE_FILE_CODES: ReadonlySet<string> = new Set(Object.keys(FILE_REJECTION_FALLBACK));
+
+/**
+ * Cadangan per kode impor CSV (server #157), dipakai hanya bila server tidak mengirim pesan. Pesan server
+ * didahulukan karena lebih spesifik (jumlah baris, batas MB). Batasnya sendiri tidak disalin ke client.
+ */
+const FALLBACK: Readonly<Record<string, string>> = {
+  ...FILE_REJECTION_FALLBACK,
+  IMPORT_BATCH_NOT_FOUND: "Ringkasan impor tidak ditemukan.",
+};
 
 const FORBIDDEN = "Hanya Kontributor dan Admin yang boleh mengimpor kasus.";
 const SERVER_ERROR = "Impor gagal karena kesalahan server. Coba lagi.";
