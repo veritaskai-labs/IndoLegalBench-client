@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "./Button";
 
 interface ErrorStateProps {
   message?: string;
@@ -19,9 +20,9 @@ export function ErrorState({
     return (
       <div
         role="alert"
-        className={`flex flex-col items-center justify-center p-8 bg-red-50/50 border border-red-200 rounded-lg text-center ${className}`}
+        className={`flex flex-col items-center justify-center p-8 bg-paper border border-line rounded-control text-center ${className}`}
       >
-        <div className="w-10 h-10 mb-3 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+        <div className="w-10 h-10 mb-3 rounded-full bg-surface flex items-center justify-center text-danger">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -38,16 +39,12 @@ export function ErrorState({
             />
           </svg>
         </div>
-        <h4 className="text-sm font-semibold text-red-900 mb-1">Gagal Memuat Data</h4>
-        <p className="text-xs text-red-700 max-w-sm mb-4">{message}</p>
+        <h4 className="text-sm font-semibold text-ink mb-1">Gagal Memuat Data</h4>
+        <p className="text-xs text-ink-soft max-w-sm mb-4">{message}</p>
         {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-medium transition-colors cursor-pointer"
-          >
+          <Button size="sm" onClick={onRetry}>
             Coba lagi
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -56,14 +53,14 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className={`rounded-lg bg-red-50 border border-red-200 p-4 flex items-center justify-between gap-4 ${className}`}
+      className={`rounded-control bg-paper border border-line p-4 flex items-center justify-between gap-4 ${className}`}
     >
-      <div className="flex items-center gap-2 text-xs text-red-800">
+      <div className="flex items-center gap-2 text-xs text-ink">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="w-4 h-4 text-red-600 shrink-0"
+          className="w-4 h-4 text-danger shrink-0"
           aria-hidden="true"
         >
           <path
@@ -75,13 +72,9 @@ export function ErrorState({
         <span>{message}</span>
       </div>
       {onRetry && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="text-xs text-red-700 hover:text-red-900 font-medium px-2.5 py-1 rounded bg-red-100 hover:bg-red-200 transition-colors cursor-pointer shrink-0"
-        >
+        <Button variant="ghost" size="sm" onClick={onRetry} className="shrink-0">
           Coba lagi
-        </button>
+        </Button>
       )}
     </div>
   );
