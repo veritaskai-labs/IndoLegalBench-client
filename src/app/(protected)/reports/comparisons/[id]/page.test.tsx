@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/apiClient";
 import { httpPublicationGateway } from "@/lib/reports/publicationApi";
 import { httpReportsGateway } from "@/lib/reports/reportsApi";
 import { session } from "@/test/authMock";
-import { devTestReport, firstReport } from "@/test/reportFixtures";
+import { devTestReport, firstReport, publishedCandidates, replaceCandidate, savedCandidates } from "@/test/reportFixtures";
 
 import ComparisonReportPage from "./page";
 
@@ -22,7 +22,7 @@ vi.mock("@/lib/reports/reportsApi", () => ({
 // SCRUM-335: the Terbitkan section reads the role; null keeps the session loading, as before.
 vi.mock("@/hooks/useAuth", async () => await import("@/test/authMock"));
 vi.mock("@/lib/reports/publicationApi", () => ({
-  httpPublicationGateway: { publish: vi.fn(), listPublished: vi.fn() },
+  httpPublicationGateway: { publish: vi.fn(), listPublished: vi.fn(), replaceCandidates: vi.fn() },
 }));
 
 const detail = vi.mocked(httpReportsGateway.detail);
@@ -133,6 +133,8 @@ describe("ComparisonReportPage publishing", () => {
   it("lets Admin publish a saved Test report and reloads it as published", async () => {
     session.role = "admin";
     detail.mockResolvedValueOnce(firstReport()).mockResolvedValueOnce(firstReport({ status: "published" }));
+    // SCRUM-373: the dialog loads the same-product versions when it opens; none here.
+    vi.mocked(httpPublicationGateway.replaceCandidates).mockResolvedValue(publishedCandidates([]));
     publish.mockResolvedValue({ id: "pub-1", report_id: "r-1", version_no: 1, supersedes_id: null });
 
     render(<ComparisonReportPage />);
@@ -153,18 +155,10 @@ describe("ComparisonReportPage publishing", () => {
     session.role = "admin";
     const published = firstReport({ status: "published" });
     detail.mockResolvedValueOnce(published).mockResolvedValueOnce(firstReport({ status: "superseded" }));
-    vi.mocked(httpPublicationGateway.listPublished).mockResolvedValue([
-      {
-        id: "pub-1",
-        report_id: published.id,
-        version_no: 1,
-        title: published.title,
-        published_at: "2026-11-18T03:00:00Z",
-        published_by: "admin-1",
-        product_labels: [],
-      },
-    ]);
-    vi.mocked(httpReportsGateway.list).mockResolvedValue([firstReport({ id: "r-new", title: "November" })]);
+    // SCRUM-373: the server offers the saved reports with the same products, and names this report's version.
+    vi.mocked(httpPublicationGateway.replaceCandidates).mockResolvedValue(
+      savedCandidates([replaceCandidate({ report_id: "r-new", publication_id: null, version_no: null, title: "November" })], "pub-1"),
+    );
     publish.mockResolvedValue({ id: "pub-2", report_id: "r-new", version_no: 2, supersedes_id: "pub-1" });
 
     render(<ComparisonReportPage />);

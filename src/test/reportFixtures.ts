@@ -10,6 +10,8 @@ import type {
   ReportDetailSessionRead,
   ReportOtherProductRead,
   ReportResultCasesRead,
+  ReplaceCandidate,
+  ReplaceCandidates,
   ScoreSplit,
 } from "@/types/reports";
 
@@ -290,4 +292,35 @@ export function otherProduct(overrides: Partial<ReportOtherProductRead> = {}): R
     ],
     ...overrides,
   };
+}
+
+/**
+ * Satu pilihan GET /reports/{id}/replace-candidates (server#167, SCRUM-371): bawaannya versi terbit yang bisa diganti
+ * laporan tersimpan (mode replace_published), dengan produk yang sama.
+ */
+export function replaceCandidate(overrides: Partial<ReplaceCandidate> = {}): ReplaceCandidate {
+  return {
+    report_id: "r-old",
+    publication_id: "pub-1",
+    version_no: 1,
+    title: "Perbandingan Oktober",
+    product_labels: ["AiYU", "Produk B"],
+    date: "2026-11-18T03:00:00Z",
+    ...overrides,
+  };
+}
+
+/** Jawaban untuk laporan tersimpan: versi terbit dengan produk yang sama, publication_id menjadi supersedes_id. */
+export function publishedCandidates(items: ReplaceCandidate[] = [replaceCandidate()]): ReplaceCandidates {
+  return { mode: "replace_published", replaces_publication_id: null, items };
+}
+
+/** Jawaban untuk laporan terbit: laporan tersimpan pengganti, dan versi terbit laporan ini sebagai supersedes_id. */
+export function savedCandidates(
+  items: ReplaceCandidate[] = [
+    replaceCandidate({ report_id: "r-new", publication_id: null, version_no: null, title: "Perbandingan November", date: "2026-11-19T03:15:00Z" }),
+  ],
+  replacesPublicationId = "pub-1",
+): ReplaceCandidates {
+  return { mode: "replace_with_saved", replaces_publication_id: replacesPublicationId, items };
 }

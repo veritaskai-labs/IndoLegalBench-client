@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, onForbidden } from "@/lib/apiClient";
 import type { PublicationRead, PublishedReportListItem } from "@/types/reports";
 
+import { publishedCandidates } from "@/test/reportFixtures";
+
 import { httpPublicationGateway } from "./publicationApi";
 
 // The real apiFetch runs against a stubbed fetch, so the test proves what reaches the wire (server PR #151).
@@ -138,5 +140,38 @@ describe("httpPublicationGateway.listPublished (GET /published-reports, AC9)", (
 
     await expect(httpPublicationGateway.listPublished()).resolves.toHaveLength(100);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// SCRUM-373: both dialogs ask the server for the same-product choices (server#167, SCRUM-371).
+describe("httpPublicationGateway.replaceCandidates (GET /reports/{id}/replace-candidates)", () => {
+  // Positif: one request, and the answer is handed over as the server sent it.
+  it("reads the choices for the opened report", async () => {
+    const answer = publishedCandidates();
+    fetchMock.mockResolvedValue(fakeResponse(200, answer));
+
+    await expect(httpPublicationGateway.replaceCandidates("r-2")).resolves.toEqual(answer);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toMatch(/\/reports\/r-2\/replace-candidates$/);
+    expect(init).toMatchObject({ credentials: "include" });
+  });
+
+  // Edge: the report id is a path segment, so it is escaped.
+  it("escapes the report id in the path", async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, publishedCandidates([])));
+
+    await httpPublicationGateway.replaceCandidates("a/b");
+
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/reports\/a%2Fb\/replace-candidates$/);
+  });
+
+  // Negatif: the route is Admin only; a 403 stays in the dialog instead of jumping to /forbidden.
+  it("keeps a 403 in the dialog", async () => {
+    const listener = vi.fn();
+    unsubscribers.push(onForbidden(listener));
+    fetchMock.mockResolvedValue(fakeResponse(403, { code: "FORBIDDEN" }));
+
+    await expect(httpPublicationGateway.replaceCandidates("r-2")).rejects.toBeInstanceOf(ApiError);
+    expect(listener).not.toHaveBeenCalled();
   });
 });

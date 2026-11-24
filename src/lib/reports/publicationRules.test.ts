@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
-import { firstReport } from "@/test/reportFixtures";
+import { firstReport, replaceCandidate } from "@/test/reportFixtures";
 
 import {
   DEV_SCORES_MESSAGE,
   canPublish,
-  candidateLabel,
   productLabelsText,
   publishErrorMessage,
   publishState,
   publishedListErrorMessage,
-  replaceOptionLabel,
+  replaceCandidateLabel,
+  replaceCandidatesErrorMessage,
   versionLabel,
 } from "./publicationRules";
 
@@ -61,6 +61,13 @@ describe("publishErrorMessage (server refusals in plain words)", () => {
     expect(publishErrorMessage(new ApiError(404, "PUBLICATION_NOT_FOUND"))).toMatch(/Versi terbit yang dipilih sudah tidak ada/);
   });
 
+  // Negatif, SCRUM-373: the server still refuses another product set (server#167), e.g. a list that went stale.
+  it("explains that a replacement must compare the same products", () => {
+    expect(publishErrorMessage(new ApiError(409, "REPORT_PRODUCTS_MISMATCH"))).toBe(
+      "Laporan pengganti harus membandingkan produk yang sama dengan versi yang diganti. Tutup dialog lalu pilih lagi.",
+    );
+  });
+
   it("covers a missing report, a non-Admin and anything else", () => {
     expect(publishErrorMessage(new ApiError(404, "REPORT_NOT_FOUND"))).toBe("Laporan tidak ditemukan.");
     expect(publishErrorMessage(new ApiError(403, "FORBIDDEN"))).toBe("Hanya Admin yang bisa menerbitkan laporan.");
@@ -69,9 +76,30 @@ describe("publishErrorMessage (server refusals in plain words)", () => {
 });
 
 describe("labels", () => {
-  it("names versions and replace choices", () => {
+  it("names versions", () => {
     expect(versionLabel(2)).toBe("Versi 2");
-    expect(replaceOptionLabel({ title: "Perbandingan Oktober", version_no: 3 })).toBe("Perbandingan Oktober (Versi 3)");
+  });
+
+  // Positif, SCRUM-373: a published version shows its version, its products and when it was published, so
+  // Admin sees the products match and can tell similar titles apart.
+  it("names a published version with its products and publish date", () => {
+    expect(replaceCandidateLabel(replaceCandidate({ title: "Perbandingan Oktober", version_no: 3 }))).toBe(
+      "Perbandingan Oktober (Versi 3) · AiYU, Produk B · terbit 18 Nov 2026",
+    );
+  });
+
+  // Positif, SCRUM-373: a saved replacement is not published yet, so its date is the day it was made.
+  it("names a saved replacement with its products and creation date", () => {
+    const saved = replaceCandidate({ publication_id: null, version_no: null, date: "2026-11-19T03:15:00Z" });
+
+    expect(replaceCandidateLabel(saved)).toBe("Perbandingan Oktober · AiYU, Produk B · dibuat 19 Nov 2026");
+  });
+
+  // Edge: version 0 does not exist, but a falsy number must still be read as a published version.
+  it("treats only a missing version number as a saved report", () => {
+    expect(replaceCandidateLabel(replaceCandidate({ version_no: 0, product_labels: [] }))).toBe(
+      "Perbandingan Oktober (Versi 0) · Tidak ada produk · terbit 18 Nov 2026",
+    );
   });
 
   // AC10: the server already froze the names under the PBI-15 rule (real name or code); the list shows them as is.
@@ -80,14 +108,12 @@ describe("labels", () => {
     expect(productLabelsText([])).toBe("Tidak ada produk");
   });
 
-  // SCRUM-363 dropped the language from the report list (AC10), so only the date tells same titles apart.
-  it("tells replacement candidates with the same title apart by date", () => {
-    expect(candidateLabel(firstReport({ title: "Perbandingan", created_at: "2026-11-19T03:15:00Z" }))).toBe(
-      "Perbandingan · 19 Nov 2026",
-    );
-  });
-
   it("has a retryable message for the published list", () => {
     expect(publishedListErrorMessage()).toBe("Gagal memuat daftar laporan terbit. Coba lagi.");
+  });
+
+  // Negatif, SCRUM-373: the only callers are Admin, so a failed load is always worth a retry.
+  it("has a retryable message for the replace choices", () => {
+    expect(replaceCandidatesErrorMessage()).toBe("Gagal memuat laporan dengan produk yang sama. Coba lagi.");
   });
 });

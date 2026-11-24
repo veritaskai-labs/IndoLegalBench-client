@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PublicationGateway } from "@/lib/reports/publicationApi";
 import { session } from "@/test/authMock";
-import { devTestReport, firstReport } from "@/test/reportFixtures";
+import { devTestReport, firstReport, publishedCandidates, savedCandidates } from "@/test/reportFixtures";
 
 import { ReportPublishActions } from "./ReportPublishActions";
 
@@ -14,6 +14,7 @@ function fakeGateway(): PublicationGateway {
   return {
     publish: vi.fn().mockResolvedValue({ id: "pub-9", report_id: "r-1", version_no: 2, supersedes_id: "pub-1" }),
     listPublished: vi.fn().mockResolvedValue([]),
+    replaceCandidates: vi.fn().mockResolvedValue(publishedCandidates([])),
   };
 }
 
@@ -75,30 +76,17 @@ describe("ReportPublishActions", () => {
     expect(screen.getByRole("button", { name: "Ganti versi" })).toBeEnabled();
   });
 
-  // SCRUM-335 "tombol ganti versi": Admin replaces this published report with a saved Test report.
+  // SCRUM-335 "tombol ganti versi": Admin replaces this published report with a saved Test report of the same
+  // products (SCRUM-373), offered by the server for this report.
   it("replaces this published report from its own page", async () => {
     const user = userEvent.setup();
     const onChanged = vi.fn();
     const gateway = fakeGateway();
-    vi.mocked(gateway.listPublished).mockResolvedValue([
-      { id: "pub-1", report_id: "r-pub", version_no: 1, title: "Oktober", published_at: "2026-11-18T03:00:00Z", published_by: "a", product_labels: [] },
-    ]);
-    const reports = {
-      list: vi.fn().mockResolvedValue([
-        { ...firstReport({ id: "r-new", title: "November" }) },
-        { ...devTestReport({ id: "r-dev", title: "Dev" }) },
-      ]),
-      detail: vi.fn(),
-      pdf: vi.fn(),
-      eligibleSessions: vi.fn(),
-      create: vi.fn(),
-      validate: vi.fn(),
-    };
+    vi.mocked(gateway.replaceCandidates).mockResolvedValue(savedCandidates());
     render(
       <ReportPublishActions
         report={firstReport({ id: "r-pub", status: "published" })}
         gateway={gateway}
-        reportsGateway={reports}
         onChanged={onChanged}
       />,
     );
@@ -108,6 +96,7 @@ describe("ReportPublishActions", () => {
     await user.selectOptions(await dialog.findByRole("combobox", { name: "Laporan pengganti" }), "r-new");
     await user.click(dialog.getByRole("button", { name: "Ganti versi" }));
 
+    expect(gateway.replaceCandidates).toHaveBeenCalledWith("r-pub");
     expect(gateway.publish).toHaveBeenCalledWith("r-new", "pub-1");
     await waitFor(() => expect(onChanged).toHaveBeenCalledWith(expect.objectContaining({ id: "pub-9" })));
   });

@@ -1,7 +1,7 @@
 import { ApiError } from "@/lib/apiClient";
 import { formatWibDate } from "@/lib/datetime/formatWib";
 import type { Role } from "@/lib/auth";
-import type { PublishedReportListItem, ReportSummary } from "@/types/reports";
+import type { ReplaceCandidate, ReportSummary } from "@/types/reports";
 
 /**
  * Aturan penerbitan laporan di layar (PBI-17 SCRUM-335, AC9, AC10, AC12). Server (SCRUM-332) tetap menjadi
@@ -12,6 +12,8 @@ export const REPORT_HAS_DEV_SCORES = "REPORT_HAS_DEV_SCORES";
 export const REPORT_NOT_PUBLISHABLE = "REPORT_NOT_PUBLISHABLE";
 export const PUBLICATION_NOT_FOUND = "PUBLICATION_NOT_FOUND";
 export const REPORT_NOT_FOUND = "REPORT_NOT_FOUND";
+/** SCRUM-371: server menolak penggantian bila set produk kedua laporan berbeda, walau layar sudah menyaring. */
+export const REPORT_PRODUCTS_MISMATCH = "REPORT_PRODUCTS_MISMATCH";
 
 /** Sama maknanya dengan pesan server (ensure_publishable), dipakai sebelum dan sesudah tombol ditekan. */
 export const DEV_SCORES_MESSAGE =
@@ -40,6 +42,9 @@ export function publishErrorMessage(error: unknown): string {
       return "Laporan ini sudah terbit atau versi yang dipilih sudah diganti. Tutup dialog lalu muat ulang halaman.";
     }
     if (error.code === PUBLICATION_NOT_FOUND) return "Versi terbit yang dipilih sudah tidak ada. Tutup dialog lalu pilih lagi.";
+    if (error.code === REPORT_PRODUCTS_MISMATCH) {
+      return "Laporan pengganti harus membandingkan produk yang sama dengan versi yang diganti. Tutup dialog lalu pilih lagi.";
+    }
     if (error.status === 404) return "Laporan tidak ditemukan.";
     if (error.status === 403) return "Hanya Admin yang bisa menerbitkan laporan.";
   }
@@ -55,16 +60,23 @@ export function versionLabel(versionNo: number): string {
   return `Versi ${versionNo}`;
 }
 
-export function replaceOptionLabel(item: Pick<PublishedReportListItem, "title" | "version_no">): string {
-  return `${item.title} (${versionLabel(item.version_no)})`;
+/** Gagal memuat pilihan ganti versi (SCRUM-373); selalu layak dicoba lagi karena pemanggilnya Admin. */
+export function replaceCandidatesErrorMessage(): string {
+  return "Gagal memuat laporan dengan produk yang sama. Coba lagi.";
 }
 
 /**
- * Pilihan laporan pengganti: judul bisa sama, jadi tanggal dibuat ikut ditulis. Bahasa tidak lagi dikirim
- * daftar laporan (SCRUM-363 AC10), dan sampai PBI-26 semua laporan berbahasa sama, jadi tidak membedakan apa pun.
+ * Satu pilihan di dropdown ganti versi (SCRUM-373, feedback UAT sprint 4). Produk dan tanggal ikut ditulis supaya
+ * Admin bisa membedakan laporan dengan judul mirip dan melihat produknya sama. Versi terbit punya nomor versi dan
+ * tanggal terbit; laporan tersimpan pengganti belum terbit, jadi tanggalnya tanggal dibuat (server SCRUM-371).
  */
-export function candidateLabel(report: Pick<ReportSummary, "title" | "created_at">): string {
-  return `${report.title} · ${formatWibDate(report.created_at)}`;
+export function replaceCandidateLabel(
+  candidate: Pick<ReplaceCandidate, "title" | "version_no" | "product_labels" | "date">,
+): string {
+  const products = productLabelsText(candidate.product_labels);
+  const date = formatWibDate(candidate.date);
+  if (candidate.version_no == null) return `${candidate.title} · ${products} · dibuat ${date}`;
+  return `${candidate.title} (${versionLabel(candidate.version_no)}) · ${products} · terbit ${date}`;
 }
 
 /** AC10: nama sudah dibekukan server menurut aturan PBI-15 (nama asli atau kode); layar tidak mengubahnya. */

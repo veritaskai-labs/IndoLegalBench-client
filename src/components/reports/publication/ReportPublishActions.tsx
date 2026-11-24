@@ -5,7 +5,6 @@ import { useId, useState } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { httpPublicationGateway, type PublicationGateway } from "@/lib/reports/publicationApi";
-import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import { DEV_SCORES_MESSAGE, canPublish, publishState } from "@/lib/reports/publicationRules";
 import type { PublicationRead, ReportSummary } from "@/types/reports";
 
@@ -30,12 +29,10 @@ type Report = Pick<ReportSummary, "id" | "title" | "status" | "has_dev_scores" |
 export function ReportPublishActions({
   report,
   gateway = httpPublicationGateway,
-  reportsGateway = httpReportsGateway,
   onChanged,
 }: Readonly<{
   report: Report;
   gateway?: PublicationGateway;
-  reportsGateway?: ReportsGateway;
   onChanged: (publication?: PublicationRead) => void;
 }>) {
   const auth = useAuth();
@@ -75,7 +72,6 @@ export function ReportPublishActions({
           <ReplaceVersionDialog
             report={report}
             gateway={gateway}
-            reportsGateway={reportsGateway}
             onReplaced={(publication) => {
               setReplacing(false);
               onChanged(publication);

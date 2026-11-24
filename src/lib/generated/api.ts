@@ -1592,6 +1592,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/reports/{report_id}/replace-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pilihan ganti versi: hanya laporan dengan produk yang sama
+         * @description Admin saja, sama dengan POST publish. Kedua jalur FE memakai rute ini (SCRUM-371).
+         */
+        get: operations["list_replace_candidates_reports__report_id__replace_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/reports/{report_id}/results/{result_id}/cases": {
         parameters: {
             query?: never;
@@ -4780,6 +4800,60 @@ export interface components {
             /** Is Active */
             is_active: boolean;
         };
+        /**
+         * ReplaceCandidateRead
+         * @description Satu pilihan di dropdown ganti versi.
+         */
+        ReplaceCandidateRead: {
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /**
+             * Publication Id
+             * @description replace_published: kirim sebagai supersedes_id. replace_with_saved: null
+             */
+            publication_id: string | null;
+            /**
+             * Version No
+             * @description Nomor versi yang sedang terbit; null di replace_with_saved
+             */
+            version_no: number | null;
+            /** Title */
+            title: string;
+            /**
+             * Product Labels
+             * @description Label produk beku, urut abjad
+             */
+            product_labels: string[];
+            /**
+             * Date
+             * Format: date-time
+             * @description replace_published: published_at. replace_with_saved: created_at
+             */
+            date: string;
+        };
+        /**
+         * ReplaceCandidates
+         * @description GET /reports/{id}/replace-candidates: hanya laporan dengan himpunan produk yang sama.
+         */
+        ReplaceCandidates: {
+            mode: components["schemas"]["ReplaceMode"];
+            /**
+             * Replaces Publication Id
+             * @description replace_with_saved: versi laporan ini, kirim sebagai supersedes_id saat menerbitkan item yang dipilih. replace_published: null
+             */
+            replaces_publication_id: string | null;
+            /** Items */
+            items: components["schemas"]["ReplaceCandidateRead"][];
+        };
+        /**
+         * ReplaceMode
+         * @description Arah ganti versi menurut status laporan yang sedang dibuka (SCRUM-371).
+         * @enum {string}
+         */
+        ReplaceMode: "replace_published" | "replace_with_saved";
         /**
          * ReplaceReviewerRequest
          * @description Payload untuk POST /reviews/{assignment_id}/replace.
@@ -11340,7 +11414,65 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorBody"];
                 };
             };
-            /** @description Tidak bisa diterbitkan */
+            /** @description Tidak bisa diterbitkan (`REPORT_NOT_PUBLISHABLE`, `REPORT_HAS_DEV_SCORES`), atau pengganti membandingkan produk lain (`REPORT_PRODUCTS_MISMATCH`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_replace_candidates_reports__report_id__replace_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplaceCandidates"];
+                };
+            };
+            /** @description Bukan Admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Laporan tidak ada (`REPORT_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Laporan berisi skor dev (`REPORT_HAS_DEV_SCORES`) atau sudah digantikan (`REPORT_NOT_PUBLISHABLE`) */
             409: {
                 headers: {
                     [name: string]: unknown;
