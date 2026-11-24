@@ -14,14 +14,16 @@ export const SCOPE_UNAVAILABLE: Readonly<Record<ScoreScope, string>> = {
 /** Alasan bila belum ada yang ditawarkan karena sesinya belum cukup, bukan karena irisan kasusnya kosong. */
 export const SCOPE_WAITING = "Pilih sesi dulu, lalu pilihan ini diperiksa.";
 
-/** Jawaban validate yang sudah dipilah untuk tampilan: pelanggaran umum, per sesi, dan peringatan. */
+/** Jawaban validate yang sudah dipilah untuk tampilan: pelanggaran dan peringatan, umum atau per sesi. */
 export interface ValidationView {
   /** Pelanggaran pilihan, syarat, dan irisan kasus; tampil di atas daftar sesi. */
   general: ReportViolation[];
   /** Pelanggaran satu sesi, ditempel ke baris sesinya. */
   bySession: ReadonlyMap<string, ReportViolation[]>;
-  /** Penanda yang tidak memblokir (percobaan berbeda, rentang manual, versi model, uji coba). */
+  /** Penanda yang tidak memblokir dan berlaku untuk seluruh pilihan (percobaan berbeda, versi model). */
   warnings: ReportWarning[];
+  /** Penanda yang tidak memblokir untuk satu sesi (uji coba, rentang manual), ditempel ke baris sesinya. */
+  sessionWarnings: ReadonlyMap<string, ReportWarning[]>;
   /** Ada pelanggaran: tombol Buat laporan harus nonaktif. */
   blocking: boolean;
 }
@@ -40,7 +42,9 @@ export interface ScopeOption {
  * server tetap memeriksa ulang saat submit.
  */
 export function validationView(validation: ReportValidation | null): ValidationView {
-  if (validation === null) return { general: [], bySession: new Map(), warnings: [], blocking: false };
+  if (validation === null) {
+    return { general: [], bySession: new Map(), warnings: [], sessionWarnings: new Map(), blocking: false };
+  }
   const general: ReportViolation[] = [];
   const bySession = new Map<string, ReportViolation[]>();
   for (const violation of validation.violations) {
@@ -51,10 +55,20 @@ export function validationView(validation: ReportValidation | null): ValidationV
       bySession.set(sessionId, [...(bySession.get(sessionId) ?? []), violation]);
     }
   }
+  const warnings: ReportWarning[] = [];
+  const sessionWarnings = new Map<string, ReportWarning[]>();
+  for (const warning of validation.warnings) {
+    if (warning.session_id === null || warning.session_id === undefined) {
+      warnings.push(warning);
+    } else {
+      sessionWarnings.set(warning.session_id, [...(sessionWarnings.get(warning.session_id) ?? []), warning]);
+    }
+  }
   return {
     general,
     bySession,
-    warnings: validation.warnings,
+    warnings,
+    sessionWarnings,
     blocking: !validation.valid || validation.violations.length > 0,
   };
 }
