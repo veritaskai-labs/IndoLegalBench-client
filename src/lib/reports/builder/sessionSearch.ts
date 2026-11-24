@@ -65,3 +65,11 @@ export function productOptions(sessions: readonly EligibleSession[]): ProductOpt
   for (const session of sessions) byId.set(session.product_id, session.product_name);
   return [...byId].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/**
+ * Teks tombol filter produk (SCRUM-365, dipakai ulang SCRUM-368): "Produk: semua" bila tidak ada yang dipilih
+ * (filter tidak aktif), selain itu jumlah produk yang dipilih.
+ */
+export function productFilterLabel(chosen: number): string {
+  return chosen === 0 ? "Produk: semua" : `Produk: ${chosen} dipilih`;
+}
