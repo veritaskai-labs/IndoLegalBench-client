@@ -95,7 +95,7 @@ function NavLinks({
             </p>
             <ul className="space-y-1">
               {group.items.map((item) => {
-                const active = pathname === item.href;
+                const active = pathname === item.href || (item.href === "/suites" && pathname === "/cases");
                 return (
                   <li key={item.href}>
                     <Link

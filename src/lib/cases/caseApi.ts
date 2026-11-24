@@ -19,6 +19,14 @@ export function getCase(caseId: string): Promise<CaseRead> {
   return apiFetch<CaseRead>(casePath(caseId));
 }
 
+/** POST /cases/{case_id}/duplicate. Server mengembalikan draf baru tanpa tag. */
+export function duplicateCase(caseId: string): Promise<CaseRead> {
+  return apiFetch<CaseRead>(`${casePath(caseId)}/duplicate`, {
+    method: "POST",
+    silentForbidden: true,
+  });
+}
+
 /** PUT /cases/{case_id}. Server tetap yang menentukan status dan siapa boleh mengubah split_tag. */
 export function updateCase(caseId: string, payload: CaseWritePayload): Promise<CaseRead> {
   return apiFetch<CaseRead>(casePath(caseId), {

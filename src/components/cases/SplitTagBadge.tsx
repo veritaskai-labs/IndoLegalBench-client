@@ -7,7 +7,7 @@ const TAG_CLASS: Record<SplitTag, string> = {
 };
 
 type Props = {
-  tag: SplitTag;
+  tag: SplitTag | null;
   /** Halaman review: tag hanya informasi, tidak dinilai reviewer (PBI-9 AC2). */
   infoOnly?: boolean;
   /** Kasus pernah ada di dev set (was_dev dari server, PBI-9 AC3). Ditampilkan selama tagnya test. */
@@ -16,19 +16,20 @@ type Props = {
 
 /** Badge tag dev/test yang sama di editor, daftar kasus, dan halaman review. */
 export function SplitTagBadge({ tag, infoOnly = false, wasDev = false }: Readonly<Props>) {
-  const label = SPLIT_TAG_LABEL[tag];
+  const label = tag === null ? "Belum ditetapkan" : SPLIT_TAG_LABEL[tag];
+  const style = tag === null ? "border-amber-200 bg-amber-50 text-amber-800" : TAG_CLASS[tag];
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
         aria-label={infoOnly ? `Tag ${label}, hanya informasi dan tidak dinilai` : undefined}
-        className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium ${TAG_CLASS[tag]}`}
+        className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium ${style}`}
       >
         {label}
         {infoOnly && <span className="font-normal opacity-80">info saja</span>}
       </span>
-      {wasDev && tag === "test" && (
+      {wasDev && tag !== "dev" && (
         <span
-          title="Kasus ini pernah dipakai sebagai dev set dan sudah terlihat developer AI."
+          title="Isi kasus ini pernah terlihat oleh Developer AI."
           className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800"
         >
           pernah dev set
