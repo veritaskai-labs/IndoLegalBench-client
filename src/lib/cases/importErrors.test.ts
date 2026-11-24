@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
-import { importErrorMessage } from "./importErrors";
+import { importErrorMessage, isFileRejected } from "./importErrors";
 
 /** Whole-file rejections from server #157 (csv_import.py, import_router.py), each with its own message. */
 const FILE_CODES = [
@@ -119,5 +119,33 @@ describe("importErrorMessage", () => {
   it.each([new Error("boom"), "string", null, undefined])("falls back to a generic message for %s", (error) => {
     // Arrange / Act / Assert
     expect(importErrorMessage(error)).toBe("Terjadi kesalahan. Coba lagi.");
+  });
+});
+
+describe("isFileRejected (D7: whole file rejected, nothing stored)", () => {
+  // Positive: every whole-file code of the server.
+  it.each(FILE_CODES)("is true for 422 %s", (code) => {
+    // Arrange / Act / Assert
+    expect(isFileRejected(new ApiError(422, code, "pesan"))).toBe(true);
+  });
+
+  // Negative: errors that do not mean "the file was refused".
+  it.each([
+    ["404 batch", new ApiError(404, "IMPORT_BATCH_NOT_FOUND")],
+    ["403", new ApiError(403, "FORBIDDEN")],
+    ["500", new ApiError(500, "internal_error")],
+    ["422 of another feature", new ApiError(422, "validation_error")],
+    ["413 proxy page", new ApiError(413, "UNKNOWN_ERROR")],
+    ["network", new TypeError("Failed to fetch")],
+    ["anything else", new Error("boom")],
+  ])("is false for %s", (_, error) => {
+    // Arrange / Act / Assert
+    expect(isFileRejected(error)).toBe(false);
+  });
+
+  // Edge: an IMPORT_* code with a status other than 422 is not a whole-file rejection.
+  it("is false for an import code that did not come with 422", () => {
+    // Arrange / Act / Assert
+    expect(isFileRejected(new ApiError(400, "IMPORT_FILE_EMPTY"))).toBe(false);
   });
 });

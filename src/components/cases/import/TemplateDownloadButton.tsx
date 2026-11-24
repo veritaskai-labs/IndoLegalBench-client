@@ -18,7 +18,9 @@ function saveTemplate(file: Blob): void {
  * Tombol unduh template CSV impor kasus (PBI-4 AC6). Berkasnya dari server; klik kedua selama unduhan berjalan
  * diabaikan oleh useAsyncAction.
  */
-export function TemplateDownloadButton({ gateway }: Readonly<{ gateway: ImportGateway }>) {
+export function TemplateDownloadButton({
+  gateway,
+}: Readonly<{ gateway: Pick<ImportGateway, "downloadTemplate"> }>) {
   const download = useCallback(() => gateway.downloadTemplate(), [gateway]);
   const { run, pending, error } = useAsyncAction(download, saveTemplate, importErrorMessage);
 
