@@ -21,7 +21,7 @@ function item(overrides: Partial<PublishedReportListItem> = {}): PublishedReport
 }
 
 function gatewayWith(listPublished: PublicationGateway["listPublished"]): PublicationGateway {
-  return { publish: vi.fn(), listPublished };
+  return { publish: vi.fn(), listPublished, replaceCandidates: vi.fn() };
 }
 
 // SCRUM-335 (PBI-17 AC9, AC10): every signed-in user reads the reports that are currently published.
