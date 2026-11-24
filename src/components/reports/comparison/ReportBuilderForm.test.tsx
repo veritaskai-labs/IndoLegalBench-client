@@ -688,6 +688,137 @@ describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () =>
     expect(screen.queryByRole("checkbox", { name: /Sesi B1/ })).not.toBeInTheDocument();
   });
 
+  // SCRUM-368 (UAT feedback Sprint 4): the product filter must look like a filter. It gets a filter icon, sits to
+  // the left of the search bar, opens its panel to the right, and shows when products are chosen. What it does
+  // stays the same (the SCRUM-365 tests around this block are unchanged).
+  describe("the product filter button (SCRUM-368)", () => {
+    /** The <summary> that opens the product panel; its own text is the button label. */
+    const filterButton = (label = "Produk: semua") => {
+      const button = screen.getByText(label);
+      expect(button.tagName).toBe("SUMMARY");
+      return button;
+    };
+    const panel = () => screen.getByRole("group", { name: "Filter produk" });
+
+    it("Positif: comes before the search bar", async () => {
+      await renderReady();
+
+      const order = filterButton().compareDocumentPosition(searchBar());
+      expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    // Tab from the measurement radios until one of the two toolbar controls has focus: it must be the filter.
+    // (Not Shift+Tab from the search: jsdom keeps the checkboxes of a closed <details> focusable, browsers do not.)
+    it("Positif: is reached with Tab before the search bar", async () => {
+      const { user } = await renderReady();
+      const toolbar = [filterButton(), searchBar()];
+
+      screen.getByRole("radio", { name: "Semua" }).focus();
+      for (let i = 0; i < 5 && !toolbar.includes(document.activeElement as HTMLElement); i += 1) await user.tab();
+
+      expect(filterButton()).toHaveFocus();
+    });
+
+    // The icon is drawn in the page (no icon library) and is decoration only: a screen reader reads the label.
+    it("Positif: starts with a filter icon that screen readers skip", async () => {
+      await renderReady();
+
+      const button = filterButton();
+      const icons = button.querySelectorAll("svg");
+      // firstChild, not firstElementChild: the icon must come before the label text node.
+      expect(button.firstChild?.nodeName.toLowerCase()).toBe("svg");
+      expect(icons.length).toBeGreaterThan(0);
+      for (const icon of icons) {
+        expect(icon).toHaveAttribute("aria-hidden", "true");
+        expect(icon).toHaveAttribute("focusable", "false");
+      }
+    });
+
+    it("Positif: keeps the label as its only text", async () => {
+      await renderReady();
+
+      expect(filterButton().textContent).toBe("Produk: semua");
+    });
+
+    // jsdom has no layout, so this pins the anchor class; the 375 px check in the browser is the real proof.
+    it("Positif: opens the panel from its left edge so it is not cut off on a phone", async () => {
+      await renderReady();
+
+      expect(panel()).toHaveClass("left-0");
+      expect(panel()).not.toHaveClass("right-0");
+    });
+
+    it("Positif: shows that products are chosen and drops that look when none is", async () => {
+      const { user } = await renderReady();
+      expect(filterButton()).not.toHaveClass("border-indigo-600");
+
+      await user.click(productBox("Produk A"));
+      expect(filterButton("Produk: 1 dipilih")).toHaveClass("border-indigo-600");
+
+      await user.click(productBox("Produk A"));
+      expect(filterButton()).not.toHaveClass("border-indigo-600");
+    });
+
+    it("Edge: unticking every chosen product brings back all sessions and the label", async () => {
+      const { user } = await renderReady();
+
+      await user.click(productBox("Produk A"));
+      await user.click(productBox("Produk B"));
+      expect(filterButton("Produk: 2 dipilih")).toBeInTheDocument();
+
+      await user.click(productBox("Produk B"));
+      await user.click(productBox("Produk A"));
+
+      expect(filterButton()).toBeInTheDocument();
+      expect(box(/Sesi A1/)).toBeInTheDocument();
+      expect(box(/Sesi B1/)).toBeInTheDocument();
+      expect(box(/Sesi C1/)).toBeInTheDocument();
+    });
+
+    it("Edge: a search and a product together, then Hapus pencarian clears both", async () => {
+      const { user } = await renderReady();
+
+      await user.click(productBox("Produk A"));
+      await user.type(searchBar(), "Sesi C1");
+      expect(screen.getByText("Tidak ada sesi yang cocok dengan pencarian atau filter produk ini.")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Hapus pencarian" }));
+
+      expect(searchBar()).toHaveValue("");
+      expect(filterButton()).not.toHaveClass("border-indigo-600");
+      expect(screen.getByRole("tab", { name: "Valid (4)" })).toBeInTheDocument();
+    });
+
+    // Many products: every one is listed and the panel scrolls instead of growing past the screen.
+    it("Edge: lists 30 products in a panel that scrolls", async () => {
+      const many = Array.from({ length: 30 }, (_, i) =>
+        eligibleSession({
+          session_id: `m-${i}`,
+          label: `Sesi M${i}`,
+          product_id: `p-m${i}`,
+          product_name: `Produk M${String(i).padStart(2, "0")}`,
+        }),
+      );
+      render(<ReportBuilderForm gateway={gatewayWith({ eligibleSessions: vi.fn().mockResolvedValue(many) })} />);
+      await screen.findByRole("checkbox", { name: /Sesi M0$/ });
+
+      expect(within(panel()).getAllByRole("checkbox", { hidden: true })).toHaveLength(30);
+      expect(panel()).toHaveClass("max-h-64", "overflow-y-auto");
+      expect(filterButton()).toBeInTheDocument();
+    });
+
+    it("Negatif: still works with only one product", async () => {
+      const user = userEvent.setup();
+      render(<ReportBuilderForm gateway={gatewayWith({ eligibleSessions: vi.fn().mockResolvedValue([a1]) })} />);
+      await screen.findByRole("checkbox", { name: /Sesi A1/ });
+
+      expect(within(panel()).getAllByRole("checkbox")).toHaveLength(1);
+      await user.click(productBox("Produk A"));
+      expect(filterButton("Produk: 1 dipilih")).toBeInTheDocument();
+      expect(box(/Sesi A1/)).toBeInTheDocument();
+    });
+  });
+
   // The existing automatic/manual filter stays and combines with the product filter.
   it("Positif: keeps the Otomatis / Manual filter next to the new ones", async () => {
     const { user } = await renderReady();
