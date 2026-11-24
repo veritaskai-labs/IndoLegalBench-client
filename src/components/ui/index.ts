@@ -23,3 +23,4 @@ export * from "./Breadcrumb";
 export * from "./Tabs";
 export * from "./DataTable";
 export * from "./Pager";
+export * from "./BarChart";
