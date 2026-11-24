@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BarChart, type BarGroup } from "./BarChart";
 
 const groups: BarGroup[] = [
@@ -64,5 +64,19 @@ describe("BarChart", () => {
     const { container } = render(<BarChart groups={[]} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("draws two products that share a name without a duplicate-key warning", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const twins: BarGroup[] = [
+      { label: "Veritask", bars: [{ series: "deterministic", value: 0.1 }] },
+      { label: "Veritask", bars: [{ series: "deterministic", value: 0.9 }] },
+    ];
+
+    render(<BarChart groups={twins} />);
+
+    expect(screen.getAllByRole("group", { name: "Veritask" })).toHaveLength(2);
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 });

@@ -92,4 +92,49 @@ describe("DataTable", () => {
 
     expect(screen.queryByText(/Halaman/)).toBeNull();
   });
+
+  it("sorts a column with its own comparator", async () => {
+    const byNameLength = (a: Row, b: Row) => a.name.length - b.name.length;
+    const custom: Column<Row>[] = [{ key: "name", header: "Nama", sortable: true, compare: byNameLength, cell: (r) => r.name }];
+    render(<DataTable columns={custom} rows={data} rowKey={(r) => r.id} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Nama/ }));
+
+    expect(bodyNames()).toEqual(["Ani", "Budi", "Citra"]);
+  });
+
+  it("sorts a derived column through its sortValue", async () => {
+    const derived: Column<Row>[] = [
+      { key: "name", header: "Nama", cell: (r) => r.name },
+      { key: "double", header: "Dobel", sortable: true, sortValue: (r) => r.score * 2, cell: (r) => String(r.score * 2) },
+    ];
+    render(<DataTable columns={derived} rows={data} rowKey={(r) => r.id} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Dobel/ }));
+
+    expect(bodyNames()).toEqual(["Budi", "Citra", "Ani"]);
+  });
+
+  it("goes back to page one when the rows change, so clearing a filter does not jump to an old page", async () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({ id: String(i), name: `Nama ${i}`, score: i }));
+    const { rerender } = render(<DataTable columns={columns} rows={many} rowKey={(r) => r.id} pageSize={2} />);
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(screen.getByText("Halaman 3 dari 3")).toBeInTheDocument();
+
+    rerender(<DataTable columns={columns} rows={many.slice(0, 3)} rowKey={(r) => r.id} pageSize={2} />);
+    expect(screen.getByText("Halaman 1 dari 2")).toBeInTheDocument();
+
+    rerender(<DataTable columns={columns} rows={many} rowKey={(r) => r.id} pageSize={2} />);
+    expect(screen.getByText("Halaman 1 dari 3")).toBeInTheDocument();
+  });
+
+  it("keeps the page when the parent re-renders with the same rows in a new array", async () => {
+    const { rerender } = render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} pageSize={2} />);
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+
+    rerender(<DataTable columns={columns} rows={[...data]} rowKey={(r) => r.id} pageSize={2} />);
+
+    expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+  });
 });

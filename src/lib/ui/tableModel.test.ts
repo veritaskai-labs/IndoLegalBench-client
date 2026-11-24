@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextSort, paginate, sortRows } from "./tableModel";
+import { nextSort, paginate, sameRows, sortRows } from "./tableModel";
 
 type Row = { name: string | null; score: number | null };
 
@@ -102,5 +102,90 @@ describe("paginate", () => {
 
   it("rejects a page size below one", () => {
     expect(() => paginate(items, 1, 0)).toThrow(RangeError);
+  });
+});
+
+describe("sortRows with decimals that arrive as strings", () => {
+  // The generated API types send scores, costs and percentages as strings (det_score, total_cost_idr).
+  const asc = { key: "v", direction: "asc" } as const;
+  const values = (list: { v: unknown }[]) => list.map((r) => r.v);
+
+  it("orders numeric strings by value, not character by character", () => {
+    const rows = [{ v: "100.0" }, { v: "95.5" }, { v: "9.0" }, { v: "0.85" }];
+
+    expect(values(sortRows(rows, asc, {}))).toEqual(["0.85", "9.0", "95.5", "100.0"]);
+  });
+
+  it("orders numeric strings descending", () => {
+    const rows = [{ v: "9.0" }, { v: "100.0" }, { v: "0.85" }];
+
+    expect(values(sortRows(rows, { key: "v", direction: "desc" }, {}))).toEqual(["100.0", "9.0", "0.85"]);
+  });
+
+  it("compares a number with a numeric string by value", () => {
+    const rows = [{ v: "12" }, { v: 3 }, { v: "4.5" }];
+
+    expect(values(sortRows(rows, asc, {}))).toEqual([3, "4.5", "12"]);
+  });
+
+  it("falls back to text when one of the two values is not a number", () => {
+    const rows = [{ v: "10" }, { v: "abc" }, { v: "9" }];
+
+    expect(values(sortRows(rows, asc, {}))).toEqual(["10", "9", "abc"]);
+  });
+
+  it("does not read a blank string as zero", () => {
+    const rows = [{ v: "0.5" }, { v: "  " }];
+
+    expect(values(sortRows(rows, asc, {}))).toEqual(["  ", "0.5"]);
+  });
+
+  it("keeps empty values last next to numeric strings", () => {
+    const rows = [{ v: null }, { v: "10" }, { v: "2" }];
+
+    expect(values(sortRows(rows, asc, {}))).toEqual(["2", "10", null]);
+  });
+});
+
+describe("sortRows with a sort value for a derived column", () => {
+  type Line = { cost: string; tax: string };
+  const lines: Line[] = [
+    { cost: "10", tax: "1" },
+    { cost: "2", tax: "0.5" },
+    { cost: "5", tax: "20" },
+  ];
+  const total = (row: Line) => Number(row.cost) + Number(row.tax);
+
+  it("sorts by the derived value even though the key is not a row field", () => {
+    const result = sortRows(lines, { key: "total", direction: "asc" }, {}, { total });
+
+    expect(result.map((r) => r.cost)).toEqual(["2", "10", "5"]);
+  });
+
+  it("puts rows whose derived value is empty last", () => {
+    const sparse = (row: Line) => (row.cost === "2" ? null : total(row));
+
+    const result = sortRows(lines, { key: "total", direction: "asc" }, {}, { total: sparse });
+
+    expect(result.map((r) => r.cost)).toEqual(["10", "5", "2"]);
+  });
+});
+
+describe("sameRows", () => {
+  const a = { id: 1 };
+  const b = { id: 2 };
+
+  it("is true for the same rows in the same order, even in a new array", () => {
+    expect(sameRows([a, b], [a, b])).toBe(true);
+  });
+
+  it("is false when the length, the order or a row differs", () => {
+    expect(sameRows([a, b], [a])).toBe(false);
+    expect(sameRows([a, b], [b, a])).toBe(false);
+    expect(sameRows([a], [{ id: 1 }])).toBe(false);
+  });
+
+  it("is true for two empty lists", () => {
+    expect(sameRows([], [])).toBe(true);
   });
 });
