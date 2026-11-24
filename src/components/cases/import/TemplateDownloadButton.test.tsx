@@ -12,9 +12,9 @@ import { TemplateDownloadButton } from "./TemplateDownloadButton";
 const { saveBlobMock } = vi.hoisted(() => ({ saveBlobMock: vi.fn() }));
 vi.mock("@/lib/browserDownload", () => ({ saveBlob: saveBlobMock }));
 
-const TEMPLATE = new Blob(["﻿title,question\r\n"], { type: "text/csv" });
+const TEMPLATE = new Blob(["\uFEFFtitle,question\r\n"], { type: "text/csv" });
 
-function gatewayWith(downloadTemplate: ImportGateway["downloadTemplate"]): ImportGateway {
+function gatewayWith(downloadTemplate: ImportGateway["downloadTemplate"]): Pick<ImportGateway, "downloadTemplate"> {
   return { downloadTemplate };
 }
 

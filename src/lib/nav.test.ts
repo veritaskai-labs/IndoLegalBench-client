@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/types";
-import { navForRole } from "./nav";
+import { isNavItemActive, navForRole } from "./nav";
 
 function labels(role: Role) {
   return navForRole(role).flatMap((group) =>
@@ -120,5 +120,35 @@ describe("navForRole", () => {
 
     // Assert
     expect(withRubrics).toEqual(["admin"]);
+  });
+});
+
+describe("isNavItemActive", () => {
+  // Positive: the exact page of a menu item.
+  it.each([
+    ["/dashboard", "/dashboard"],
+    ["/suites", "/suites"],
+  ])("marks %s active on %s", (href, pathname) => {
+    // Arrange / Act / Assert
+    expect(isNavItemActive(href, pathname)).toBe(true);
+  });
+
+  // Positive: the case list and the CSV import live under "Suite dan kasus" (SCRUM-341, SCRUM-340).
+  it.each(["/cases", "/cases/import"])("marks Suite dan kasus active on %s", (pathname) => {
+    // Arrange / Act / Assert
+    expect(isNavItemActive("/suites", pathname)).toBe(true);
+  });
+
+  // Negative: other pages and other items.
+  it.each([
+    ["/suites", "/dashboard"],
+    ["/dashboard", "/cases"],
+    ["/reports", "/cases/import"],
+    ["/suites", "/suites-lama"],
+    ["/suites", "/cases-lama"],
+    ["/suites", "/cases/c-1/edit"],
+  ])("does not mark %s active on %s", (href, pathname) => {
+    // Arrange / Act / Assert
+    expect(isNavItemActive(href, pathname)).toBe(false);
   });
 });

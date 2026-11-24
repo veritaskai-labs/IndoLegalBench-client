@@ -3,6 +3,7 @@ import Link from "next/link";
 const LINKS = [
   { href: "/suites", label: "Suite" },
   { href: "/cases", label: "Daftar kasus" },
+  { href: "/cases/import", label: "Impor CSV" },
 ] as const;
 
 export function SuiteCaseNav({ current }: Readonly<{ current: (typeof LINKS)[number]["href"] }>) {
