@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, BASE_URL } from "@/lib/apiClient";
-import { createCase, getCase, updateCase } from "./caseApi";
+import { createCase, duplicateCase, getCase, updateCase } from "./caseApi";
 import { emptyCaseFormValues, toCaseWritePayload } from "./caseFormMapping";
 
 const SUITE_ID = "11111111-1111-1111-1111-111111111111";
@@ -73,6 +73,26 @@ describe("createCase", () => {
 });
 
 const CASE_ID = "22222222-2222-2222-2222-222222222222";
+
+describe("duplicateCase", () => {
+  it("posts without a body and returns the new untagged draft", async () => {
+    const copy = { id: "new-case", status: "draft", split_tag: null };
+    fetchMock.mockResolvedValue(jsonResponse(201, copy));
+
+    await expect(duplicateCase("case/1")).resolves.toEqual(copy);
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+      `${BASE_URL}/cases/case%2F1/duplicate`,
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBeUndefined();
+  });
+
+  it("preserves the archived suite error for the confirmation dialog", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(422, { code: "SUITE_NOT_ACTIVE" }));
+
+    await expect(duplicateCase(CASE_ID)).rejects.toMatchObject({ status: 422, code: "SUITE_NOT_ACTIVE" });
+  });
+});
 
 describe("getCase", () => {
   // Positive

@@ -246,6 +246,7 @@ export function caseDetail(overrides: Partial<ReportCaseDetailRead> = {}): Repor
     rubric_version: "v3",
     det_score: "0.80",
     llm_score: "0.75",
+    other_products: [],
     attempts: [
       reportAttempt(),
       reportAttempt({

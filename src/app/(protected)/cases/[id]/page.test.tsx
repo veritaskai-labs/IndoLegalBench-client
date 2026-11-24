@@ -43,6 +43,7 @@ function approvedDevCase(): CaseRead {
     legal_refs: [],
     answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
     split_tag: "dev",
+    origin: "manual",
     status: "approved",
     completeness_pct: 100,
     was_dev: false,

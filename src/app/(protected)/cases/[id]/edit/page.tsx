@@ -132,7 +132,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
   }
   const { saved } = detail;
   const editable = isCaseEditable(saved.status);
-  const canChangeTag = canChangeTagAsAdmin(user?.role ?? null, saved);
+  const canChangeTag = saved.split_tag !== null && canChangeTagAsAdmin(user?.role ?? null, saved);
   
   const suitePath = `/suites/${encodeURIComponent(saved.suite_id)}`;
 
@@ -284,7 +284,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
         />
       </div>
 
-      {changingTag && (
+      {changingTag && saved.split_tag !== null && (
         <ChangeSplitTagDialog
           caseId={caseId}
           caseCode={saved.case_code}

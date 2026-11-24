@@ -52,6 +52,7 @@ function createdCase(id: string): CaseRead {
     legal_refs: [],
     answer_criteria: { must_contain: [], must_not_contain: [], expected_conclusion: null },
     split_tag: "dev",
+    origin: "manual",
     status: "draft",
     completeness_pct: 0,
     was_dev: false,

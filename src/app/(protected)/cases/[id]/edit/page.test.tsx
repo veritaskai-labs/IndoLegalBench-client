@@ -117,6 +117,7 @@ function savedCase(overrides: Partial<CaseRead> = {}): CaseRead {
       expected_conclusion: null,
     },
     split_tag: "dev",
+    origin: "manual",
     status: "draft",
     completeness_pct: 83,
     was_dev: false,
@@ -1169,6 +1170,23 @@ describe("EditCasePage submit for review (SCRUM-148)", () => {
     expect(
       await screen.findByRole("button", { name: "Ajukan review" }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("requires a saved dev/test tag before submitting a copied draft", async () => {
+    const user = userEvent.setup();
+    getCaseMock.mockResolvedValue(savedCase({ origin: "duplicate", split_tag: null }));
+    completenessMock.mockResolvedValue(completeness({
+      missing: [{ field: "split_tag", message: "Pilih tag dev atau test." }],
+    }));
+    renderPage();
+
+    const submit = await screen.findByRole("button", { name: "Ajukan review" });
+    expect(screen.getByText("Belum ditetapkan")).toBeInTheDocument();
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    for (const tag of screen.getAllByRole("radio")) expect(tag).not.toBeChecked();
+    expect(submit).toHaveAttribute("aria-disabled", "true");
+    await user.click(submit);
+    expect(submitMock).not.toHaveBeenCalled();
   });
 
   // Negative: the server only accepts the submission from the contributor who wrote the case,

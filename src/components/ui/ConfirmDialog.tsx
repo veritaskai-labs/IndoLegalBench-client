@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 
 /**
  * Callback ref: buka sebagai modal saat dialog dipasang. React memanggilnya lagi dengan null
@@ -47,22 +47,26 @@ export function ConfirmDialog<T>({
   onClose: (afterError: boolean) => void;
 }>) {
   const titleId = useId();
+  const confirming = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function confirm() {
+    if (confirming.current) return;
+    confirming.current = true;
     setBusy(true);
     setError(null);
     try {
       onDone(await onConfirm());
     } catch (failure) {
+      confirming.current = false;
       setError(errorMessage(failure));
       setBusy(false);
     }
   }
 
   function close() {
-    if (!busy) onClose(error !== null);
+    if (!confirming.current) onClose(error !== null);
   }
 
   return (

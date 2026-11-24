@@ -611,11 +611,15 @@ describe("ReportBuilderForm: live validation (SCRUM-366)", () => {
 
   // Negative: the check itself fails. The user can retry, and Create stays on because the server checks again.
   it("shows a failed check with a retry and keeps Create on", async () => {
-    const validate = vi
-      .fn()
+    const validateSelection = vi.fn<ReportsGateway["validate"]>()
       .mockRejectedValueOnce(new ApiError(500, "X"))
       .mockResolvedValue(reportValidation());
+    const validate = vi.fn<ReportsGateway["validate"]>((request) =>
+      request.session_ids.length === 2 ? validateSelection(request) : answerLikeServer(request),
+    );
     const { user } = await renderReady(gatewayWith({ validate }));
+    // The initial check may finish before either session is picked.
+    await waitFor(() => expect(validate).toHaveBeenCalledWith(expect.objectContaining({ session_ids: [] })));
     await fillValidForm(user);
 
     expect(await screen.findByText(/Pemeriksaan pilihan gagal/)).toBeInTheDocument();
@@ -623,8 +627,8 @@ describe("ReportBuilderForm: live validation (SCRUM-366)", () => {
 
     await user.click(screen.getByRole("button", { name: "Periksa lagi" }));
 
-    // The quick picks were one request, then the retry; the failure note goes once the retry has answered.
-    await waitFor(() => expect(validate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(validateSelection).toHaveBeenCalledTimes(2));
+    expect(validateSelection.mock.calls[1][0]).toEqual(validateSelection.mock.calls[0][0]);
     await waitFor(() => expect(screen.queryByText(/Pemeriksaan pilihan gagal/)).not.toBeInTheDocument());
   });
 

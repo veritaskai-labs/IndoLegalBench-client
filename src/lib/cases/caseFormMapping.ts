@@ -180,6 +180,6 @@ export function fromCaseRead(saved: CaseRead): CaseFormValues {
       must_not_contain: (criteria.must_not_contain ?? []).join("\n"),
       expected_conclusion: textOrEmpty(criteria.expected_conclusion),
     },
-    split_tag: saved.split_tag,
+    split_tag: saved.split_tag ?? "",
   };
 }
