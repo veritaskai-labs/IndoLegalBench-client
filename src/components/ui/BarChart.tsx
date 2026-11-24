@@ -35,8 +35,8 @@ export function BarChart({ groups }: Readonly<{ groups: readonly BarGroup[] }>) 
         ))}
       </ul>
       <div className="relative ml-[120px] mr-12">
-        {groups.map((group) => (
-          <fieldset key={group.label} aria-label={group.label} className="relative m-0 mb-5 min-w-0 border-0 p-0">
+        {groups.map((group, index) => (
+          <fieldset key={`${index}-${group.label}`} aria-label={group.label} className="relative m-0 mb-5 min-w-0 border-0 p-0">
             <div className="absolute -left-[120px] top-1/2 w-[108px] -translate-y-1/2 text-sm font-semibold">
               {group.label}
             </div>

@@ -128,10 +128,10 @@ describe("sortRows with decimals that arrive as strings", () => {
     expect(values(sortRows(rows, asc, {}))).toEqual([3, "4.5", "12"]);
   });
 
-  it("falls back to text when one of the two values is not a number", () => {
+  it("compares two numbers by value and a number with plain text as text", () => {
     const rows = [{ v: "10" }, { v: "abc" }, { v: "9" }];
 
-    expect(values(sortRows(rows, asc, {}))).toEqual(["10", "9", "abc"]);
+    expect(values(sortRows(rows, asc, {}))).toEqual(["9", "10", "abc"]);
   });
 
   it("does not read a blank string as zero", () => {

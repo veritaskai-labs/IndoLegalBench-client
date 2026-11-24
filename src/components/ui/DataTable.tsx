@@ -1,7 +1,15 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
-import { type Comparator, nextSort, paginate, type SortDirection, type SortState, sortRows } from "@/lib/ui/tableModel";
+import {
+  type Comparator,
+  nextSort,
+  paginate,
+  sameRows,
+  type SortDirection,
+  type SortState,
+  sortRows,
+} from "@/lib/ui/tableModel";
 import { Pager } from "./Pager";
 
 export type Column<T> = {
@@ -10,10 +18,13 @@ export type Column<T> = {
   sortable?: boolean;
   /** Overrides the default comparison of the cell value for this column. */
   compare?: Comparator<T>;
+  /** Value to sort by when the column is derived and its key is not a field of the row. */
+  sortValue?: (row: T) => unknown;
   cell: (row: T) => ReactNode;
 };
 
 type Props<T> = {
+  /** Define outside the component or wrap in useMemo, so the table does not rebuild its sort on every render. */
   columns: readonly Column<T>[];
   rows: readonly T[];
   rowKey: (row: T) => string;
@@ -44,13 +55,26 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Re
   const [sort, setSort] = useState<SortState | null>(null);
   const [page, setPage] = useState(1);
 
-  const comparators = useMemo(() => {
-    const map: Record<string, Comparator<T>> = {};
-    for (const column of columns) if (column.compare) map[column.key] = column.compare;
-    return map;
-  }, [columns]);
+  // Back to page one when the rows really change (filter, refetch), but not on a re-render with the same rows.
+  const [seenRows, setSeenRows] = useState(rows);
+  if (seenRows !== rows) {
+    setSeenRows(rows);
+    if (!sameRows(seenRows, rows)) setPage(1);
+  }
 
-  const sorted = useMemo(() => sortRows(rows, sort, comparators), [rows, sort, comparators]);
+  // Only the active column's sort hooks matter, so inline columns do not invalidate the sorted rows.
+  const activeColumn = sort ? columns.find((column) => column.key === sort.key) : undefined;
+  const activeCompare = activeColumn?.compare;
+  const activeSortValue = activeColumn?.sortValue;
+  const sorted = useMemo(() => {
+    const key = sort?.key ?? "";
+    return sortRows(
+      rows,
+      sort,
+      activeCompare ? { [key]: activeCompare } : {},
+      activeSortValue ? { [key]: activeSortValue } : {},
+    );
+  }, [rows, sort, activeCompare, activeSortValue]);
   const paged = paginate(sorted, page, pageSize);
 
   function toggleSort(key: string) {
