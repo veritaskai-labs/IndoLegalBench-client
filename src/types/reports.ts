@@ -41,6 +41,9 @@ export type PublicationRead = components["schemas"]["PublicationRead"];
 /** Satu baris GET /published-reports; product_labels sudah dibekukan server menurut aturan PBI-15 (AC10). */
 export type PublishedReportListItem = components["schemas"]["PublishedReportListItem"];
 export type PublishedReportPage = components["schemas"]["Page_PublishedReportListItem_"];
+/** GET /reports/{id}/replace-candidates (SCRUM-371): pilihan ganti versi yang produknya sama. */
+export type ReplaceCandidates = components["schemas"]["ReplaceCandidates"];
+export type ReplaceCandidate = components["schemas"]["ReplaceCandidateRead"];
 
 /** Tren skor satu produk antar bulan (PBI-17, server#150 dan server#153). */
 export type TrendRead = components["schemas"]["TrendRead"];
