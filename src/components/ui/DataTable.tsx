@@ -33,6 +33,12 @@ function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
 
 const ARIA_SORT = { asc: "ascending", desc: "descending" } as const;
 
+/** aria-sort only belongs on sortable headers: "none" until the column is the active sort. */
+function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
+  if (!sortable) return undefined;
+  return active ? ARIA_SORT[active.direction] : "none";
+}
+
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
 export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Readonly<Props<T>>) {
   const [sort, setSort] = useState<SortState | null>(null);
@@ -64,7 +70,7 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Re
                   <th
                     key={column.key}
                     scope="col"
-                    aria-sort={column.sortable ? (active ? ARIA_SORT[active.direction] : "none") : undefined}
+                    aria-sort={ariaSortFor(column.sortable, active)}
                     className="h-9 whitespace-nowrap bg-surface px-3 py-2 text-left font-medium text-ink-soft"
                   >
                     {column.sortable ? (

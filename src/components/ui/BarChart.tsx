@@ -36,7 +36,7 @@ export function BarChart({ groups }: Readonly<{ groups: readonly BarGroup[] }>) 
       </ul>
       <div className="relative ml-[120px] mr-12">
         {groups.map((group) => (
-          <div key={group.label} role="group" aria-label={group.label} className="relative mb-5">
+          <fieldset key={group.label} aria-label={group.label} className="relative m-0 mb-5 min-w-0 border-0 p-0">
             <div className="absolute -left-[120px] top-1/2 w-[108px] -translate-y-1/2 text-sm font-semibold">
               {group.label}
             </div>
@@ -45,23 +45,25 @@ export function BarChart({ groups }: Readonly<{ groups: readonly BarGroup[] }>) 
               const { label, fill } = SERIES[bar.series];
               return (
                 <div key={bar.series} className="my-1 flex items-center">
-                  <div
-                    role="img"
-                    aria-label={`${label} ${display}`}
-                    className="relative h-3.5 flex-1 rounded-[2px] bg-surface"
-                  >
+                  <div aria-hidden="true" className="relative h-3.5 flex-1 rounded-[2px] bg-surface">
                     <div
+                      data-testid={`fill-${group.label}-${bar.series}`}
                       className={`absolute inset-y-0 left-0 rounded-[2px] ${fill}`}
                       style={{ width: `${bar.value === null ? 0 : barWidthPercent(bar.value)}%` }}
                     />
                   </div>
+                  {bar.value === null ? (
+                    <span className="sr-only">{`${label} ${display}`}</span>
+                  ) : (
+                    <meter className="sr-only" min={0} max={1} value={bar.value} aria-label={`${label} ${display}`} />
+                  )}
                   <span aria-hidden="true" className="absolute -right-11 text-[13px]">
                     {display}
                   </span>
                 </div>
               );
             })}
-          </div>
+          </fieldset>
         ))}
         <div aria-hidden="true" className="flex justify-between text-xs text-muted">
           {AXIS.map((tick) => (
