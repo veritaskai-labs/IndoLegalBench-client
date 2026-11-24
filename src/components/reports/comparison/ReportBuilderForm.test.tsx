@@ -865,4 +865,31 @@ describe("ReportBuilderForm: message levels", () => {
     const levels = [...row.querySelectorAll("[data-level]")].map((el) => el.getAttribute("data-level"));
     expect(levels).toEqual(["error", "warning"]);
   });
+
+  // Accessibility: a message that appears on a row is read out, like the messages under the list.
+  it("announces the messages of a session row", async () => {
+    const { user } = await renderReady(
+      answering(reportValidation({ valid: false, violations: [cancelled], warnings: [trial] })),
+    );
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    for (const message of [cancelled.message, trial.message]) {
+      expect((await within(row).findByText(message)).closest("[aria-live]")).toHaveAttribute("aria-live", "polite");
+    }
+  });
+
+  it("removes a session warning once the latest check no longer sends it", async () => {
+    const validate = vi.fn((request: ReportValidateRequest) =>
+      Promise.resolve(reportValidation({ warnings: request.session_ids.includes("c-1") ? [] : [trial] })),
+    );
+    const { user } = await renderReady(gatewayWith({ validate }));
+
+    await pickTwo(user);
+    await within(pickedRow("Produk B · Sesi B1")).findByText(trial.message);
+    await user.click(box(/Sesi C1/));
+
+    await waitFor(() => expect(screen.queryByText(trial.message)).not.toBeInTheDocument());
+  });
 });
