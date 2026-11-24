@@ -8,6 +8,7 @@ import type {
   ReportDetail,
   ReportDetailResultRead,
   ReportDetailSessionRead,
+  ReportOtherProductRead,
   ReportResultCasesRead,
   ScoreSplit,
 } from "@/types/reports";
@@ -265,3 +266,28 @@ export function caseDetail(overrides: Partial<ReportCaseDetailRead> = {}): Repor
   };
 }
 
+/** Produk lain di laporan yang sama untuk kasus yang dibuka (SCRUM-370): jawaban manual yang dinilai. */
+export function otherProduct(overrides: Partial<ReportOtherProductRead> = {}): ReportOtherProductRead {
+  return {
+    result_id: "res-2",
+    product_label: "LegalHero",
+    measurement_kind: "manual",
+    is_trial: false,
+    status: "answered",
+    rubric_version: "v3",
+    det_score: "0.50",
+    llm_score: "1.00",
+    attempts: [
+      reportAttempt({
+        attempt_id: "b-1",
+        source: "manual",
+        det_score: "0.50",
+        llm_score: "1.00",
+        answer_text: "Tanpa surat, PHK tidak sah.",
+        filled_by_name: "Rina",
+        answered_at: "2026-11-18T07:30:00Z",
+      }),
+    ],
+    ...overrides,
+  };
+}

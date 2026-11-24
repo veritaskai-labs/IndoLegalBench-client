@@ -45,11 +45,15 @@ export function canRetryDrilldown(message: string): boolean {
   return message === LOAD_FAILED;
 }
 
-/** Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4, D9 Sprint 4); server tetap menegakkannya. */
-const EVIDENCE_ROLES: ReadonlySet<Role> = new Set<Role>(["admin", "contributor"]);
+/** Bukti jawaban manual (AC4, D9 Sprint 4) dan perbandingan produk (SCRUM-372) hanya untuk Admin dan Kontributor; server tetap menegakkannya. */
+const ADMIN_AND_CONTRIBUTOR: ReadonlySet<Role> = new Set<Role>(["admin", "contributor"]);
 
 export function canOpenEvidence(role: Role | null): boolean {
-  return role !== null && EVIDENCE_ROLES.has(role);
+  return role !== null && ADMIN_AND_CONTRIBUTOR.has(role);
+}
+
+export function canCompareProducts(role: Role | null): boolean {
+  return role !== null && ADMIN_AND_CONTRIBUTOR.has(role);
 }
 
 /** Percobaan gagal teknis tidak punya skor dan ditandai "tidak dinilai", bukan skor 0 (AC2). */

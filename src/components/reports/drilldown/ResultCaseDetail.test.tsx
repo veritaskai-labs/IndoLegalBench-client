@@ -1,10 +1,11 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
-import { caseDetail, reportAttempt } from "@/test/reportFixtures";
+import { caseDetail, otherProduct, reportAttempt } from "@/test/reportFixtures";
 
 import { ResultCaseDetail } from "./ResultCaseDetail";
 
@@ -166,5 +167,104 @@ describe("ResultCaseDetail", () => {
     await screen.findByRole("article", { name: "Percobaan 1" });
     expect(screen.queryByRole("region", { name: /^Bukti percobaan/ })).not.toBeInTheDocument();
     expect(gateway.evidence).not.toHaveBeenCalled();
+  });
+});
+
+// SCRUM-372 (UAT feedback, SCRUM-370 API): the answers of another product in the same report, side by side.
+describe("ResultCaseDetail product comparison", () => {
+  const COMPARE = { name: "Bandingkan dengan produk lain" };
+  const justisio = otherProduct({
+    result_id: "res-3",
+    product_label: "Justisio",
+    measurement_kind: "automatic",
+    status: "no_answer",
+    rubric_version: null,
+    det_score: null,
+    llm_score: null,
+    attempts: [],
+  });
+
+  async function openCase(role: string, others = [otherProduct()]) {
+    signInAs(role);
+    renderDetail(vi.fn().mockResolvedValue(caseDetail({ other_products: others })));
+    await screen.findByRole("heading", { level: 1 });
+  }
+
+  it.each([
+    ["admin", true],
+    ["contributor", true],
+    ["viewer", false],
+    ["developer_ai", false],
+  ])("offers the comparison to %s: %s", async (role, offered) => {
+    await openCase(role);
+
+    expect(screen.queryByRole("button", COMPARE) !== null).toBe(offered);
+  });
+
+  // Positive: with one other product the toggle puts both side by side right away, without a picker.
+  it("puts the two products side by side and back", async () => {
+    const user = userEvent.setup();
+    await openCase("admin");
+
+    await user.click(screen.getByRole("button", COMPARE));
+
+    expect(screen.getByRole("button", COMPARE)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "AiYU" })).getAllByRole("article")).toHaveLength(2);
+    const other = screen.getByRole("region", { name: "LegalHero" });
+    expect(within(other).getByText("Manual · Rubrik v3")).toBeInTheDocument();
+    expect(within(other).getByText("Tanpa surat, PHK tidak sah.")).toBeInTheDocument();
+    expect(within(other).getByText("Rina")).toBeInTheDocument();
+    expect(within(other).getAllByText("1,00").length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", COMPARE));
+
+    expect(screen.queryByRole("region", { name: "LegalHero" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Percobaan (2)" })).toBeInTheDocument();
+  });
+
+  // Positive: with more than two products a picker chooses the product to compare with.
+  it("lets the user pick the product when the report has more than two", async () => {
+    const user = userEvent.setup();
+    await openCase("contributor", [otherProduct(), justisio]);
+
+    await user.click(screen.getByRole("button", COMPARE));
+    const picker = screen.getByRole("combobox", { name: "Produk pembanding" });
+    expect(screen.queryByRole("region", { name: "LegalHero" })).not.toBeInTheDocument();
+
+    await user.selectOptions(picker, "Justisio");
+
+    const other = screen.getByRole("region", { name: "Justisio" });
+    expect(within(other).getByText("Tidak menjawab")).toBeInTheDocument();
+    expect(within(other).getByText("Produk ini tidak menjawab kasus ini.")).toBeInTheDocument();
+    expect(within(other).getByText("Otomatis · Rubrik –")).toBeInTheDocument();
+
+    await user.selectOptions(picker, "LegalHero");
+
+    expect(screen.getByRole("region", { name: "LegalHero" })).toBeInTheDocument();
+  });
+
+  // Edge: a product whose attempts all failed technically reads "Tidak dinilai", and a trial session says so.
+  it("marks a not graded trial product", async () => {
+    const user = userEvent.setup();
+    const failed = reportAttempt({ attempt_id: "b-2", graded: false, det_score: null, llm_score: null, answer_text: null });
+    await openCase("admin", [
+      otherProduct({ status: "not_graded", is_trial: true, det_score: null, llm_score: null, attempts: [failed] }),
+    ]);
+
+    await user.click(screen.getByRole("button", COMPARE));
+
+    const other = screen.getByRole("region", { name: "LegalHero" });
+    expect(within(other).getByText("Uji Coba")).toBeInTheDocument();
+    expect(within(other).getAllByText("Tidak dinilai")).toHaveLength(2);
+    expect(within(other).queryByText("0,00")).not.toBeInTheDocument();
+  });
+
+  // Empty: nothing to compare with, so no toggle.
+  it("says when there is no other product to compare with", async () => {
+    await openCase("admin", []);
+
+    expect(screen.getByText("Tidak ada produk lain di laporan ini untuk dibandingkan.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", COMPARE)).not.toBeInTheDocument();
   });
 });
