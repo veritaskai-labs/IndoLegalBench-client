@@ -52,8 +52,8 @@ export function canOpenEvidence(role: Role | null): boolean {
   return role !== null && ADMIN_AND_CONTRIBUTOR.has(role);
 }
 
-export function canCompareProducts(_role: Role | null): boolean {
-  return false;
+export function canCompareProducts(role: Role | null): boolean {
+  return role !== null && ADMIN_AND_CONTRIBUTOR.has(role);
 }
 
 /** Percobaan gagal teknis tidak punya skor dan ditandai "tidak dinilai", bukan skor 0 (AC2). */
