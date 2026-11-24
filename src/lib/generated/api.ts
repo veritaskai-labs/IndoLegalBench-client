@@ -285,6 +285,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar kasus lintas suite dengan pencarian dan filter
+         * @description List the cases of every suite, newest update first (PBI-4 AC3, SCRUM-339).
+         *
+         *     Contributor and Admin only: rows are not masked, so Developer AI keeps the
+         *     per-suite list that hides test cases.
+         */
+        get: operations["list_all_cases_cases_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cases/{case_id}": {
         parameters: {
             query?: never;
@@ -1537,6 +1560,10 @@ export interface paths {
         /**
          * Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan
          * @description PBI-16 AC2 dan AC3: jawaban asli, skor, alasan, versi rubrik, dan data jawaban manual.
+         *
+         *     `other_products` memuat jawaban produk lain di laporan yang sama untuk kasus ini, dengan
+         *     status `answered`, `not_graded` (tampilkan "tidak dinilai"), atau `no_answer`. Aturan akses
+         *     sama dengan isi kasus, jadi peran tanpa hak mendapat 403 tanpa jawaban produk mana pun.
          */
         get: operations["get_result_case_reports__report_id__results__result_id__cases__case_id__get"];
         put?: never;
@@ -1861,6 +1888,23 @@ export interface paths {
          * @description Untuk dropdown penilai di form pengukuran (Admin dan Developer AI). Isinya produk AI otomatis yang aktif dan belum dihapus, sama dengan halaman Provider. Hanya id, nama, jenis, dan model; tanpa URL, hint kredensial, harga, atau anggaran.
          */
         get: operations["list_judge_options_judge_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cari suite, kasus, dan sesi pengukuran */
+        get: operations["search_search_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2546,6 +2590,51 @@ export interface components {
             category?: string | null;
         };
         /**
+         * CaseListItem
+         * @description One row of GET /cases: the suite summary plus the suite it belongs to (SCRUM-339).
+         */
+        CaseListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Case Code */
+            case_code: string;
+            /** Title */
+            title: string;
+            /** @description Kosong hanya pada draft hasil impor atau duplikasi (PBI-4 AC2, AC8) */
+            split_tag: components["schemas"]["SplitTag"] | null;
+            status: components["schemas"]["CaseStatus"];
+            /** @default manual */
+            origin: components["schemas"]["CaseOrigin"];
+            /** Completeness Pct */
+            completeness_pct: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Masked
+             * @description True for a test case shown to Developer AI: case_code and title are server placeholders and the case cannot be opened (SCRUM-183).
+             * @default false
+             */
+            masked: boolean;
+            /**
+             * Suite Id
+             * Format: uuid
+             */
+            suite_id: string;
+            /** Suite Name */
+            suite_name: string;
+            /**
+             * Suite Archived
+             * @description True when the suite is archived; its cases stay listed
+             */
+            suite_archived: boolean;
+        };
+        /**
          * CaseNotReadyBody
          * @description 422 CASE_NOT_READY: every section that blocks the submission.
          */
@@ -2566,6 +2655,23 @@ export interface components {
          * @enum {string}
          */
         CaseOrigin: "manual" | "import" | "duplicate";
+        /**
+         * CasePage
+         * @description One page of GET /cases, newest update first (PBI-4 AC3, SCRUM-339).
+         */
+        CasePage: {
+            /** Items */
+            items: components["schemas"]["CaseListItem"][];
+            /**
+             * Total
+             * @description Rows matching the filters, over every page
+             */
+            total: number;
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+        };
         /**
          * CaseRead
          * @description Full case returned by create, read, and update.
@@ -2647,6 +2753,20 @@ export interface components {
             decided_at: string | null;
             /** Reviewers */
             reviewers: components["schemas"]["ReviewerSlot"][];
+        };
+        /** CaseSearchHit */
+        CaseSearchHit: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Archived */
+            archived: boolean;
+            /** Case Code */
+            case_code: string;
         };
         /**
          * CaseStatus
@@ -4177,6 +4297,12 @@ export interface components {
             created_at: string;
         };
         /**
+         * OtherProductStatus
+         * @description Keadaan satu produk lain pada kasus yang sedang ditelusuri (PBI-16 SCRUM-370).
+         * @enum {string}
+         */
+        OtherProductStatus: "answered" | "no_answer" | "not_graded";
+        /**
          * OwnCaseSummary
          * @description Kasus yang ditulis pengguna yang login, per status versi yang berlaku (PBI-24 AC6).
          */
@@ -4670,6 +4796,11 @@ export interface components {
             llm_score: string | null;
             /** Attempts */
             attempts: components["schemas"]["ReportAttemptRead"][];
+            /**
+             * Other Products
+             * @description Produk lain di laporan yang sama untuk kasus ini, urut label; kosong bila laporan hanya memuat satu produk. Hanya dikirim ke peran yang boleh membuka isi kasus.
+             */
+            other_products: components["schemas"]["ReportOtherProductRead"][];
         };
         /**
          * ReportCaseScoreRead
@@ -4922,6 +5053,44 @@ export interface components {
             };
             /** Rejections */
             rejections: components["schemas"]["ReportRejectionRead"][];
+        };
+        /**
+         * ReportOtherProductRead
+         * @description Jawaban satu produk lain di laporan yang sama untuk kasus yang sedang dibuka.
+         *
+         *     Tanpa id sesi, dan label produk memakai nilai beku laporan (nama asli atau kode).
+         */
+        ReportOtherProductRead: {
+            /**
+             * Result Id
+             * Format: uuid
+             * @description Angka laporan produk ini, jenis skor yang sama
+             */
+            result_id: string;
+            /**
+             * Product Label
+             * @description Label produk yang dibekukan di laporan (nama asli atau kode)
+             */
+            product_label: string;
+            measurement_kind: components["schemas"]["MeasurementKind"];
+            /**
+             * Is Trial
+             * @description Sesi Uji Coba wajib diberi tanda yang jelas
+             */
+            is_trial: boolean;
+            /** @description answered: ada jawaban dinilai; not_graded: semua percobaan gagal teknis (tampilkan 'tidak dinilai'); no_answer: produk tidak menjawab kasus ini */
+            status: components["schemas"]["OtherProductStatus"];
+            /**
+             * Rubric Version
+             * @description Versi rubrik run penilaian produk ini; kosong bila kasus tidak ada di run-nya
+             */
+            rubric_version: string | null;
+            /** Det Score */
+            det_score: string | null;
+            /** Llm Score */
+            llm_score: string | null;
+            /** Attempts */
+            attempts: components["schemas"]["ReportAttemptRead"][];
         };
         /** ReportRead */
         ReportRead: {
@@ -5543,6 +5712,27 @@ export interface components {
          * @enum {string}
          */
         ScoreSplit: "test" | "dev" | "combined";
+        /** SearchHit */
+        SearchHit: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Archived */
+            archived: boolean;
+        };
+        /** SearchResponse */
+        SearchResponse: {
+            /** Suites */
+            suites: components["schemas"]["SearchHit"][];
+            /** Cases */
+            cases: components["schemas"]["CaseSearchHit"][];
+            /** Sessions */
+            sessions: components["schemas"]["SessionSearchHit"][];
+        };
         /**
          * SessionAcceptRequest
          * @description Terima apa adanya (PBI-12 AC9). Alasan wajib; dicek di server supaya kodenya REASON_REQUIRED.
@@ -5990,6 +6180,28 @@ export interface components {
              * @description Percobaan yang kembali pending, urut kasus lalu nomor pengulangan
              */
             retried_attempt_ids: string[];
+        };
+        /** SessionSearchHit */
+        SessionSearchHit: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Archived */
+            archived: boolean;
+            /**
+             * Session Type
+             * @enum {string}
+             */
+            session_type: "automatic" | "manual";
+            /**
+             * Destination
+             * @enum {string}
+             */
+            destination: "automatic_detail" | "manual_detail" | "grading_results";
         };
         /**
          * SessionStatus
@@ -7257,6 +7469,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_all_cases_cases_get: {
+        parameters: {
+            query?: {
+                /** @description Sebagian kode kasus atau judul, huruf besar/kecil tidak dibedakan. Kosong atau hanya spasi berarti tanpa kata kunci. */
+                q?: string | null;
+                /** @description Status versi yang berlaku */
+                status?: components["schemas"]["CaseStatus"] | null;
+                /** @description Satu suite. Suite yang tidak ada memberi daftar kosong. */
+                suite_id?: string | null;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CasePage"];
+                };
+            };
+            /** @description Hanya Kontributor dan Admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -11751,6 +12010,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    search_search_get: {
+        parameters: {
+            query: {
+                /** @description Kata kunci pencarian */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResponse"];
+                };
+            };
+            /** @description Autentikasi diperlukan */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
