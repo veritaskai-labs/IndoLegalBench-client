@@ -13,7 +13,7 @@ import { useReportBuilder, type ReportBuilder } from "@/hooks/useReportBuilder";
 import { REPORT_TITLE_MAX, type TitleProblem } from "@/lib/reports/builder/builderRules";
 import type { CreateOutcome, ForbiddenCode } from "@/lib/reports/builder/createOutcome";
 import { reasonText } from "@/lib/reports/builder/reasonText";
-import type { SessionTab } from "@/lib/reports/builder/sessionSearch";
+import { productFilterLabel, type SessionTab } from "@/lib/reports/builder/sessionSearch";
 import type { ScopeOption } from "@/lib/reports/builder/validationView";
 import { LABEL_MODE_TEXT } from "@/lib/reports/labelPreview";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
@@ -178,7 +178,7 @@ function ProductFilter({ builder }: Readonly<{ builder: ReportBuilder }>) {
         className={`flex cursor-pointer list-none items-center gap-2 whitespace-nowrap rounded-md border bg-white px-3 py-2 text-sm [&::-webkit-details-marker]:hidden ${look}`}
       >
         <FilterIcon />
-        {chosen === 0 ? "Produk: semua" : `Produk: ${chosen} dipilih`}
+        {productFilterLabel(chosen)}
         <ChevronIcon />
       </summary>
       <fieldset className="absolute left-0 z-10 mt-1 max-h-64 w-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 shadow-md">
