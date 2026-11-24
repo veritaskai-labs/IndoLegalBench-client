@@ -288,16 +288,19 @@ function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
               Lepas <span className="sr-only">{sessionName(session)}</span>
             </button>
           </div>
-          {sessionProblems(builder, session.session_id).map((text) => (
-            <ValidationMessage key={text} level="error">
-              {text}
-            </ValidationMessage>
-          ))}
-          {sessionWarnings(builder, session.session_id).map((text) => (
-            <ValidationMessage key={text} level="warning">
-              {text}
-            </ValidationMessage>
-          ))}
+          {/* Selalu ada sejak baris muncul, supaya pesan yang datang kemudian ikut dibacakan. */}
+          <div aria-live="polite" className="space-y-1">
+            {sessionProblems(builder, session.session_id).map((text) => (
+              <ValidationMessage key={text} level="error">
+                {text}
+              </ValidationMessage>
+            ))}
+            {sessionWarnings(builder, session.session_id).map((text) => (
+              <ValidationMessage key={text} level="warning">
+                {text}
+              </ValidationMessage>
+            ))}
+          </div>
         </li>
       ))}
     </ul>
