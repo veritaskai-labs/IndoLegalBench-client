@@ -888,3 +888,139 @@ describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () =>
     expect(screen.queryByRole("button", { name: "Hapus pencarian" })).not.toBeInTheDocument();
   });
 });
+
+// Every check message says whether it stops the report (red, Error) or only informs (yellow,
+// Peringatan), and a warning about one session sits on that session's row instead of under the list.
+describe("ReportBuilderForm: message levels", () => {
+  const suite = {
+    kind: "requirement",
+    code: "SUITE_VERSION",
+    message: "Sesi yang dipilih memakai suite yang berbeda.",
+  } as const;
+  const noShared = {
+    kind: "case_slice",
+    code: "NO_SHARED_CASES",
+    message: "Tidak ada kasus yang dijawab semua produk yang dipilih, jadi tidak ada angka perbandingan.",
+  } as const;
+  const cancelled = { kind: "session", code: "SESSION_CANCELLED", message: "Sesi ini dibatalkan.", session_id: "b-1" } as const;
+  const model = { code: "MODEL_VERSION_DIFFERS", message: "Versi model produk antar sesi berbeda." };
+  const repetitions = { code: "REPETITIONS_DIFFER", message: "Jumlah percobaan antar sesi berbeda." };
+  const trial = { code: "TRIAL_SESSION", message: "Sesi ini berjenis Uji Coba.", session_id: "b-1" };
+  const range = {
+    code: "MANUAL_ANSWER_RANGE_OVER_LIMIT",
+    message: "Rentang tanggal jawaban sesi manual ini lebih dari 7 hari.",
+    session_id: "b-1",
+  };
+
+  const answering = (verdict: ReportValidation) => gatewayWith({ validate: vi.fn().mockResolvedValue(verdict) });
+  const levelOf = (text: string) => screen.getByText(text).closest("[data-level]");
+
+  async function pickTwo(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("Judul laporan"), "Laporan");
+    await user.click(box(/Sesi A1/));
+    await user.click(box(/Sesi B1/));
+  }
+
+  it("shows blocking violations as red errors and keeps Create off", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [suite, noShared] })));
+
+    await pickTwo(user);
+
+    await screen.findByText(suite.message);
+    for (const violation of [suite, noShared]) {
+      expect(levelOf(violation.message)).toHaveAttribute("data-level", "error");
+      expect(levelOf(violation.message)).toHaveTextContent(/^Error: /);
+    }
+    expect(createButton()).toBeDisabled();
+  });
+
+  it("shows warnings as yellow Peringatan and leaves Create on", async () => {
+    const { user } = await renderReady(answering(reportValidation({ warnings: [model, repetitions] })));
+
+    await pickTwo(user);
+
+    await createReady();
+    for (const warning of [model, repetitions]) {
+      expect(levelOf(warning.message)).toHaveAttribute("data-level", "warning");
+      expect(levelOf(warning.message)).toHaveTextContent(/^Peringatan: /);
+    }
+  });
+
+  it("puts the trial marker on the trial session's row, not under the list", async () => {
+    const { user } = await renderReady(answering(reportValidation({ warnings: [trial] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    const marker = (await within(row).findByText(trial.message)).closest("[data-level]");
+    expect(marker).toHaveAttribute("data-level", "warning");
+    expect(within(pickedRow("Produk A · Sesi A1")).queryByText(trial.message)).not.toBeInTheDocument();
+    expect(screen.getAllByText(trial.message)).toHaveLength(1);
+    await createReady();
+  });
+
+  it("puts the manual date range warning on that session's row", async () => {
+    const { user } = await renderReady(answering(reportValidation({ warnings: [range] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    expect((await within(row).findByText(range.message)).closest("[data-level]")).toHaveAttribute(
+      "data-level",
+      "warning",
+    );
+  });
+
+  it("shows a session violation on its row as a red error", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [cancelled] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    expect((await within(row).findByText(cancelled.message)).closest("[data-level]")).toHaveAttribute(
+      "data-level",
+      "error",
+    );
+    expect(createButton()).toBeDisabled();
+  });
+
+  it("lists the errors of a row before its warnings", async () => {
+    const { user } = await renderReady(
+      answering(reportValidation({ valid: false, violations: [cancelled], warnings: [trial] })),
+    );
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    await within(row).findByText(trial.message);
+    const levels = [...row.querySelectorAll("[data-level]")].map((el) => el.getAttribute("data-level"));
+    expect(levels).toEqual(["error", "warning"]);
+  });
+
+  // Accessibility: a message that appears on a row is read out, like the messages under the list.
+  it("announces the messages of a session row", async () => {
+    const { user } = await renderReady(
+      answering(reportValidation({ valid: false, violations: [cancelled], warnings: [trial] })),
+    );
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    for (const message of [cancelled.message, trial.message]) {
+      expect((await within(row).findByText(message)).closest("[aria-live]")).toHaveAttribute("aria-live", "polite");
+    }
+  });
+
+  it("removes a session warning once the latest check no longer sends it", async () => {
+    const validate = vi.fn((request: ReportValidateRequest) =>
+      Promise.resolve(reportValidation({ warnings: request.session_ids.includes("c-1") ? [] : [trial] })),
+    );
+    const { user } = await renderReady(gatewayWith({ validate }));
+
+    await pickTwo(user);
+    await within(pickedRow("Produk B · Sesi B1")).findByText(trial.message);
+    await user.click(box(/Sesi C1/));
+
+    await waitFor(() => expect(screen.queryByText(trial.message)).not.toBeInTheDocument());
+  });
+});

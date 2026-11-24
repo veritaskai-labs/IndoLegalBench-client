@@ -1,11 +1,11 @@
 import type { ReportBuilder } from "@/hooks/useReportBuilder";
 
-const NOTE = "text-sm text-amber-800";
+import { ValidationMessage } from "./ValidationMessage";
 
 /**
  * Hasil pemeriksaan pilihan sesi (SCRUM-366): pelanggaran yang menahan tombol Buat laporan, peringatan yang
  * tidak menahan, dan keadaan pemeriksaannya sendiri. Hanya menampilkan; aturannya dari server lewat hook.
- * Pelanggaran satu sesi tidak tampil di sini, melainkan di baris sesinya (PickedList).
+ * Pelanggaran dan peringatan satu sesi tidak tampil di sini, melainkan di baris sesinya (PickedList).
  */
 export function ValidationPanel({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const { validation, view } = builder;
@@ -23,14 +23,14 @@ export function ValidationPanel({ builder }: Readonly<{ builder: ReportBuilder }
           </div>
         )}
         {view.general.map((violation) => (
-          <p key={violation.code} className="text-sm text-red-700">
+          <ValidationMessage key={violation.code} level="error">
             {violation.message}
-          </p>
+          </ValidationMessage>
         ))}
         {view.warnings.map((warning) => (
-          <p key={`${warning.code}:${warning.session_id ?? ""}`} className={NOTE}>
+          <ValidationMessage key={warning.code} level="warning">
             {warning.message}
-          </p>
+          </ValidationMessage>
         ))}
       </div>
     </div>

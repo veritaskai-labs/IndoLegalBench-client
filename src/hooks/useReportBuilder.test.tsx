@@ -369,7 +369,8 @@ describe("useReportBuilder: live validation (SCRUM-366, AC1 AC4 AC5 AC13 AC14)",
   it("shows warnings without blocking Create", async () => {
     const { result } = await readyToCheck(vi.fn().mockResolvedValue(reportValidation({ warnings: [trialWarning] })));
 
-    expect(result.current.view.warnings).toEqual([trialWarning]);
+    expect(result.current.view.sessionWarnings.get("a-1")).toEqual([trialWarning]);
+    expect(result.current.view.warnings).toEqual([]);
     expect(result.current.canSubmit).toBe(true);
   });
 

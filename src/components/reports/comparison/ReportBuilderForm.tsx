@@ -21,6 +21,7 @@ import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsAp
 import type { EligibleSession, MeasurementFilter, ProductLabelMode } from "@/types/reports";
 
 import { ProductLabelPreview } from "./ProductLabelPreview";
+import { ValidationMessage } from "./ValidationMessage";
 import { ValidationPanel } from "./ValidationPanel";
 
 const FILTER_OPTIONS: ReadonlyArray<readonly [MeasurementFilter, string]> = [
@@ -300,13 +301,18 @@ function sessionProblems(builder: ReportBuilder, sessionId: string): string[] {
   return [...new Set([...live, ...createProblems(builder.outcome, sessionId)])];
 }
 
+/** Penanda yang tidak memblokir untuk sesi ini, misalnya sesi uji coba. */
+function sessionWarnings(builder: ReportBuilder, sessionId: string): string[] {
+  return [...new Set((builder.view.sessionWarnings.get(sessionId) ?? []).map((warning) => warning.message))];
+}
+
 function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const rows = [...builder.picked, ...builder.dropped];
   if (rows.length === 0) return null;
   return (
     <ul aria-label="Sesi terpilih" className="space-y-1">
       {rows.map((session) => (
-        <li key={session.session_id} className="rounded-md bg-slate-50 px-3 py-2 text-sm">
+        <li key={session.session_id} className="space-y-1 rounded-md bg-slate-50 px-3 py-2 text-sm">
           <div className="flex items-center justify-between gap-2">
             <span className="text-slate-900">{sessionName(session)}</span>
             <button
@@ -317,11 +323,19 @@ function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
               Lepas <span className="sr-only">{sessionName(session)}</span>
             </button>
           </div>
-          {sessionProblems(builder, session.session_id).map((text) => (
-            <p key={text} className="text-red-700">
-              {text}
-            </p>
-          ))}
+          {/* Selalu ada sejak baris muncul, supaya pesan yang datang kemudian ikut dibacakan. */}
+          <div aria-live="polite" className="space-y-1">
+            {sessionProblems(builder, session.session_id).map((text) => (
+              <ValidationMessage key={text} level="error">
+                {text}
+              </ValidationMessage>
+            ))}
+            {sessionWarnings(builder, session.session_id).map((text) => (
+              <ValidationMessage key={text} level="warning">
+                {text}
+              </ValidationMessage>
+            ))}
+          </div>
         </li>
       ))}
     </ul>
