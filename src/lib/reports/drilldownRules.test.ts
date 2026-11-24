@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 
 import {
+  canCompareProducts,
   canOpenEvidence,
   canRetryDrilldown,
   CONTENT_REQUEST_TEXT,
@@ -70,5 +71,17 @@ describe("canOpenEvidence (AC4)", () => {
     [null, false],
   ] as const)("%s → %s", (role, allowed) => {
     expect(canOpenEvidence(role)).toBe(allowed);
+  });
+});
+
+describe("canCompareProducts (SCRUM-372)", () => {
+  it.each([
+    ["admin", true],
+    ["contributor", true],
+    ["viewer", false],
+    ["developer_ai", false],
+    [null, false],
+  ] as const)("%s → %s", (role, allowed) => {
+    expect(canCompareProducts(role)).toBe(allowed);
   });
 });
