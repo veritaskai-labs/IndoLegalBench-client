@@ -13,7 +13,7 @@ import { useReportBuilder, type ReportBuilder } from "@/hooks/useReportBuilder";
 import { REPORT_TITLE_MAX, type TitleProblem } from "@/lib/reports/builder/builderRules";
 import type { CreateOutcome, ForbiddenCode } from "@/lib/reports/builder/createOutcome";
 import { reasonText } from "@/lib/reports/builder/reasonText";
-import type { SessionTab } from "@/lib/reports/builder/sessionSearch";
+import { productFilterLabel, type SessionTab } from "@/lib/reports/builder/sessionSearch";
 import type { ScopeOption } from "@/lib/reports/builder/validationView";
 import { LABEL_MODE_TEXT } from "@/lib/reports/labelPreview";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
@@ -21,6 +21,7 @@ import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsAp
 import type { EligibleSession, MeasurementFilter, ProductLabelMode } from "@/types/reports";
 
 import { ProductLabelPreview } from "./ProductLabelPreview";
+import { ValidationMessage } from "./ValidationMessage";
 import { ValidationPanel } from "./ValidationPanel";
 
 const FILTER_OPTIONS: ReadonlyArray<readonly [MeasurementFilter, string]> = [
@@ -138,15 +139,50 @@ const scopeRadio = (option: ScopeOption): RadioOption<ScopeOption["scope"]> => (
   reason: option.reason,
 });
 
-/** Dropdown filter produk (SCRUM-365): bisa memilih lebih dari satu; tidak memilih apa pun berarti semua produk. */
+/** Ikon corong (filter), digambar sendiri; hiasan saja, nama tombol tetap dari teksnya. */
+function FilterIcon() {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+      <path d="M3 4.5a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .38.82L12 10.6v4.4a.5.5 0 0 1-.28.45l-3 1.5A.5.5 0 0 1 8 16.5v-5.9L3.12 4.82A.5.5 0 0 1 3 4.5Z" />
+    </svg>
+  );
+}
+
+/** Panah kecil ke bawah, berputar saat panel terbuka; menandai bahwa tombol ini membuka daftar. */
+function ChevronIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+    >
+      <path d="M5.5 8 10 12.5 14.5 8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * Dropdown filter produk (SCRUM-365): bisa memilih lebih dari satu; tidak memilih apa pun berarti semua produk.
+ * SCRUM-368 (UAT): diberi ikon filter dan tampilan aktif saat ada produk dipilih, diletakkan di kiri kotak cari,
+ * dan panelnya terbuka dari tepi kiri tombol supaya tidak terpotong di layar HP.
+ */
 function ProductFilter({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const chosen = builder.productIds.length;
+  const look = chosen > 0 ? "border-indigo-600 text-indigo-700" : "border-slate-300 text-slate-800";
   return (
-    <details className="relative">
-      <summary className="cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800">
-        {chosen === 0 ? "Produk: semua" : `Produk: ${chosen} dipilih`}
+    <details className="group relative shrink-0">
+      <summary
+        className={`flex cursor-pointer list-none items-center gap-2 whitespace-nowrap rounded-md border bg-white px-3 py-2 text-sm [&::-webkit-details-marker]:hidden ${look}`}
+      >
+        <FilterIcon />
+        {productFilterLabel(chosen)}
+        <ChevronIcon />
       </summary>
-      <fieldset className="absolute right-0 z-10 mt-1 max-h-64 w-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 shadow-md">
+      <fieldset className="absolute left-0 z-10 mt-1 max-h-64 w-64 space-y-1 overflow-y-auto rounded-md border border-slate-200 bg-white p-3 shadow-md">
         <legend className="sr-only">Filter produk</legend>
         {builder.productOptions.map((product) => (
           <label key={product.id} className="flex items-center gap-2 text-sm text-slate-800">
@@ -223,6 +259,7 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
     <fieldset className="space-y-2">
       <legend className={LEGEND}>Sesi</legend>
       <div className="flex flex-wrap items-start gap-2">
+        <ProductFilter builder={builder} />
         <input
           type="search"
           aria-label="Cari sesi"
@@ -232,7 +269,6 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
           value={builder.query}
           onChange={(event) => builder.setQuery(event.target.value)}
         />
-        <ProductFilter builder={builder} />
       </div>
       <Tabs
         label="Kelayakan sesi"
@@ -265,13 +301,18 @@ function sessionProblems(builder: ReportBuilder, sessionId: string): string[] {
   return [...new Set([...live, ...createProblems(builder.outcome, sessionId)])];
 }
 
+/** Penanda yang tidak memblokir untuk sesi ini, misalnya sesi uji coba. */
+function sessionWarnings(builder: ReportBuilder, sessionId: string): string[] {
+  return [...new Set((builder.view.sessionWarnings.get(sessionId) ?? []).map((warning) => warning.message))];
+}
+
 function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
   const rows = [...builder.picked, ...builder.dropped];
   if (rows.length === 0) return null;
   return (
     <ul aria-label="Sesi terpilih" className="space-y-1">
       {rows.map((session) => (
-        <li key={session.session_id} className="rounded-md bg-slate-50 px-3 py-2 text-sm">
+        <li key={session.session_id} className="space-y-1 rounded-md bg-slate-50 px-3 py-2 text-sm">
           <div className="flex items-center justify-between gap-2">
             <span className="text-slate-900">{sessionName(session)}</span>
             <button
@@ -282,11 +323,19 @@ function PickedList({ builder }: Readonly<{ builder: ReportBuilder }>) {
               Lepas <span className="sr-only">{sessionName(session)}</span>
             </button>
           </div>
-          {sessionProblems(builder, session.session_id).map((text) => (
-            <p key={text} className="text-red-700">
-              {text}
-            </p>
-          ))}
+          {/* Selalu ada sejak baris muncul, supaya pesan yang datang kemudian ikut dibacakan. */}
+          <div aria-live="polite" className="space-y-1">
+            {sessionProblems(builder, session.session_id).map((text) => (
+              <ValidationMessage key={text} level="error">
+                {text}
+              </ValidationMessage>
+            ))}
+            {sessionWarnings(builder, session.session_id).map((text) => (
+              <ValidationMessage key={text} level="warning">
+                {text}
+              </ValidationMessage>
+            ))}
+          </div>
         </li>
       ))}
     </ul>

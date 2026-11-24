@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { eligibleSession } from "@/test/reportFixtures";
 
-import { productOptions, searchSessions, type SessionSearch } from "./sessionSearch";
+import { productFilterLabel, productOptions, searchSessions, type SessionSearch } from "./sessionSearch";
 
 // SCRUM-365 (PBI-15 AC1, AC4, AC5): the session field of the report builder gets a search bar, "Valid" and
 // "Tidak valid" tabs, and a product filter that takes more than one product. The search follows the server rule
@@ -102,5 +102,20 @@ describe("productOptions", () => {
 
   it("Edge: an empty list has no products", () => {
     expect(productOptions([])).toEqual([]);
+  });
+});
+
+// SCRUM-368: the button label moved out of the component; the wording is the one the SCRUM-365 page tests pin.
+describe("productFilterLabel", () => {
+  it("Positif: no product chosen means every product", () => {
+    expect(productFilterLabel(0)).toBe("Produk: semua");
+  });
+
+  it("Edge: one product is still counted, not called 'semua'", () => {
+    expect(productFilterLabel(1)).toBe("Produk: 1 dipilih");
+  });
+
+  it("Positif: several products show how many", () => {
+    expect(productFilterLabel(12)).toBe("Produk: 12 dipilih");
   });
 });

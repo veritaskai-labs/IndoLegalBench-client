@@ -41,7 +41,13 @@ describe("validationView (SCRUM-366, AC1 AC4 AC13)", () => {
   it("is empty and not blocking while no answer has arrived", () => {
     const view = validationView(null);
 
-    expect(view).toEqual({ general: [], bySession: new Map(), warnings: [], blocking: false });
+    expect(view).toEqual({
+      general: [],
+      bySession: new Map(),
+      warnings: [],
+      sessionWarnings: new Map(),
+      blocking: false,
+    });
   });
 
   it("is not blocking for a valid answer and keeps its warnings", () => {
@@ -87,6 +93,33 @@ describe("validationView (SCRUM-366, AC1 AC4 AC13)", () => {
 
     expect(view.general).toEqual([orphan]);
     expect(view.bySession.size).toBe(0);
+  });
+});
+
+describe("validationView: warnings about one session", () => {
+  const trial: ReportWarning = { code: "TRIAL_SESSION", message: "Sesi ini berjenis Uji Coba.", session_id: "s-2" };
+  const range: ReportWarning = {
+    code: "MANUAL_ANSWER_RANGE_OVER_LIMIT",
+    message: "Rentang tanggal jawaban sesi manual ini lebih dari 7 hari.",
+    session_id: "s-2",
+  };
+
+  it("puts a warning with a session id on that session, not in the general list", () => {
+    const view = validationView(reportValidation({ warnings: [warning, trial] }));
+
+    expect(view.warnings).toEqual([warning]);
+    expect(view.sessionWarnings.get("s-2")).toEqual([trial]);
+  });
+
+  it("groups several warnings of one session together", () => {
+    const view = validationView(reportValidation({ warnings: [trial, range] }));
+
+    expect(view.sessionWarnings.get("s-2")).toEqual([trial, range]);
+    expect(view.warnings).toEqual([]);
+  });
+
+  it("never blocks because of a session warning", () => {
+    expect(validationView(reportValidation({ warnings: [trial] })).blocking).toBe(false);
   });
 });
 

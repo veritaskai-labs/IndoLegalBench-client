@@ -688,6 +688,137 @@ describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () =>
     expect(screen.queryByRole("checkbox", { name: /Sesi B1/ })).not.toBeInTheDocument();
   });
 
+  // SCRUM-368 (UAT feedback Sprint 4): the product filter must look like a filter. It gets a filter icon, sits to
+  // the left of the search bar, opens its panel to the right, and shows when products are chosen. What it does
+  // stays the same (the SCRUM-365 tests around this block are unchanged).
+  describe("the product filter button (SCRUM-368)", () => {
+    /** The <summary> that opens the product panel; its own text is the button label. */
+    const filterButton = (label = "Produk: semua") => {
+      const button = screen.getByText(label);
+      expect(button.tagName).toBe("SUMMARY");
+      return button;
+    };
+    const panel = () => screen.getByRole("group", { name: "Filter produk" });
+
+    it("Positif: comes before the search bar", async () => {
+      await renderReady();
+
+      const order = filterButton().compareDocumentPosition(searchBar());
+      expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    // Tab from the measurement radios until one of the two toolbar controls has focus: it must be the filter.
+    // (Not Shift+Tab from the search: jsdom keeps the checkboxes of a closed <details> focusable, browsers do not.)
+    it("Positif: is reached with Tab before the search bar", async () => {
+      const { user } = await renderReady();
+      const toolbar = [filterButton(), searchBar()];
+
+      screen.getByRole("radio", { name: "Semua" }).focus();
+      for (let i = 0; i < 5 && !toolbar.includes(document.activeElement as HTMLElement); i += 1) await user.tab();
+
+      expect(filterButton()).toHaveFocus();
+    });
+
+    // The icon is drawn in the page (no icon library) and is decoration only: a screen reader reads the label.
+    it("Positif: starts with a filter icon that screen readers skip", async () => {
+      await renderReady();
+
+      const button = filterButton();
+      const icons = button.querySelectorAll("svg");
+      // firstChild, not firstElementChild: the icon must come before the label text node.
+      expect(button.firstChild?.nodeName.toLowerCase()).toBe("svg");
+      expect(icons.length).toBeGreaterThan(0);
+      for (const icon of icons) {
+        expect(icon).toHaveAttribute("aria-hidden", "true");
+        expect(icon).toHaveAttribute("focusable", "false");
+      }
+    });
+
+    it("Positif: keeps the label as its only text", async () => {
+      await renderReady();
+
+      expect(filterButton().textContent).toBe("Produk: semua");
+    });
+
+    // jsdom has no layout, so this pins the anchor class; the 375 px check in the browser is the real proof.
+    it("Positif: opens the panel from its left edge so it is not cut off on a phone", async () => {
+      await renderReady();
+
+      expect(panel()).toHaveClass("left-0");
+      expect(panel()).not.toHaveClass("right-0");
+    });
+
+    it("Positif: shows that products are chosen and drops that look when none is", async () => {
+      const { user } = await renderReady();
+      expect(filterButton()).not.toHaveClass("border-indigo-600");
+
+      await user.click(productBox("Produk A"));
+      expect(filterButton("Produk: 1 dipilih")).toHaveClass("border-indigo-600");
+
+      await user.click(productBox("Produk A"));
+      expect(filterButton()).not.toHaveClass("border-indigo-600");
+    });
+
+    it("Edge: unticking every chosen product brings back all sessions and the label", async () => {
+      const { user } = await renderReady();
+
+      await user.click(productBox("Produk A"));
+      await user.click(productBox("Produk B"));
+      expect(filterButton("Produk: 2 dipilih")).toBeInTheDocument();
+
+      await user.click(productBox("Produk B"));
+      await user.click(productBox("Produk A"));
+
+      expect(filterButton()).toBeInTheDocument();
+      expect(box(/Sesi A1/)).toBeInTheDocument();
+      expect(box(/Sesi B1/)).toBeInTheDocument();
+      expect(box(/Sesi C1/)).toBeInTheDocument();
+    });
+
+    it("Edge: a search and a product together, then Hapus pencarian clears both", async () => {
+      const { user } = await renderReady();
+
+      await user.click(productBox("Produk A"));
+      await user.type(searchBar(), "Sesi C1");
+      expect(screen.getByText("Tidak ada sesi yang cocok dengan pencarian atau filter produk ini.")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Hapus pencarian" }));
+
+      expect(searchBar()).toHaveValue("");
+      expect(filterButton()).not.toHaveClass("border-indigo-600");
+      expect(screen.getByRole("tab", { name: "Valid (4)" })).toBeInTheDocument();
+    });
+
+    // Many products: every one is listed and the panel scrolls instead of growing past the screen.
+    it("Edge: lists 30 products in a panel that scrolls", async () => {
+      const many = Array.from({ length: 30 }, (_, i) =>
+        eligibleSession({
+          session_id: `m-${i}`,
+          label: `Sesi M${i}`,
+          product_id: `p-m${i}`,
+          product_name: `Produk M${String(i).padStart(2, "0")}`,
+        }),
+      );
+      render(<ReportBuilderForm gateway={gatewayWith({ eligibleSessions: vi.fn().mockResolvedValue(many) })} />);
+      await screen.findByRole("checkbox", { name: /Sesi M0$/ });
+
+      expect(within(panel()).getAllByRole("checkbox", { hidden: true })).toHaveLength(30);
+      expect(panel()).toHaveClass("max-h-64", "overflow-y-auto");
+      expect(filterButton()).toBeInTheDocument();
+    });
+
+    it("Negatif: still works with only one product", async () => {
+      const user = userEvent.setup();
+      render(<ReportBuilderForm gateway={gatewayWith({ eligibleSessions: vi.fn().mockResolvedValue([a1]) })} />);
+      await screen.findByRole("checkbox", { name: /Sesi A1/ });
+
+      expect(within(panel()).getAllByRole("checkbox")).toHaveLength(1);
+      await user.click(productBox("Produk A"));
+      expect(filterButton("Produk: 1 dipilih")).toBeInTheDocument();
+      expect(box(/Sesi A1/)).toBeInTheDocument();
+    });
+  });
+
   // The existing automatic/manual filter stays and combines with the product filter.
   it("Positif: keeps the Otomatis / Manual filter next to the new ones", async () => {
     const { user } = await renderReady();
@@ -755,5 +886,141 @@ describe("ReportBuilderForm: search, tabs and product filter (SCRUM-365)", () =>
 
     expect(screen.getByText("Tidak ada sesi yang tidak valid.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Hapus pencarian" })).not.toBeInTheDocument();
+  });
+});
+
+// Every check message says whether it stops the report (red, Error) or only informs (yellow,
+// Peringatan), and a warning about one session sits on that session's row instead of under the list.
+describe("ReportBuilderForm: message levels", () => {
+  const suite = {
+    kind: "requirement",
+    code: "SUITE_VERSION",
+    message: "Sesi yang dipilih memakai suite yang berbeda.",
+  } as const;
+  const noShared = {
+    kind: "case_slice",
+    code: "NO_SHARED_CASES",
+    message: "Tidak ada kasus yang dijawab semua produk yang dipilih, jadi tidak ada angka perbandingan.",
+  } as const;
+  const cancelled = { kind: "session", code: "SESSION_CANCELLED", message: "Sesi ini dibatalkan.", session_id: "b-1" } as const;
+  const model = { code: "MODEL_VERSION_DIFFERS", message: "Versi model produk antar sesi berbeda." };
+  const repetitions = { code: "REPETITIONS_DIFFER", message: "Jumlah percobaan antar sesi berbeda." };
+  const trial = { code: "TRIAL_SESSION", message: "Sesi ini berjenis Uji Coba.", session_id: "b-1" };
+  const range = {
+    code: "MANUAL_ANSWER_RANGE_OVER_LIMIT",
+    message: "Rentang tanggal jawaban sesi manual ini lebih dari 7 hari.",
+    session_id: "b-1",
+  };
+
+  const answering = (verdict: ReportValidation) => gatewayWith({ validate: vi.fn().mockResolvedValue(verdict) });
+  const levelOf = (text: string) => screen.getByText(text).closest("[data-level]");
+
+  async function pickTwo(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("Judul laporan"), "Laporan");
+    await user.click(box(/Sesi A1/));
+    await user.click(box(/Sesi B1/));
+  }
+
+  it("shows blocking violations as red errors and keeps Create off", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [suite, noShared] })));
+
+    await pickTwo(user);
+
+    await screen.findByText(suite.message);
+    for (const violation of [suite, noShared]) {
+      expect(levelOf(violation.message)).toHaveAttribute("data-level", "error");
+      expect(levelOf(violation.message)).toHaveTextContent(/^Error: /);
+    }
+    expect(createButton()).toBeDisabled();
+  });
+
+  it("shows warnings as yellow Peringatan and leaves Create on", async () => {
+    const { user } = await renderReady(answering(reportValidation({ warnings: [model, repetitions] })));
+
+    await pickTwo(user);
+
+    await createReady();
+    for (const warning of [model, repetitions]) {
+      expect(levelOf(warning.message)).toHaveAttribute("data-level", "warning");
+      expect(levelOf(warning.message)).toHaveTextContent(/^Peringatan: /);
+    }
+  });
+
+  it("puts the trial marker on the trial session's row, not under the list", async () => {
+    const { user } = await renderReady(answering(reportValidation({ warnings: [trial] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    const marker = (await within(row).findByText(trial.message)).closest("[data-level]");
+    expect(marker).toHaveAttribute("data-level", "warning");
+    expect(within(pickedRow("Produk A · Sesi A1")).queryByText(trial.message)).not.toBeInTheDocument();
+    expect(screen.getAllByText(trial.message)).toHaveLength(1);
+    await createReady();
+  });
+
+  it("puts the manual date range warning on that session's row", async () => {
+    const { user } = await renderReady(answering(reportValidation({ warnings: [range] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    expect((await within(row).findByText(range.message)).closest("[data-level]")).toHaveAttribute(
+      "data-level",
+      "warning",
+    );
+  });
+
+  it("shows a session violation on its row as a red error", async () => {
+    const { user } = await renderReady(answering(reportValidation({ valid: false, violations: [cancelled] })));
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    expect((await within(row).findByText(cancelled.message)).closest("[data-level]")).toHaveAttribute(
+      "data-level",
+      "error",
+    );
+    expect(createButton()).toBeDisabled();
+  });
+
+  it("lists the errors of a row before its warnings", async () => {
+    const { user } = await renderReady(
+      answering(reportValidation({ valid: false, violations: [cancelled], warnings: [trial] })),
+    );
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    await within(row).findByText(trial.message);
+    const levels = [...row.querySelectorAll("[data-level]")].map((el) => el.getAttribute("data-level"));
+    expect(levels).toEqual(["error", "warning"]);
+  });
+
+  // Accessibility: a message that appears on a row is read out, like the messages under the list.
+  it("announces the messages of a session row", async () => {
+    const { user } = await renderReady(
+      answering(reportValidation({ valid: false, violations: [cancelled], warnings: [trial] })),
+    );
+
+    await pickTwo(user);
+
+    const row = pickedRow("Produk B · Sesi B1");
+    for (const message of [cancelled.message, trial.message]) {
+      expect((await within(row).findByText(message)).closest("[aria-live]")).toHaveAttribute("aria-live", "polite");
+    }
+  });
+
+  it("removes a session warning once the latest check no longer sends it", async () => {
+    const validate = vi.fn((request: ReportValidateRequest) =>
+      Promise.resolve(reportValidation({ warnings: request.session_ids.includes("c-1") ? [] : [trial] })),
+    );
+    const { user } = await renderReady(gatewayWith({ validate }));
+
+    await pickTwo(user);
+    await within(pickedRow("Produk B · Sesi B1")).findByText(trial.message);
+    await user.click(box(/Sesi C1/));
+
+    await waitFor(() => expect(screen.queryByText(trial.message)).not.toBeInTheDocument());
   });
 });
