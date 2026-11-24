@@ -185,16 +185,21 @@ describe("ImportSummaryView (AC7)", () => {
   });
 
   // Edge: the largest file (AC4) renders every row, and the table scrolls sideways on a phone.
+  // With 500 rows, the default role queries check the visibility of every element (~1.9 s
+  // together), which timed out under a parallel full run. Nothing here is hidden, so
+  // `hidden: true` keeps the same role and name checks without that cost. The extra timeout
+  // covers the real re-render of 500 rows.
   it("renders 500 rows in a horizontally scrollable table", async () => {
     // Arrange
     const many = summaryOf(Array.from({ length: 500 }, (_, i) => row(i + 2, i % 3 === 0 ? "failed" : "created")));
     render(<ImportSummaryView summary={many} />);
 
     // Act
-    await userEvent.click(screen.getByRole("button", { name: "Semua (500)" }));
+    await userEvent.click(screen.getByRole("button", { name: "Semua (500)", hidden: true }));
 
     // Assert
-    expect(bodyRows()).toHaveLength(500);
-    expect(table().parentElement).toHaveClass("overflow-x-auto");
-  });
+    const big = screen.getByRole("table", { name: "Hasil per baris", hidden: true });
+    expect(within(big).getAllByRole("row", { hidden: true }).slice(1)).toHaveLength(500);
+    expect(big.parentElement).toHaveClass("overflow-x-auto");
+  }, 15_000);
 });
