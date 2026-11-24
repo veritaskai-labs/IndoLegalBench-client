@@ -17,7 +17,7 @@ export function CasePreviewDrawer({ row, onClose, onDuplicate }: Readonly<{
   onDuplicate?: () => void;
 }>) {
   const headingId = useId();
-  const detail = useCaseDetail(row.item.id);
+  const detail = useCaseDetail(row.id);
   const attach = useCallback((node: HTMLDialogElement) => {
     const opener = document.activeElement;
     const overflow = document.body.style.overflow;
@@ -64,7 +64,7 @@ export function CasePreviewDrawer({ row, onClose, onDuplicate }: Readonly<{
                 <SplitTagBadge tag={detail.saved.split_tag} wasDev={detail.saved.was_dev} />
               </div>
               <h3 className="text-xl font-semibold">{detail.saved.identity.title || "Kasus tanpa judul"}</h3>
-              <p className="text-sm text-slate-600">{row.suite.name}</p>
+              <p className="text-sm text-slate-600">{row.suite_name}</p>
             </div>
             <CaseSectionList omit={HEADER_SECTIONS} sections={{
               "identity.title": detail.saved.identity.title,

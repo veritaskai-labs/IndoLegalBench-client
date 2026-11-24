@@ -25,13 +25,13 @@ export function DuplicateCaseDialog({ row, onClose, onDone }: Readonly<{
       title="Duplikat kasus"
       confirmLabel="Duplikat"
       busyLabel="Menduplikasi…"
-      onConfirm={() => duplicateCase(row.item.id)}
+      onConfirm={() => duplicateCase(row.id)}
       errorMessage={duplicateErrorMessage}
       onDone={(created) => onDone(created.id)}
       onClose={onClose}
     >
       <p className="mt-2 text-sm text-slate-600">
-        Versi yang berlaku dari <strong>{row.item.case_code}</strong> akan disalin ke suite <strong>{row.suite.name}</strong>.
+        Versi yang berlaku dari <strong>{row.case_code}</strong> akan disalin ke suite <strong>{row.suite_name}</strong>.
         Salinan mendapat ID baru dan berstatus draft. Pilih tag dev/test sebelum mengajukan tinjauan.
       </p>
     </ConfirmDialog>

@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CaseSummary } from "@/lib/api/cases";
 import { ApiError } from "@/lib/apiClient";
+import type { CaseDirectoryQuery, CaseDirectoryRow } from "@/lib/cases/caseDirectory";
 import type { Suite } from "@/types/suite";
 import CasesPage from "./page";
 
@@ -10,7 +10,7 @@ const { list, get, duplicate, auth, push, suites } = vi.hoisted(() => ({
   list: vi.fn(), get: vi.fn(), duplicate: vi.fn(), auth: vi.fn(), push: vi.fn(), suites: vi.fn(),
 }));
 
-vi.mock("@/lib/api/cases", () => ({ getCasesForSuite: list }));
+vi.mock("@/lib/cases/caseDirectory", () => ({ listDirectoryCases: list }));
 vi.mock("@/lib/cases/caseApi", () => ({ getCase: get, duplicateCase: duplicate }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: auth }));
 vi.mock("@/hooks/useSuites", () => ({ useSuites: suites }));
@@ -18,15 +18,20 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const active: Pick<Suite, "id" | "name" | "status"> = { id: "active", name: "Perdata", status: "active" };
 const archived: typeof active = { id: "archived", name: "Administrasi", status: "archived" };
-const source: CaseSummary = {
+const source: CaseDirectoryRow = {
   id: "source", case_code: "KAS-01", title: "Sengketa sewa", split_tag: null,
   origin: "import", masked: false,
   status: "draft", completeness_pct: 50, updated_at: "2026-11-20T00:00:00Z",
+  suite_id: active.id, suite_name: active.name, suite_archived: false,
 };
-const old: CaseSummary = {
+const old: CaseDirectoryRow = {
   ...source, id: "old", case_code: "KAS-02", title: "Sengketa administratif",
   split_tag: "test", status: "approved", origin: "manual",
+  suite_id: archived.id, suite_name: archived.name, suite_archived: true,
 };
+
+const firstPage = { q: "", status: "", suiteId: "", page: 1 };
+const casePage = (items: CaseDirectoryRow[], page = 1, total = items.length) => ({ items, total, page, size: 20 });
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -34,10 +39,12 @@ beforeEach(() => {
   suites.mockImplementation((status) => ({
     status: "ready", suites: [status === "active" ? active : archived], reload: vi.fn(),
   }));
-  list.mockImplementation(async (id: string, { status }: { status?: string }) => {
-    const row = id === active.id ? source : old;
-    return !status || row.status === status ? [row] : [];
-  });
+  list.mockImplementation(async ({ q, suiteId, status, page }: CaseDirectoryQuery) => casePage(
+    [source, old].filter((row) => (!suiteId || row.suite_id === suiteId)
+      && (!status || row.status === status)
+      && (!q || row.case_code.toLowerCase().includes(q.toLowerCase()))),
+    page,
+  ));
   get.mockResolvedValue({
     ...source, suite_id: active.id, version: 1, was_dev: false,
     identity: { title: source.title, question: "Apa isi lengkap pertanyaan?", category: null },
@@ -55,29 +62,76 @@ describe("Daftar kasus", () => {
     render(<CasesPage />);
 
     expect(await screen.findByText("Belum ditetapkan")).toBeInTheDocument();
+    expect(list).toHaveBeenCalledExactlyOnceWith(firstPage);
+    expect(screen.getByText("2 kasus").tagName).toBe("OUTPUT");
     expect(screen.getByText(old.title)).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Suite"), active.id);
     await user.selectOptions(screen.getByLabelText("Status"), "draft");
-    await user.type(screen.getByRole("searchbox", { name: "Cari kasus" }), "  kAs-02 ");
+    fireEvent.change(screen.getByRole("searchbox", { name: "Cari kasus" }), { target: { value: "  kAs-02 " } });
     expect(await screen.findByText("Tidak ada kasus yang sesuai")).toBeInTheDocument();
-    expect(list).toHaveBeenLastCalledWith(active.id, { status: "draft" });
+    expect(list).toHaveBeenLastCalledWith({ q: "kAs-02", suiteId: active.id, status: "draft", page: 1 });
 
     await user.click(screen.getByRole("button", { name: "Reset filter" }));
     expect(await screen.findByText(old.title)).toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toHaveValue("");
+    expect(list).toHaveBeenLastCalledWith(firstPage);
   });
 
   it("keeps the latest suite result when an earlier request finishes late", async () => {
     const user = userEvent.setup();
-    const pending = Promise.withResolvers<CaseSummary[]>();
-    list.mockImplementation((id: string) => id === active.id ? pending.promise : Promise.resolve([old]));
+    const pending = Promise.withResolvers<ReturnType<typeof casePage>>();
+    list.mockImplementation(({ suiteId }) => suiteId === "" ? pending.promise : Promise.resolve(casePage([old])));
     render(<CasesPage />);
     expect(screen.getByRole("status")).toHaveTextContent("Memuat kasus");
 
     await user.selectOptions(screen.getByLabelText("Suite"), archived.id);
     expect(await screen.findByText(old.title)).toBeInTheDocument();
-    await act(async () => pending.resolve([source]));
+    await act(async () => pending.resolve(casePage([source])));
     expect(screen.queryByText(source.title)).not.toBeInTheDocument();
+  });
+
+  it("uses the server count for paging and resets to page one after a keyword change", async () => {
+    const user = userEvent.setup();
+    list.mockImplementation(async ({ page, q }) => q
+      ? casePage([old])
+      : casePage(page === 1 ? [source] : [old], page, 21));
+    render(<CasesPage />);
+
+    expect(await screen.findByText("21 kasus")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sebelumnya" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(await screen.findByText("Halaman 2 dari 2")).toBeInTheDocument();
+    expect(screen.getByText(old.title)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Berikutnya" })).toBeDisabled();
+    expect(list).toHaveBeenLastCalledWith({ ...firstPage, page: 2 });
+
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "ADMIN" } });
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("1 kasus")).toBeInTheDocument();
+    expect(screen.getByText(old.title)).toBeInTheDocument();
+    expect(list).toHaveBeenLastCalledWith({ ...firstPage, q: "ADMIN" });
+    expect(list).toHaveBeenCalledTimes(3);
+  });
+
+  it("still shows cases when the suite options fail to load", async () => {
+    suites.mockReturnValue({ status: "error", suites: [], reload: vi.fn() });
+    render(<CasesPage />);
+
+    expect(await screen.findByText(source.title)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Gagal memuat daftar suite.");
+    expect(screen.getByLabelText("Suite")).toBeDisabled();
+  });
+
+  it("returns to the last available page if the result set shrinks", async () => {
+    const user = userEvent.setup();
+    list.mockResolvedValueOnce(casePage([source], 1, 21))
+      .mockResolvedValueOnce(casePage([], 2, 1))
+      .mockResolvedValueOnce(casePage([old]));
+    render(<CasesPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Berikutnya" }));
+    expect(await screen.findByText(old.title)).toBeInTheDocument();
+    expect(list.mock.calls).toEqual([[firstPage], [{ ...firstPage, page: 2 }], [firstPage]]);
   });
 
   it("shows the full read-only case and restores focus and filters on Escape", async () => {

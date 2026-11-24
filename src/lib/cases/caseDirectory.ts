@@ -1,25 +1,21 @@
-import { getCasesForSuite, type CaseSummary } from "@/lib/api/cases";
+import { apiFetch } from "@/lib/apiClient";
+import type { components } from "@/lib/generated/api";
 import type { CaseStatus } from "@/types/case";
-import type { Suite } from "@/types/suite";
 
-export type CaseDirectoryRow = {
-  item: CaseSummary;
-  suite: Pick<Suite, "id" | "name" | "status">;
+export type CaseDirectoryRow = components["schemas"]["CaseListItem"];
+
+export type CaseDirectoryQuery = {
+  q: string;
+  status: CaseStatus | "";
+  suiteId: string;
+  page: number;
 };
 
-// SCRUM-339: the global endpoint will replace these requests once its contract is available.
-export async function listDirectoryCases(
-  suites: readonly CaseDirectoryRow["suite"][],
-  status?: CaseStatus,
-): Promise<CaseDirectoryRow[]> {
-  const rows: CaseDirectoryRow[] = [];
-  const concurrency = 6;
-  for (let offset = 0; offset < suites.length; offset += concurrency) {
-    const batch = await Promise.all(suites.slice(offset, offset + concurrency).map(async (suite) => {
-      const cases = await getCasesForSuite(suite.id, { status });
-      return cases.filter(({ masked }) => !masked).map((item) => ({ item, suite }));
-    }));
-    rows.push(...batch.flat());
-  }
-  return rows;
+export function listDirectoryCases({ q, status, suiteId, page }: CaseDirectoryQuery) {
+  const query = new URLSearchParams({ page: String(page), size: "20" });
+  const keyword = q.trim();
+  if (keyword) query.set("q", keyword);
+  if (status) query.set("status", status);
+  if (suiteId) query.set("suite_id", suiteId);
+  return apiFetch<components["schemas"]["CasePage"]>(`/cases?${query}`);
 }
