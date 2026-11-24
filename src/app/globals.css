@@ -85,8 +85,11 @@ body {
   line-height: 20px;
 }
 
-/* AC5: keyboard focus is always visible, same ring as the prototype. */
-:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
+/* AC5: keyboard focus is always visible, same ring as the prototype. In the base layer so a page can still
+   change it with a focus-visible: utility. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+  }
 }
