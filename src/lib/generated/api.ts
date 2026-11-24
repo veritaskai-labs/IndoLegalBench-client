@@ -494,6 +494,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/case-imports/template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unduh template CSV impor kasus
+         * @description Template CSV dari sistem. case_code tidak ada karena dibuat sistem.
+         */
+        get: operations["download_import_template_case_imports_template_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/case-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Impor kasus dari satu berkas CSV
+         * @description Baris valid menjadi kasus draft di satu suite sementara, baris gagal dilaporkan dengan
+         *     alasan, baris kembar dilewati. Nomor baris mengikuti spreadsheet.
+         */
+        post: operations["import_cases_case_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/case-imports/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buka lagi ringkasan satu impor CSV
+         * @description Ringkasan yang sama dengan respons impor, dibaca dari tabel impor. Hanya untuk pengimpor
+         *     batch itu dan Admin; pengguna lain mendapat 404.
+         */
+        get: operations["read_import_summary_case_imports__batch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/providers": {
         parameters: {
             query?: never;
@@ -2590,6 +2652,26 @@ export interface components {
             category?: string | null;
         };
         /**
+         * CaseIdentityRead
+         * @description Identitas kasus saat dibaca. Judul dan pertanyaan boleh kosong hanya pada draft hasil impor
+         *     CSV: kasus lama masuk dengan field lebih sedikit lalu dilengkapi. Menyimpan lewat editor tetap
+         *     memakai CaseIdentity, yang mewajibkan keduanya.
+         */
+        CaseIdentityRead: {
+            /**
+             * Title
+             * @description Judul pertanyaan; kosong hanya pada draft impor
+             */
+            title: string;
+            /**
+             * Question
+             * @description Pertanyaan hukum; kosong hanya pada draft impor
+             */
+            question: string;
+            /** Category */
+            category?: string | null;
+        };
+        /**
          * CaseListItem
          * @description One row of GET /cases: the suite summary plus the suite it belongs to (SCRUM-339).
          */
@@ -2689,7 +2771,7 @@ export interface components {
             suite_id: string;
             /** Case Code */
             case_code: string;
-            identity: components["schemas"]["CaseIdentity"];
+            identity: components["schemas"]["CaseIdentityRead"];
             /** Legal Refs */
             legal_refs: components["schemas"]["LegalRefRead"][];
             answer_criteria: components["schemas"]["AnswerCriteria"];
@@ -3474,6 +3556,83 @@ export interface components {
             app_env: string;
             /** Database */
             database: string;
+        };
+        /**
+         * ImportRowRead
+         * @description Hasil satu baris. Nomor baris mengikuti spreadsheet (header = baris 1).
+         */
+        ImportRowRead: {
+            /**
+             * Row No
+             * @description Nomor baris di spreadsheet; header adalah baris 1
+             */
+            row_no: number;
+            status: components["schemas"]["ImportRowStatus"];
+            /**
+             * Case Id
+             * @description Hanya untuk status created
+             */
+            case_id?: string | null;
+            /**
+             * Case Code
+             * @description Kode buatan sistem, hanya created
+             */
+            case_code?: string | null;
+            /**
+             * Reason
+             * @description Alasan gagal atau dilewati
+             */
+            reason?: string | null;
+        };
+        /**
+         * ImportRowStatus
+         * @description Hasil satu baris CSV impor (D7): jadi kasus, gagal validasi, atau dilewati kembar.
+         * @enum {string}
+         */
+        ImportRowStatus: "created" | "failed" | "skipped";
+        /**
+         * ImportSummaryRead
+         * @description Ringkasan impor (AC7): berhasil, gagal beserta alasannya, dan dilewati.
+         */
+        ImportSummaryRead: {
+            /**
+             * Batch Id
+             * Format: uuid
+             */
+            batch_id: string;
+            /** File Name */
+            file_name: string;
+            /**
+             * Imported By
+             * Format: uuid
+             */
+            imported_by: string;
+            /**
+             * Imported At
+             * Format: date-time
+             */
+            imported_at: string;
+            /**
+             * Suite Id
+             * Format: uuid
+             * @description Suite sementara tempat semua kasus berkas ini
+             */
+            suite_id: string;
+            /** Suite Name */
+            suite_name: string;
+            /**
+             * Total Rows
+             * @description Baris kasus yang dibaca; baris kosong tidak dihitung
+             */
+            total_rows: number;
+            /** Success Count */
+            success_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Skipped Count */
+            skipped_count: number;
+            /** Rows */
+            rows: components["schemas"]["ImportRowRead"][];
         };
         /**
          * InReviewCase
@@ -8022,6 +8181,132 @@ export interface operations {
                 };
             };
             /** @description Kasus atau suite tidak ditemukan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_import_template_case_imports_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Header delapan kolom (title, question, category, split_tag, legal_refs, must_contain, must_not_contain, expected_conclusion), UTF-8 dengan BOM, pemisah koma. Kolom legal_refs, must_contain, must_not_contain berisi list JSON, misalnya ["Pasal 1 KUHPerdata"]; dari Google Sheets tulis apa adanya, kutip ganda di-escape otomatis saat diekspor. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Bukan Kontributor atau Admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    import_cases_case_imports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Berkas .csv dari template, UTF-8, pemisah koma
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummaryRead"];
+                };
+            };
+            /** @description Bukan Kontributor atau Admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Seluruh berkas ditolak, tidak ada yang disimpan: tanpa berkas (`IMPORT_FILE_REQUIRED`), bukan .csv (`IMPORT_FILE_NOT_CSV`), bukan UTF-8 (`IMPORT_FILE_NOT_UTF8`), terlalu besar (`IMPORT_FILE_TOO_LARGE`), rusak (`IMPORT_FILE_UNREADABLE`), header beda dari template (`IMPORT_HEADER_MISMATCH`, `expected` berisi header yang benar), tanpa baris kasus (`IMPORT_FILE_EMPTY`), atau lebih dari 500 baris (`IMPORT_TOO_MANY_ROWS`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    read_import_summary_case_imports__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportSummaryRead"];
+                };
+            };
+            /** @description Bukan Kontributor atau Admin. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Batch tidak ada, atau bukan milik pengguna ini dan bukan Admin (`IMPORT_BATCH_NOT_FOUND`). */
             404: {
                 headers: {
                     [name: string]: unknown;
