@@ -1513,6 +1513,10 @@ export interface paths {
         /**
          * Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan
          * @description PBI-16 AC2 dan AC3: jawaban asli, skor, alasan, versi rubrik, dan data jawaban manual.
+         *
+         *     `other_products` memuat jawaban produk lain di laporan yang sama untuk kasus ini, dengan
+         *     status `answered`, `not_graded` (tampilkan "tidak dinilai"), atau `no_answer`. Aturan akses
+         *     sama dengan isi kasus, jadi peran tanpa hak mendapat 403 tanpa jawaban produk mana pun.
          */
         get: operations["get_result_case_reports__report_id__results__result_id__cases__case_id__get"];
         put?: never;
@@ -4131,6 +4135,12 @@ export interface components {
             created_at: string;
         };
         /**
+         * OtherProductStatus
+         * @description Keadaan satu produk lain pada kasus yang sedang ditelusuri (PBI-16 SCRUM-370).
+         * @enum {string}
+         */
+        OtherProductStatus: "answered" | "no_answer" | "not_graded";
+        /**
          * OwnCaseSummary
          * @description Kasus yang ditulis pengguna yang login, per status versi yang berlaku (PBI-24 AC6).
          */
@@ -4624,6 +4634,11 @@ export interface components {
             llm_score: string | null;
             /** Attempts */
             attempts: components["schemas"]["ReportAttemptRead"][];
+            /**
+             * Other Products
+             * @description Produk lain di laporan yang sama untuk kasus ini, urut label; kosong bila laporan hanya memuat satu produk. Hanya dikirim ke peran yang boleh membuka isi kasus.
+             */
+            other_products: components["schemas"]["ReportOtherProductRead"][];
         };
         /**
          * ReportCaseScoreRead
@@ -4876,6 +4891,44 @@ export interface components {
             };
             /** Rejections */
             rejections: components["schemas"]["ReportRejectionRead"][];
+        };
+        /**
+         * ReportOtherProductRead
+         * @description Jawaban satu produk lain di laporan yang sama untuk kasus yang sedang dibuka.
+         *
+         *     Tanpa id sesi, dan label produk memakai nilai beku laporan (nama asli atau kode).
+         */
+        ReportOtherProductRead: {
+            /**
+             * Result Id
+             * Format: uuid
+             * @description Angka laporan produk ini, jenis skor yang sama
+             */
+            result_id: string;
+            /**
+             * Product Label
+             * @description Label produk yang dibekukan di laporan (nama asli atau kode)
+             */
+            product_label: string;
+            measurement_kind: components["schemas"]["MeasurementKind"];
+            /**
+             * Is Trial
+             * @description Sesi Uji Coba wajib diberi tanda yang jelas
+             */
+            is_trial: boolean;
+            /** @description answered: ada jawaban dinilai; not_graded: semua percobaan gagal teknis (tampilkan 'tidak dinilai'); no_answer: produk tidak menjawab kasus ini */
+            status: components["schemas"]["OtherProductStatus"];
+            /**
+             * Rubric Version
+             * @description Versi rubrik run penilaian produk ini; kosong bila kasus tidak ada di run-nya
+             */
+            rubric_version: string | null;
+            /** Det Score */
+            det_score: string | null;
+            /** Llm Score */
+            llm_score: string | null;
+            /** Attempts */
+            attempts: components["schemas"]["ReportAttemptRead"][];
         };
         /** ReportRead */
         ReportRead: {

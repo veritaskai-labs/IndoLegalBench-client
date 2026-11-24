@@ -35,6 +35,7 @@ export type ReportResultCasesRead = components["schemas"]["ReportResultCasesRead
 export type ReportCaseScoreRead = components["schemas"]["ReportCaseScoreRead"];
 export type ReportCaseDetailRead = components["schemas"]["ReportCaseDetailRead"];
 export type ReportAttemptRead = components["schemas"]["ReportAttemptRead"];
+export type ReportOtherProductRead = components["schemas"]["ReportOtherProductRead"];
 /** PBI-17 SCRUM-332: versi terbit baru dari POST /reports/{id}/publish. version_no diisi server. */
 export type PublicationRead = components["schemas"]["PublicationRead"];
 /** Satu baris GET /published-reports; product_labels sudah dibekukan server menurut aturan PBI-15 (AC10). */
