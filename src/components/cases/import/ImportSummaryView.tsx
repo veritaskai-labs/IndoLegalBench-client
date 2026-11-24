@@ -87,7 +87,7 @@ export function ImportSummaryView({ summary }: Readonly<{ summary: ImportSummary
         </p>
       )}
 
-      <div role="group" aria-label="Saring baris" className="flex flex-wrap gap-2">
+      <fieldset aria-label="Saring baris" className="m-0 flex min-w-0 flex-wrap gap-2 border-0 p-0">
         {FILTERS.map((option) => {
           const active = option.value === filter;
           return (
@@ -102,7 +102,7 @@ export function ImportSummaryView({ summary }: Readonly<{ summary: ImportSummary
             </button>
           );
         })}
-      </div>
+      </fieldset>
 
       <div className="overflow-x-auto">
         <table aria-label="Hasil per baris" className="min-w-full text-left text-sm">

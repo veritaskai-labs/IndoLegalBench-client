@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useState, type ChangeEvent, type SubmitEvent } from "react";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { ImportGateway } from "@/lib/cases/importApi";
 import { importErrorMessage, isFileRejected } from "@/lib/cases/importErrors";
@@ -50,7 +50,7 @@ export function ImportUploadForm({
     setDismissed(error);
   }
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setDismissed(null);
     void run();
@@ -76,9 +76,9 @@ export function ImportUploadForm({
         {pending ? "Mengimpor…" : "Impor"}
       </button>
       {pending && (
-        <p role="status" className="text-sm text-slate-600">
+        <output className="block text-sm text-slate-600">
           Mengimpor berkas. Ini bisa sampai 30 detik, jangan tutup halaman.
-        </p>
+        </output>
       )}
       {shownError && (
         <p role="alert" className="text-sm text-red-700">
