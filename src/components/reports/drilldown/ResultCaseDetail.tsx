@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState } from "react";
 
 import { MarkdownAnswer } from "@/components/runs/MarkdownAnswer";
@@ -8,6 +9,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { useResultCase } from "@/hooks/useReportDrilldown";
+import { useReport } from "@/hooks/useReports";
 import { formatWibDate } from "@/lib/datetime/formatWib";
 import { ATTEMPT_SOURCE_LABEL, reasonLabel } from "@/lib/grading/gradingView";
 import { formatScore } from "@/lib/grading/scoreFormat";
@@ -20,6 +22,7 @@ import {
   resultCasesHref,
 } from "@/lib/reports/drilldownRules";
 import { measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
+import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
 import type { MeasurementKind, ReportAttemptRead, ReportCaseDetailRead, ReportOtherProductRead } from "@/types/reports";
 
 import { AttemptEvidence } from "./AttemptEvidence";
@@ -256,10 +259,15 @@ function CaseBody({
   data,
   evidence,
   canCompare,
-}: Readonly<{ data: ReportCaseDetailRead; evidence: EvidenceTarget; canCompare: boolean }>) {
+  listHref,
+}: Readonly<{ data: ReportCaseDetailRead; evidence: EvidenceTarget; canCompare: boolean; listHref: string }>) {
   return (
     <div className="space-y-5">
       <header className="space-y-1">
+        {/* SCRUM-346 A2 (AC3): a visible way back next to the title, not only the small breadcrumb. */}
+        <Link href={listHref} className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink hover:underline">
+          <span aria-hidden="true">‹</span> Kembali ke daftar kasus
+        </Link>
         <h1 className="text-xl font-semibold text-slate-900">
           {data.case_code} v{data.case_version_no}: {data.title}
         </h1>
@@ -286,15 +294,25 @@ function CaseBody({
 /**
  * Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan (PBI-16 AC2, D6 langkah 4–7). Peran yang
  * tidak boleh melihat isinya mendapat pesan server dengan email untuk meminta isi kasus (AC3), tanpa Coba lagi.
- * Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4).
+ * Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4). Laporannya dimuat sebagai konteks untuk judul di
+ * breadcrumb (SCRUM-346 A2); bila gagal, breadcrumb memakai "Detail laporan".
  */
 export function ResultCaseDetail({
   reportId,
   resultId,
   caseId,
   gateway = httpDrilldownGateway,
-}: Readonly<{ reportId: string; resultId: string; caseId: string; gateway?: DrilldownGateway }>) {
+  reportsGateway = httpReportsGateway,
+}: Readonly<{
+  reportId: string;
+  resultId: string;
+  caseId: string;
+  gateway?: DrilldownGateway;
+  reportsGateway?: ReportsGateway;
+}>) {
   const detail = useResultCase(reportId, resultId, caseId, gateway);
+  const report = useReport(reportId, reportsGateway);
+  const listHref = resultCasesHref(reportId, resultId);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
   const evidence = canOpenEvidence(role) ? { reportId, resultId, caseId, gateway } : null;
@@ -305,8 +323,11 @@ export function ResultCaseDetail({
         items={[
           { label: "Laporan", href: "/reports" },
           { label: "Laporan perbandingan", href: "/reports/comparisons" },
-          { label: "Detail laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
-          { label: "Kasus di balik angka", href: resultCasesHref(reportId, resultId) },
+          {
+            label: report.status === "ready" ? report.data.title : "Detail laporan",
+            href: `/reports/comparisons/${encodeURIComponent(reportId)}`,
+          },
+          { label: "Kasus di balik angka", href: listHref },
           { label: detail.status === "ready" ? detail.data.case_code : "Kasus" },
         ]}
       />
@@ -319,7 +340,7 @@ export function ResultCaseDetail({
         />
       )}
       {detail.status === "ready" && (
-        <CaseBody data={detail.data} evidence={evidence} canCompare={canCompareProducts(role)} />
+        <CaseBody data={detail.data} evidence={evidence} canCompare={canCompareProducts(role)} listHref={listHref} />
       )}
     </div>
   );
