@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource-variable/hanken-grotesk";
+@import "@fontsource-variable/source-serif-4";
 
 /* Design tokens, copied from the approved prototype (Final UI ILB). Light mode only. */
 :root {
@@ -62,8 +64,8 @@
   --color-disabled-bg: var(--disabled-bg);
   --color-disabled-ink: var(--disabled-ink);
 
-  --font-sans: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-source-serif), Georgia, Cambria, serif;
+  --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", Georgia, Cambria, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --radius-control: 8px;

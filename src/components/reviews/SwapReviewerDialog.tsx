@@ -1,178 +1,112 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
+import { Button, ConfirmDialog, FormField, openAsModal } from "@/components/ui";
 import type { ReplaceReviewerBody, ReviewerOption } from "@/types/reviewAdmin";
 
 type Props = {
   caseCode: string;
+  caseTitle: string;
+  roundNo: number;
   currentReviewerId: string;
   currentReviewerName: string;
   candidates: ReviewerOption[];
+  loadingCandidates?: boolean;
   notice?: string | null;
   pending: boolean;
   error: string | null;
-  onConfirm: (body: ReplaceReviewerBody) => void;
+  onConfirm: (body: ReplaceReviewerBody) => Promise<string | null | undefined> | void;
   onClose: () => void;
 };
 
-/** AC7. Alasan wajib dan satu langkah konfirmasi, karena penilaian reviewer lama jadi hangus. */
+const controlClass = "w-full rounded-control border border-line bg-paper px-3 py-2 text-sm";
+const actions = "flex flex-wrap justify-end gap-2";
+
 export function SwapReviewerDialog({
-  caseCode,
-  currentReviewerId,
-  currentReviewerName,
-  candidates,
-  notice,
-  pending,
-  error,
-  onConfirm,
-  onClose,
+  caseCode, caseTitle, roundNo, currentReviewerId, currentReviewerName, candidates,
+  loadingCandidates, notice, pending, error, onConfirm, onClose,
 }: Readonly<Props>) {
   const [reviewerId, setReviewerId] = useState("");
   const [reason, setReason] = useState("");
   const [confirming, setConfirming] = useState(false);
-  const ref = useRef<HTMLDialogElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
 
-  /**
-   * showModal, bukan atribut open: hanya dialog modal yang memerangkap fokus,
-   * menutup lewat Esc, dan menggelapkan latarnya sendiri.
-   */
-  useEffect(() => {
-    const node = ref.current;
-    if (node === null || node.open) return;
-    if (typeof node.showModal === "function") {
-      node.showModal();
-    } else {
-      node.open = true;
-    }
-  }, []);
+  useEffect(() => { heading.current?.focus(); }, [confirming]);
 
-  const options = candidates.filter((item) => item.id !== currentReviewerId);
+  const options = candidates.filter(item => item.id !== currentReviewerId);
+  const chosen = options.find(item => item.id === reviewerId);
   const trimmed = reason.trim();
-  const chosen = options.find((item) => item.id === reviewerId);
-  const ready = chosen !== undefined && trimmed !== "";
+  const ready = !!chosen && !!trimmed && !loadingCandidates;
+  const caseSummary = (
+    <div id="swap-case" className="my-4 border-b border-line-soft pb-4">
+      <p className="font-mono text-xs text-muted">{caseCode} · Ronde {roundNo}</p>
+      <p className="mt-1 wrap-anywhere">{caseTitle}</p>
+    </div>
+  );
+
+  if (confirming && chosen) {
+    return (
+      <ConfirmDialog
+        title="Konfirmasi penggantian reviewer"
+        confirmLabel={pending ? "Menyimpan…" : "Ganti reviewer"}
+        busyLabel="Menyimpan…"
+        dismissLabel="Kembali"
+        confirmDisabled={pending}
+        onConfirm={async () => {
+          const failure = await onConfirm({ new_reviewer_id: chosen.id, reason: trimmed });
+          if (failure) throw new Error(failure);
+        }}
+        errorMessage={failure => failure instanceof Error ? failure.message : "Gagal mengganti reviewer. Coba lagi."}
+        onDone={onClose} onClose={afterError => {
+          if (pending) return;
+          if (afterError) onClose();
+          else setConfirming(false);
+        }}>
+        {caseSummary}
+        <div className="space-y-4">
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div><dt className="text-xs text-muted">Reviewer lama</dt><dd className="wrap-anywhere">{currentReviewerName}</dd></div>
+            <div><dt className="text-xs text-muted">Reviewer baru</dt><dd className="wrap-anywhere">{chosen.name}</dd></div>
+            <div className="sm:col-span-2"><dt className="text-xs text-muted">Alasan penggantian</dt><dd className="whitespace-pre-wrap wrap-anywhere">{trimmed}</dd></div>
+          </dl>
+          <p className="rounded-control bg-surface p-3 text-sm">Penilaian reviewer lama tidak dihitung setelah penggantian.</p>
+        </div>
+      </ConfirmDialog>
+    );
+  }
 
   return (
     <dialog
-      ref={ref}
+      ref={openAsModal}
       aria-labelledby="swap-reviewer-title"
-      onCancel={(event) => {
-        // Esc: tutup lewat state halaman, jangan biarkan browser menutupnya diam-diam.
-        event.preventDefault();
-        onClose();
-      }}
-      className="m-auto w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-lg backdrop:bg-slate-900/40"
-    >
-      <h2
-        id="swap-reviewer-title"
-        className="text-base font-semibold text-slate-900"
-      >
+      aria-describedby="swap-case"
+      onCancel={event => { event.preventDefault(); if (!pending) onClose(); }}
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-dialog border border-line bg-paper p-5 text-ink shadow-dialog backdrop:bg-black/35 sm:p-6">
+      <h2 id="swap-reviewer-title" ref={heading} tabIndex={-1} className="font-serif text-2xl leading-tight">
         Ganti reviewer
       </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        {`${caseCode} · reviewer sekarang ${currentReviewerName}`}
-      </p>
-
-      {notice ? (
-        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
-          {notice}
-        </p>
-      ) : null}
-
-      {confirming && chosen ? (
-        <div className="mt-4 space-y-4">
-          <p className="text-sm text-slate-700">
-            {`Ganti ${currentReviewerName} dengan ${chosen.name}? Penilaian reviewer lama tidak dihitung.`}
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                onConfirm({ new_reviewer_id: chosen.id, reason: trimmed })
-              }
-              className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-            >
-              {pending ? "Menyimpan…" : "Ya, ganti reviewer"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => setConfirming(false)}
-              className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-700 disabled:opacity-50"
-            >
-              Kembali
-            </button>
-          </div>
+      {caseSummary}
+      {notice && <p className="mb-3 rounded-tag bg-warning-wash p-2 text-sm text-warning-ink">{notice}</p>}
+      <div className="space-y-4">
+        <p className="wrap-anywhere text-sm"><span className="text-muted">Reviewer lama</span> · {currentReviewerName}</p>
+        <FormField label="Reviewer baru" required>{control => (
+          <select {...control} required value={reviewerId} disabled={loadingCandidates || !options.length}
+            onChange={event => setReviewerId(event.target.value)} className={controlClass}>
+            <option value="">Pilih reviewer</option>
+            {options.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        )}</FormField>
+        {loadingCandidates && <output className="block">Memuat kandidat reviewer…</output>}
+        {!loadingCandidates && !notice && !options.length && <p>Tidak ada reviewer yang memenuhi syarat untuk ronde ini.</p>}
+        <FormField label="Alasan penggantian" hint="Alasan wajib diisi dan tercatat di log audit." required>{control =>
+          <textarea {...control} required rows={3} value={reason} onChange={event => setReason(event.target.value)} className={controlClass} />
+        }</FormField>
+        <div className={actions}>
+          <Button variant="ghost" onClick={onClose}>Batal</Button>
+          <Button disabled={!ready} onClick={() => setConfirming(true)}>Tinjau penggantian</Button>
         </div>
-      ) : (
-        <div className="mt-4 space-y-4">
-          <div>
-            <label
-              htmlFor="swap-reviewer-new"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Reviewer baru
-            </label>
-            <select
-              id="swap-reviewer-new"
-              value={reviewerId}
-              onChange={(event) => setReviewerId(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
-            >
-              <option value="">Pilih reviewer</option>
-              {options.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="swap-reviewer-reason"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Alasan penggantian
-            </label>
-            <textarea
-              id="swap-reviewer-reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              rows={3}
-              className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Alasan wajib diisi dan tercatat di log audit.
-            </p>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={!ready}
-              onClick={() => setConfirming(true)}
-              className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
-            >
-              Lanjut
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-700"
-            >
-              Batal
-            </button>
-          </div>
-        </div>
-      )}
-
-      {error !== null && (
-        <p role="alert" className="mt-4 text-sm text-red-600">
-          {error}
-        </p>
-      )}
+      </div>
+      {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
     </dialog>
   );
 }

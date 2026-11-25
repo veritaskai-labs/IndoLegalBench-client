@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCRUM-374 · Case review design comparison</title>
+<style>
+* { box-sizing: border-box }
+:root { --ink:#000; --muted:#4d4d4d; --line:#d9d9d9; --rule:#e7e7e7; --wash:#f1f2f4; --sans:'Hanken Grotesk',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif }
+body { margin:0; color:var(--ink); background:white; font:16px/1.5 var(--sans) }
+main { max-width:1660px; margin:auto; padding:36px clamp(16px,3vw,56px) 64px }
+header { border-bottom:1px solid var(--line); padding-bottom:24px }
+h1,h2,h3 { font-family:var(--serif); font-weight:400; line-height:1.15; margin:0 0 12px }
+h1 { font-size:clamp(32px,3.2vw,54px) } h2 { font-size:30px } h3 { font-size:23px }
+p { margin:6px 0 12px } header p, .intro { max-width:85ch } section { margin-top:36px }
+.meta, figcaption, small { color:var(--muted); font-size:13px }
+.meta { margin:0 0 10px } nav { display:flex; flex-wrap:wrap; gap:8px 22px }
+a { color:inherit; text-underline-offset:3px } :focus-visible { outline:3px solid #1f87f9; outline-offset:3px }
+.pair { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:20px }
+figure { margin:0; min-width:0 } figcaption { padding:10px 0;border-top:1px solid var(--ink);font-weight:600 }
+.frame { padding:20px; border:1px solid var(--line);border-radius:8px;min-width:0 }
+.frame h3 {font-size:30px} .frame p {font-size:14px} .frame h4 {margin:14px 0 4px;font-size:16px}
+.tabs { display:flex; flex-wrap:wrap;border-bottom:1px solid var(--rule);margin:14px 0 16px;font-size:14px }
+.tabs span {padding:8px 10px} .tabs strong { padding:8px 10px;border-bottom:2px solid black }
+.scroll {overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table {width:100%; border-collapse:collapse; text-align:left} th {background:var(--wash);color:var(--muted)}
+td,th {padding:10px 12px;vertical-align:top;border-bottom:1px solid var(--rule)} tr:last-child td {border-bottom:0}
+.sample {font-size:13px;line-height:1.45}.sample th {white-space:nowrap;font-weight:500}.baseline {min-width:760px}
+.sample td {vertical-align:middle} code {font:600 12px/20px Cousine,Consolas,monospace}
+.pill {display:inline-block;background:var(--wash);color:var(--muted);font-weight:500;font-size:12px;padding:2px 8px;border-radius:4px}
+.amber {color:#8a5200;background:#fff1d6}.mock-button,button {display:inline-flex;align-items:center;justify-content:center;background:black;color:white;border:1px solid black;border-radius:8px;min-height:32px;padding:5px 12px;font:500 13px/20px var(--sans)}
+button {cursor:pointer} button:disabled {cursor:default;opacity:.5}.quiet {background:white;color:black;border-color:var(--line)}
+.monitor {max-width:1154px}
+.monitor .sample {font-size:13px;line-height:20px}
+.monitor .sample th {height:36px;padding:8px 12px}
+.monitor .sample td {height:53px;padding:6px 12px}
+.monitor .sample td:not(:nth-child(2)), .monitor .mock-button {white-space:nowrap}
+.monitor .sample td:nth-child(2) {overflow-wrap:anywhere}
+.monitor .sample .replace {display:inline-block;vertical-align:middle;max-width:min(100%,var(--action-width,12rem));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+.monitor .sample .replace.show-full-name {white-space:normal;overflow-wrap:anywhere}
+.name-tooltip {position:fixed;z-index:2;width:max-content;max-width:min(24rem,calc(100vw - 16px));padding:5px 9px;border-radius:6px;background:var(--ink);color:white;font:13px/1.4 var(--sans);overflow-wrap:anywhere}
+.name-example {display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 12px}
+.name-example label {margin:0;font-size:13px;font-weight:500}
+.name-example select {width:auto;max-width:100%;padding:4px 8px;font:14px var(--sans)}
+.monitor .sample tbody tr:hover {background:#fafafa}
+.monitor .sample tbody tr[hidden] {display:none}
+.switch {display:inline-flex;gap:2px;margin:4px 0 16px;border:1px solid var(--line);padding:3px;border-radius:8px}
+.switch button {border:0;background:white;color:var(--muted);border-radius:5px}
+.switch button[aria-pressed="true"] {background:black;color:white}
+.monitor .frame {padding:20px}
+.monitor .scroll {max-width:100%}
+.caption {font-size:14px;color:var(--muted);margin:10px 0}.notes {width:100%;font-size:15px}.notes th:first-child {width:19%}
+dialog {width:min(490px,calc(100% - 32px));max-height:90dvh;overflow:auto;padding:24px;border:1px solid var(--line);border-radius:12px}
+dialog::backdrop {background:rgba(0,0,0,.4)} label {display:block;font-weight:600;margin:16px 0 4px}
+select,textarea {width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:white;color:black;font:inherit}
+.actions {display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:20px} .confirmation {background:var(--wash);padding:12px;border-radius:8px;overflow-wrap:anywhere}
+.case-summary {margin:16px 0;overflow-wrap:anywhere}
+.case-summary small {display:block;margin-bottom:2px}
+.case-summary code {font-weight:400}
+.reviewers {display:flex;flex-wrap:wrap;gap:12px 20px;margin:16px 0}
+.reviewers > div {flex:1 1 auto;min-width:min(8rem,100%);max-width:100%}
+.reviewers dt,.change-reason dt {color:var(--muted);font-size:13px}
+.reviewers dd,.change-reason dd {margin:2px 0 0;overflow-wrap:anywhere}
+.change-reason {margin:16px 0}
+dialog:not(.confirming) .confirmation-field {display:none}
+.status:empty {display:none}.status {font-size:14px;background:var(--wash);padding:10px;border-radius:8px}
+.frame {container-type:inline-size}
+@container (width > 900px) {
+  /* Keep compact columns at their content width. The case title gets the remaining space. */
+  .alt-table th:not(:nth-child(2)) {width:1%}
+  .monitor .alt-table .replace {max-width:12rem}
+}
+@container (max-width:900px) {
+  .alt-table thead {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .alt-table,.alt-table tbody {display:block}
+  .monitor .alt-table tbody tr {display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr) minmax(135px,auto);gap:3px 12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--rule)}
+  .monitor .alt-table tbody tr:last-child {border:0}
+  .monitor .alt-table td {height:auto;padding:0;border:0;min-width:0}
+  .alt-table td:nth-child(1) {grid-area:1/1}
+  .alt-table td:nth-child(2) {grid-area:1/2}
+  .alt-table td:nth-child(3) {grid-area:2/1}
+  .alt-table td:nth-child(4) {grid-area:2/2}
+  .alt-table td:nth-child(5) {grid-area:1/3}
+  .alt-table td:nth-child(6) {grid-area:2/3}
+  .monitor .alt-table td .pill {white-space:normal}
+  .alt-table {--action-width:min(40vw,12rem)}
+}
+@container (max-width:500px) {
+  .monitor .alt-table tbody tr {grid-template-columns:minmax(0,1fr) auto;gap:3px 8px}
+  .alt-table td:nth-child(2) {grid-area:2/1/3/-1}
+  .alt-table td:nth-child(3) {grid-area:1/2;text-align:right}
+  .alt-table td:nth-child(4) {grid-area:3/1/4/-1}
+  .alt-table td:nth-child(5) {grid-area:4/1}
+  .alt-table td:nth-child(6) {grid-area:4/2}
+}
+@media(max-width:1100px){.pair{grid-template-columns:1fr}}
+@media(max-width:640px){.frame{padding:14px}.notes,.notes tbody,.notes tr,.notes td {display:block}.notes thead{display:none}.notes tr{border-top:1px solid var(--line);padding:10px 0}.notes td{border:0;padding:3px 0}.notes td:nth-child(2)::before{content:'Preserve · ';font-weight:600}.notes td:nth-child(3)::before{content:'Change · ';font-weight:600}}
+</style>
+<main>
+<header><p class="meta">Veritask / SCRUM-374 · Design review draft · 25 November 2026</p>
+<h1>Case review and reassignment</h1>
+<p>Before an admin replaces a reviewer, they should be able to identify the case, the person, and what happens to that person’s assessment. Aileen’s monitoring frame already makes the case and round status easy to find. The alternative brings the reviewer into that same reading path.</p>
+<nav aria-label="Contents"><a href="#comparison">Compare the designs</a><a href="#reviewer">Reviewer flow</a><a href="#evaluation">Heuristic evaluation</a><a href="#handoff">Figma handoff</a></nav></header>
+<section id="comparison"><h2>Monitoring and reassignment</h2>
+<p class="intro">Switch between the same five cases at the same width. Both views retain the six fields, 13 px table text and 32 px action. Reviewer names in the alternative are illustrative. Select a named action to try the confirmation.</p>
+<div class="switch" role="group" aria-label="Monitoring design"><button type="button" data-view="original" aria-pressed="false" aria-controls="original">Baseline</button><button type="button" data-view="alternative" aria-pressed="true" aria-controls="alternative">Alternative</button></div>
+<div class="monitor">
+<figure id="original" hidden><figcaption>Baseline / pemantauan · Aileen’s monitoring view</figcaption>
+<div class="frame" lang="id"><h3>Review kasus</h3><p>Pantau kasus yang sedang direview dan tangani kasus yang kehilangan reviewer.</p>
+<div class="tabs"><strong>Perlu penugasan ulang</strong><span>Dalam review</span></div>
+<div class="scroll" tabindex="0" aria-label="Tabel penugasan baseline"><table class="sample baseline"><thead><tr><th>Kode</th><th>Judul</th><th>Ronde</th><th>Status ronde</th><th>Alasan</th><th>Aksi</th></tr></thead><tbody>
+<tr><td><code>Tes-003</code></td><td>Tes hukum</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><span class="mock-button">Ganti reviewer</span></td></tr>
+<tr><td><code>KLN-PHK-001</code></td><td>Hak pesangon pekerja tetap saat PHK karena efisiensi.</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><span class="mock-button">Ganti reviewer</span></td></tr>
+<tr><td><code>testing</code></td><td>testing</td><td>Ronde 5</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><span class="mock-button">Ganti reviewer</span></td></tr>
+<tr><td><code>bvc</code></td><td>bvc</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><span class="mock-button">Ganti reviewer</span></td></tr>
+<tr><td><code>vcx</code></td><td>vcx</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><span class="mock-button">Ganti reviewer</span></td></tr>
+</tbody></table></div></div>
+<p class="caption">Original desktop frame: 248 px sidebar, 1,112 px content area, 53 px row boxes. Each action has the same label. The export positions successive rows 55 px apart.</p></figure>
+<figure id="alternative"><figcaption>Alternatif (Tabel ringkas) · proposed monitoring view</figcaption>
+<div class="frame" lang="id"><h3>Review kasus</h3><p>Pantau kasus yang sedang direview dan tangani kasus yang kehilangan reviewer.</p>
+<div class="tabs"><strong>Perlu penugasan ulang</strong><span>Dalam review</span></div>
+<div class="scroll" tabindex="0" aria-label="Tabel penugasan alternatif"><table class="sample alt-table"><thead><tr><th>Kode</th><th>Judul</th><th>Ronde</th><th>Status ronde</th><th>Alasan</th><th>Ganti reviewer</th></tr></thead><tbody>
+<tr><td><code>Tes-003</code></td><td data-case-title>Tes hukum</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><button class="quiet replace" data-code="Tes-003" data-round="1" data-name="Dwi Eka Sari" aria-label="Ganti Dwi Eka Sari, reviewer untuk Tes-003">Ganti Dwi Eka Sari</button></td></tr>
+<tr><td><code>KLN-PHK-001</code></td><td data-case-title>Hak pesangon pekerja tetap saat PHK karena efisiensi.</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><button class="quiet replace" data-code="KLN-PHK-001" data-round="1" data-name="Rani Ayu" aria-label="Ganti Rani Ayu, reviewer untuk KLN-PHK-001">Ganti Rani Ayu</button></td></tr>
+<tr><td><code>testing</code></td><td data-case-title>testing</td><td>Ronde 5</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><button class="quiet replace" data-code="testing" data-round="5" data-name="Aninditya Wicaksono" aria-label="Ganti Aninditya Wicaksono, reviewer untuk testing">Ganti Aninditya Wicaksono</button></td></tr>
+<tr><td><code>bvc</code></td><td data-case-title>bvc</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><button class="quiet replace" data-code="bvc" data-round="1" data-name="Prameswari Kartikaningrum Widyastuti" aria-label="Ganti Prameswari Kartikaningrum Widyastuti, reviewer untuk bvc">Ganti Prameswari Kartikaningrum Widyastuti</button></td></tr>
+<tr><td><code>vcx</code></td><td data-case-title>vcx</td><td>Ronde 1</td><td><span class="pill">● Menunggu penugasan</span></td><td><span class="pill amber">Peran reviewer diubah</span></td><td><button class="quiet replace" data-code="vcx" data-round="1" data-name="Putri Utami" aria-label="Ganti Putri Utami, reviewer untuk vcx">Ganti Putri Utami</button></td></tr>
+</tbody></table></div><p class="status" id="status" role="status"></p></div>
+<p class="caption">H6, H7, H8 · Keep all six columns and identify the affected person in the action. Use a neutral outline for the repeated button. The old and new names, audit reason, and effect on the verdict appear together at confirmation.</p></figure>
+</div></section>
+<section><h2>Replacing a reviewer</h2><div class="pair">
+<figure><figcaption>Baseline / ganti reviewer · approved HTML prototype</figcaption><div class="frame" lang="id">
+<h3>Ganti reviewer</h3><code>KLN-PHK-001</code><h4>Reviewer baru *</h4><p>Pilih reviewer</p><h4>Alasan penggantian *</h4><p>Alasan wajib diisi dan tercatat di log audit.</p><div class="actions"><span class="mock-button quiet">Batal</span><span class="mock-button">Lanjut</span></div></div>
+<p class="caption">From the reassignment queue the dialog receives only the case code as context. “Lanjut” closes it and displays a success message. The existing app already separates preparation and confirmation.</p></figure>
+<figure id="reassignment-confirmation"><figcaption>Alternatif (Konfirmasi penggantian) · final step</figcaption>
+<div class="name-example"><label for="name-example">Reviewer name example</label>
+<select id="name-example">
+  <option data-outgoing="Rani Ayu" data-incoming="Sari Dewi">2 short words</option>
+  <option data-outgoing="Dwi Eka Sari" data-incoming="Adi Tri Jaya">3 short words</option>
+  <option data-outgoing="Aninditya Wicaksono" data-incoming="Kusumawardani Puspitasari">2 long words</option>
+  <option data-outgoing="Prameswari Kartikaningrum Widyastuti" data-incoming="Ranggawijaya Adityanugraha Kusumawardhana">3 long words</option>
+</select></div>
+<div class="frame" lang="id">
+<h3>Konfirmasi penggantian reviewer</h3>
+<div class="case-summary"><small>Kasus <code>KLN-PHK-001 · Ronde 1</code></small>Hak pesangon pekerja tetap saat PHK karena efisiensi.</div>
+<dl class="reviewers">
+  <div><dt>Reviewer lama</dt><dd id="example-outgoing">Rani Ayu</dd></div>
+  <div><dt>Reviewer baru</dt><dd id="example-incoming">Sari Dewi</dd></div>
+</dl>
+<dl class="change-reason"><dt>Alasan</dt><dd>Peran reviewer berubah.</dd></dl>
+<p class="confirmation">Penilaian reviewer lama tidak dihitung setelah penggantian.</p><div class="actions"><span class="mock-button quiet">Kembali</span><span class="mock-button">Ganti reviewer</span></div></div>
+<p class="caption">H3, H5, H6 · Show the full case title, code and round during selection and confirmation so the admin can check the assignment before committing. “Tinjau penggantian” opens this step. “Kembali” keeps the selected person and reason. Announce success after the server confirms. If another admin has changed the assignment, explain the conflict and return to the refreshed list.</p></figure></div></section>
+<section id="reviewer"><h2>The reviewer’s queue and case</h2><p class="intro">The supplied Figma export shows admin monitoring. The following proposals use the reviewer screens in client revision <code>7456075</code>. Their visual baseline still needs comparison with any separate reviewer frames.</p>
+<div class="pair"><figure><figcaption>Daftar review · H1, H2, H7</figcaption><div class="frame" lang="id"><h3>Antrean tinjauan</h3>
+<p>Kasus dengan ronde terlama tampil lebih dulu.</p><div class="tabs"><strong>Antrean tinjauan</strong><span>Menunggu revisi penulis</span></div><code>KLN-PHK-001 · Ronde 1</code><h4>Hak pesangon pekerja tetap saat PHK karena efisiensi.</h4><span class="pill amber">Menunggu penilaian Anda</span></div><p class="caption">Keep the existing oldest-round-first default, two queues, and wording that says whose turn it is. Make the default ordering visible. A submitted review retains its waiting status and the existing destination.</p></figure>
+<figure><figcaption>Halaman review kasus · H3, H6, H10</figcaption><div class="frame" lang="id"><code>KLN-PHK-001 · Versi 2</code><h3>Penilaian Anda</h3><p>Keputusan yang dipilih: <strong>Perlu revisi</strong></p><h4>Komentar untuk penulis (wajib)</h4><p>Jelaskan bagian yang perlu diperbaiki.</p><span class="mock-button">Kirim penilaian</span></div><p class="caption">The current form puts the revision requirement in placeholder text and already has a programmatic required state. Keep the rule visible while typing. Approval keeps comments optional. Retain the existing decision wording, draft across history tabs, and blind second review.</p></figure></div></section>
+<section id="evaluation"><h2>Nielsen evaluation</h2><p class="intro">These findings come from inspection. User success rates and severity in practice still need observation. Highest priority goes to identifying the affected assignment and making the final action explicit.</p>
+<table class="notes"><thead><tr><th>Heuristic</th><th>What works</th><th>Finding and design response</th></tr></thead><tbody>
+<tr><td><b>H1 · Status</b></td><td>Text badges identify the round state independently of color.</td><td>The prototype can announce success from the reassignment tab without updating the targeted slot. Show pending feedback, then name the case and replacement on confirmed success.</td></tr>
+<tr><td><b>H2 · Familiar language</b></td><td>“Perlu penugasan ulang” describes the admin’s task in the team’s language.</td><td>The queue uses “Putaran” where admin monitoring uses “Ronde”. Use the approved frame’s “Ronde” in both.</td></tr>
+<tr><td><b>H3 · User control</b></td><td>“Batal” exits the form. The app retains the reviewer’s draft while history is open.</td><td>Prototype “Lanjut” leaves no checkpoint. Preserve the app’s return-to-edit step and keep both fields filled.</td></tr>
+<tr><td><b>H4 · Consistency</b></td><td>The active sidebar item, tab underline and repeated table structure give the screen a clear location.</td><td>The exported headers and list have no visible sort or page controls. Use SCRUM-343 DataTable and Pager for long lists with meaningful sort keys and the accepted default order.</td></tr>
+<tr><td><b>H5 · Prevent mistakes</b></td><td>Both a replacement and a reason are required in the prototype.</td><td>The prototype commits through a forward-navigation label. Put the consequence and old/new names together before the final action. Retain current eligibility and duplicate-submit protection.</td></tr>
+<tr><td><b>H6 · Recognition</b></td><td>Case codes and titles are available in each exported row.</td><td>Identical action labels omit the affected person. Name the reviewer in the existing action column and show the actual reason beside it. If a name is unavailable, use the existing neutral fallback.</td></tr>
+<tr><td><b>H7 · Efficiency</b></td><td>Tabs separate work requiring action from ongoing reviews.</td><td>Retain the 53 px desktop row and keep the named action in a consistent column. Reflow narrow screens and allow extra height for real content. Test the long PHK title and two affected reviewers.</td></tr>
+<tr><td><b>H8 · Visual hierarchy</b></td><td>The serif heading, muted metadata, status text and monospaced IDs have distinct roles.</td><td>Five solid black row buttons give every routine entry equal emphasis. Use an existing neutral row button and reserve the strongest action for the decision dialog.</td></tr>
+<tr><td><b>H9 · Error recovery</b></td><td>The app offers retry when the queue fails and distinguishes a stale assignment from a failed request.</td><td>The prototype shows only populated tables. Draw separate loading, empty, fetch-failed and stale-assignment states. Keep the next action within the affected panel.</td></tr>
+<tr><td><b>H10 · Help in context</b></td><td>The replacement form explains that its reason goes into the audit log.</td><td>Keep that hint. Add the consequence beside the final decision and persist the revision-comment requirement beside the reviewer’s field.</td></tr>
+</tbody></table></section>
+<section><h2>Benchmark decisions</h2><ul>
+<li>Artificial Analysis groups related leaderboard columns and offers details from the entity being compared. Apply that grouping to case identity, round, and affected reviewer. <a href="https://artificialanalysis.ai/leaderboards/models">Artificial Analysis leaderboard</a></li>
+<li>GitHub separates reviewing evidence from submitting a review and lets reviewers comment on specific changes. Keep case evidence, reviewer feedback, and the explicit verdict in that order. <a href="https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/reviewing-proposed-changes-in-a-pull-request">GitHub review workflow</a></li>
+<li>Cursor presents changes in context for inspection. Use the same principle in reassignment by showing the old and new reviewer together with the case before committing. <a href="https://cursor.com/help/ai-features/agent">Cursor’s review workflow</a></li>
+</ul></section>
+<section id="handoff"><h2>Figma handoff and usability check</h2>
+<h3 id="name-overflow-note">Figma annotation · Reviewer button</h3>
+<p class="intro" lang="id">Pada tabel desktop, atur kolom Judul ke <i>Fill container</i> dan kolom lain ke <i>Hug contents</i>. Batasi lebar tombol Ganti reviewer hingga 192 px, dengan padding sel 12 px di setiap sisi. Judul kasus yang panjang mendapat ruang tersisa.</p>
+<p class="intro" lang="id">H6, H7 · Pertahankan satu baris agar daftar mudah dipindai. Jika label “Ganti [nama]” melebihi lebar tombol, tampilkan elipsis di ujung dan perlihatkan label lengkap saat kursor diarahkan ke tombol. <a href="https://spectrum.adobe.com/web/swc/components/action-button#text-overflow">Adobe Spectrum — Action button, Text overflow</a>.</p>
+<p class="intro" lang="id">Untuk Veritask, tampilkan label lengkap juga saat tombol mendapat fokus keyboard. Ketukan pada layar sentuh membuka dialog dengan nama lengkap sebelum admin mengonfirmasi. Jika satu kasus memiliki beberapa reviewer yang perlu diganti, tampilkan nama lengkap mereka langsung pada tombol agar admin bisa memilih orang yang tepat.</p>
+<ol><li>Duplicate Aileen’s 1,440 × 900 “Baseline / pemantauan” frame beside “Alternatif (Tabel ringkas)”. Keep the 72 px header, 248 px sidebar, 40 px desktop content insets, Source Serif 4 headings, Hanken Grotesk UI, Cousine IDs, and existing badge and button tokens. Use auto-layout rows that grow with text. The export’s 315 px table sits inside a 303 px container.</li>
+<li>Use the same case on both sides. Annotate the named action with H6, row density with H7, and the neutral action treatment with H8. Give each replaceable reviewer their own named action when a case has two. Put the case code and round on a muted line above the full, regular-weight title in both steps (H6). Under “Konfirmasi penggantian reviewer”, place the outgoing and incoming reviewers side by side when space permits. Give the submitted reason its own line before the consequence (H5). Include a second slot, an unknown reviewer name, a row with no eligible replacement action, and a genuine empty candidate list.</li>
+<li>At 768 px, test the full title and action with the shared responsive shell. At 375 px, stack case, round, status and each reviewer’s reason/action. Preserve access to supported sorting and paging. Verify tab and dialog focus, Escape/cancel before submission, return focus, explicit field labels and readable badges. Any new shared-component variant goes through SCRUM-343.</li>
+<li>For data states use the shared components. Label loading “Memuat penugasan…”, empty “Tidak ada kasus yang perlu penugasan ulang”, and failure “Daftar penugasan gagal dimuat” with “Coba lagi”. For an ineligible list, explain that there are no eligible candidates. Show a fetch failure separately so admins can recover.</li>
+<li>PO and SA review the frame pairs, labels and role-specific rules before production coding. For SCRUM-360, ask a reviewer to locate the correct case version, request a revision and return to the queue. Ask an admin to replace the intended person in a two-slot round and explain the effect before confirming. Counterbalance which design admins see first. With comparable case lists, record time to locate the target, incorrect reviewer selections and whether admins can explain the consequence. Check the number of complete rows in the same viewport before comparing task results. Revise the designs and code from PO-agreed findings.</li></ol>
+<p class="caption">References · <a href="https://kelompok4pplxpropensi.atlassian.net/browse/SCRUM-374">SCRUM-374</a> · <a href="https://github.com/veritaskai-labs/IndoLegalBench-client/pull/121">merged SCRUM-343 design system</a> · <a href="https://www.nngroup.com/articles/ten-usability-heuristics/">Nielsen’s ten heuristics</a>. The admin export and Final UI ILB.html establish the visual baseline. Reviewer and error-state observations use the local client.</p></section>
+</main>
+<div class="name-tooltip" id="name-tooltip" lang="id" role="tooltip" hidden></div>
+<dialog lang="id" aria-labelledby="dialog-title" aria-describedby="case-summary"><h2 id="dialog-title" tabindex="-1">Ganti reviewer</h2>
+<div class="case-summary" id="case-summary"><small>Kasus <code id="context"></code></small><span id="case-title"></span></div>
+<dl class="reviewers">
+  <div><dt>Reviewer lama</dt><dd id="old"></dd></div>
+  <div class="confirmation-field"><dt>Reviewer baru</dt><dd id="new"></dd></div>
+</dl>
+<form id="prepare"><label for="candidate">Reviewer baru (wajib)</label><select id="candidate" required><option value="">Pilih reviewer</option></select>
+<label for="reason">Alasan penggantian (wajib)</label><textarea id="reason" rows="3" required aria-describedby="reason-hint"></textarea><small id="reason-hint">Alasan tercatat di log audit.</small>
+<div class="actions"><button class="quiet" type="button" id="cancel">Batal</button><button id="next" disabled>Tinjau penggantian</button></div></form>
+<div id="confirm" hidden><dl class="change-reason"><dt>Alasan</dt><dd id="why"></dd></dl>
+<p class="confirmation">Penilaian reviewer lama tidak dihitung setelah penggantian.</p>
+<div class="actions"><button class="quiet" id="back">Kembali</button><button id="save">Ganti reviewer</button></div></div></dialog>
+<script>
+const find = id => document.getElementById(id);
+const dialog = document.querySelector('dialog');
+const form = find('prepare');
+const nameExample = find('name-example');
+for (const example of nameExample.options) {
+  find('candidate').add(new Option(example.dataset.incoming));
+}
+function showNameExample() {
+  const example = nameExample.selectedOptions[0];
+  find('example-outgoing').textContent = example.dataset.outgoing;
+  find('example-incoming').textContent = example.dataset.incoming;
+}
+nameExample.addEventListener('change', showNameExample);
+showNameExample();
+let trigger;
+for (const choice of document.querySelectorAll('[data-view]')) {
+  choice.onclick = () => {
+    for (const item of document.querySelectorAll('[data-view]')) {
+      const selected = choice === item;
+      item.setAttribute('aria-pressed', String(selected));
+      find(item.dataset.view).hidden = !selected;
+    }
+  };
+}
+function showStep(confirming) {
+  form.hidden = confirming;
+  find('confirm').hidden = !confirming;
+  dialog.classList.toggle('confirming', confirming);
+  find('dialog-title').textContent = confirming ? 'Konfirmasi penggantian reviewer' : 'Ganti reviewer';
+}
+const reviewerButtons = [...document.querySelectorAll('.replace')];
+const nameTooltip = find('name-tooltip');
+let tooltipButton = null;
+function closeNameTooltip() {
+  nameTooltip.hidden = true;
+  tooltipButton = null;
+}
+function openNameTooltip(button) {
+  closeNameTooltip();
+  if (button.scrollWidth <= button.clientWidth || dialog.open) return;
+  tooltipButton = button;
+  nameTooltip.textContent = button.textContent;
+  nameTooltip.hidden = false;
+  const rect = button.getBoundingClientRect();
+  nameTooltip.style.left = Math.max(8, Math.min(rect.left, document.documentElement.clientWidth - nameTooltip.offsetWidth - 8)) + 'px';
+  const above = rect.top - nameTooltip.offsetHeight;
+  nameTooltip.style.top = (above >= 4 ? above : rect.bottom) + 'px';
+}
+for (const button of reviewerButtons) {
+  if (reviewerButtons.some(other => other !== button && other.dataset.code === button.dataset.code)) {
+    button.classList.add('show-full-name');
+  }
+  button.addEventListener('pointerenter', event => {
+    if (event.pointerType !== 'touch') openNameTooltip(button);
+  });
+  button.addEventListener('focus', () => openNameTooltip(button));
+  button.addEventListener('blur', closeNameTooltip);
+  button.addEventListener('pointerleave', event => {
+    if (event.relatedTarget !== nameTooltip && document.activeElement !== button) closeNameTooltip();
+  });
+  button.addEventListener('click', () => {
+    closeNameTooltip();
+    trigger = button;
+    form.reset();
+    find('next').disabled = true;
+    find('case-title').textContent = trigger.closest('tr').querySelector('[data-case-title]').textContent;
+    find('context').textContent = trigger.dataset.code + ' · Ronde ' + trigger.dataset.round;
+    find('old').textContent = trigger.dataset.name;
+    showStep(false);
+    dialog.showModal();
+    find('candidate').focus();
+  });
+}
+nameTooltip.addEventListener('pointerleave', event => {
+  if (event.relatedTarget !== tooltipButton && document.activeElement !== tooltipButton) closeNameTooltip();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeNameTooltip();
+});
+window.addEventListener('resize', closeNameTooltip);
+window.addEventListener('scroll', closeNameTooltip, true);
+form.oninput = () => { find('next').disabled = !find('candidate').value || !find('reason').value.trim(); };
+form.onsubmit = event => {
+  event.preventDefault();
+  if (find('next').disabled) return;
+  find('new').textContent = find('candidate').value;
+  find('why').textContent = find('reason').value.trim();
+  showStep(true);
+  find('dialog-title').focus();
+};
+find('back').onclick = () => { showStep(false); find('candidate').focus(); };
+find('cancel').onclick = () => dialog.close();
+find('save').onclick = () => {
+  const status = find('status');
+  status.textContent = 'Simulasi selesai. Reviewer untuk ' + trigger.dataset.code + ' diganti dari ' + trigger.dataset.name + ' ke ' + find('candidate').value + '. Muat ulang halaman untuk mengulang.';
+  dialog.close();
+  trigger.closest('tr').hidden = true;
+  status.tabIndex = -1;
+  status.focus();
+};
+</script>
+</html>

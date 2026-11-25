@@ -45,7 +45,7 @@ describe("navForRole", () => {
       "Rubrik",
       "Laporan",
       "Anggota",
-      "Pemantauan review",
+      "Review kasus",
       "Log audit",
     ]);
   });
