@@ -23,12 +23,15 @@ function renderList(cases: DrilldownGateway["cases"], reports: ReportsGateway = 
   render(<ResultCaseList reportId="r-1" resultId="res-1" gateway={fakeGateway(cases)} reportsGateway={reports} />);
 }
 
-/** The row of one case: DataTable cells are all plain cells, so the row is found by its case code. */
+/**
+ * The row of one case: DataTable cells are all plain cells, so the row is found by its case code (the first
+ * match; an open case repeats the code inside its "Buka jawaban" link name).
+ */
 function rowOf(code: string) {
-  return screen.getByText(code).closest("tr") as HTMLElement;
+  return screen.getAllByText(code)[0].closest("tr") as HTMLElement;
 }
 
-/** Report r-1 with AiYU (res-1, the number opened) and DeepSeek (res-2) on test cases, and a dev number. */
+/** Report r-1 with AiYU (res-1, the number opened) and DeepSeek (res-2) on test cases, plus dev-only numbers. */
 function reportWithTwoProducts(): ReportDetail {
   return firstReport({
     id: "r-1",
@@ -39,6 +42,8 @@ function reportWithTwoProducts(): ReportDetail {
         product_label: "DeepSeek",
         results: [reportResult({ id: "res-2", rank: 2 }), reportResult({ id: "res-9", score_split: "dev" })],
       }),
+      // Edge: a product with only a dev number has nothing to switch to from a test number.
+      reportSession({ product_label: "Gemini", results: [reportResult({ id: "res-7", score_split: "dev" })] }),
     ],
   });
 }

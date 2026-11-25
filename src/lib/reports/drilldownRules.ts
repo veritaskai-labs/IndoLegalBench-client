@@ -1,11 +1,27 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/lib/auth";
+import type { ReportDetail, ScoreSplit } from "@/types/reports";
 
 import { REPORT_CONTACT_EMAIL } from "./reportLabels";
 
 /** Halaman daftar kasus di balik satu angka (D6 langkah 1–3). */
 export function resultCasesHref(reportId: string, resultId: string): string {
   return `/reports/comparisons/${encodeURIComponent(reportId)}/results/${encodeURIComponent(resultId)}`;
+}
+
+/** Satu produk di laporan beserta angka yang bisa ditelusuri untuk jenis nilai yang sama. */
+export type ProductNumber = { label: string; resultId: string };
+
+/**
+ * Produk lain di laporan yang punya angka dengan jenis nilai yang sama dengan angka yang sedang dibuka (SCRUM-346
+ * A2), dalam urutan sesi dari server. Hanya dari laporan yang sudah dikirim server untuk peran ini (D9), jadi tidak
+ * ada angka yang tidak boleh dilihat.
+ */
+export function sameSplitProducts(report: ReportDetail, split: ScoreSplit): ProductNumber[] {
+  return report.sessions.flatMap((session) => {
+    const result = session.results.find((item) => item.score_split === split);
+    return result ? [{ label: session.product_label, resultId: result.id }] : [];
+  });
 }
 
 /** Halaman satu kasus sampai jawaban asli (D6 langkah 4–7). */
