@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
-import { caseDetail, otherProduct, reportAttempt } from "@/test/reportFixtures";
+import type { ReportsGateway } from "@/lib/reports/reportsApi";
+import { caseDetail, firstReport, otherProduct, reportAttempt } from "@/test/reportFixtures";
 
 import { ResultCaseDetail } from "./ResultCaseDetail";
 
@@ -21,14 +22,21 @@ beforeEach(() => {
   useAuthMock.mockReturnValue({ status: "loading" });
 });
 
-function renderDetail(caseDetailLoader: DrilldownGateway["caseDetail"]) {
+/** The report the case belongs to; by default it never answers, like a slow network. */
+function fakeReports(detail: ReportsGateway["detail"] = vi.fn().mockReturnValue(new Promise(() => {}))): ReportsGateway {
+  return { detail, list: vi.fn(), pdf: vi.fn(), eligibleSessions: vi.fn(), create: vi.fn(), validate: vi.fn() };
+}
+
+function renderDetail(caseDetailLoader: DrilldownGateway["caseDetail"], reports: ReportsGateway = fakeReports()) {
   const gateway: DrilldownGateway = {
     cases: vi.fn(),
     caseDetail: caseDetailLoader,
     evidence: vi.fn().mockResolvedValue([]),
     evidenceFile: vi.fn(),
   };
-  render(<ResultCaseDetail reportId="r-1" resultId="res-1" caseId="c-1" gateway={gateway} />);
+  render(
+    <ResultCaseDetail reportId="r-1" resultId="res-1" caseId="c-1" gateway={gateway} reportsGateway={reports} />,
+  );
   return gateway;
 }
 
@@ -266,5 +274,30 @@ describe("ResultCaseDetail product comparison", () => {
 
     expect(screen.getByText("Tidak ada produk lain di laporan ini untuk dibandingkan.")).toBeInTheDocument();
     expect(screen.queryByRole("button", COMPARE)).not.toBeInTheDocument();
+  });
+
+  // SCRUM-346 A2 (finding N4): the trail names the report the case was reached from, like the case list.
+  it("names the report in the trail once it is loaded", async () => {
+    renderDetail(
+      vi.fn().mockResolvedValue(caseDetail()),
+      fakeReports(vi.fn().mockResolvedValue(firstReport({ title: "Perbandingan November" }))),
+    );
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(await within(breadcrumb).findByRole("link", { name: "Perbandingan November" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1",
+    );
+  });
+
+  // SCRUM-346 A2 / AC3: a visible way back to the list of cases next to the title, not only the small trail.
+  it("offers a way back to the case list next to the title", async () => {
+    renderDetail(vi.fn().mockResolvedValue(caseDetail()));
+
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("link", { name: "Kembali ke daftar kasus" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1/results/res-1",
+    );
   });
 });
