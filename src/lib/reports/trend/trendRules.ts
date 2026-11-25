@@ -65,8 +65,12 @@ export function hasDrawablePoint(points: readonly TrendPointRead[]): boolean {
   return points.some((point) => point.value !== null);
 }
 
-export function hasSinglePoint(_points: readonly TrendPointRead[]): boolean {
-  return false;
+/**
+ * Tepat satu bulan punya skor (SCRUM-346 A3, temuan N3): grafik hanya berisi satu titik tanpa garis, jadi halaman
+ * menjelaskan bahwa tren butuh minimal dua bulan. Tanpa bulan yang punya skor, AC11 sudah menjelaskannya sendiri.
+ */
+export function hasSinglePoint(points: readonly TrendPointRead[]): boolean {
+  return points.filter((point) => point.value !== null).length === 1;
 }
 
 /** Alasan garis diputus lebih dulu, lalu penanda titik, dalam bahasa pembaca (PBI-17 AC5). */

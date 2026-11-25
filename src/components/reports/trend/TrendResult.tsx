@@ -10,7 +10,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import type { AsyncResource } from "@/hooks/useAsyncResource";
 import type { TrendGateway, TrendQuery } from "@/lib/reports/trend/trendApi";
 import { TREND_METRIC_LABEL } from "@/lib/reports/trend/trendLabels";
-import { hasDrawablePoint, trendWarnings } from "@/lib/reports/trend/trendRules";
+import { hasDrawablePoint, hasSinglePoint, trendWarnings } from "@/lib/reports/trend/trendRules";
 import type { TrendRead } from "@/types/reports";
 
 /**
@@ -43,6 +43,11 @@ export function TrendResult({
   return (
     <div className="space-y-4">
       <TrendNotices warnings={trendWarnings(trend.data)} />
+      {hasSinglePoint(points) && (
+        <p role="note" className="rounded-control bg-surface px-3 py-2 text-sm text-ink-soft">
+          Tren butuh data minimal dua bulan. Data bulan ini sudah tampil di tabel di bawah.
+        </p>
+      )}
       {hasDrawablePoint(points) && <TrendChart points={points} metric={query.metric} />}
       <TrendTable points={points} caption={`${TREND_METRIC_LABEL[query.metric]} ${productName} per bulan`} />
       <TrendPdfButton query={query} gateway={gateway} />

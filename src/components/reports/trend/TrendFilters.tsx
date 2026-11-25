@@ -24,7 +24,8 @@ const RANGES = Object.entries(TREND_RANGE_LABEL) as [TrendRange, string][];
 
 function Field({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   return (
-    <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+    // SCRUM-346 A3 (AC5): full width and stacked on a phone, side by side from the sm breakpoint.
+    <label className="flex w-full flex-col gap-1 text-xs font-medium text-slate-600 sm:w-auto">
       {label}
       {children}
     </label>
