@@ -10,9 +10,15 @@ import { ReportDocument } from "./ReportDocument";
 // report's language (Fase 0 K3) and says so with a lang attribute for screen readers (WCAG 3.1.2). SCRUM-363 took
 // the language out of the detail, so the body is English like every report the builder makes, unless told.
 describe("ReportDocument", () => {
-  // Positive: English by default, the language of the PDF of every report made from the builder.
-  it("is English when no language is given", () => {
+  // Positive (SCRUM-346 N7, PO 25 Nov): Indonesian by default, the language the builder now gives every new report.
+  it("is Indonesian when no language is given", () => {
     render(<ReportDocument report={firstReport()} />);
+    expect(screen.getByRole("article")).toHaveAttribute("lang", "id");
+  });
+
+  // Edge: an English report (made before the switch, or the preview) still reads fully in English.
+  it("still speaks English when told", () => {
+    render(<ReportDocument report={firstReport()} language="en" />);
     expect(screen.getByRole("article")).toHaveAttribute("lang", "en");
   });
 
