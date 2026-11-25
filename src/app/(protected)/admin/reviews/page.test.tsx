@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -224,6 +224,23 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   });
 
 // Positif
+  it.each([false, true])("restores the invoking row after Escape (went back: %s)", async (wentBack) => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValue([row({ void_assignments: [assignment({ status: "void" })] })]);
+    render(<AdminReviewsPage />);
+    const trigger = await screen.findByRole("button", { name: /^Ganti Roben/ });
+    await user.click(trigger);
+    if (wentBack) {
+      await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
+      await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "Cuti");
+      await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
+      await user.click(screen.getByRole("button", { name: "Kembali" }));
+    }
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it("returns a stale assignment to the refreshed queue and explains the conflict", async () => {
     const user = userEvent.setup();
     queueMock.mockResolvedValueOnce([row({ void_assignments: [assignment({ status: "void" })] })]).mockResolvedValue([]);
