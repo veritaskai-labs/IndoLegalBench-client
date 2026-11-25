@@ -30,7 +30,7 @@ describe("ReportDocument", () => {
 
   // The title is typed by a person, so an English report keeps its Indonesian title (PBI-26 AC3).
   it("shows the logo, the title as typed and the PDF info line", () => {
-    render(<ReportDocument report={firstReport()} />);
+    render(<ReportDocument report={firstReport()} language="en" />);
     const body = screen.getByRole("article");
     // AC8: the official Veritask logo, the same asset the server PDF uses.
     expect(within(body).getByRole("img", { name: "Veritask" })).toHaveAttribute(
@@ -52,7 +52,7 @@ describe("ReportDocument", () => {
 
   // AC7 / D9: a test report, as Viewer and Kontributor receive it, has no dev banner and one section.
   it("shows one Test cases section without a dev banner for a test report", () => {
-    render(<ReportDocument report={firstReport()} />);
+    render(<ReportDocument report={firstReport()} language="en" />);
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Test cases"]);
     expect(screen.getByRole("table", { name: "Test cases" })).toBeInTheDocument();
     expect(screen.queryByRole("note")).toBeNull();
@@ -74,13 +74,13 @@ describe("ReportDocument", () => {
   // Edge: like the PDF, a report with no result rows says so instead of drawing empty tables.
   it("says the report has no results when no section has rows", () => {
     render(<ReportDocument report={firstReport({ sessions: [] })} />);
-    expect(screen.getByText("This report has no results.")).toBeInTheDocument();
+    expect(screen.getByText("Tidak ada hasil untuk laporan ini.")).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("lists the case versions behind the numbers, folded by default", () => {
     render(<ReportDocument report={firstReport()} />);
-    const summary = screen.getByText("Case versions (42)");
+    const summary = screen.getByText("Versi kasus (42)");
     const details = summary.closest("details") as HTMLElement;
     expect(details).not.toHaveAttribute("open");
     expect(details).toHaveTextContent("ILB-001 v1, ILB-002 v1, ILB-003 v1, ILB-004 v2");
@@ -88,7 +88,7 @@ describe("ReportDocument", () => {
 
   it("leaves out the case versions when the report lists none", () => {
     render(<ReportDocument report={firstReport({ case_basis: [] })} />);
-    expect(screen.queryByText(/Case versions/)).toBeNull();
+    expect(screen.queryByText(/Versi kasus/)).toBeNull();
   });
 
   // PBI-16 AC3-4: readers who cannot open case contents are told where to ask.

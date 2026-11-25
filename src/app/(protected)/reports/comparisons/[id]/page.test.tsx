@@ -59,7 +59,7 @@ describe("ComparisonReportPage", () => {
     render(<ComparisonReportPage />);
 
     const body = await screen.findByRole("article");
-    expect(body).toHaveAttribute("lang", "en");
+    expect(body).toHaveAttribute("lang", "id");
     expect(screen.getByRole("heading", { level: 1, name: "Perbandingan 5 produk, Oktober 2026" })).toBeInTheDocument();
     expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("Perbandingan 5 produk, Oktober 2026")).toHaveAttribute(
       "aria-current",
@@ -70,13 +70,13 @@ describe("ComparisonReportPage", () => {
   });
 
   // SCRUM-364 (AC10): the "Bahasa laporan" chip is gone, because the detail no longer carries the language.
-  // The page chrome stays Indonesian and the body is English, like the PDF of every report from the builder (K3).
-  it("shows no language chip and keeps the chrome Indonesian around an English body", async () => {
+  // The body is Indonesian like the chrome and the PDF of every new report (PO decision 25 Nov, SCRUM-346 N7).
+  it("shows no language chip and an Indonesian body", async () => {
     detail.mockResolvedValue(devTestReport());
 
     render(<ComparisonReportPage />);
 
-    expect(await screen.findByRole("article")).toHaveAttribute("lang", "en");
+    expect(await screen.findByRole("article")).toHaveAttribute("lang", "id");
     expect(screen.queryByText(/Bahasa laporan/)).toBeNull();
     expect(screen.getByText("Tersimpan")).toBeInTheDocument();
     expect(screen.getByRole("note")).toBeInTheDocument();

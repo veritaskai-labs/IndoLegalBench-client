@@ -380,7 +380,7 @@ describe("ReportBuilderForm: title and Create", () => {
       score_scope: "dev_test",
       measurement_filter: "all",
       product_label_mode: "code",
-      language: "en",
+      language: "id",
     });
   });
 
