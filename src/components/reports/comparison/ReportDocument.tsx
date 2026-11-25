@@ -5,12 +5,15 @@ import { REPORT_LANGUAGE, REPORT_LABELS } from "@/lib/reports/reportLabels";
 import { reportSections } from "@/lib/reports/reportSections";
 import type { ReportDetail, ReportLanguage } from "@/types/reports";
 
-import { ReportBarChart } from "./ReportBarChart";
+import { ReportGuide } from "./ReportGuide";
+import { ReportHighlightCards } from "./ReportHighlightCards";
 import { ReportRankingTable, type ScoreHref } from "./ReportRankingTable";
+import { ReportScoreCharts } from "./ReportScoreCharts";
 
 /**
- * Isi laporan perbandingan, disusun seperti PDF (pdf.py render), dalam bahasa laporan (Fase 0 K3). Judul
- * diketik pengguna, jadi tidak diterjemahkan.
+ * Isi laporan perbandingan dalam bahasa laporan (Fase 0 K3), urutannya seperti PDF (pdf.py render). Judul diketik
+ * pengguna, jadi tidak diterjemahkan. Di web saja (SCRUM-346, disetujui PO 25 Nov): panel cara membaca (A5), kartu
+ * sorotan dan grafik per skor (A6); PDF tidak berubah.
  */
 export function ReportDocument({
   report,
@@ -26,6 +29,7 @@ export function ReportDocument({
         <Image src="/veritask-logo.png" alt="Veritask" width={1022} height={256} className="h-8 w-auto" />
         <h1 className="text-xl font-semibold text-slate-900">{report.title}</h1>
         <p className="text-sm text-slate-600">{reportInfoLine(report, language)}</p>
+        <ReportGuide />
       </header>
 
       {report.has_dev_scores && (
@@ -40,6 +44,7 @@ export function ReportDocument({
         sections.map((section) => (
           <section key={section.split} className="space-y-3">
             <h2 className="text-base font-semibold text-slate-900">{labels.splits[section.split]}</h2>
+            <ReportHighlightCards rows={section.rows} label={`Sorotan ${labels.splits[section.split]}`} />
             <ReportRankingTable
               rows={section.rows}
               language={language}
@@ -47,7 +52,7 @@ export function ReportDocument({
               caption={labels.splits[section.split]}
               scoreHref={scoreHref}
             />
-            <ReportBarChart rows={section.rows} language={language} />
+            <ReportScoreCharts rows={section.rows} language={language} />
           </section>
         ))
       )}

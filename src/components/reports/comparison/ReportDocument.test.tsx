@@ -47,7 +47,8 @@ describe("ReportDocument", () => {
 
   it("hides the model versions of a code-mode report", () => {
     render(<ReportDocument report={firstReport({ product_label_mode: "code" })} language="id" />);
-    expect(screen.getAllByText("Disamarkan")).toHaveLength(firstReport().sessions.length);
+    // SCRUM-346 A1: the version sits under the product name, after the kind.
+    expect(screen.getAllByText(/ · Disamarkan$/)).toHaveLength(firstReport().sessions.length);
   });
 
   // AC7 / D9: a test report, as Viewer and Kontributor receive it, has no dev banner and one section.

@@ -8,11 +8,14 @@ import { ReportHighlightCards } from "./ReportHighlightCards";
 
 const rows = () => reportSections(firstReport().sessions)[0].rows;
 
+/** The cards only: each card has its own nested list of leaders. */
+const cardsOf = (name: string) => [...screen.getByRole("list", { name }).children] as HTMLElement[];
+
 // SCRUM-346 A6 (PO approved 25 Nov): three cards above the table, each naming the best product for one number.
 describe("ReportHighlightCards", () => {
   it("lists one card per number with its title, sentence and leader", () => {
     render(<ReportHighlightCards rows={rows()} label="Sorotan Kasus test" />);
-    const cards = within(screen.getByRole("list", { name: "Sorotan Kasus test" })).getAllByRole("listitem");
+    const cards = cardsOf("Sorotan Kasus test");
     expect(cards).toHaveLength(3);
     expect(within(cards[0]).getByRole("heading", { level: 3, name: "Skor deterministik" })).toBeInTheDocument();
     expect(cards[0]).toHaveTextContent("AiYU tertinggi dengan 0,91. Berikutnya Justisio 0,86.");
@@ -22,7 +25,7 @@ describe("ReportHighlightCards", () => {
 
   it("shows every tied leader as a badge", () => {
     render(<ReportHighlightCards rows={rows()} label="Sorotan" />);
-    const llm = within(screen.getByRole("list", { name: "Sorotan" })).getAllByRole("listitem")[1];
+    const llm = cardsOf("Sorotan")[1];
     expect(within(llm).getByRole("list", { name: "Produk teratas" })).toHaveTextContent("Gemini");
   });
 
