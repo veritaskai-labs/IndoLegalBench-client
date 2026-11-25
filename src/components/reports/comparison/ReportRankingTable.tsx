@@ -36,7 +36,11 @@ export function ScoreCell({
   if (!href || score === null) return <td className={NUMBER}>{text}</td>;
   return (
     <td className={NUMBER}>
-      <Link href={href} className="text-accent-ink underline decoration-dotted underline-offset-2 hover:decoration-solid">
+      {/* relative: keeps the sr-only hint inside the scroll box, or it widens the whole page on a phone. */}
+      <Link
+        href={href}
+        className="relative text-accent-ink underline decoration-dotted underline-offset-2 hover:decoration-solid"
+      >
         {text}
         {label && (
           <span className="sr-only" lang="id">
@@ -120,7 +124,7 @@ export function ReportRankingTable({
         </button>
       </div>
       {/* shortcut: no tabIndex (Sonar S6845); Chrome, Edge and Firefox focus a scroll box by keyboard, Safari does not, add a focusable wrapper if Safari users report it. */}
-      <section aria-label={caption} className="overflow-x-auto rounded-control border border-line bg-paper">
+      <section aria-label={caption} className="relative overflow-x-auto rounded-control border border-line bg-paper">
         <table id={tableId} className="w-full min-w-[760px] border-separate border-spacing-0 text-[13px] text-ink">
           <caption className="sr-only">{caption}</caption>
           <thead>
@@ -183,7 +187,7 @@ export function ReportRankingTable({
                     <td className={`${CELL} text-right`}>
                       <Link
                         href={href}
-                        className="inline-flex h-8 items-center whitespace-nowrap rounded-control border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover"
+                        className="relative inline-flex h-8 items-center whitespace-nowrap rounded-control border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover"
                       >
                         Lihat kasus <span className="sr-only">{session.product_label}</span>
                         <span aria-hidden="true"> ›</span>

@@ -62,7 +62,7 @@ function caseColumns(reportId: string, resultId: string): Column<ReportCaseScore
         item.content_visible ? (
           <Link
             href={href(item)}
-            className="inline-flex h-8 items-center whitespace-nowrap rounded-control border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover"
+            className="relative inline-flex h-8 items-center whitespace-nowrap rounded-control border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover"
           >
             Buka jawaban <span className="sr-only">{item.case_code}</span>
             <span aria-hidden="true"> ›</span>
