@@ -9,6 +9,22 @@ export function resultCasesHref(reportId: string, resultId: string): string {
   return `/reports/comparisons/${encodeURIComponent(reportId)}/results/${encodeURIComponent(resultId)}`;
 }
 
+/** Satu langkah breadcrumb; bentuknya sama dengan BreadcrumbItem di komponen UI. */
+export type TrailStep = { label: string; href: string };
+
+/**
+ * Tiga langkah pertama breadcrumb halaman penelusuran: Laporan, Laporan perbandingan, lalu laporannya sendiri.
+ * Judul laporan dipakai bila sudah dimuat (SCRUM-346 A2, temuan N4); selama dimuat atau bila gagal, "Detail
+ * laporan", yang tetap berbeda dari "Laporan" untuk pembaca layar (review #104).
+ */
+export function reportTrail(reportId: string, title: string | null): TrailStep[] {
+  return [
+    { label: "Laporan", href: "/reports" },
+    { label: "Laporan perbandingan", href: "/reports/comparisons" },
+    { label: title ?? "Detail laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
+  ];
+}
+
 /** Satu produk di laporan beserta angka yang bisa ditelusuri untuk jenis nilai yang sama. */
 export type ProductNumber = { label: string; resultId: string };
 

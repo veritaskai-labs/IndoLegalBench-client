@@ -19,6 +19,7 @@ import {
   canOpenEvidence,
   canRetryDrilldown,
   NOT_GRADED,
+  reportTrail,
   resultCasesHref,
 } from "@/lib/reports/drilldownRules";
 import { measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
@@ -321,12 +322,7 @@ export function ResultCaseDetail({
     <div className="space-y-5">
       <Breadcrumb
         items={[
-          { label: "Laporan", href: "/reports" },
-          { label: "Laporan perbandingan", href: "/reports/comparisons" },
-          {
-            label: report.status === "ready" ? report.data.title : "Detail laporan",
-            href: `/reports/comparisons/${encodeURIComponent(reportId)}`,
-          },
+          ...reportTrail(reportId, report.status === "ready" ? report.data.title : null),
           { label: "Kasus di balik angka", href: listHref },
           { label: detail.status === "ready" ? detail.data.case_code : "Kasus" },
         ]}
