@@ -1,10 +1,12 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
-import { caseScore, resultCases } from "@/test/reportFixtures";
+import type { ReportsGateway } from "@/lib/reports/reportsApi";
+import { caseScore, firstReport, reportResult, reportSession, resultCases } from "@/test/reportFixtures";
+import type { ReportDetail } from "@/types/reports";
 
 import { ResultCaseList } from "./ResultCaseList";
 
@@ -12,8 +14,33 @@ function fakeGateway(cases: DrilldownGateway["cases"]): DrilldownGateway {
   return { cases, caseDetail: vi.fn(), evidence: vi.fn(), evidenceFile: vi.fn() };
 }
 
-function renderList(cases: DrilldownGateway["cases"]) {
-  render(<ResultCaseList reportId="r-1" resultId="res-1" gateway={fakeGateway(cases)} />);
+/** The report the number belongs to; by default it never answers, like a slow network. */
+function fakeReports(detail: ReportsGateway["detail"] = vi.fn().mockReturnValue(new Promise(() => {}))): ReportsGateway {
+  return { detail, list: vi.fn(), pdf: vi.fn(), eligibleSessions: vi.fn(), create: vi.fn(), validate: vi.fn() };
+}
+
+function renderList(cases: DrilldownGateway["cases"], reports: ReportsGateway = fakeReports()) {
+  render(<ResultCaseList reportId="r-1" resultId="res-1" gateway={fakeGateway(cases)} reportsGateway={reports} />);
+}
+
+/** The row of one case: DataTable cells are all plain cells, so the row is found by its case code. */
+function rowOf(code: string) {
+  return screen.getByText(code).closest("tr") as HTMLElement;
+}
+
+/** Report r-1 with AiYU (res-1, the number opened) and DeepSeek (res-2) on test cases, and a dev number. */
+function reportWithTwoProducts(): ReportDetail {
+  return firstReport({
+    id: "r-1",
+    title: "Perbandingan November",
+    sessions: [
+      reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-1" })] }),
+      reportSession({
+        product_label: "DeepSeek",
+        results: [reportResult({ id: "res-2", rank: 2 }), reportResult({ id: "res-9", score_split: "dev" })],
+      }),
+    ],
+  });
 }
 
 // SCRUM-328 (PBI-16 AC1, D6 steps 1–3): one report number opens to its basis cases, versions and scores.
@@ -43,16 +70,17 @@ describe("ResultCaseList", () => {
   it("lists the cases behind the number with their version and scores", async () => {
     renderList(vi.fn().mockResolvedValue(resultCases()));
 
-    const table = await screen.findByRole("table", { name: "Kasus di balik angka AiYU" });
+    await screen.findByRole("table");
     expect(screen.getByRole("heading", { level: 1, name: "Kasus di balik angka AiYU" })).toBeInTheDocument();
     expect(screen.getByText("Kasus test · Manual · Rubrik v3 · 2 kasus")).toBeInTheDocument();
-    const first = within(table).getByRole("rowheader", { name: "ILB-001" }).closest("tr") as HTMLElement;
-    expect(within(first).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
+    // SCRUM-346 A2 (finding N6): the "Isi kasus: Dapat dibuka" column became an action that opens the answer.
+    expect(within(rowOf("ILB-001")).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
+      "ILB-001",
       "v2",
       "Test",
       "0,80",
       "0,75",
-      "Dapat dibuka",
+      "Buka jawaban ILB-001 ›",
     ]);
   });
 
@@ -64,8 +92,13 @@ describe("ResultCaseList", () => {
       "href",
       "/reports/comparisons/r-1/results/res-1/cases/c-1",
     );
+    expect(screen.getByRole("link", { name: "Buka jawaban ILB-001" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1/results/res-1/cases/c-1",
+    );
     expect(screen.queryByRole("link", { name: "ILB-002" })).not.toBeInTheDocument();
-    expect(screen.getByText("Tertutup")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Buka jawaban ILB-002" })).not.toBeInTheDocument();
+    expect(within(rowOf("ILB-002")).getAllByRole("cell").at(-1)).toHaveTextContent("Tertutup");
     expect(screen.getByRole("note")).toHaveTextContent("indolegalbench@veritask.ai");
   });
 
@@ -83,8 +116,8 @@ describe("ResultCaseList", () => {
   it("shows an empty score as a dash", async () => {
     renderList(vi.fn().mockResolvedValue(resultCases()));
 
-    const row = (await screen.findByRole("rowheader", { name: "ILB-002" })).closest("tr") as HTMLElement;
-    expect(within(row).getAllByRole("cell")[2]).toHaveTextContent("–");
+    await screen.findByRole("table");
+    expect(within(rowOf("ILB-002")).getAllByRole("cell")[3]).toHaveTextContent("–");
   });
 
   // Edge: no contact note when every case can be opened.
@@ -117,5 +150,65 @@ describe("ResultCaseList", () => {
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(cases).toHaveBeenCalledTimes(2);
+  });
+
+  // SCRUM-346 A2 / AC4: the platform's one sort and paging pattern (DataTable from SCRUM-343), so the list stays
+  // usable once PBI-4 migrates the old cases.
+  it("sorts by a score and pages long lists", async () => {
+    const many = Array.from({ length: 12 }, (_, index) =>
+      caseScore({ case_id: `c-${index}`, case_code: `ILB-${String(index + 1).padStart(3, "0")}`, det_score: `0.${index + 10}` }),
+    );
+    renderList(vi.fn().mockResolvedValue(resultCases({ cases: many })));
+
+    await screen.findByRole("table");
+    expect(screen.getByText("Halaman 1 dari 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Skor deterministik" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skor deterministik" }));
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("ILB-012");
+    fireEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+  });
+
+  // SCRUM-346 A2 (finding N4): the trail names the report, so the reader knows which report the number is from.
+  it("names the report in the trail once it is loaded", async () => {
+    renderList(vi.fn().mockResolvedValue(resultCases()), fakeReports(vi.fn().mockResolvedValue(reportWithTwoProducts())));
+
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(await within(breadcrumb).findByRole("link", { name: "Perbandingan November" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1",
+    );
+  });
+
+  // SCRUM-346 A2: switch to the same number of another product without going back to the report. Only numbers of
+  // the same score split are offered; the one on screen is marked as the current page.
+  it("offers the same number of the other products in the report", async () => {
+    renderList(vi.fn().mockResolvedValue(resultCases()), fakeReports(vi.fn().mockResolvedValue(reportWithTwoProducts())));
+
+    const products = await screen.findByRole("navigation", { name: "Produk di laporan ini" });
+    const links = within(products).getAllByRole("link");
+    expect(links.map((link) => [link.textContent, link.getAttribute("href"), link.getAttribute("aria-current")])).toEqual([
+      ["AiYU", "/reports/comparisons/r-1/results/res-1", "page"],
+      ["DeepSeek", "/reports/comparisons/r-1/results/res-2", null],
+    ]);
+  });
+
+  // Negative: the report is only context; if it fails or has one product, the list still works without it.
+  it.each([
+    ["fails", () => vi.fn().mockRejectedValue(new ApiError(500, "ANY"))],
+    [
+      "has one product",
+      () =>
+        vi.fn().mockResolvedValue(
+          firstReport({ sessions: [reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-1" })] })] }),
+        ),
+    ],
+  ])("keeps the list and the plain trail when the report %s", async (_case, makeDetail) => {
+    const detail = makeDetail();
+    renderList(vi.fn().mockResolvedValue(resultCases()), fakeReports(detail));
+
+    await screen.findByRole("table");
+    expect(detail).toHaveBeenCalledWith("r-1");
+    expect(screen.queryByRole("navigation", { name: "Produk di laporan ini" })).toBeNull();
   });
 });
