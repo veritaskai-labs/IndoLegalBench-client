@@ -148,14 +148,14 @@ describe("InReviewTable", () => {
 
     expect(screen.getByText("Belum ada reviewer")).toBeInTheDocument();
     expect(screen.getByText("Menunggu penugasan")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Ganti / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   // corner
-  it("offers no replacement when there is nothing in review", () => {
+  it("renders only the header when there is nothing in review", () => {
     render(<InReviewTable rows={[]} />);
 
-    expect(screen.queryByRole("button", { name: /^Ganti / })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("row")).toHaveLength(1);
   });
 
   // AC7: reviewer yang lambat tapi masih aktif juga harus bisa diganti dari sini.
@@ -180,6 +180,6 @@ describe("InReviewTable", () => {
 
     render(<InReviewTable rows={[queued]} onReplace={vi.fn()} />);
 
-    expect(screen.queryByRole("button", { name: /^Ganti / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

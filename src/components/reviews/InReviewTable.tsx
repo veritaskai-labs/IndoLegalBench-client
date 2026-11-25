@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge, Button, DataTable, type Column } from "@/components/ui";
 import type { InReviewRow } from "@/lib/reviews/inReviewApi";
 import {
   ASSIGNMENT_STATUS_LABEL,
@@ -18,19 +17,73 @@ type Props = {
 
 /** AC3 dan AC7. Hanya menggambar; keputusan reviewer ditampilkan apa adanya karena Admin boleh melihat semua. */
 export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
-  const columns: Column<InReviewRow>[] = [
-    { key: "code", header: "Kode", sortable: true, sortValue: row => row.case.case_code, cell: row => <code>{row.case.case_code}</code> },
-    { key: "title", header: "Judul", sortable: true, sortValue: row => row.case.title, cell: row => (
-      <>{row.case.title}{row.newVersion !== null && <p className="mt-1 text-xs text-accent-ink">{newVersionLabel(row.newVersion)}</p>}</>
-    ) },
-    { key: "round", header: "Ronde", sortable: true, sortValue: row => row.review.round_no, cell: row => `Ronde ${row.review.round_no}` },
-    { key: "status", header: "Status ronde", cell: row => <Badge dot>{ROUND_STATUS_LABEL[row.review.status]}</Badge> },
-    { key: "decision", header: "Keputusan", cell: row => row.review.decision ? ROUND_DECISION_LABEL[row.review.decision] : "Belum diputuskan" },
-    { key: "reviewers", header: "Reviewer dan penilaian", cell: row => (
-      <ReviewerCell review={row.review} onReplace={onReplace && (slot => onReplace(slot, row))} />
-    ) },
-  ];
-  return <DataTable columns={columns} rows={rows} rowKey={row => row.case.id} />;
+  return (
+    <table className="w-full text-left text-sm">
+      <thead className="border-b border-slate-200 text-xs font-medium text-slate-600">
+        <tr>
+          <th scope="col" className="py-3 px-4">
+            Kode
+          </th>
+          <th scope="col" className="py-3 px-4">
+            Judul
+          </th>
+          <th scope="col" className="py-3 px-4">
+            Ronde
+          </th>
+          <th scope="col" className="py-3 px-4">
+            Status ronde
+          </th>
+          <th scope="col" className="py-3 px-4">
+            Keputusan
+          </th>
+          <th scope="col" className="py-3 px-4">
+            Reviewer dan penilaian
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <InReviewTableRow key={row.case.id} row={row} onReplace={onReplace} />
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** Satu kasus: kode, judul dengan penanda versi baru (F-02), ronde, keputusan, dan reviewernya. */
+function InReviewTableRow({
+  row,
+  onReplace,
+}: Readonly<{ row: InReviewRow; onReplace?: Props["onReplace"] }>) {
+  const { case: item, review } = row;
+  const versionMark = newVersionLabel(row.newVersion);
+
+  return (
+    <tr className="border-b border-slate-100 align-top hover:bg-slate-50">
+      <td className="py-3 px-4 font-mono text-xs text-slate-700">{item.case_code}</td>
+      <td className="py-3 px-4 text-slate-900">
+        {item.title}
+        {versionMark === null ? null : (
+          <div className="mt-1 text-xs text-indigo-700">{versionMark}</div>
+        )}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        Ronde {review.round_no}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        {ROUND_STATUS_LABEL[review.status]}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        {review.decision ? ROUND_DECISION_LABEL[review.decision] : "Belum diputuskan"}
+      </td>
+      <td className="py-3 px-4 text-slate-700">
+        <ReviewerCell
+          review={review}
+          onReplace={onReplace ? (slot) => onReplace(slot, row) : undefined}
+        />
+      </td>
+    </tr>
+  );
 }
 
 function ReviewerCell({
@@ -41,33 +94,33 @@ function ReviewerCell({
   onReplace?: (slot: ReviewerSlot) => void;
 }>) {
   if (review.reviewers.length === 0) {
-    return <span className="text-muted">Belum ada reviewer</span>;
+    return <span className="text-slate-500">Belum ada reviewer</span>;
   }
 
   return (
     <ul className="space-y-2">
       {review.reviewers.map((slot) => (
         <li key={slot.assignment_id}>
-          <span className="text-ink">{slot.reviewer.name}</span>{" "}
-          <span className="text-xs text-muted">
+          <span className="text-slate-900">{slot.reviewer.name}</span>{" "}
+          <span className="text-xs text-slate-500">
             {ASSIGNMENT_STATUS_LABEL[slot.status]}
           </span>
-          <div className="text-xs text-ink-soft">
+          <div className="text-xs text-slate-700">
             {verdictLabel(slot.verdict)}
           </div>
           {slot.verdict?.comment ? (
-            <p className="mt-1 text-xs text-ink-soft">{slot.verdict.comment}</p>
+            <p className="mt-1 text-xs text-slate-600">{slot.verdict.comment}</p>
           ) : null}
           {/* AC7: hanya penugasan aktif yang bisa diganti; yang replaced atau void sudah selesai. */}
           {onReplace && slot.status === "active" ? (
-            <Button size="sm" variant="ghost"
+            <button
               type="button"
               aria-label={`Ganti reviewer ${slot.reviewer.name}`}
               onClick={() => onReplace(slot)}
-              className="mt-1"
+              className="mt-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
             >
               Ganti reviewer
-            </Button>
+            </button>
           ) : null}
         </li>
       ))}

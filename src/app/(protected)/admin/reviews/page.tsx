@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "re
 import { InReviewTable } from "@/components/reviews/InReviewTable";
 import { ReassignmentTable } from "@/components/reviews/ReassignmentTable";
 import { SwapReviewerDialog } from "@/components/reviews/SwapReviewerDialog";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingSkeleton, LoadingState } from "@/components/ui";
 import { useInReviewCases } from "@/hooks/useInReviewCases";
 import { useNeedsReassignment } from "@/hooks/useNeedsReassignment";
 import { useReplaceReviewer } from "@/hooks/useReplaceReviewer";
@@ -110,7 +110,7 @@ function InReviewPanel({
   }
 
   if (inReview.status === "loading") {
-    return <LoadingState label="Memuat penugasan…" />;
+    return <LoadingSkeleton variant="lines" rows={5} />;
   }
 
   if (inReview.data.length === 0) {
@@ -122,7 +122,11 @@ function InReviewPanel({
     );
   }
 
-  return <InReviewTable rows={inReview.data} onReplace={onReplace} />;
+  return (
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <InReviewTable rows={inReview.data} onReplace={onReplace} />
+    </div>
+  );
 }
 
 export default function AdminReviewsPage() {
