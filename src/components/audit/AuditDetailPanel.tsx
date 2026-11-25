@@ -13,7 +13,7 @@ type Props = {
   onClose: () => void;
 };
 
-function ValueBlock({ label, value }: { label: string; value: Record<string, unknown> | null }) {
+function ValueBlock({ label, value }: Readonly<{ label: string; value: Record<string, unknown> | null }>) {
   return (
     <div className="min-w-0">
       <p className="text-xs font-medium text-slate-700">{label}</p>
