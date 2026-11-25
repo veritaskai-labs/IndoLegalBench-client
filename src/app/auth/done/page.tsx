@@ -14,7 +14,7 @@ type AuthDonePageProps = {
 
 export default async function AuthDonePage({
   searchParams,
-}: AuthDonePageProps) {
+}: Readonly<AuthDonePageProps>) {
   const { error } = await searchParams;
   const errorValue = Array.isArray(error) ? error[0] : error;
 

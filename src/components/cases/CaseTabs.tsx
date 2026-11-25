@@ -16,6 +16,6 @@ type Props = {
 };
 
 /** Pindah antara editor kasus dan riwayat versinya. */
-export function CaseTabs({ active, onChange }: Props) {
+export function CaseTabs({ active, onChange }: Readonly<Props>) {
   return <Tabs tabs={TABS} active={active} onChange={onChange} label="Bagian kasus" idPrefix="case" />;
 }

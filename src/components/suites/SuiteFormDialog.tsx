@@ -11,7 +11,7 @@ type Props = {
   onSaved: () => void;
 };
 
-export function SuiteFormDialog({ suite, onClose, onSaved }: Props) {
+export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
   const nameId = useId();
   const descriptionId = useId();
 

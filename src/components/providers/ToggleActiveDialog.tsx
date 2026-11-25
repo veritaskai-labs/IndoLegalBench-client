@@ -11,7 +11,7 @@ type Props = {
 };
 
 /** Konfirmasi aktifkan/nonaktifkan produk AI (SCRUM-117, AC4). */
-export function ToggleActiveDialog({ product, onClose, onDone }: Props) {
+export function ToggleActiveDialog({ product, onClose, onDone }: Readonly<Props>) {
   const activating = !product.is_active;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

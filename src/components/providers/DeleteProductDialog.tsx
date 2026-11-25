@@ -12,7 +12,7 @@ type Props = {
 };
 
 /** Konfirmasi hapus produk AI (SCRUM-134 #2). Soft delete: riwayat pengukuran tetap ada. */
-export function DeleteProductDialog({ product, onClose, onDone }: Props) {
+export function DeleteProductDialog({ product, onClose, onDone }: Readonly<Props>) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

@@ -415,7 +415,7 @@ function NotApplicable() {
   );
 }
 
-function LastTest({ product, testing, live }: { product: AiProduct; testing: boolean; live: LiveResult | undefined }) {
+function LastTest({ product, testing, live }: Readonly<{ product: AiProduct; testing: boolean; live: LiveResult | undefined }>) {
   if (testing) return <span className="text-slate-500">Menguji koneksi, bisa sampai 15 detik…</span>;
   if (live?.status === "error") {
     return <span className="text-red-700">Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.</span>;

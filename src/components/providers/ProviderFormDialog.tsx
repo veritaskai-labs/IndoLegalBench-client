@@ -564,13 +564,13 @@ function Labeled({
   error,
   required = false,
   children,
-}: {
+}: Readonly<{
   id: string;
   label: string;
   error?: string;
   required?: boolean;
   children: ReactNode;
-}) {
+}>) {
   return (
     <div>
       <div className="flex gap-1 text-sm font-medium text-slate-700">

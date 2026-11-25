@@ -15,7 +15,7 @@ export function ErrorState({
   onRetry,
   variant = "banner",
   className = "",
-}: ErrorStateProps) {
+}: Readonly<ErrorStateProps>) {
   if (variant === "card") {
     return (
       <div

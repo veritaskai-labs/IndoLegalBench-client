@@ -11,7 +11,7 @@ function loginPath(reason: UnauthorizedReason): string {
   return reason === "expired" ? "/login?reason=expired" : "/login";
 }
 
-export function AuthGuard({ children }: { children: React.ReactNode }) {
+export function AuthGuard({ children }: Readonly<{ children: React.ReactNode }>) {
   const auth = useAuth();
   const router = useRouter();
   // Set by the first 401 after the session was known (SCRUM-252). Later 401s keep the first reason.

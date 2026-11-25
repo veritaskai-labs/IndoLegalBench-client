@@ -18,7 +18,7 @@ export type AuthState =
 
 const AuthContext = createContext<AuthState>({ status: "loading" });
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [state, setState] = useState<AuthState>(() =>
     MOCK_ENABLED
       ? { status: "authenticated", user: getMockMe() }

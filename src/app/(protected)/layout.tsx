@@ -7,9 +7,9 @@ import { ToastProvider } from "@/components/ui/Toast";
 
 export default function ProtectedLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <AuthProvider>
       <AuthGuard>

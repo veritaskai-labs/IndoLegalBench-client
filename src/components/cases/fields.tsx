@@ -26,7 +26,7 @@ export function FieldLabel({
   );
 }
 
-export function ErrorText({ id, message }: { id?: string; message: string }) {
+export function ErrorText({ id, message }: Readonly<{ id?: string; message: string }>) {
   return (
     <p id={id} className="mt-1 text-xs text-red-700">
       {message}
@@ -161,14 +161,14 @@ export function FormSection({
   help,
   error,
   children,
-}: {
+}: Readonly<{
   title: string;
   /** Penjelasan singkat bagian ini untuk penulis kasus. */
   help?: string;
   /** Error untuk bagian ini secara utuh, misalnya daftar rujukan kosong. */
   error?: string;
   children: ReactNode;
-}) {
+}>) {
   return (
     <fieldset className="rounded-lg border border-slate-200 bg-white p-6">
       <legend className="px-1 text-base font-semibold text-slate-900">{title}</legend>
@@ -186,14 +186,14 @@ export function RowGroup({
   onRemove,
   invalid = false,
   children,
-}: {
+}: Readonly<{
   title: string;
   removeLabel: string;
   onRemove: () => void;
   /** Baris berisi isian yang tidak valid; disorot supaya mudah ditemukan. */
   invalid?: boolean;
   children: ReactNode;
-}) {
+}>) {
   return (
     <fieldset
       aria-invalid={invalid || undefined}
@@ -218,7 +218,7 @@ export function RowGroup({
   );
 }
 
-export function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
+export function AddRowButton({ label, onClick }: Readonly<{ label: string; onClick: () => void }>) {
   return (
     <button
       type="button"

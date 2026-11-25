@@ -12,7 +12,7 @@ export function LoadingSkeleton({
   rows = 3,
   columns = 5,
   className = "",
-}: LoadingSkeletonProps) {
+}: Readonly<LoadingSkeletonProps>) {
 
   // Table Skeleton
   if (variant === "table") {

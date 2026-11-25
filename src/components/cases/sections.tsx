@@ -21,7 +21,7 @@ type SectionProps = {
   errorFor: ErrorLookup;
 };
 
-export function IdentitySection({ register, errorFor }: SectionProps) {
+export function IdentitySection({ register, errorFor }: Readonly<SectionProps>) {
   return (
     <FormSection title="Identitas" help={CASE_HELP.identity}>
       <TextField
@@ -57,7 +57,7 @@ export function IdentitySection({ register, errorFor }: SectionProps) {
   );
 }
 
-export function AnswerCriteriaSection({ register, errorFor }: SectionProps) {
+export function AnswerCriteriaSection({ register, errorFor }: Readonly<SectionProps>) {
   return (
     <FormSection title="Kriteria jawaban" help={CASE_HELP.answerCriteria}>
       <TextAreaField

@@ -10,7 +10,7 @@ import type { VersionSummary } from "@/types/caseVersion";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { VersionCompareView } from "./VersionCompareView";
 
-function VersionTable({ versions }: { versions: VersionSummary[] }) {
+function VersionTable({ versions }: Readonly<{ versions: VersionSummary[] }>) {
   return (
     <div className="overflow-x-auto rounded border border-slate-200 bg-white">
       <table className="w-full border-collapse text-left text-xs">
@@ -49,7 +49,7 @@ function VersionTable({ versions }: { versions: VersionSummary[] }) {
 }
 
 /** Isi tab "Riwayat versi": siapa mengubah, kapan, dan bagian apa, lalu pembanding dua versi. */
-export function VersionHistoryTab({ caseId }: { caseId: string }) {
+export function VersionHistoryTab({ caseId }: Readonly<{ caseId: string }>) {
   const history = useCaseVersions(caseId);
 
   if (history.status === "loading") return <LoadingState label="Memuat riwayat versi…" />;
