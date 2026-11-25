@@ -12,7 +12,7 @@ import type { ReplaceReviewerBody } from "@/types/reviewAdmin";
  * onDone dipakai halaman untuk menyegarkan daftar setelah penggantian berhasil;
  * onStale untuk galat 409, yang artinya daftar di layar sudah ketinggalan.
  */
-export function useReplaceReviewer(onDone: () => void, onStale?: () => void) {
+export function useReplaceReviewer(onDone: (body: ReplaceReviewerBody) => void, onStale?: () => void) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Ref, bukan state: klik kedua bisa masuk sebelum render ulang menonaktifkan tombol.
@@ -39,7 +39,7 @@ export function useReplaceReviewer(onDone: () => void, onStale?: () => void) {
       }
 
       // Di luar try: galat di onDone bukan kegagalan permintaan, dan reviewer sudah terganti.
-      if (succeeded) onDone();
+      if (succeeded) onDone(body);
       // 409: yang di layar sudah basi, jadi daftarnya dimuat ulang; dialog tetap menampilkan pesannya.
       if (stale) onStale?.();
     },

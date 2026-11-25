@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { InReviewTable } from "@/components/reviews/InReviewTable";
 import { ReassignmentTable } from "@/components/reviews/ReassignmentTable";
 import { SwapReviewerDialog } from "@/components/reviews/SwapReviewerDialog";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
 import { useInReviewCases } from "@/hooks/useInReviewCases";
 import { useNeedsReassignment } from "@/hooks/useNeedsReassignment";
 import { useReplaceReviewer } from "@/hooks/useReplaceReviewer";
@@ -19,6 +19,7 @@ import type {
   ReassignmentAssignment,
   ReassignmentRow,
   ReviewerSlot,
+  ReplaceReviewerBody,
 } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
 
@@ -32,6 +33,8 @@ type Target = {
   assignmentId: string;
   caseId: string;
   caseCode: string;
+  caseTitle: string;
+  roundNo: number;
   reviewerId: string;
   reviewerName: string;
   takenReviewerIds: string[];
@@ -73,7 +76,7 @@ function ReassignmentPanel({
   }
 
   if (queue.status === "loading") {
-    return <LoadingSkeleton variant="lines" rows={5} />;
+    return <LoadingState label="Memuat penugasan…" />;
   }
 
   if (queue.data.length === 0) {
@@ -85,11 +88,7 @@ function ReassignmentPanel({
     );
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <ReassignmentTable rows={queue.data} onReplace={onReplace} />
-    </div>
-  );
+  return <ReassignmentTable rows={queue.data} onReplace={onReplace} />;
 }
 
 /** Isi tab kasus yang sedang direview, dengan urutan keadaan yang sama. */
@@ -111,7 +110,7 @@ function InReviewPanel({
   }
 
   if (inReview.status === "loading") {
-    return <LoadingSkeleton variant="lines" rows={5} />;
+    return <LoadingState label="Memuat penugasan…" />;
   }
 
   if (inReview.data.length === 0) {
@@ -123,20 +122,20 @@ function InReviewPanel({
     );
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <InReviewTable rows={inReview.data} onReplace={onReplace} />
-    </div>
-  );
+  return <InReviewTable rows={inReview.data} onReplace={onReplace} />;
 }
 
 export default function AdminReviewsPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const [target, setTarget] = useState<Target | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[] | null>(null);
   const [usersFailed, setUsersFailed] = useState(false);
   const [authorId, setAuthorId] = useState<string | null>(null);
   const [authorFailed, setAuthorFailed] = useState(false);
+
+  const [checkingAuthor, setCheckingAuthor] = useState(false);
+  const [success, setSuccess] = useState("");
+  const feedback = useRef<HTMLDivElement>(null);
 
   const queue = useNeedsReassignment();
   const { reload } = queue;
@@ -149,13 +148,21 @@ export default function AdminReviewsPage() {
     reloadInReview();
   }, [reload, reloadInReview]);
 
-  const afterReplace = useCallback(() => {
+  const closeAndRefresh = useCallback(() => {
     setTarget(null);
     reloadBoth();
   }, [reloadBoth]);
-
-  const replacement = useReplaceReviewer(afterReplace, reloadBoth);
+  const afterReplace = useCallback((body: ReplaceReviewerBody) => {
+    const name = users?.find(user => user.id === body.new_reviewer_id)?.name;
+    setSuccess(`Reviewer untuk ${target?.caseCode} berhasil diganti dengan ${name}.`);
+    closeAndRefresh();
+  }, [target, users, closeAndRefresh]);
+  const replacement = useReplaceReviewer(afterReplace, closeAndRefresh);
   const { reset } = replacement;
+
+  useEffect(() => {
+    if (!target && (success || replacement.error)) feedback.current?.focus();
+  }, [target, success, replacement.error]);
 
   // Kandidat reviewer diambil sekali; daftar anggota tidak berubah selama halaman terbuka.
   useEffect(() => {
@@ -182,7 +189,7 @@ export default function AdminReviewsPage() {
    * dan hanya di antara kandidat, karena di luar itu tidak berpengaruh.
    */
   useEffect(() => {
-    if (target === null) return;
+    if (target === null || users === null) return;
 
     let cancelled = false;
     listCaseVersions(target.caseId)
@@ -190,12 +197,14 @@ export default function AdminReviewsPage() {
         if (cancelled) return;
         const author = users.find((item) => isCaseCreator(versions, item.id));
         setAuthorId(author?.id ?? null);
+        setCheckingAuthor(false);
         setAuthorFailed(false);
       })
       .catch(() => {
         if (cancelled) return;
         setAuthorId(null);
         setAuthorFailed(true);
+        setCheckingAuthor(false);
       });
 
     return () => {
@@ -206,6 +215,8 @@ export default function AdminReviewsPage() {
   const openDialog = useCallback(
     (next: Target) => {
       reset();
+      setSuccess("");
+      setCheckingAuthor(true);
       setAuthorId(null);
       setAuthorFailed(false);
       setTarget(next);
@@ -220,6 +231,8 @@ export default function AdminReviewsPage() {
         assignmentId: assignment.id,
         caseId: row.case_id,
         caseCode: row.case_code,
+        caseTitle: row.case_title,
+        roundNo: row.round_no,
         reviewerId: assignment.reviewer_id,
         reviewerName: reviewerName(assignment),
         takenReviewerIds: activeAssignments(row).map(
@@ -237,6 +250,8 @@ export default function AdminReviewsPage() {
         assignmentId: slot.assignment_id,
         caseId: row.case.id,
         caseCode: row.case.case_code,
+        caseTitle: row.case.title,
+        roundNo: row.review.round_no,
         reviewerId: slot.reviewer.id,
         reviewerName: slot.reviewer.name,
         takenReviewerIds: (row.review?.reviewers ?? [])
@@ -248,7 +263,8 @@ export default function AdminReviewsPage() {
   );
 
   /** Pola tablist: panah kiri/kanan berpindah tab dan memindahkan fokus, hanya ada dua tab. */
-  const moveTab = (event: KeyboardEvent<HTMLButtonElement>) => {    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+  const moveTab = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
     const next: Tab = tab === "queue" ? "decisions" : "queue";
     setTab(next);
@@ -256,12 +272,12 @@ export default function AdminReviewsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-screen-2xl space-y-4">
       <header>
-        <h1 className="text-xl font-semibold text-slate-900">
-          Pemantauan review
+        <h1 className="font-serif text-3xl leading-tight text-ink sm:text-4xl">
+          Review kasus
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-muted">
           Pantau kasus yang sedang direview dan tangani kasus yang kehilangan
           reviewer.
         </p>
@@ -270,7 +286,7 @@ export default function AdminReviewsPage() {
       <div
         role="tablist"
         aria-label="Tampilan pemantauan"
-        className="flex gap-2 border-b border-slate-200"
+        className="flex gap-2 border-b border-line-soft"
       >
         {TABS.map((name) => (
           <button
@@ -285,14 +301,20 @@ export default function AdminReviewsPage() {
             onKeyDown={moveTab}
             className={
               tab === name
-                ? "-mb-px border-b-2 border-slate-900 px-3 py-2 text-sm font-medium text-slate-900"
-                : "px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
+                ? "-mb-px border-b-2 border-ink px-3 py-2 text-sm font-medium text-ink"
+                : "px-3 py-2 text-sm text-muted hover:text-slate-700"
             }
           >
             {TAB_LABEL[name]}
           </button>
         ))}
       </div>
+
+      {!target && (success || replacement.error) && (
+        <div ref={feedback} tabIndex={-1} role={success ? "status" : "alert"} className="rounded-control bg-surface p-3 text-sm">
+          {success || replacement.error}
+        </div>
+      )}
 
       {tab === "queue" ? (
         <section
@@ -315,9 +337,12 @@ export default function AdminReviewsPage() {
       {target && (
         <SwapReviewerDialog
           caseCode={target.caseCode}
+          caseTitle={target.caseTitle}
+          roundNo={target.roundNo}
+          loadingCandidates={users === null || checkingAuthor}
           currentReviewerId={target.reviewerId}
           currentReviewerName={target.reviewerName}
-          candidates={candidatesExcept(users, target.takenReviewerIds, authorId)}
+          candidates={candidatesExcept(users ?? [], target.takenReviewerIds, authorId)}
           notice={dialogNotice(usersFailed, authorFailed)}
           pending={replacement.pending}
           error={replacement.error}

@@ -32,6 +32,10 @@ function voidLabels(assignment: ReassignmentAssignment): VoidLabels {
   return VOID_LABELS[assignment.void_reason ?? ""] ?? UNKNOWN_VOID_LABELS;
 }
 
+export function voidReason(assignment: ReassignmentAssignment): string {
+  return voidLabels(assignment).reason;
+}
+
 /** Teks tombol ganti untuk penugasan void, mengikuti alasan void-nya. */
 export function voidedReplaceText(assignment: ReassignmentAssignment): string {
   return voidLabels(assignment).replaceText;

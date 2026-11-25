@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button, FormField } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useSubmitVerdict } from "@/hooks/useSubmitVerdict";
 import { VERDICT_HINT, VERDICT_LABEL, VERDICT_ORDER } from "@/lib/reviews/reviewLabels";
@@ -33,9 +34,9 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
         event.preventDefault();
         void submit();
       }}
-      className="space-y-4 rounded-lg border border-slate-200 bg-white p-5"
+      className="space-y-4 rounded-lg border border-line bg-paper p-5"
     >
-      <h2 className="text-base font-semibold text-slate-900">Penilaian Anda</h2>
+      <h2 className="text-base font-semibold text-ink">Penilaian Anda</h2>
 
       <fieldset className="grid gap-3 sm:grid-cols-2">
         <legend className="sr-only">Keputusan</legend>
@@ -43,7 +44,7 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
           <label
             key={option}
             className={`grid cursor-pointer grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg border p-3 ${
-              decision === option ? "border-indigo-600 bg-indigo-50" : "border-slate-200 bg-white"
+              decision === option ? "border-accent-ink bg-accent-wash" : "border-line bg-paper"
             }`}
           >
             <input
@@ -54,38 +55,25 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
               onChange={() => setDecision(option)}
               className="mt-1"
             />
-            <span className="block text-sm font-medium text-slate-900">{VERDICT_LABEL[option]}</span>
-            <span className="col-start-2 block text-xs text-slate-600">{VERDICT_HINT[option]}</span>
+            <span className="block text-sm font-medium text-ink">{VERDICT_LABEL[option]}</span>
+            <span className="col-start-2 block text-xs text-ink-soft">{VERDICT_HINT[option]}</span>
           </label>
         ))}
       </fieldset>
 
-      <div className="space-y-1">
-        <label htmlFor="verdict-comment" className="block text-sm font-medium text-slate-800">
-          Komentar untuk penulis
-        </label>
-        <textarea
-          id="verdict-comment"
-          rows={4}
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-          aria-required={decision === "revise"}
-          placeholder="Opsional saat menyetujui, wajib saat meminta revisi"
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
-        />
-      </div>
+      <FormField label="Komentar untuk penulis" required={decision === "revise"} optional={decision === "approve"}
+        hint={decision === "revise" ? "Jelaskan bagian yang perlu diperbaiki." : "Komentar opsional saat menyetujui kasus."}>
+        {control => <textarea {...control} rows={4} value={comment} onChange={event => setComment(event.target.value)}
+          aria-required={decision === "revise"} className="w-full rounded-control border border-line px-3 py-2 text-sm" />}
+      </FormField>
 
       {error !== null && <ErrorState message={error} />}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <button
-          type="submit"
-          disabled={!canSend}
-          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={!canSend}>
           {pending ? "Mengirim…" : "Kirim penilaian"}
-        </button>
-        <p className="font-mono text-xs text-slate-500">Dicatat terhadap versi {versionNo}</p>
+        </Button>
+        <p className="font-mono text-xs text-muted">Dicatat terhadap versi {versionNo}</p>
       </div>
     </form>
   );

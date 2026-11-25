@@ -206,9 +206,9 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     await user.click(
       await screen.findByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" }),
     );
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
     await user.type(
-      screen.getByLabelText("Alasan penggantian"),
+      screen.getByRole("textbox", { name: "Alasan penggantian" }),
       "Reviewer cuti",
     );
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
@@ -230,8 +230,8 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     replaceMock.mockRejectedValue(new ApiError(409, "ASSIGNMENT_ALREADY_REPLACED"));
     render(<AdminReviewsPage />);
     await user.click(await screen.findByRole("button", { name: /^Ganti Roben/ }));
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
-    await user.type(screen.getByLabelText("Alasan penggantian"), "Cuti");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
+    await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "Cuti");
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
     await user.click(screen.getByRole("button", { name: "Ganti reviewer" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Penugasan ini sudah pernah diganti");

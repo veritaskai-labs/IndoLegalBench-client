@@ -27,7 +27,7 @@ describe("AwaitingRevisionList", () => {
     const item = within(screen.getByRole("list", { name: "Menunggu revisi penulis" })).getByRole("listitem");
     expect(item).toHaveTextContent("ILB-PT-0142");
     expect(item).toHaveTextContent("PHK sepihak");
-    expect(screen.getByText("Putaran 2")).toBeInTheDocument();
+    expect(screen.getByText("Ronde 2")).toBeInTheDocument();
     expect(screen.getByText("14 Okt 2026, 10.00 WIB")).toBeInTheDocument();
   });
 

@@ -78,7 +78,7 @@ export default function ReviewsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Antrean tinjauan</h1>
+      <header><h1 className="font-serif text-3xl sm:text-4xl">Antrean tinjauan</h1></header>
 
       <Tabs tabs={QUEUE_TABS} active={tab} onChange={showTab} label="Daftar tinjauan" idPrefix={TAB_PREFIX} />
       <div
@@ -87,6 +87,7 @@ export default function ReviewsPage() {
         aria-labelledby={tabElementId(TAB_PREFIX, "queue")}
         hidden={tab !== "queue"}
       >
+        <p className="mb-3 text-sm text-muted">Kasus dengan ronde terlama tampil lebih dulu.</p>
         <ReviewQueuePanel />
       </div>
       <div

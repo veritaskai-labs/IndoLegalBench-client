@@ -1,0 +1,19 @@
+.queue { container-type: inline-size; }
+.queue th, .queue td { width: 1%; white-space: nowrap; }
+.queue th:nth-child(2), .queue td:nth-child(2) { width: auto; white-space: normal; overflow-wrap: anywhere; }
+.queue td:last-child { white-space: normal; }
+.queue code { font-size: 12px; font-weight: 700; }
+
+/* Keep the same sortable headers, data and page controls in the narrow layout. */
+@container (max-width: 46rem) {
+  .queue table, .queue tbody, .queue thead { display: block; }
+  .queue thead tr, .queue tbody tr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px; }
+  .queue thead tr { background: var(--surface); }
+  .queue tbody tr { border-top: 1px solid var(--line-soft); }
+  .queue th, .queue td, .queue td:nth-child(2) { width: auto; height: auto; padding: 0; border: 0; }
+  .queue th:nth-child(n+4) { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
+  .queue td:nth-child(2), .queue td:last-child { flex-basis: 100%; }
+  .queue td:last-child ul { display: flex; flex-wrap: wrap; gap: 8px; }
+  .queue td:last-child li { margin: 0; }
+  .queue td:last-child li > span[aria-hidden] { left: 0; right: auto; }
+}

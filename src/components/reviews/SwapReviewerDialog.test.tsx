@@ -32,13 +32,13 @@ describe("SwapReviewerDialog", () => {
     const next = screen.getByRole("button", { name: "Tinjau penggantian" });
     expect(next).toBeDisabled();
 
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
     expect(next).toBeDisabled();
 
-    await user.type(screen.getByLabelText("Alasan penggantian"), "   ");
+    await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "   ");
     expect(next).toBeDisabled();
 
-    await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
+    await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "Reviewer cuti");
     expect(next).toBeEnabled();
   });
 
@@ -55,8 +55,8 @@ describe("SwapReviewerDialog", () => {
     const user = userEvent.setup();
     render(<SwapReviewerDialog {...props()} />);
 
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
-    await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
+    await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "Reviewer cuti");
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
 
     const dialog = screen.getByRole("dialog", { name: "Konfirmasi penggantian reviewer" });
@@ -71,9 +71,9 @@ describe("SwapReviewerDialog", () => {
     const onConfirm = vi.fn();
     render(<SwapReviewerDialog {...props({ onConfirm })} />);
 
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
     await user.type(
-      screen.getByLabelText("Alasan penggantian"),
+      screen.getByRole("textbox", { name: "Alasan penggantian" }),
       "  Reviewer cuti  ",
     );
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
@@ -90,13 +90,13 @@ describe("SwapReviewerDialog", () => {
     const user = userEvent.setup();
     render(<SwapReviewerDialog {...props()} />);
 
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
-    await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
+    await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "Reviewer cuti");
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
     await user.click(screen.getByRole("button", { name: "Kembali" }));
 
-    expect(screen.getByLabelText("Reviewer baru")).toHaveValue("u9");
-    expect(screen.getByLabelText("Alasan penggantian")).toHaveValue("Reviewer cuti");
+    expect(screen.getByRole("combobox", { name: "Reviewer baru" })).toHaveValue("u9");
+    expect(screen.getByRole("textbox", { name: "Alasan penggantian" })).toHaveValue("Reviewer cuti");
   });
 
   // Negatif
@@ -117,8 +117,8 @@ describe("SwapReviewerDialog", () => {
     const user = userEvent.setup();
     const { rerender } = render(<SwapReviewerDialog {...props()} />);
 
-    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
-    await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Reviewer baru" }), "u9");
+    await user.type(screen.getByRole("textbox", { name: "Alasan penggantian" }), "Reviewer cuti");
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
 
     rerender(<SwapReviewerDialog {...props({ pending: true })} />);
