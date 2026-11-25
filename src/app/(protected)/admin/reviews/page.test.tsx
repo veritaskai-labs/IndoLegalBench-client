@@ -204,16 +204,17 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     render(<AdminReviewsPage />);
 
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
+      await screen.findByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" }),
     );
     await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
     await user.type(
       screen.getByLabelText("Alasan penggantian"),
       "Reviewer cuti",
     );
-    await user.click(screen.getByRole("button", { name: "Lanjut" }));
-    await user.click(screen.getByRole("button", { name: "Ya, ganti reviewer" }));
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
+    await user.click(screen.getByRole("button", { name: "Ganti reviewer" }));
 
+    expect(await screen.findByRole("status")).toHaveTextContent(/ILB-PT-0142.*Aileen/);
     expect(replaceMock).toHaveBeenCalledWith("a1", {
       new_reviewer_id: "u9",
       reason: "Reviewer cuti",
@@ -223,6 +224,21 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   });
 
 // Positif
+  it("returns a stale assignment to the refreshed queue and explains the conflict", async () => {
+    const user = userEvent.setup();
+    queueMock.mockResolvedValueOnce([row({ void_assignments: [assignment({ status: "void" })] })]).mockResolvedValue([]);
+    replaceMock.mockRejectedValue(new ApiError(409, "ASSIGNMENT_ALREADY_REPLACED"));
+    render(<AdminReviewsPage />);
+    await user.click(await screen.findByRole("button", { name: /^Ganti Roben/ }));
+    await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
+    await user.type(screen.getByLabelText("Alasan penggantian"), "Cuti");
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
+    await user.click(screen.getByRole("button", { name: "Ganti reviewer" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Penugasan ini sudah pernah diganti");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(queueMock).toHaveBeenCalledTimes(2);
+  });
+
   it("lists the cases in review on the second tab", async () => {
     const user = userEvent.setup();
     queueMock.mockResolvedValue([]);
@@ -286,7 +302,7 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
 
     render(<AdminReviewsPage />);
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
+      await screen.findByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" }),
     );
 
     expect(
@@ -306,7 +322,7 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
 
     render(<AdminReviewsPage />);
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
+      await screen.findByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" }),
     );
 
     expect(
@@ -324,7 +340,7 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
 
     render(<AdminReviewsPage />);
     await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer (peran diubah) Roben" }),
+      await screen.findByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" }),
     );
 
     expect(
@@ -343,6 +359,7 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
       await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
     );
 
-    expect(screen.getByRole("dialog")).toHaveTextContent("ILB-PT-0142");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Sengketa tanah warisan");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Ronde 1");
   });
 });

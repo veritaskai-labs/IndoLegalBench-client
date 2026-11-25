@@ -41,7 +41,7 @@ describe("ReviewQueueList", () => {
     render(<ReviewQueueList reviews={reviews} />);
 
     // Assert
-    expect(screen.getByText("Putaran 2")).toBeInTheDocument();
+    expect(screen.getByText("Ronde 2")).toBeInTheDocument();
     expect(screen.getByText("13 Okt 2026, 15.00 WIB")).toBeInTheDocument();
   });
 

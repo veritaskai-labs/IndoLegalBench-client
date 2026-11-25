@@ -13,7 +13,7 @@ const submitMock = vi.mocked(submitVerdict);
 const send = () => screen.getByRole("button", { name: "Kirim penilaian" });
 const approve = () => screen.getByRole("radio", { name: /Dapat dipertahankan sebagaimana tertulis/ });
 const revise = () => screen.getByRole("radio", { name: /Perlu revisi/ });
-const comment = () => screen.getByLabelText("Komentar untuk penulis");
+const comment = () => screen.getByRole("textbox", { name: /Komentar untuk penulis/ });
 
 function renderForm(onSubmitted = vi.fn()) {
   render(<VerdictForm assignmentId={ASSIGNMENT_ID} versionNo={3} onSubmitted={onSubmitted} />);
@@ -109,6 +109,7 @@ describe("VerdictForm", () => {
     // Assert
     expect(requiredForApproval).toBe("false");
     expect(comment()).toHaveAttribute("aria-required", "true");
+    expect(comment()).toHaveAccessibleDescription(/Jelaskan bagian yang perlu diperbaiki/);
   });
 
   // Negative: the reviewer must not lose what they wrote.

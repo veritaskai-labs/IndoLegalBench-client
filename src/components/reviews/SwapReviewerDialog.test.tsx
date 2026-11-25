@@ -7,6 +7,8 @@ import { SwapReviewerDialog } from "./SwapReviewerDialog";
 function props(overrides: Partial<Parameters<typeof SwapReviewerDialog>[0]> = {}) {
   return {
     caseCode: "ILB-PT-0142",
+    caseTitle: "Sengketa tanah warisan",
+    roundNo: 3,
     currentReviewerId: "u1",
     currentReviewerName: "Roben",
     candidates: [
@@ -27,7 +29,7 @@ describe("SwapReviewerDialog", () => {
     const user = userEvent.setup();
     render(<SwapReviewerDialog {...props()} />);
 
-    const next = screen.getByRole("button", { name: "Lanjut" });
+    const next = screen.getByRole("button", { name: "Tinjau penggantian" });
     expect(next).toBeDisabled();
 
     await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
@@ -55,11 +57,12 @@ describe("SwapReviewerDialog", () => {
 
     await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
     await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
-    await user.click(screen.getByRole("button", { name: "Lanjut" }));
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
 
-    expect(
-      screen.getByText(/Ganti Roben dengan Aileen\?/),
-    ).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Konfirmasi penggantian reviewer" });
+    for (const label of ["Sengketa tanah warisan", "ILB-PT-0142", "Ronde 3", "Roben", "Aileen", "Reviewer cuti", "Penilaian reviewer lama tidak dihitung"]) {
+      expect(dialog).toHaveTextContent(label);
+    }
   });
 
   // Positif
@@ -73,8 +76,8 @@ describe("SwapReviewerDialog", () => {
       screen.getByLabelText("Alasan penggantian"),
       "  Reviewer cuti  ",
     );
-    await user.click(screen.getByRole("button", { name: "Lanjut" }));
-    await user.click(screen.getByRole("button", { name: "Ya, ganti reviewer" }));
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
+    await user.click(screen.getByRole("button", { name: "Ganti reviewer" }));
 
     expect(onConfirm).toHaveBeenCalledWith({
       new_reviewer_id: "u9",
@@ -89,10 +92,11 @@ describe("SwapReviewerDialog", () => {
 
     await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
     await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
-    await user.click(screen.getByRole("button", { name: "Lanjut" }));
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
     await user.click(screen.getByRole("button", { name: "Kembali" }));
 
     expect(screen.getByLabelText("Reviewer baru")).toHaveValue("u9");
+    expect(screen.getByLabelText("Alasan penggantian")).toHaveValue("Reviewer cuti");
   });
 
   // Negatif
@@ -115,11 +119,14 @@ describe("SwapReviewerDialog", () => {
 
     await user.selectOptions(screen.getByLabelText("Reviewer baru"), "u9");
     await user.type(screen.getByLabelText("Alasan penggantian"), "Reviewer cuti");
-    await user.click(screen.getByRole("button", { name: "Lanjut" }));
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
 
     rerender(<SwapReviewerDialog {...props({ pending: true })} />);
 
     expect(screen.getByRole("button", { name: "Menyimpan…" })).toBeDisabled();
+    const event = new Event("cancel", { cancelable: true });
+    fireEvent(screen.getByRole("dialog"), event);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   // Dialog modal: Esc memicu event cancel, dan itu harus menutup lewat onClose.
@@ -129,6 +136,8 @@ describe("SwapReviewerDialog", () => {
     render(
       <SwapReviewerDialog
         caseCode="ILB-PT-0142"
+        caseTitle="Sengketa tanah warisan"
+        roundNo={3}
         currentReviewerId="u1"
         currentReviewerName="Roben"
         candidates={[{ id: "u9", name: "Aileen" }]}
