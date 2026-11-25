@@ -135,6 +135,7 @@ export default function AdminReviewsPage() {
 
   const [checkingAuthor, setCheckingAuthor] = useState(false);
   const [success, setSuccess] = useState("");
+  const opener = useRef<HTMLElement | null>(null);
   const feedback = useRef<HTMLDivElement>(null);
 
   const queue = useNeedsReassignment();
@@ -161,8 +162,11 @@ export default function AdminReviewsPage() {
   const { reset } = replacement;
 
   useEffect(() => {
-    if (!target && (success || replacement.error)) feedback.current?.focus();
-  }, [target, success, replacement.error]);
+    if (target || !opener.current) return;
+    const returnTarget = opener.current.isConnected ? opener.current : document.getElementById(`tab-${tab}`);
+    (feedback.current ?? returnTarget)?.focus();
+    opener.current = null;
+  }, [target, tab]);
 
   // Kandidat reviewer diambil sekali; daftar anggota tidak berubah selama halaman terbuka.
   useEffect(() => {
@@ -214,6 +218,7 @@ export default function AdminReviewsPage() {
 
   const openDialog = useCallback(
     (next: Target) => {
+      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       reset();
       setSuccess("");
       setCheckingAuthor(true);
