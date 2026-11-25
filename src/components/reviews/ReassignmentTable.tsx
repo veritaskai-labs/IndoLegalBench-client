@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Badge, Button, DataTable, type Column } from "@/components/ui";
 import { ROUND_STATUS_LABEL } from "@/lib/reviews/reviewLabels";
 import { reassignmentReason, reviewerName, voidReason } from "@/lib/reviews/reviewQueue";
@@ -40,8 +40,8 @@ function ReplaceAction({ item, row, onReplace }: Readonly<{
   );
 }
 
-export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
-  const columns: Column<ReassignmentRow>[] = [
+function reassignmentColumns(onReplace: Props["onReplace"]): Column<ReassignmentRow>[] {
+  return [
     { key: "case_code", header: "Kode", sortable: true, cell: row => <code>{row.case_code}</code> },
     { key: "case_title", header: "Judul", sortable: true, cell: row => row.case_title },
     { key: "round_no", header: "Ronde", sortable: true, cell: row => `Ronde ${row.round_no}` },
@@ -55,5 +55,9 @@ export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
         )}</ul>
       : <span className="text-muted">Tidak ada penugasan untuk diganti</span> },
   ];
+}
+
+export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
+  const columns = useMemo(() => reassignmentColumns(onReplace), [onReplace]);
   return <div className={styles.queue}><DataTable columns={columns} rows={rows} rowKey={row => row.round_id} /></div>;
 }

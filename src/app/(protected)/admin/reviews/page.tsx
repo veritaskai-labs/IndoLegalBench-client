@@ -24,6 +24,12 @@ import type {
 import type { User } from "@/types/user-management";
 
 type Tab = "queue" | "decisions";
+type AuthorLookup = {
+  request: Promise<string | null>;
+  authorId?: string | null;
+};
+
+const feedbackClass = "block rounded-control bg-surface p-3 text-sm";
 
 /**
  * Penugasan yang sedang diganti, dalam bentuk yang tidak terikat pada tabel asalnya:
@@ -140,7 +146,9 @@ export default function AdminReviewsPage() {
   const [checkingAuthor, setCheckingAuthor] = useState(false);
   const [success, setSuccess] = useState("");
   const opener = useRef<HTMLElement | null>(null);
-  const feedback = useRef<HTMLDivElement>(null);
+  const successFeedback = useRef<HTMLOutputElement>(null);
+  const errorFeedback = useRef<HTMLParagraphElement>(null);
+  const authorLookups = useRef(new Map<string, AuthorLookup>());
 
   const queue = useNeedsReassignment();
   const { reload } = queue;
@@ -168,7 +176,7 @@ export default function AdminReviewsPage() {
   useEffect(() => {
     if (target || !opener.current) return;
     const returnTarget = opener.current.isConnected ? opener.current : document.getElementById(`tab-${tab}`);
-    (feedback.current ?? returnTarget)?.focus();
+    (successFeedback.current ?? errorFeedback.current ?? returnTarget)?.focus();
     opener.current = null;
   }, [target, tab]);
 
@@ -193,18 +201,33 @@ export default function AdminReviewsPage() {
 
   /**
    * AC7 mengecualikan penulis kasus. Antrean dari server belum membawa field author,
-   * jadi penulisnya dicari dari versi 1 lewat isCaseCreator — hanya saat dialog dibuka,
-   * dan hanya di antara kandidat, karena di luar itu tidak berpengaruh.
+   * jadi penulisnya dicari dari versi 1. Simpan hasil per kasus selama halaman terbuka
+   * dan gunakan permintaan yang sama jika dialog dibuka lagi sebelum pencarian selesai.
    */
   useEffect(() => {
     if (target === null || users === null) return;
 
+    const { caseId } = target;
+    const lookups = authorLookups.current;
+    const lookup = lookups.get(caseId);
+    const request: Promise<string | null> = lookup?.request ?? listCaseVersions(caseId).then(
+      (versions) => {
+        const authorId = users.find((item) => isCaseCreator(versions, item.id))?.id ?? null;
+        lookups.set(caseId, { request, authorId });
+        return authorId;
+      },
+      (error: unknown) => {
+        lookups.delete(caseId);
+        throw error;
+      },
+    );
+    if (!lookup) lookups.set(caseId, { request });
+
     let cancelled = false;
-    listCaseVersions(target.caseId)
-      .then((versions) => {
+    request
+      .then((authorId) => {
         if (cancelled) return;
-        const author = users.find((item) => isCaseCreator(versions, item.id));
-        setAuthorId(author?.id ?? null);
+        setAuthorId(authorId);
         setCheckingAuthor(false);
         setAuthorFailed(false);
       })
@@ -225,8 +248,9 @@ export default function AdminReviewsPage() {
       opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       reset();
       setSuccess("");
-      setCheckingAuthor(true);
-      setAuthorId(null);
+      const cachedAuthor = authorLookups.current.get(next.caseId)?.authorId;
+      setCheckingAuthor(cachedAuthor === undefined);
+      setAuthorId(cachedAuthor ?? null);
       setAuthorFailed(false);
       setTarget(next);
     },
@@ -319,10 +343,11 @@ export default function AdminReviewsPage() {
         ))}
       </div>
 
-      {!target && (success || replacement.error) && (
-        <div ref={feedback} tabIndex={-1} role={success ? "status" : "alert"} className="rounded-control bg-surface p-3 text-sm">
-          {success || replacement.error}
-        </div>
+      {!target && success && (
+        <output ref={successFeedback} tabIndex={-1} className={feedbackClass}>{success}</output>
+      )}
+      {!target && replacement.error && (
+        <p ref={errorFeedback} tabIndex={-1} role="alert" className={feedbackClass}>{replacement.error}</p>
       )}
 
       {tab === "queue" ? (

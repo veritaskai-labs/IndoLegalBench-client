@@ -96,7 +96,7 @@ export function SwapReviewerDialog({
             {options.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
         )}</FormField>
-        {loadingCandidates && <p role="status">Memuat kandidat reviewer…</p>}
+        {loadingCandidates && <output className="block">Memuat kandidat reviewer…</output>}
         {!loadingCandidates && !notice && !options.length && <p>Tidak ada reviewer yang memenuhi syarat untuk ronde ini.</p>}
         <FormField label="Alasan penggantian" hint="Alasan wajib diisi dan tercatat di log audit." required>{control =>
           <textarea {...control} required rows={3} value={reason} onChange={event => setReason(event.target.value)} className={controlClass} />
