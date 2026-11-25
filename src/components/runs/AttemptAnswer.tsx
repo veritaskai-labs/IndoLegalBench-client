@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 import { MarkdownAnswer } from "@/components/runs/MarkdownAnswer";
+import { AttemptDisclosure } from "@/components/runs/AttemptDisclosure";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { isExpandedByDefault } from "@/lib/runs/attemptDisclosure";
 import { describeAttemptTiming } from "@/lib/runs/attemptTiming";
 import { ATTEMPT_STATUS_LABEL, answerPlaceholder, type AnswerContext } from "@/lib/runs/sessionDetail";
 import type { AttemptResult } from "@/types/measurement";
@@ -16,31 +18,45 @@ const TOGGLE_OFF = `${TOGGLE_BASE} border-slate-300 bg-white text-slate-700 hove
 
 /**
  * Satu percobaan di detail sesi (PBI-11 AC8): status, jejak waktu WIB, dan jawaban mentah sebagai
- * markdown terformat atau teks asli. Semua aturan (teks pengganti, label waktu) ada di lib/runs.
+ * markdown terformat atau teks asli. Header selalu tampil; jawabannya dilipat di balik chevron
+ * (SCRUM-292). Semua aturan (teks pengganti, label waktu, bawaan buka/tutup) ada di lib/runs.
  */
-export function AttemptAnswer({ attempt, context }: Readonly<{ attempt: AttemptResult; context: AnswerContext }>) {
+export function AttemptAnswer({
+  attempt,
+  context,
+  attemptCount,
+  label,
+}: Readonly<{ attempt: AttemptResult; context: AnswerContext; attemptCount: number; label?: string }>) {
   const timing = describeAttemptTiming(attempt);
   const placeholder = answerPlaceholder(attempt, context);
 
   return (
     <li aria-label={`Percobaan ${attempt.repetition_no}`} className="rounded-md border border-slate-200">
-      <div className="space-y-1 border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="font-medium text-slate-900">Percobaan {attempt.repetition_no}</span>
-          <span>{ATTEMPT_STATUS_LABEL[attempt.status]}</span>
-          {attempt.model_version && <span className="font-mono">{attempt.model_version}</span>}
-        </p>
-        <dl className="flex flex-wrap gap-x-4 gap-y-1">
-          <TimingItem label="Mulai" value={timing.started} />
-          <TimingItem label="Selesai" value={timing.finished} />
-          {timing.duration && <TimingItem label="Durasi" value={timing.duration} />}
-        </dl>
-      </div>
-      {placeholder === null ? (
-        <AnswerBody answer={attempt.answer_text ?? ""} />
-      ) : (
-        <p className="px-3 py-2 text-sm text-slate-500">{placeholder}</p>
-      )}
+      <AttemptDisclosure
+        toggleLabel={`Jawaban percobaan ${attempt.repetition_no}`}
+        defaultExpanded={isExpandedByDefault(attemptCount)}
+        header={
+          <>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-medium text-slate-900">Percobaan {attempt.repetition_no}</span>
+              <span>{ATTEMPT_STATUS_LABEL[attempt.status]}</span>
+              {label && <span className="font-mono">{label}</span>}
+              {attempt.model_version && <span className="font-mono">{attempt.model_version}</span>}
+            </p>
+            <dl className="flex flex-wrap gap-x-4 gap-y-1">
+              <TimingItem label="Mulai" value={timing.started} />
+              <TimingItem label="Selesai" value={timing.finished} />
+              {timing.duration && <TimingItem label="Durasi" value={timing.duration} />}
+            </dl>
+          </>
+        }
+      >
+        {placeholder === null ? (
+          <AnswerBody answer={attempt.answer_text ?? ""} />
+        ) : (
+          <p className="px-3 py-2 text-sm text-slate-500">{placeholder}</p>
+        )}
+      </AttemptDisclosure>
     </li>
   );
 }

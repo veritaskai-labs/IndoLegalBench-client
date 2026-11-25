@@ -1,38 +1,96 @@
 "use client";
 
+import Link from "next/link";
 import { useId } from "react";
 
 import { GradedSessionList } from "@/components/grading/GradedSessionList";
-import { PlaceholderPage } from "@/components/PlaceholderPage";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { useGradedSessions } from "@/hooks/useGradedSessions";
 import { canSeeGradedSessions } from "@/lib/grading/gradingRules";
 
 /**
- * Isi halaman Laporan. Admin, Viewer, dan Kontributor membaca hasil penilaian sesi di sini (PBI-14
- * AC8, PBI-24 AC10; keputusan PO: Viewer tidak membuka Eksekusi). Laporan perbandingan (PBI-15–17) nanti menjadi bagian baru di
- * halaman ini. Peran lain, yang servernya menolak daftar ini, tetap melihat placeholder.
+ * Semua peran membuka laporan perbandingan (PBI-15, D9). Hasil penilaian sesi hanya untuk Admin, Viewer, dan
+ * Kontributor (PBI-14 AC8, PBI-24 AC10), karena server menolaknya untuk Developer AI.
  */
 export function ReportsOverview() {
   const auth = useAuth();
   if (auth.status === "loading") return <LoadingState />;
-
-  const role = auth.status === "authenticated" ? auth.user.role : null;
-  if (!canSeeGradedSessions(role)) {
-    return (
-      <PlaceholderPage
-        title="Halaman Laporan"
-        description="Fitur laporan perbandingan belum tersedia dan akan hadir pada sprint berikutnya."
-      />
-    );
-  }
+  if (auth.status !== "authenticated") return null;
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-slate-900">Laporan</h1>
-      <GradedSessionsSection />
+      <ComparisonReportsSection />
+      <PublishedReportsSection />
+      <TrendSection />
+      {canSeeGradedSessions(auth.user.role) && <GradedSessionsSection />}
     </div>
+  );
+}
+
+function ComparisonReportsSection() {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId} className="space-y-3">
+      <div>
+        <h2 id={headingId} className="text-base font-semibold text-slate-900">
+          Laporan perbandingan
+        </h2>
+        <p className="text-sm text-slate-600">Laporan tersimpan yang membandingkan beberapa produk dari hasil beku, lengkap dengan PDF-nya.</p>
+      </div>
+      <Link
+        href="/reports/comparisons"
+        className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+      >
+        Buka laporan perbandingan
+      </Link>
+    </section>
+  );
+}
+
+/** Laporan terbit untuk semua pengguna yang login (PBI-17 AC9). */
+function PublishedReportsSection() {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId} className="space-y-3">
+      <div>
+        <h2 id={headingId} className="text-base font-semibold text-slate-900">
+          Laporan terbit
+        </h2>
+        <p className="text-sm text-slate-600">Laporan perbandingan yang sudah diterbitkan Admin, versi yang sedang berlaku.</p>
+      </div>
+      <Link
+        href="/reports/published"
+        className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+      >
+        Buka laporan terbit
+      </Link>
+    </section>
+  );
+}
+
+/** Semua peran membuka tren; filter jenis kasus di halamannya yang berbeda per peran (PBI-17 AC1, AC12). */
+function TrendSection() {
+  const headingId = useId();
+
+  return (
+    <section aria-labelledby={headingId} className="space-y-3">
+      <div>
+        <h2 id={headingId} className="text-base font-semibold text-slate-900">
+          Tren kualitas produk
+        </h2>
+        <p className="text-sm text-slate-600">Perkembangan skor satu produk AI dari bulan ke bulan, lengkap dengan PDF-nya.</p>
+      </div>
+      <Link
+        href="/reports/trend"
+        className="inline-block rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+      >
+        Buka tren kualitas
+      </Link>
+    </section>
   );
 }
 
@@ -47,7 +105,7 @@ function GradedSessionsSection() {
         <h2 id={headingId} className="text-base font-semibold text-slate-900">
           Hasil penilaian sesi
         </h2>
-        <p className="text-sm text-slate-600">Sesi pengukuran yang sudah selesai dan dinilai. Pilih sesi untuk melihat skornya.</p>
+        <p className="text-sm text-slate-600">Satu baris per penilaian dari sesi yang sudah selesai, lengkap dengan LLM judge dan versi rubriknya. Pilih satu untuk melihat skornya.</p>
       </div>
       <GradedSessionList sessions={sessions} />
     </section>

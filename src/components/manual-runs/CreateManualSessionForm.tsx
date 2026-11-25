@@ -2,7 +2,6 @@
 
 import { useId, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
-import { JudgeProviderSelect } from "@/components/providers/JudgeProviderSelect";
 import { ProductSelect } from "@/components/providers/ProductSelect";
 import { useSuites } from "@/hooks/useSuites";
 import { useToast } from "@/components/ui/Toast";
@@ -37,8 +36,7 @@ export function CreateManualSessionForm() {
   // Step 3: Produk AI Manual
   const [productId, setProductId] = useState("");
 
-  // Step 4: Pengulangan & Penilai LLM
-  const [judgeProviderId, setJudgeProviderId] = useState("");
+  // Step 4: Pengulangan (LLM judge dipilih saat menilai, K-14)
   const [repeatCount, setRepeatCount] = useState<number | "">(MANUAL_SESSION_DEFAULT_REPETITIONS);
 
   // Submission State
@@ -55,7 +53,6 @@ export function CreateManualSessionForm() {
     purpose !== "" &&
     selectedSuiteIds.length > 0 &&
     productId !== "" &&
-    judgeProviderId !== "" &&
     isValidRepeat;
 
   function handleSuiteToggle(suiteId: string) {
@@ -87,7 +84,6 @@ export function CreateManualSessionForm() {
       case_filter: caseFilter,
       product_id: productId,
       repeat_count: typeof repeatCount === "number" ? repeatCount : MANUAL_SESSION_DEFAULT_REPETITIONS,
-      judge_provider_id: judgeProviderId,
     };
 
     try {
@@ -296,14 +292,15 @@ export function CreateManualSessionForm() {
         </div>
       </section>
 
-      {/* Bagian 4: Pengulangan & Penilai LLM */}
+      {/* Bagian 4: Pengulangan */}
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4">
         <header className="border-b border-slate-100 pb-3">
           <h2 className="text-base font-semibold text-slate-900">
-            4. Pengulangan & Penilai LLM
+            4. Pengulangan
           </h2>
           <p className="text-xs text-slate-500">
-            Tentukan berapa kali pengisian jawaban manual dilakukan dan model penilai yang digunakan.
+            Tentukan berapa kali pengisian jawaban manual dilakukan. LLM judge dipilih saat sesi
+            dinilai.
           </p>
         </header>
 
@@ -363,12 +360,6 @@ export function CreateManualSessionForm() {
               {MANUAL_SESSION_MIN_REPETITIONS} sampai {MANUAL_SESSION_MAX_REPETITIONS}).
             </p>
           </div>
-
-          <JudgeProviderSelect
-            value={judgeProviderId}
-            onChange={setJudgeProviderId}
-            disabled={isSubmitting}
-          />
         </div>
       </section>
 

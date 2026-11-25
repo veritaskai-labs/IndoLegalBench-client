@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { formatRupiah } from "@/lib/providers/format";
 import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
 import { toRunRow, toRunRows } from "./gradingRun";
 
@@ -20,6 +21,8 @@ describe("toRunRow (AC7: hasil terbaru dan versi rubriknya)", () => {
       versionLabel: "Versi 1",
       triggeredAt: "06 Nov 2026, 10.05 WIB",
       isLatest: true,
+      judgeLabel: "Penilai tidak tercatat",
+      costLabel: null,
     });
   });
 
@@ -113,6 +116,8 @@ describe("toRunRow with a history summary (GET /grading-runs)", () => {
       versionLabel: "Versi 2",
       triggeredAt: "06 Nov 2026, 10.05 WIB",
       isLatest: true,
+      judgeLabel: "Penilai tidak tercatat",
+      costLabel: null,
     });
   });
 });
@@ -183,5 +188,66 @@ describe("toRunRows", () => {
 
     // Assert
     expect(rows.map((row) => row.id)).toEqual(["new", "old", "bad"]);
+  });
+});
+
+describe("toRunRow judge and cost (K-17/K-18, SCRUM-283)", () => {
+  const JUDGE = { judge_provider_id: "judge-a", name: "DeepSeek", model_version: "deepseek-chat", cost_idr: "1234.50" };
+
+  // Positive: each run says which judge graded it, so results of two judges are told apart.
+  it("names the judge product and the model it reported", () => {
+    // Arrange
+    const source = gradingRunSummary({ judge: JUDGE });
+
+    // Act
+    const row = toRunRow(source);
+
+    // Assert
+    expect(row.judgeLabel).toBe("DeepSeek · deepseek-chat");
+  });
+
+  // Edge: every judge call failed, so no model was reported.
+  it("shows only the product name when no model was reported", () => {
+    // Arrange / Act
+    const row = toRunRow(gradingRunSummary({ judge: { ...JUDGE, model_version: null } }));
+
+    // Assert
+    expect(row.judgeLabel).toBe("DeepSeek");
+  });
+
+  // Edge: the judge product was deleted after grading, so the server sends no name.
+  it("still says a judge graded the run when its name is gone", () => {
+    // Arrange / Act
+    const row = toRunRow(gradingRunSummary({ judge: { ...JUDGE, name: null, model_version: null } }));
+
+    // Assert
+    expect(row.judgeLabel).toBe("Penilai tanpa nama");
+  });
+
+  // Edge: runs from before SCRUM-280 have no judge.
+  it("says the judge is not recorded for an older run", () => {
+    // Arrange / Act
+    const row = toRunRow(gradingRunSummary({ judge: null }));
+
+    // Assert
+    expect(row.judgeLabel).toBe("Penilai tidak tercatat");
+  });
+
+  // Positive: the cost is the sum of the recorded judge calls (review on server#134), so it says "tercatat".
+  it("shows the recorded judge cost in Rupiah", () => {
+    // Arrange / Act
+    const row = toRunRow(gradingRunSummary({ judge: JUDGE }));
+
+    // Assert
+    expect(row.costLabel).toBe(`Biaya tercatat ${formatRupiah("1234.50")}`);
+  });
+
+  // Negative: no recorded cost is not shown as Rp 0.
+  it("shows no cost when none was recorded", () => {
+    // Arrange / Act
+    const row = toRunRow(gradingRunSummary({ judge: { ...JUDGE, cost_idr: null } }));
+
+    // Assert
+    expect(row.costLabel).toBeNull();
   });
 });

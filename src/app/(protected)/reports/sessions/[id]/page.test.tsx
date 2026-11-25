@@ -12,7 +12,7 @@ const params = vi.hoisted(() => ({ id: "s-1" }));
 vi.mock("next/navigation", () => ({ useParams: () => params }));
 
 // gradingApi has its own request tests (stubbed fetch); here only the page's reaction matters.
-vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn() } }));
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { results: vi.fn() } }));
 
 const resultsRead = vi.mocked(httpGradingGateway.results);
 
@@ -99,6 +99,20 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
     expect(await screen.findByRole("table", { name: "Skor sesi" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Skor per kasus" })).toHaveTextContent("KC-001");
     expect(screen.getByText(/Versi rubrik v1/)).toBeInTheDocument();
+  });
+
+  // Positif (K-11, SCRUM-291, TC_87): Viewer di Laporan melihat LLM judge yang menilai sesi ini.
+  it("names the LLM judge product and model in the summary", async () => {
+    // Arrange
+    resultsRead.mockResolvedValue(
+      gradingResponse({ judge: { judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2", cost_idr: null } }),
+    );
+
+    // Act
+    render(<SessionResultsReportPage />);
+
+    // Assert
+    expect(await screen.findByText("LLM judge: Judge Alfa · alfa-2")).toBeInTheDocument();
   });
 
   // PO: Viewer sees scores and, on a row, the grading detail and rubric version. The question and the

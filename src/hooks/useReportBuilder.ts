@@ -1,0 +1,213 @@
+"use client";
+
+import { useState } from "react";
+
+import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { useAsyncResource, type AsyncResource } from "@/hooks/useAsyncResource";
+import { useReportValidation, type ReportValidationState } from "@/hooks/useReportValidation";
+import {
+  allowedScoreScopes,
+  canChooseProductLabel,
+  normalizeChoices,
+  titleProblem as titleProblemOf,
+  type BuilderChoices,
+  type TitleProblem,
+} from "@/lib/reports/builder/builderRules";
+import { applyFilter, toggleSession } from "@/lib/reports/builder/builderSelection";
+import {
+  chooseScope,
+  scopeOptions as scopeOptionsOf,
+  validationView,
+  type ScopeOption,
+  type ValidationView,
+} from "@/lib/reports/builder/validationView";
+import {
+  productOptions as productOptionsOf,
+  searchSessions,
+  type ProductOption,
+  type SessionTab,
+} from "@/lib/reports/builder/sessionSearch";
+import { outcomeFromError, outcomeFromResponse, type CreateOutcome } from "@/lib/reports/builder/createOutcome";
+import { REPORT_LANGUAGE } from "@/lib/reports/reportLabels";
+import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
+import { stripBlank } from "@/lib/text";
+import type { Role } from "@/types";
+import type {
+  EligibleSession,
+  MeasurementFilter,
+  ProductLabelMode,
+  ReportCreate,
+  ReportValidation,
+  ScoreScope,
+} from "@/types/reports";
+
+export interface ReportBuilder {
+  /** Every session the user may see, eligible or not, with the server's reasons (AC4). */
+  sessions: AsyncResource<EligibleSession[]> & { reload: () => void };
+  /** Sessions the field shows: the kind the filter shows (AC5), the search, the chosen products and the tab. */
+  visibleSessions: EligibleSession[];
+  /** SCRUM-365: search bar text (session name, session id or product name). */
+  query: string;
+  setQuery: (query: string) => void;
+  /** SCRUM-365: "Valid" or "Tidak valid"; invalid sessions stay visible there with their reasons (AC4). */
+  tab: SessionTab;
+  setTab: (tab: SessionTab) => void;
+  /** Sessions per tab after the search and filters, for the tab labels. */
+  tabCounts: Record<SessionTab, number>;
+  /** SCRUM-365: the products of the dropdown, and the ones chosen (none chosen = every product). */
+  productOptions: ProductOption[];
+  productIds: readonly string[];
+  toggleProduct: (productId: string) => void;
+  /** Empties the search bar and the product choice; the tab and the measurement filter stay. */
+  clearSearch: () => void;
+  /** Picked sessions that go into the report (the filter keeps them). */
+  picked: EligibleSession[];
+  /** Picked sessions the filter leaves out; the server would drop them without a word. */
+  dropped: EligibleSession[];
+  toggle: (session: EligibleSession) => void;
+  filter: MeasurementFilter;
+  setFilter: (filter: MeasurementFilter) => void;
+  /** Live answer of POST /reports/validate for the picked sessions (SCRUM-366). */
+  validation: ReportValidationState;
+  view: ValidationView;
+  scopeOptions: ScopeOption[];
+  scoreScope: ScoreScope;
+  setScoreScope: (scope: ScoreScope) => void;
+  canChooseLabel: boolean;
+  productLabelMode: ProductLabelMode;
+  setProductLabelMode: (mode: ProductLabelMode) => void;
+  title: string;
+  setTitle: (title: string) => void;
+  titleProblem: TitleProblem | null;
+  canSubmit: boolean;
+  submitting: boolean;
+  submit: () => Promise<void>;
+  /** Answer of the last Create, null before the first one and after the selection changes. */
+  outcome: CreateOutcome | null;
+}
+
+const LIST_ERROR = "Gagal memuat daftar sesi. Coba lagi.";
+
+const listErrorMessage = () => LIST_ERROR;
+// Create never rejects: outcomeFromError turns every failure into an outcome the page can show.
+const unusedCreateMessage = () => "";
+
+/**
+ * Form state of the report builder (SCRUM-321). The rules live in lib/reports/builder; this hook only keeps
+ * state and calls the gateway. The list is loaded once with every kind of session and filtered here, so a
+ * filter change never hides a picked session without saying so. Role-dependent options are derived on every
+ * render (normalizeChoices), so a role change can never leave a forbidden choice in the request.
+ */
+export function useReportBuilder(
+  role: Role | null,
+  gateway: ReportsGateway = httpReportsGateway,
+  validateDelayMs?: number,
+): ReportBuilder {
+  const sessions = useAsyncResource<EligibleSession[]>(
+    "report-builder-sessions",
+    () => gateway.eligibleSessions("all"),
+    listErrorMessage,
+  );
+  const [filter, setFilter] = useState<MeasurementFilter>("all");
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<SessionTab>("valid");
+  const [productIds, setProductIds] = useState<readonly string[]>([]);
+  const [allPicked, setAllPicked] = useState<EligibleSession[]>([]);
+  const [rawChoices, setRawChoices] = useState<BuilderChoices>({ scoreScope: "test", productLabelMode: "real_name" });
+  const [title, setTitle] = useState("");
+  const [outcome, setOutcome] = useState<CreateOutcome | null>(null);
+
+  const choices = normalizeChoices(role, rawChoices);
+  const { kept, dropped } = applyFilter(allPicked, filter);
+  // Search, tab and products only change what the field shows; picks stay in allPicked, so switching never
+  // loses them (SCRUM-365). Only the measurement filter takes picks out of the report, as the server would.
+  const loaded = sessions.status === "ready" ? sessions.data : [];
+  const found = searchSessions(loaded, { measurement: filter, query, tab, productIds });
+  const titleProblem = titleProblemOf(title);
+
+  // The check asks with the score type the form will actually use. When the user's own choice is not offered, the
+  // form moves to one that is, and that one must be checked too: the answer for the old choice still holds its
+  // violations (the server says NO_SHARED_CASES for a score type the cases do not have), so Create would stay off.
+  // It settles in at most two requests: the offered scope types do not depend on the score type that was asked.
+  // verdictSeen mirrors the last answer so the request can depend on it in the same render (React's "adjust state
+  // while rendering" pattern); both sides are the same object after one extra render, so it cannot loop.
+  const [verdictSeen, setVerdictSeen] = useState<ReportValidation | null>(null);
+  const allowedScopes = allowedScoreScopes(role);
+  const askedScope = chooseScope(choices.scoreScope, scopeOptionsOf(allowedScopes, verdictSeen));
+  const validation = useReportValidation(
+    { session_ids: kept.map((s) => s.session_id), score_scope: askedScope, measurement_filter: filter },
+    gateway,
+    validateDelayMs,
+    sessions.status === "ready" && role !== null,
+  );
+  if (validation.verdict !== verdictSeen) setVerdictSeen(validation.verdict);
+  const view = validationView(validation.verdict);
+  const scopeOptions = scopeOptionsOf(allowedScopes, validation.verdict);
+  const scoreScope = chooseScope(choices.scoreScope, scopeOptions);
+
+  const body: ReportCreate = {
+    title: stripBlank(title),
+    session_ids: kept.map((s) => s.session_id),
+    score_scope: scoreScope,
+    measurement_filter: filter,
+    product_label_mode: choices.productLabelMode,
+    // Server default, and the language the web report body uses. Letting the user choose it is PBI-26.
+    language: REPORT_LANGUAGE,
+  };
+
+  const create = () =>
+    gateway.create(body).then(
+      (response) => outcomeFromResponse({ report: response.report, warning: response.warning ?? null }),
+      outcomeFromError,
+    );
+  const action = useAsyncAction(create, setOutcome, unusedCreateMessage);
+  // Create waits for the answer to the latest selection. A failed check does not block: the server checks again.
+  const canSubmit = titleProblem === null && validation.status !== "checking" && !view.blocking && !action.pending;
+
+  const toggle = (session: EligibleSession) => {
+    setAllPicked((current) => toggleSession(current, session));
+    setOutcome(null);
+  };
+
+  return {
+    sessions,
+    visibleSessions: found.shown,
+    query,
+    setQuery,
+    tab,
+    setTab,
+    tabCounts: found.counts,
+    productOptions: productOptionsOf(loaded),
+    productIds,
+    toggleProduct: (productId) =>
+      setProductIds((current) =>
+        current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId],
+      ),
+    clearSearch: () => {
+      setQuery("");
+      setProductIds([]);
+    },
+    picked: kept,
+    dropped,
+    toggle,
+    filter,
+    setFilter,
+    validation,
+    view,
+    scopeOptions,
+    scoreScope,
+    setScoreScope: (scoreScope) => setRawChoices((c) => ({ ...c, scoreScope })),
+    canChooseLabel: canChooseProductLabel(role),
+    productLabelMode: choices.productLabelMode,
+    setProductLabelMode: (productLabelMode) => setRawChoices((c) => ({ ...c, productLabelMode })),
+    title,
+    setTitle,
+    titleProblem,
+    canSubmit,
+    submitting: action.pending,
+    submit: async () => {
+      if (canSubmit) await action.run();
+    },
+    outcome,
+  };
+}

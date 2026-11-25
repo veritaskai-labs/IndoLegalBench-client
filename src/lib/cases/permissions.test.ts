@@ -3,6 +3,7 @@ import type { Role } from "@/types";
 import type { CaseStatus } from "@/types/case";
 import {
   canCreateCase,
+  canImportCases,
   canReadReviewFeedback,
   canStartNewVersion,
   canSubmitForReview,
@@ -255,6 +256,35 @@ describe("canCreateCase", () => {
 
     // Act
     const allowed = canCreateCase(role);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+});
+
+describe("canImportCases", () => {
+  // Positive: D9 gives the CSV import to Kontributor and Admin.
+  it.each(["contributor", "admin"] as const)("offers the import page to the %s", (role) => {
+    // Arrange / Act
+    const allowed = canImportCases(role);
+
+    // Assert
+    expect(allowed).toBe(true);
+  });
+
+  // Negative: the server answers 403 for these roles, so the page is not offered.
+  it.each(["viewer", "developer_ai"] as const)("does not offer the import page to the %s", (role: Role) => {
+    // Arrange / Act
+    const allowed = canImportCases(role);
+
+    // Assert
+    expect(allowed).toBe(false);
+  });
+
+  // Edge: no session yet.
+  it("does not offer the import page before the session is known", () => {
+    // Arrange / Act
+    const allowed = canImportCases(null);
 
     // Assert
     expect(allowed).toBe(false);

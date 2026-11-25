@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
-import { gradedSessionItem } from "@/test/gradingFixtures";
+import { gradedRunItem } from "@/test/gradingFixtures";
 import type { Role } from "@/types";
 import ReportsPage from "./page";
 
@@ -11,7 +11,7 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 // gradingApi has its own request tests (stubbed fetch); here only the page's reaction matters.
 vi.mock("@/lib/grading/gradingApi", () => ({
-  httpGradingGateway: { grade: vi.fn(), results: vi.fn(), sessions: vi.fn(), runs: vi.fn() },
+  httpGradingGateway: { results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn() },
 }));
 
 const sessionsRead = vi.mocked(httpGradingGateway.sessions);
@@ -25,7 +25,7 @@ function signedInAs(role: Role) {
 
 beforeEach(() => {
   sessionsRead.mockReset();
-  sessionsRead.mockResolvedValue([gradedSessionItem({ session_id: "s-1" })]);
+  sessionsRead.mockResolvedValue([gradedRunItem({ session_id: "s-1" })]);
 });
 
 describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Laporan)", () => {
@@ -38,22 +38,54 @@ describe("ReportsPage (PBI-14 AC8, PO decision: Viewer reads results under Lapor
     const section = screen.getByRole("region", { name: "Hasil penilaian sesi" });
     expect(await within(section).findByRole("link", { name: "Uji Coba Produk A" })).toHaveAttribute(
       "href",
-      "/reports/sessions/s-1",
+      "/reports/sessions/s-1/runs/run-1",
     );
     expect(sessionsRead).toHaveBeenCalledTimes(1);
   });
 
-  // Developer AI has no Laporan list: the server refuses it (403), so the page keeps the placeholder
-  // and never asks for it.
-  it("keeps the placeholder for Developer AI and does not ask for the list", () => {
+  // SCRUM-322: Laporan is the menu entry to the saved comparison reports; without this link they open by URL only.
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the saved comparison reports", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Laporan perbandingan" });
+    expect(within(section).getByRole("link", { name: "Buka laporan perbandingan" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons",
+    );
+  });
+
+  // SCRUM-335 (PBI-17 AC9): every signed-in role reads the published reports.
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the published reports", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Laporan terbit" });
+    expect(within(section).getByRole("link", { name: "Buka laporan terbit" })).toHaveAttribute("href", "/reports/published");
+  });
+
+  // SCRUM-334 (PBI-17): Laporan is also the menu entry to the monthly trend; every role may read it (the
+  // case type filter on that page is what differs per role).
+  it.each<Role>(["viewer", "admin", "contributor", "developer_ai"])("links %s to the monthly quality trend", (role) => {
+    signedInAs(role);
+
+    render(<ReportsPage />);
+
+    const section = screen.getByRole("region", { name: "Tren kualitas produk" });
+    expect(within(section).getByRole("link", { name: "Buka tren kualitas" })).toHaveAttribute("href", "/reports/trend");
+  });
+
+  // D9 (SA): Developer AI reads comparison reports, including dev-score ones, but the server refuses it the
+  // graded-session list (403), so that list is never asked for.
+  it("shows Developer AI the comparison reports without the graded sessions", () => {
     signedInAs("developer_ai");
 
     render(<ReportsPage />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Halaman Laporan" })).toBeInTheDocument();
-    expect(
-      screen.getByText("Fitur laporan perbandingan belum tersedia dan akan hadir pada sprint berikutnya."),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Laporan" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Laporan perbandingan" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Hasil penilaian sesi" })).not.toBeInTheDocument();
     expect(sessionsRead).not.toHaveBeenCalled();
   });

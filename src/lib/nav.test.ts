@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/types";
-import { navForRole } from "./nav";
+import { isNavItemActive, navForRole } from "./nav";
 
 function labels(role: Role) {
   return navForRole(role).flatMap((group) =>
@@ -31,8 +31,8 @@ describe("navForRole", () => {
   });
 
   // PBI-11 AC1 & D10: Admin and Developer AI can run automatic measurements.
-  it("gives developer AI the suites and execution pages, without the dashboard (PBI-11, SCRUM-184)", () => {
-    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi"]);
+  it("gives developer AI the suites, execution and report pages, without the dashboard (PBI-11, PBI-15)", () => {
+    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi", "Laporan"]);
   });
 
   it("gives admin the admin pages and reports but not the review queue", () => {
@@ -68,13 +68,13 @@ describe("navForRole", () => {
     expect(withSuites).toEqual(["contributor", "admin", "developer_ai"]);
   });
 
-  // PBI-24 AC10: Contributor and Admin get the Viewer right to read reports.
-  it("offers the reports page to admin, contributor and viewer", () => {
+  // PBI-24 AC10: Contributor and Admin get the Viewer right to read reports. D9: Developer AI reads reports too.
+  it("offers the reports page to every role", () => {
     const roles = ["contributor", "admin", "viewer", "developer_ai"] as const;
 
     const withReports = roles.filter((role) => hrefs(role).includes("/reports"));
 
-    expect(withReports).toEqual(["contributor", "admin", "viewer"]);
+    expect(withReports).toEqual(["contributor", "admin", "viewer", "developer_ai"]);
   });
 
   // D10: Admin does not review cases, so the queue is for the contributor only.
@@ -120,5 +120,35 @@ describe("navForRole", () => {
 
     // Assert
     expect(withRubrics).toEqual(["admin"]);
+  });
+});
+
+describe("isNavItemActive", () => {
+  // Positive: the exact page of a menu item.
+  it.each([
+    ["/dashboard", "/dashboard"],
+    ["/suites", "/suites"],
+  ])("marks %s active on %s", (href, pathname) => {
+    // Arrange / Act / Assert
+    expect(isNavItemActive(href, pathname)).toBe(true);
+  });
+
+  // Positive: the case list and the CSV import live under "Suite dan kasus" (SCRUM-341, SCRUM-340).
+  it.each(["/cases", "/cases/import"])("marks Suite dan kasus active on %s", (pathname) => {
+    // Arrange / Act / Assert
+    expect(isNavItemActive("/suites", pathname)).toBe(true);
+  });
+
+  // Negative: other pages and other items.
+  it.each([
+    ["/suites", "/dashboard"],
+    ["/dashboard", "/cases"],
+    ["/reports", "/cases/import"],
+    ["/suites", "/suites-lama"],
+    ["/suites", "/cases-lama"],
+    ["/suites", "/cases/c-1/edit"],
+  ])("does not mark %s active on %s", (href, pathname) => {
+    // Arrange / Act / Assert
+    expect(isNavItemActive(href, pathname)).toBe(false);
   });
 });

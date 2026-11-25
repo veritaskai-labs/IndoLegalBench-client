@@ -67,7 +67,7 @@ export function FilterPopover({
                 onChange={() => setStatus("active")}
                 className="border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
-              Aktif
+              <span>Aktif</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-slate-700">
               <input
@@ -77,7 +77,7 @@ export function FilterPopover({
                 onChange={() => setStatus("inactive")}
                 className="border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
-              Non-aktif
+              <span>Non-aktif</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer text-slate-700">
               <input
@@ -87,7 +87,7 @@ export function FilterPopover({
                 onChange={() => setStatus("all")}
                 className="border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
-              Semua
+              <span>Semua</span>
             </label>
           </div>
         </div>

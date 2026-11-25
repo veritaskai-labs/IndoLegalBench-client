@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
 import { getProgress, getSession } from "@/lib/runs/runsApi";
-import { gradingResponse } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingProgress, gradingResponse } from "@/test/gradingFixtures";
 import { acceptAsIs, pauseSession, retrySession } from "@/lib/runs/sessionControlApi";
 import type { Role } from "@/types";
 import type { AttemptResult, SessionCaseResult, SessionDetail } from "@/types/measurement";
@@ -27,7 +27,19 @@ vi.mock("@/lib/runs/sessionControlApi", () => ({
   retrySession: vi.fn(),
 }));
 // The grading section has its own tests with a fake gateway; here the page uses the default one.
-vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: { grade: vi.fn(), results: vi.fn(), runs: vi.fn().mockResolvedValue([]) } }));
+vi.mock("@/lib/grading/gradingApi", () => ({ httpGradingGateway: {
+    enqueue: vi.fn(),
+    progress: vi.fn().mockResolvedValue(null),
+    estimate: vi.fn(),
+    results: vi.fn(),
+    runs: vi.fn().mockResolvedValue([]),
+  } }));
+// K-14 (SCRUM-282): dialog Nilai memuat daftar LLM judge sendiri.
+vi.mock("@/lib/providers/judgeApi", () => ({
+  listJudgeOptions: vi.fn().mockResolvedValue([
+    { id: "judge-a", name: "DeepSeek", provider_type: "openai_compatible", model_name: "deepseek-chat" },
+  ]),
+}));
 // The toast lives in the protected layout; SessionControls.test checks its text with the real provider.
 vi.mock("@/components/ui/Toast", () => ({ useToast: () => ({ showToast: vi.fn() }) }));
 
@@ -37,7 +49,8 @@ vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
 
 const get = vi.mocked(getSession);
 const progressRead = vi.mocked(getProgress);
-const gradeRequest = vi.mocked(httpGradingGateway.grade);
+const enqueueRequest = vi.mocked(httpGradingGateway.enqueue);
+const estimateRequest = vi.mocked(httpGradingGateway.estimate);
 const resultsRead = vi.mocked(httpGradingGateway.results);
 
 function signedInAs(role: Role) {
@@ -123,12 +136,19 @@ async function openCase(user: ReturnType<typeof userEvent.setup>, code = "QA-001
   return within(card);
 }
 
+// Attempts start closed when a case has several (SCRUM-292); open them all to read the answers.
+async function expandAttempts(user: ReturnType<typeof userEvent.setup>, card: ReturnType<typeof within>) {
+  for (const toggle of card.queryAllByRole("button", { name: /^Jawaban percobaan/, expanded: false })) {
+    await user.click(toggle);
+  }
+}
+
 beforeEach(() => {
   get.mockReset();
   params.id = "s-1";
   signedInAs("admin");
   progressRead.mockReturnValue(new Promise(() => {}));
-  gradeRequest.mockReset();
+  enqueueRequest.mockReset();
   resultsRead.mockReset();
   resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
 });
@@ -191,7 +211,11 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     get.mockResolvedValue(session({ archived_at: "2026-11-03T03:00:00Z" }));
     render(<SessionDetailPage />);
 
-    expect(await screen.findByText(/Sesi ini sudah diarsipkan/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Sesi ini sudah diarsipkan dan tidak tampil di daftar. Datanya tetap tersimpan."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+    expect(screen.getByText("Sesi ini sudah diarsipkan, jadi berkas skornya tidak bisa diunduh.")).toBeInTheDocument();
   });
 
   // Edge: queued, the snapshot does not exist yet.
@@ -381,6 +405,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     const items = card.getAllByRole("listitem", { name: /^Percobaan/ });
     // Corner: repetition 2 is missing and stays missing.
     expect(items.map((item) => item.getAttribute("aria-label"))).toEqual(["Percobaan 1", "Percobaan 3"]);
@@ -422,6 +447,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     const [first, second] = card.getAllByRole("listitem", { name: /^Percobaan/ });
     expect(within(first).getByRole("heading", { level: 2, name: "Kesimpulan" })).toBeInTheDocument();
     expect(within(first).getByRole("listitem")).toHaveTextContent("poin satu");
@@ -448,6 +474,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     expect(card.getByText("Gagal teknis, tidak ada jawaban.")).toBeInTheDocument();
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
   });
@@ -466,6 +493,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user);
+    await expandAttempts(user, card);
     expect(card.getByText("Jawaban dev saat berjalan")).toBeInTheDocument();
     expect(card.getByText("Belum ada jawaban.")).toBeInTheDocument();
     expect(card.queryByText("Jawaban tampil setelah sesi selesai.")).not.toBeInTheDocument();
@@ -494,6 +522,7 @@ describe("SessionDetailPage raw answers (PBI-11 AC8)", () => {
     render(<SessionDetailPage />);
 
     const card = await openCase(user, "KASUS-TEST");
+    await expandAttempts(user, card);
     expect(card.getByText("Isi kasus test disembunyikan untuk Developer AI. Hanya status percobaan yang ditampilkan.")).toBeInTheDocument();
     expect(card.queryByText("Rujukan hukum")).not.toBeInTheDocument();
     expect(card.getAllByText("Isi kasus test disembunyikan untuk Developer AI.")).toHaveLength(2);
@@ -705,14 +734,19 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
   it("lets Admin grade a finished session from the page", async () => {
     const user = userEvent.setup();
     get.mockResolvedValue(session({ status: "finished" }));
-    gradeRequest.mockResolvedValue(gradingResponse());
+    enqueueRequest.mockResolvedValue({ grading_run_id: "run-1", status: "queued" });
+    estimateRequest.mockResolvedValue(gradeEstimate());
 
     render(<SessionDetailPage />);
     const results = await screen.findByRole("region", { name: "Hasil penilaian" });
     await user.click(await within(results).findByRole("button", { name: "Nilai" }));
-    await user.click(within(screen.getByRole("dialog", { name: "Nilai sesi ini?" })).getByRole("button", { name: "Nilai" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
+    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    // The start button stays off until the cost estimate for that judge is shown.
+    await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
+    await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
-    expect(gradeRequest).toHaveBeenCalledWith("s-1");
+    expect(enqueueRequest).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
   });
 
   it("shows the scores of a graded session", async () => {
@@ -723,6 +757,84 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
 
     const results = await screen.findByRole("region", { name: "Hasil penilaian" });
     expect(await within(results).findByRole("table", { name: "Skor per kasus" })).toBeInTheDocument();
+  });
+
+  it("puts Unduh skor on the title row of a finished, graded session", async () => {
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    const heading = await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" });
+    const button = await screen.findByRole("button", { name: "Unduh skor" });
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(heading.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("Sesi masih berjalan.")).not.toBeInTheDocument();
+  });
+
+  it("explains a running session beside a disabled Unduh skor", async () => {
+    get.mockResolvedValue(session({ status: "running", finished_at: null }));
+
+    render(<SessionDetailPage />);
+
+    expect(await screen.findByRole("button", { name: "Unduh skor" })).toBeDisabled();
+    expect(
+      screen.getByText("Sesi ini belum selesai, jadi berkas skornya belum bisa diunduh. Tunggu sampai sesi selesai."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the same download control to a viewer", async () => {
+    signedInAs("viewer");
+    get.mockResolvedValue(session({ status: "finished" }));
+    resultsRead.mockResolvedValue(gradingResponse());
+
+    render(<SessionDetailPage />);
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled());
+  });
+
+  // The title button and Hasil penilaian share one results read. When that run finishes, both update.
+  it("enables Unduh skor from the same grading result the section reloads", async () => {
+    vi.useFakeTimers();
+    const progress = vi.mocked(httpGradingGateway.progress);
+    try {
+      get.mockResolvedValue(session({ status: "finished" }));
+      progress
+        .mockResolvedValueOnce(gradingProgress({ status: "running", grading_run_id: "run-1" }))
+        .mockResolvedValue(
+          gradingProgress({
+            status: "finished",
+            grading_run_id: "run-1",
+            finished_at: "2026-11-15T03:05:00Z",
+            percent: 100,
+            attempts_graded: 12,
+            attempts_ungraded: 0,
+          }),
+        );
+      resultsRead.mockReset();
+      resultsRead.mockRejectedValue(new ApiError(404, "GRADING_NOT_FOUND"));
+
+      render(<SessionDetailPage />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeDisabled();
+      expect(resultsRead).toHaveBeenCalledTimes(1);
+
+      resultsRead.mockReset();
+      resultsRead.mockResolvedValue(gradingResponse());
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(screen.getByRole("button", { name: "Unduh skor" })).toBeEnabled();
+      expect(resultsRead).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      progress.mockReset();
+      progress.mockResolvedValue(null);
+    }
   });
 
   // The page passes the signed-in role on; Developer AI never gets the action.

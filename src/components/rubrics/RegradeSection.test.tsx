@@ -4,9 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
+import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
-import { gradingResponse, gradingRunSummary } from "@/test/gradingFixtures";
+import { gradeEstimate, gradingResponse, gradingRunQueued, gradingRunSummary } from "@/test/gradingFixtures";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionGradingResponse } from "@/types/grading";
@@ -15,27 +16,38 @@ import { RegradeSection } from "./RegradeSection";
 const v1 = makeRubricSummary({ id: "id-1", version_no: 1, is_active: false });
 const v2 = makeRubricSummary({ id: "id-2", version_no: 2 });
 const SESSION = { id: "s-1", status: "finished" as const, archived_at: null as string | null };
-const BUTTON = "Nilai ulang dengan versi terbaru";
-const REGRADED = gradingResponse({ grading_run_id: "run-2", kind: "regrade", rubric_version: "v2" });
+const BUTTON = "Nilai ulang";
+const QUEUED = gradingRunQueued({ grading_run_id: "run-2" });
+const JUDGE_A = { judge_provider_id: "judge-a", name: "DeepSeek", model_version: "deepseek-chat", cost_idr: null };
+const judgeApi: JudgeOptionsApi = {
+  listJudgeOptions: () =>
+    Promise.resolve([{ id: "judge-a", name: "DeepSeek", provider_type: "openai_compatible" as const, model_name: "deepseek-chat" }]),
+};
 
 function setup({
   rubrics = {},
-  grade = vi.fn().mockResolvedValue(REGRADED),
+  enqueue = vi.fn().mockResolvedValue(QUEUED),
   role = "admin",
-  latest = gradingResponse(),
+  latest = gradingResponse({ judge: JUDGE_A }),
   session = SESSION,
   runs = vi.fn().mockResolvedValue([gradingRunSummary()]),
+  selectedRunId = null,
+  gradingActive = false,
 }: {
   rubrics?: Partial<RubricsGateway>;
-  grade?: GradingGateway["grade"];
+  enqueue?: GradingGateway["enqueue"];
   role?: Role | null;
   latest?: SessionGradingResponse | null;
   session?: typeof SESSION;
   runs?: GradingGateway["runs"];
+  selectedRunId?: string | null;
+  gradingActive?: boolean;
 } = {}) {
   const rubricsGateway = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]), ...rubrics });
-  const gradingGateway: GradingGateway = { grade, results: vi.fn(), sessions: vi.fn(), runs };
+  const gradingGateway: GradingGateway = { results: vi.fn(), sessions: vi.fn(), enqueue, progress: vi.fn(), runs, run: vi.fn(), estimate: vi.fn(() => Promise.resolve(gradeEstimate())) };
   const onChanged = vi.fn();
+  const onSelectRun = vi.fn();
+  const onQueued = vi.fn();
   render(
     <ToastProvider>
       <RegradeSection
@@ -44,14 +56,19 @@ function setup({
         latest={latest}
         gradingGateway={gradingGateway}
         rubricsGateway={rubricsGateway}
+        judgeApi={judgeApi}
+        selectedRunId={selectedRunId}
+        onSelectRun={onSelectRun}
         onChanged={onChanged}
+        gradingActive={gradingActive}
+        onQueued={onQueued}
       />
     </ToastProvider>,
   );
-  return { rubricsGateway, gradingGateway, onChanged, user: userEvent.setup() };
+  return { rubricsGateway, gradingGateway, onChanged, onSelectRun, onQueued, user: userEvent.setup() };
 }
 
-describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
+describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai lain)", () => {
   // Positive: graded with v1 and v2 exists, so the Admin can re-grade.
   it("offers the button to an Admin when a newer rubric version exists", async () => {
     // Arrange / Act
@@ -69,8 +86,8 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     await user.click(await screen.findByRole("button", { name: BUTTON }));
 
     // Assert
-    const dialog = within(screen.getByRole("dialog", { name: "Nilai ulang dengan versi terbaru?" }));
-    expect(dialog.getByText(/akan dinilai ulang dengan Versi 2/)).toBeInTheDocument();
+    const dialog = within(screen.getByRole("dialog", { name: "Nilai ulang sesi ini?" }));
+    expect(dialog.getByLabelText("Versi rubrik")).toHaveValue("v2");
     expect(dialog.getByText(/Hasil lama tetap tersimpan/)).toBeInTheDocument();
   });
 
@@ -89,7 +106,6 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
   it.each([
     ["no rubric version", { rubrics: { listVersions: vi.fn().mockResolvedValue([]) } }, "Belum ada versi rubrik. Buat versi rubrik dulu di halaman Rubrik."],
     ["a session never graded", { latest: null }, "Sesi ini belum pernah dinilai. Gunakan tombol Nilai terlebih dahulu."],
-    ["a result already on the newest version", { latest: gradingResponse({ rubric_version: "v2" }) }, "Hasil terbaru sudah memakai versi rubrik terbaru."],
     [
       "an archived session",
       { session: { ...SESSION, archived_at: "2026-11-07T03:00:00Z" } },
@@ -102,6 +118,15 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     // Assert
     expect(await screen.findByText(reason)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: BUTTON })).toBeDisabled();
+  });
+
+  // K-17: the newest version was already used, but another judge can still grade the same answers.
+  it("keeps the button on when the latest result already used the newest version", async () => {
+    // Arrange / Act
+    setup({ latest: gradingResponse({ rubric_version: "v2", judge: JUDGE_A }) });
+
+    // Assert
+    expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
   });
 
   // State: nothing is shown while the versions load, so the button does not flash on and off.
@@ -186,21 +211,34 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     expect(await screen.findByText("Belum ada hasil penilaian untuk sesi ini.")).toBeInTheDocument();
   });
 
-  // Positive: after the re-grade the dialog closes, the page reloads the result and the Admin is told.
-  it("closes the dialog, asks the page to reload and says the re-grade finished", async () => {
+  // K-13 (SCRUM-285): the dialog closes once the re-grade is queued; the page follows its progress
+  // and reloads the result when the run ends, so nothing is reloaded yet.
+  it("closes the dialog once the re-grade is queued, hands the run to the page and says it runs in the background", async () => {
     // Arrange
-    const { user, gradingGateway, onChanged } = setup();
+    const { user, gradingGateway, onChanged, onQueued } = setup();
     await user.click(await screen.findByRole("button", { name: BUTTON }));
+    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
 
     // Act
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Nilai ulang" }));
 
     // Assert
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(gradingGateway.grade).toHaveBeenCalledWith("s-1", "v2");
-    expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(gradingGateway.runs).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText("Penilaian ulang selesai dengan Versi 2.")).toBeInTheDocument();
+    expect(gradingGateway.enqueue).toHaveBeenCalledWith("s-1", { rubricVersion: "v2", judgeProviderId: "judge-a" });
+    expect(onQueued).toHaveBeenCalledWith(QUEUED);
+    expect(onChanged).not.toHaveBeenCalled();
+    expect(await screen.findByText("Penilaian ulang berjalan di latar belakang.")).toBeInTheDocument();
+  });
+
+  it("keeps the button off and says why while grading runs in the background", async () => {
+    // Arrange / Act
+    setup({ gradingActive: true });
+
+    // Assert
+    expect(await screen.findByRole("button", { name: BUTTON })).toBeDisabled();
+    expect(
+      screen.getByText("Penilaian sesi ini sedang berjalan di latar belakang. Nilai ulang bisa dipakai lagi setelah selesai."),
+    ).toBeInTheDocument();
   });
 
   // Negative: backing out starts nothing and reloads nothing.
@@ -214,7 +252,7 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
 
     // Assert
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(gradingGateway.grade).not.toHaveBeenCalled();
+    expect(gradingGateway.enqueue).not.toHaveBeenCalled();
     expect(onChanged).not.toHaveBeenCalled();
   });
 
@@ -222,9 +260,10 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
   it("asks the page to reload when the dialog is closed after an error", async () => {
     // Arrange
     const refusal = new ApiError(409, "SESSION_NOT_GRADABLE");
-    const { user, onChanged, gradingGateway } = setup({ grade: vi.fn().mockRejectedValue(refusal) });
+    const { user, onChanged, gradingGateway } = setup({ enqueue: vi.fn().mockRejectedValue(refusal) });
     await user.click(await screen.findByRole("button", { name: BUTTON }));
     const dialog = within(screen.getByRole("dialog"));
+    await screen.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai ulang" }));
     await dialog.findByRole("alert");
 
@@ -235,5 +274,37 @@ describe("RegradeSection (AC7: Nilai ulang dengan versi terbaru)", () => {
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
     expect(gradingGateway.runs).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // K-17/K-18: an older run can be opened from the history.
+  it("tells the page when the Admin opens an older run", async () => {
+    // Arrange
+    const history = [
+      gradingRunSummary({ grading_run_id: "run-2", kind: "regrade", triggered_at: "2026-11-07T05:00:00Z" }),
+      gradingRunSummary({ grading_run_id: "run-1", is_latest: false, triggered_at: "2026-11-07T03:00:00Z" }),
+    ];
+    const { user, onSelectRun } = setup({ runs: vi.fn().mockResolvedValue(history) });
+    const list = await screen.findByRole("list", { name: "Riwayat penilaian" });
+    const [, older] = within(list).getAllByRole("listitem");
+
+    // Act
+    await user.click(within(older).getByRole("button"));
+
+    // Assert
+    expect(onSelectRun).toHaveBeenCalledWith("run-1");
+  });
+
+  // Edge: a result graded before server#134 has no judge, so the dialog asks for one before re-grading.
+  it("asks for a judge when the latest result has none", async () => {
+    // Arrange
+    const { user } = setup({ latest: gradingResponse({ judge: null }) });
+
+    // Act
+    await user.click(await screen.findByRole("button", { name: BUTTON }));
+
+    // Assert
+    const dialog = within(screen.getByRole("dialog", { name: "Nilai ulang sesi ini?" }));
+    await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
+    expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
   });
 });

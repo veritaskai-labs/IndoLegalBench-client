@@ -1,5 +1,6 @@
 import { ApiError } from "@/lib/apiClient";
 import type { Role } from "@/types";
+import type { GradedRunListItem, GradingJudge, GradingProgress } from "@/types/grading";
 import type { SessionDetail, SessionStatus } from "@/types/measurement";
 
 /** Sama dengan GRADABLE_SESSION_STATUSES di server#114 (ensure_session_gradable). */
@@ -62,6 +63,21 @@ const GRADE_ERRORS: Record<string, string> = {
   NOT_COMPLETE: "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai.",
   MANUAL_SESSION_STATUS_INVALID: "Status sesi manual tidak valid untuk dinilai.",
   ANSWERS_CHANGED_DURING_GRADING: "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi.",
+  // server#134: judge pilihan Admin sudah nonaktif atau bukan produk otomatis.
+  JUDGE_NOT_ELIGIBLE: "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain.",
+  // server#136: tanpa judge di permintaan maupun sesi (K-14, SCRUM-281).
+  JUDGE_REQUIRED: "Pilih LLM judge dulu sebelum menilai.",
+  // server#142: masih ada run yang antre atau berjalan untuk sesi ini (K-13).
+  GRADING_IN_PROGRESS: "Penilaian sesi ini masih berjalan. Tunggu sampai selesai; progresnya tampil di halaman sesi.",
+};
+
+// Perkiraan biaya (server#135): kode yang sama dengan /grade ikut kalimatnya, ditambah kode judge.
+const ESTIMATE_ERRORS: Record<string, string> = {
+  ...GRADE_ERRORS,
+  JUDGE_PRICING_MISSING:
+    "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia.",
+  JUDGE_NOT_CONFIGURED: "Sesi ini belum punya penilai LLM dan belum ada yang dipilih.",
+  JUDGE_PROVIDER_NOT_FOUND: "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman.",
 };
 
 const RESULTS_ERRORS: Record<string, string> = {
@@ -77,6 +93,10 @@ function messageFor(table: Record<string, string>, error: unknown, fallback: str
 
 export function gradeErrorMessage(error: unknown): string {
   return messageFor(GRADE_ERRORS, error, "Penilaian gagal. Coba lagi.");
+}
+
+export function estimateErrorMessage(error: unknown): string {
+  return messageFor(ESTIMATE_ERRORS, error, "Perkiraan biaya gagal dimuat. Coba lagi.");
 }
 
 export function resultsErrorMessage(error: unknown): string {
@@ -96,8 +116,102 @@ const RUNS_ERRORS: Record<string, string> = {
   // server#122: riwayat penilaian hanya untuk Admin.
   FORBIDDEN: "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman.",
   MEASUREMENT_NOT_FOUND: NOT_FOUND,
+  // server#134: run yang dibuka bukan milik sesi ini (atau sudah tidak ada).
+  GRADING_RUN_NOT_FOUND: "Hasil penilaian ini tidak ditemukan. Muat ulang halaman.",
 };
 
 export function runsErrorMessage(error: unknown): string {
   return messageFor(RUNS_ERRORS, error, "Gagal memuat riwayat penilaian. Coba lagi.");
+}
+
+const RUN_RESULTS_ERRORS: Record<string, string> = {
+  // server#141: hasil run sesi yang masih berjalan hanya untuk Admin; peran lain dijawab 403 juga.
+  FORBIDDEN: "Hasil penilaian sesi yang masih berjalan hanya dapat dilihat Admin.",
+  MEASUREMENT_NOT_FOUND: NOT_FOUND,
+  GRADING_RUN_NOT_FOUND: "Hasil penilaian ini tidak ditemukan. Muat ulang halaman.",
+};
+
+/** Pesan untuk membuka satu run dari Laporan; run yang tidak ada adalah kesalahan, bukan "belum dinilai". */
+export function runResultsErrorMessage(error: unknown): string {
+  return messageFor(RUN_RESULTS_ERRORS, error, "Gagal memuat hasil penilaian. Coba lagi.");
+}
+
+const PROGRESS_ERRORS: Record<string, string> = {
+  // server#142: progres penilaian hanya untuk Admin.
+  FORBIDDEN: "Progres penilaian hanya dapat dilihat Admin. Muat ulang halaman.",
+  MEASUREMENT_NOT_FOUND: NOT_FOUND,
+};
+
+/** Pesan bila progres penilaian gagal dibaca (GET /grading-progress, K-13). */
+export function progressErrorMessage(error: unknown): string {
+  return messageFor(PROGRESS_ERRORS, error, "Gagal memuat progres penilaian. Coba lagi.");
+}
+
+const NOTHING_SAVED = "Tidak ada hasil yang tersimpan.";
+
+// Kode di grading_run_progress.error_code (server#143, #144). Kode baru cukup satu baris di sini.
+// Run gagal tidak menyimpan hasil, jadi setiap alasan ditutup NOTHING_SAVED.
+const FAILURE_REASONS: Record<string, string> = {
+  judge_not_configured: "LLM judge belum dipilih untuk penilaian ini. Pilih judge lalu coba lagi.",
+  judge_unavailable: "LLM judge tidak dapat dihubungi. Periksa produk LLM judge di halaman Penyedia lalu coba lagi.",
+  judge_pricing_missing: "Harga token produk LLM judge belum lengkap. Lengkapi harga masuk dan keluar di halaman Penyedia.",
+  judge_budget_exhausted: "Anggaran bulanan produk LLM judge habis. Tambah anggarannya di halaman Penyedia atau pilih judge lain.",
+  judge_incomplete: "LLM judge tidak memberi penilaian yang lengkap. Coba nilai ulang.",
+  NO_SCORE: "Tidak ada jawaban yang dapat diberi skor, misalnya karena semua jawaban kosong atau ditolak.",
+  GRADING_INTERRUPTED: "Penilaian terhenti di tengah jalan karena layanan penilai berhenti.",
+  SESSION_ARCHIVED: "Sesi diarsipkan saat penilaian berjalan.",
+  ANSWERS_CHANGED_DURING_GRADING: "Jawaban berubah saat penilaian berjalan.",
+  GRADING_ERROR: "Terjadi kesalahan saat menilai.",
+};
+
+/** Sesi yang diarsipkan tidak bisa dinilai lagi, jadi mengulang run yang gagal karenanya hanya akan ditolak server. */
+const NOT_RETRYABLE: ReadonlySet<string> = new Set(["SESSION_ARCHIVED"]);
+
+/** Judul dan tombol dialog konfirmasi "Coba Nilai Ulang", dipakai halaman sesi dan halaman sesi manual. */
+export const RETRY_GRADING_DIALOG = { title: "Coba nilai ulang sesi ini?", confirmLabel: "Coba Nilai Ulang" } as const;
+
+/** Apakah run yang gagal dengan error_code ini layak ditawari "Coba Nilai Ulang". Kode yang belum dikenal boleh dicoba. */
+export function canRetryGrading(errorCode: string | null | undefined): boolean {
+  return !(errorCode && NOT_RETRYABLE.has(errorCode));
+}
+
+/** Alasan run di latar belakang gagal, dari error_code progres; kode yang belum dikenal tetap dijelaskan. */
+export function gradingFailureMessage(errorCode: string | null | undefined): string {
+  const reason = errorCode ? FAILURE_REASONS[errorCode] : undefined;
+  return reason ? `${reason} ${NOTHING_SAVED}` : NOTHING_SAVED;
+}
+
+/** Run yang masih antre atau sedang dinilai worker: server menolak penilaian baru (409 GRADING_IN_PROGRESS). */
+export function isGradingActive(progress: Pick<GradingProgress, "status"> | null): boolean {
+  return progress?.status === "queued" || progress?.status === "running";
+}
+
+/**
+ * LLM judge satu run untuk kolom Laporan: produk dan model yang dilaporkan. Null bila run lama tidak
+ * punya judge, supaya tampilan memilih tanda kosongnya sendiri.
+ */
+export function judgeLabel(judge: GradingJudge | null | undefined): string | null {
+  if (!judge) return null;
+  const parts = [judge.name, judge.model_version].filter((part): part is string => Boolean(part));
+  return parts.length === 0 ? "Judge tidak diketahui" : parts.join(" · ");
+}
+
+/**
+ * LLM judge di ringkasan hasil penilaian (K-11, SCRUM-291): klien perlu tahu AI mana yang menilai.
+ * Run lama yang dinilai sebelum judge dicatat tetap diberi keterangan, supaya barisnya tidak hilang
+ * dan tidak dikira galat.
+ */
+export function resultJudgeText(judge: GradingJudge | null | undefined): string {
+  return judgeLabel(judge) ?? "tidak tercatat";
+}
+
+/** Halaman satu run di Laporan. Kedua id berasal dari server, jadi di-encode supaya tidak mengubah path. */
+export function reportRunHref(item: Pick<GradedRunListItem, "session_id" | "grading_run_id">): string {
+  return `/reports/sessions/${encodeURIComponent(item.session_id)}/runs/${encodeURIComponent(item.grading_run_id)}`;
+}
+
+/** Status satu baris Laporan: gagal dinilai, atau run terbaru, atau run yang sudah digantikan nilai ulang. */
+export function reportRunStatusLabel(item: Pick<GradedRunListItem, "status" | "is_latest">): string {
+  if (item.status === "failed") return "Gagal dinilai";
+  return item.is_latest ? "Terbaru" : "Sebelumnya";
 }

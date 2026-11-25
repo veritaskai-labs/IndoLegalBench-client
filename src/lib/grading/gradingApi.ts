@@ -1,22 +1,56 @@
 import { apiFetch } from "@/lib/apiClient";
-import type { GradedSessionListItem, GradingRunSummary, SessionGradingResponse } from "@/types/grading";
+import type {
+  GradeEstimate,
+  GradedRunListItem,
+  GradingProgress,
+  GradingRunQueued,
+  GradingRunSummary,
+  SessionGradingResponse,
+} from "@/types/grading";
 
 /**
  * Pintu ke server untuk penilaian sesi (PBI-14). Hook dan komponen bergantung pada interface ini,
  * bukan pada fetch, jadi test-nya memakai gateway palsu, dan implementasi HTTP-nya bisa diganti
  * tanpa menyentuh tampilan. Polanya sama dengan RubricsGateway di SCRUM-228.
  */
+/** Pilihan Admin saat menilai (AC6, AC7, K-17/K-18). Yang kosong memakai bawaan server. */
+export interface GradeOptions {
+  /** Label versi rubrik, mis. "v2". Kosong: versi rubrik aktif. */
+  rubricVersion?: string;
+  /** LLM judge (produk AI otomatis yang aktif). Kosong: judge sesi. */
+  judgeProviderId?: string;
+}
+
 export interface GradingGateway {
-  /** Tanpa versi: versi rubrik aktif. Dengan versi (mis. "v2"): nilai ulang dengan versi itu (AC7). */
-  grade(sessionId: string, rubricVersion?: string): Promise<SessionGradingResponse>;
+  /**
+   * Antre penilaian, pertama kali maupun ulang (AC6, AC7). Tanpa pilihan: versi rubrik aktif dan judge
+   * sesi. Server langsung membalas 202 dan worker yang memanggil judge (K-13); progresnya lewat progress.
+   */
+  enqueue(sessionId: string, options?: GradeOptions): Promise<GradingRunQueued>;
+  /** Progres run terbaru (Admin). Null bila sesi belum pernah dinilai. passive untuk polling (SCRUM-251). */
+  progress(sessionId: string, read?: { activity?: "passive" }): Promise<GradingProgress | null>;
+  /** Perkiraan biaya penilaian dengan pilihan yang sama seperti enqueue, tanpa memanggil judge (Admin, AC6). */
+  estimate(sessionId: string, options?: GradeOptions): Promise<GradeEstimate>;
   results(sessionId: string): Promise<SessionGradingResponse>;
   /** Riwayat penilaian sesi, terbaru di atas (Admin, AC7). Kosong bila sesi belum pernah dinilai. */
   runs(sessionId: string): Promise<GradingRunSummary[]>;
-  sessions(): Promise<GradedSessionListItem[]>;
+  /** Satu run lengkap dengan kasusnya, termasuk run lama atau judge lain (Admin, server#134). */
+  run(sessionId: string, runId: string): Promise<SessionGradingResponse>;
+  /** Daftar Laporan: satu baris per grading run, termasuk run lama dan judge lain (server#137). */
+  sessions(): Promise<GradedRunListItem[]>;
 }
 
 function sessionPath(sessionId: string, action: string): string {
   return `/measurements/${encodeURIComponent(sessionId)}/${action}`;
+}
+
+/** Body POST /grading-runs dan /grade/estimate: hanya pilihan yang diisi, tanpa body bila tidak ada pilihan. */
+export function gradeBody(options: GradeOptions = {}): string | undefined {
+  const body = {
+    ...(options.rubricVersion === undefined ? {} : { rubric_version: options.rubricVersion }),
+    ...(options.judgeProviderId === undefined ? {} : { judge_provider_id: options.judgeProviderId }),
+  };
+  return Object.keys(body).length === 0 ? undefined : JSON.stringify(body);
 }
 
 /**
@@ -26,15 +60,41 @@ function sessionPath(sessionId: string, action: string): string {
  */
 export const httpGradingGateway: GradingGateway = {
   /**
-   * POST /measurements/{id}/grade (Admin, AC6, AC7). Tanpa versi tidak ada body: server memakai
-   * versi rubrik aktif. Dengan versi, body { rubric_version }: hasil lama tetap tersimpan.
+   * POST /measurements/{id}/grading-runs (Admin, server#142). Server hanya mencatat run queued dan
+   * membalas 202, jadi dialog tidak menunggu judge. Nilai ulang menambah run baru; hasil lama tetap.
+   * 409 GRADING_IN_PROGRESS bila masih ada run yang antre atau berjalan.
    */
-  grade: (sessionId, rubricVersion) =>
-    apiFetch<SessionGradingResponse>(sessionPath(sessionId, "grade"), {
+  enqueue: (sessionId, options) => {
+    const body = gradeBody(options);
+    return apiFetch<GradingRunQueued>(sessionPath(sessionId, "grading-runs"), {
       method: "POST",
-      ...(rubricVersion === undefined ? {} : { body: JSON.stringify({ rubric_version: rubricVersion }) }),
+      ...(body === undefined ? {} : { body }),
       silentForbidden: true,
+    });
+  },
+
+  /**
+   * GET /measurements/{id}/grading-progress (Admin, server#142). Bacaan pertama dan Coba lagi aktif;
+   * polling tiap 5 detik passive, supaya halaman yang dibiarkan terbuka tetap bisa kedaluwarsa.
+   */
+  progress: (sessionId, read) =>
+    apiFetch<GradingProgress | null>(sessionPath(sessionId, "grading-progress"), {
+      silentForbidden: true,
+      ...(read?.activity === "passive" ? { activity: "passive" as const } : {}),
     }),
+
+  /**
+   * POST /measurements/{id}/grade/estimate (Admin, AC6, server#135). Body sama dengan enqueue, jadi
+   * perkiraan memakai judge dan versi rubrik yang sama dengan penilaian yang diumumkannya.
+   */
+  estimate: (sessionId, options) => {
+    const body = gradeBody(options);
+    return apiFetch<GradeEstimate>(sessionPath(sessionId, "grade/estimate"), {
+      method: "POST",
+      ...(body === undefined ? {} : { body }),
+      silentForbidden: true,
+    });
+  },
 
   /** GET /measurements/{id}/results (AC8): penilaian terbaru, sudah disamarkan server sesuai peran. */
   results: (sessionId) =>
@@ -44,10 +104,17 @@ export const httpGradingGateway: GradingGateway = {
   runs: (sessionId) =>
     apiFetch<GradingRunSummary[]>(sessionPath(sessionId, "grading-runs"), { silentForbidden: true }),
 
+  /** GET /measurements/{id}/grading-runs/{run_id} (Admin, server#134): run lain dari sesi yang sama. */
+  run: (sessionId, runId) =>
+    apiFetch<SessionGradingResponse>(sessionPath(sessionId, `grading-runs/${encodeURIComponent(runId)}`), {
+      silentForbidden: true,
+    }),
+
   /**
-   * GET /results/sessions (Admin, Viewer; keputusan PO): sesi selesai yang sudah dinilai, untuk
-   * dipilih di Laporan. Server juga punya /measurements/results/sessions dengan isi yang sama; yang
-   * dipakai jalur ini, sesuai usulan di review server#114.
+   * GET /results/sessions (Admin, Viewer, Kontributor): satu baris per grading run dari sesi selesai,
+   * untuk dipilih di Laporan. Nilai ulang menambah baris, baris lama tetap ada (server#137). Server
+   * juga punya /measurements/results/sessions dengan isi yang sama; yang dipakai jalur ini, sesuai
+   * usulan di review server#114.
    */
-  sessions: () => apiFetch<GradedSessionListItem[]>("/results/sessions", { silentForbidden: true }),
+  sessions: () => apiFetch<GradedRunListItem[]>("/results/sessions", { silentForbidden: true }),
 };

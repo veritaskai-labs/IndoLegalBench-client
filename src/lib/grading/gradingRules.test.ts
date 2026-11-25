@@ -6,9 +6,16 @@ import type { SessionStatus } from "@/types/measurement";
 import {
   canGrade,
   canSeeGradedSessions,
+  estimateErrorMessage,
   gradeErrorMessage,
+  gradingFailureMessage,
   isNotGraded,
+  judgeLabel,
+  reportRunHref,
+  resultJudgeText,
+  reportRunStatusLabel,
   resultsErrorMessage,
+  runResultsErrorMessage,
   runsErrorMessage,
   sessionsErrorMessage,
 } from "./gradingRules";
@@ -89,6 +96,8 @@ describe("gradeErrorMessage", () => {
     // that, so the message says what has to happen first (review on #77).
     [new ApiError(409, "RUBRIC_NOT_ACTIVE"), "Belum ada versi rubrik yang aktif. Aktifkan satu versi rubrik dulu, lalu nilai lagi."],
     [new ApiError(409, "NOT_COMPLETE"), "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai."],
+    // SCRUM-280: the chosen judge was turned off or is not an automatic product any more.
+    [new ApiError(422, "JUDGE_NOT_ELIGIBLE"), "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain."],
     [new ApiError(409, "MANUAL_SESSION_STATUS_INVALID"), "Status sesi manual tidak valid untuk dinilai."],
     [new ApiError(409, "ANSWERS_CHANGED_DURING_GRADING"), "Jawaban berubah selama proses penilaian berjalan. Muat ulang dan coba lagi."],
   ])("explains %s", (error, message) => {
@@ -162,6 +171,8 @@ describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", (
     // The history is Admin only (server#122); a role change while the page is open lands here.
     [new ApiError(403, "FORBIDDEN"), "Riwayat penilaian hanya dapat dilihat Admin. Muat ulang halaman."],
     [new ApiError(404, "MEASUREMENT_NOT_FOUND"), "Sesi tidak ditemukan. Muat ulang halaman."],
+    // SCRUM-283: opening one run that no longer belongs to this session.
+    [new ApiError(404, "GRADING_RUN_NOT_FOUND"), "Hasil penilaian ini tidak ditemukan. Muat ulang halaman."],
   ])("explains %s", (error, message) => {
     expect(runsErrorMessage(error)).toBe(message);
   });
@@ -172,5 +183,161 @@ describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", (
     ["a non-error value", "boom"],
   ])("falls back to a retry message for %s", (_name, error) => {
     expect(runsErrorMessage(error)).toBe("Gagal memuat riwayat penilaian. Coba lagi.");
+  });
+});
+
+describe("estimateErrorMessage (PBI-14 AC6)", () => {
+  it.each([
+    [new ApiError(422, "JUDGE_PRICING_MISSING"), "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia."],
+    [new ApiError(422, "JUDGE_NOT_CONFIGURED"), "Sesi ini belum punya penilai LLM dan belum ada yang dipilih."],
+    [new ApiError(404, "JUDGE_PROVIDER_NOT_FOUND"), "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman."],
+    // Same codes and words as the grade request, so the estimate and the grading never disagree.
+    [new ApiError(422, "JUDGE_NOT_ELIGIBLE"), "Penilai yang dipilih tidak aktif atau bukan produk otomatis. Pilih penilai lain."],
+    [new ApiError(404, "RUBRIC_VERSION_NOT_FOUND"), "Versi rubrik yang dipilih tidak ditemukan. Muat ulang halaman."],
+    [new ApiError(409, "SESSION_ARCHIVED"), "Sesi yang sudah diarsipkan tidak bisa dinilai."],
+    [new ApiError(409, "NOT_COMPLETE"), "Semua kasus dan percobaan harus terisi sebelum sesi manual dapat dinilai."],
+    [new ApiError(403, "FORBIDDEN"), "Hanya Admin yang bisa memicu penilaian. Muat ulang halaman."],
+  ])("explains %s", (error, message) => {
+    expect(estimateErrorMessage(error)).toBe(message);
+  });
+
+  it.each([
+    ["an unknown code", new ApiError(500, "INTERNAL_ERROR")],
+    ["a network error", new TypeError("Failed to fetch")],
+    ["a non-error value", "boom"],
+  ])("falls back to a retry message for %s", (_name, error) => {
+    expect(estimateErrorMessage(error)).toBe("Perkiraan biaya gagal dimuat. Coba lagi.");
+  });
+});
+
+describe("judgeLabel (Laporan, LLM judge column)", () => {
+  it("names the judge product and the model it reported", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2" })).toBe("Judge Alfa · alfa-2");
+  });
+
+  // Edge: the judge gave no answer, so no model was reported.
+  it("shows the product name alone when no model was reported", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: "Judge Alfa", model_version: null })).toBe("Judge Alfa");
+  });
+
+  it("shows the model alone when the product name is missing", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: null, model_version: "alfa-2" })).toBe("alfa-2");
+  });
+
+  it("says the judge is unknown when the product has neither a name nor a model", () => {
+    expect(judgeLabel({ judge_provider_id: "j-1", name: null, model_version: null })).toBe("Judge tidak diketahui");
+  });
+
+  // Edge: runs graded before the judge was recorded have no judge at all.
+  it.each([null, undefined])("returns null for a run without a judge (%s)", (judge) => {
+    expect(judgeLabel(judge)).toBeNull();
+  });
+});
+
+describe("resultJudgeText (K-11, SCRUM-291: LLM judge di ringkasan hasil penilaian)", () => {
+  // Positif: klien melihat nama produk dan model yang menilai, sesuai permintaan K-11.
+  it("names the judge product and the model", () => {
+    // Arrange
+    const judge = { judge_provider_id: "j-1", name: "Judge Alfa", model_version: "alfa-2" };
+
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("Judge Alfa · alfa-2");
+  });
+
+  // Edge: judge gagal menjawab sehingga model tidak dilaporkan; nama produknya tetap tampil.
+  it("shows the product name alone when no model was reported", () => {
+    // Arrange
+    const judge = { judge_provider_id: "j-1", name: "Judge Alfa", model_version: null };
+
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("Judge Alfa");
+  });
+
+  // Edge: produk judge sudah dihapus dan modelnya tidak tercatat, tetapi run-nya memang punya judge.
+  it("says the judge is unknown when it has neither a name nor a model", () => {
+    // Arrange
+    const judge = { judge_provider_id: "j-1", name: null, model_version: null };
+
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("Judge tidak diketahui");
+  });
+
+  // Negatif: run lama dinilai sebelum judge dicatat; ringkasan menyebutnya, bukan menampilkan kosong.
+  it.each([null, undefined])("says the judge was not recorded for a run without a judge (%s)", (judge) => {
+    // Act
+    const text = resultJudgeText(judge);
+
+    // Assert
+    expect(text).toBe("tidak tercatat");
+  });
+});
+
+describe("reportRunHref (Laporan, open the clicked run)", () => {
+  it("points at the run under its session", () => {
+    expect(reportRunHref({ session_id: "s-1", grading_run_id: "run-9" })).toBe("/reports/sessions/s-1/runs/run-9");
+  });
+
+  // Security: both ids come from the server, so neither may change the path.
+  it("encodes both ids", () => {
+    expect(reportRunHref({ session_id: "a/b?c", grading_run_id: "x#y" })).toBe("/reports/sessions/a%2Fb%3Fc/runs/x%23y");
+  });
+});
+
+describe("reportRunStatusLabel", () => {
+  it.each([
+    ["completed", true, "Terbaru"],
+    ["completed", false, "Sebelumnya"],
+    ["failed", true, "Gagal dinilai"],
+    ["failed", false, "Gagal dinilai"],
+  ])("labels a %s run (latest: %s) as %s", (status, isLatest, expected) => {
+    expect(reportRunStatusLabel({ status, is_latest: isLatest })).toBe(expected);
+  });
+});
+
+describe("runResultsErrorMessage (open one run under Laporan)", () => {
+  it.each([
+    ["FORBIDDEN", "Hasil penilaian sesi yang masih berjalan hanya dapat dilihat Admin."],
+    ["MEASUREMENT_NOT_FOUND", "Sesi tidak ditemukan. Muat ulang halaman."],
+    ["GRADING_RUN_NOT_FOUND", "Hasil penilaian ini tidak ditemukan. Muat ulang halaman."],
+  ])("explains %s", (code, message) => {
+    expect(runResultsErrorMessage(new ApiError(404, code))).toBe(message);
+  });
+
+  it("falls back to a general message for an unknown error", () => {
+    expect(runResultsErrorMessage(new TypeError("Failed to fetch"))).toBe("Gagal memuat hasil penilaian. Coba lagi.");
+  });
+});
+
+describe("gradingFailureMessage (K-19, SCRUM-290: alasan run gagal dari error_code)", () => {
+  const NOTHING_SAVED = "Tidak ada hasil yang tersimpan.";
+
+  // Positive: every code the server stores in grading_run_progress.error_code has its own sentence.
+  it.each([
+    ["judge_not_configured", "LLM judge belum dipilih untuk penilaian ini. Pilih judge lalu coba lagi."],
+    ["judge_unavailable", "LLM judge tidak dapat dihubungi. Periksa produk LLM judge di halaman Penyedia lalu coba lagi."],
+    ["judge_pricing_missing", "Harga token produk LLM judge belum lengkap. Lengkapi harga masuk dan keluar di halaman Penyedia."],
+    ["judge_budget_exhausted", "Anggaran bulanan produk LLM judge habis. Tambah anggarannya di halaman Penyedia atau pilih judge lain."],
+    ["judge_incomplete", "LLM judge tidak memberi penilaian yang lengkap. Coba nilai ulang."],
+    ["NO_SCORE", "Tidak ada jawaban yang dapat diberi skor, misalnya karena semua jawaban kosong atau ditolak."],
+    ["GRADING_INTERRUPTED", "Penilaian terhenti di tengah jalan karena layanan penilai berhenti."],
+    ["SESSION_ARCHIVED", "Sesi diarsipkan saat penilaian berjalan."],
+    ["ANSWERS_CHANGED_DURING_GRADING", "Jawaban berubah saat penilaian berjalan."],
+    ["GRADING_ERROR", "Terjadi kesalahan saat menilai."],
+  ])("explains %s and says nothing was saved", (code, reason) => {
+    expect(gradingFailureMessage(code)).toBe(`${reason} ${NOTHING_SAVED}`);
+  });
+
+  // Negative and edge: a code this client does not know yet must not hide the failure or leak the raw code.
+  it.each([["SOMETHING_NEW"], [""], [null], [undefined]])("falls back to a general sentence for %j", (code) => {
+    expect(gradingFailureMessage(code)).toBe(NOTHING_SAVED);
   });
 });

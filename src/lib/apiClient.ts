@@ -106,6 +106,9 @@ function missingSections(value: unknown): MissingSection[] {
   );
 }
 
+/** Codes whose extra fields the server sends at the top level of the body, kept as ApiError.details. */
+const FLAT_DETAIL_CODES: ReadonlySet<string> = new Set(["REPORT_NOT_COMPARABLE", "REPORT_SESSION_NOT_FOUND"]);
+
 /** Read JSON error backend: { code, message, field? } */
 async function parseError(response: Response): Promise<ApiError> {
   let code = "UNKNOWN_ERROR";
@@ -131,6 +134,10 @@ async function parseError(response: Response): Promise<ApiError> {
         remaining_budget_idr: b.remaining_budget_idr,
         estimated_cost_idr: b.estimated_cost_idr,
       };
+    } else if (FLAT_DETAIL_CODES.has(code) && typeof body === "object" && body !== null && !Array.isArray(body)) {
+      // Server puts DomainError details at the top level ({**details, code, message}); for these codes the
+      // page needs them (report reasons, missing session ids). Readers pick their own keys and check types.
+      details = { ...(body as Record<string, unknown>) };
     }
   } catch {
     // bukan JSON: halaman error HTML, balasan kosong, atau koneksi terputus.

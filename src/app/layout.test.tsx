@@ -3,8 +3,8 @@ import { metadata } from "./layout";
 
 // next/font only works inside the Next.js build; here only the exported metadata matters.
 vi.mock("next/font/google", () => ({
-  Geist: () => ({ variable: "font-sans" }),
-  Geist_Mono: () => ({ variable: "font-mono" }),
+  Hanken_Grotesk: () => ({ variable: "font-sans" }),
+  Source_Serif_4: () => ({ variable: "font-serif" }),
 }));
 
 describe("RootLayout metadata", () => {

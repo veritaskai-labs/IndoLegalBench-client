@@ -55,6 +55,14 @@ beforeEach(() => {
 });
 
 describe("SuitesPage", () => {
+  it.each(["admin", "contributor"] as const)("offers the case list to %s", (role) => {
+    signedInAs(role);
+    render(<SuitesPage />);
+
+    expect(screen.getByRole("link", { name: "Suite" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Daftar kasus" })).toHaveAttribute("href", "/cases");
+  });
+
   it("asks for the active suites first", () => {
     render(<SuitesPage />);
 

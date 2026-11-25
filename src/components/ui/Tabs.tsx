@@ -15,7 +15,7 @@ type Props<T extends string> = {
 /** Deretan tab; halaman yang memegang tab aktif dan menampilkan panelnya. */
 export function Tabs<T extends string>({ tabs, active, onChange, label, idPrefix }: Readonly<Props<T>>) {
   return (
-    <div role="tablist" aria-label={label} className="flex gap-1 border-b border-slate-200">
+    <div role="tablist" aria-label={label} className="flex gap-1 border-b border-line-soft">
       {tabs.map(({ id, label: tabLabel }) => {
         const selected = id === active;
         return (
@@ -27,10 +27,10 @@ export function Tabs<T extends string>({ tabs, active, onChange, label, idPrefix
             aria-selected={selected}
             aria-controls={tabPanelId(idPrefix, id)}
             onClick={() => onChange(id)}
-            className={`-mb-px cursor-pointer border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+            className={`-mb-px cursor-pointer border-b-2 px-5 pb-3 pt-2 text-sm font-medium transition-colors ${
               selected
-                ? "border-indigo-600 text-indigo-700"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-ink text-ink"
+                : "border-transparent text-ink-soft hover:text-ink"
             }`}
           >
             {tabLabel}

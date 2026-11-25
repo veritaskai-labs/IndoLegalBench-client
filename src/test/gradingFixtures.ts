@@ -1,7 +1,10 @@
 import type {
   AttemptGradeResult,
   CaseGradeResult,
-  GradedSessionListItem,
+  GradeEstimate,
+  GradedRunListItem,
+  GradingProgress,
+  GradingRunQueued,
   GradingRunSummary,
   SessionGradingResponse,
 } from "@/types/grading";
@@ -71,18 +74,68 @@ export function gradingRunSummary(overrides: Partial<GradingRunSummary> = {}): G
     triggered_at: "2026-11-07T03:00:00Z",
     is_latest: true,
     scores: gradingResponse().scores,
+    attempts_graded: 12,
+    attempts_total: 12,
+    attempts_ungraded: 0,
     ...overrides,
   };
 }
 
-/** Satu baris GET /results/sessions (server#114 bff8755): sesi selesai yang sudah dinilai. */
-export function gradedSessionItem(overrides: Partial<GradedSessionListItem> = {}): GradedSessionListItem {
+/** Satu baris GET /results/sessions (server#137, #140): satu grading run dengan judge dan versi rubriknya. Data sintetis. */
+export function gradedRunItem(overrides: Partial<GradedRunListItem> = {}): GradedRunListItem {
   return {
+    grading_run_id: "run-1",
     session_id: "s-1",
     label: "Uji Coba Produk A",
     product_name: "Produk Uji A",
-    finished_at: "2026-11-07T03:00:00Z",
+    session_type: "automatic",
+    judge: { judge_provider_id: "judge-a", name: "Judge Alfa", model_version: "alfa-2", cost_idr: "1500.00" },
     rubric_version: "v1",
+    graded_at: "2026-11-07T03:00:00Z",
+    status: "completed",
+    is_latest: true,
+    scores: gradingResponse().scores,
+    measurement_cost_idr: "0.00",
+    judge_cost_idr: "1500.00",
+    total_cost_idr: "1500.00",
+    ...overrides,
+  };
+}
+
+/** Respons POST /measurements/{id}/grade/estimate (server#135): perkiraan biaya sebelum Nilai. Data sintetis. */
+export function gradeEstimate(overrides: Partial<GradeEstimate> = {}): GradeEstimate {
+  return {
+    judge_provider_id: "judge-a",
+    rubric_version: "v1",
+    attempts_to_grade: 12,
+    judge_calls: 24,
+    estimated_input_tokens: 48000,
+    estimated_output_tokens: 9600,
+    estimated_cost_idr: "15250.50",
+    usd_idr_rate: "16200.00",
+    remaining_budget_idr: "500000.00",
+    budget_sufficient: true,
+    ...overrides,
+  };
+}
+
+/** Balasan 202 POST /measurements/{id}/grading-runs (server#142): run masuk antrean. Data sintetis. */
+export function gradingRunQueued(overrides: Partial<GradingRunQueued> = {}): GradingRunQueued {
+  return { grading_run_id: "run-queued", status: "queued", ...overrides };
+}
+
+/** Respons GET /measurements/{id}/grading-progress (server#142, #143): run yang sedang dinilai. Data sintetis. */
+export function gradingProgress(overrides: Partial<GradingProgress> = {}): GradingProgress {
+  return {
+    grading_run_id: "run-queued",
+    status: "running",
+    attempts_graded: 3,
+    attempts_total: 12,
+    attempts_ungraded: 9,
+    percent: 25,
+    error_code: null,
+    triggered_at: "2026-11-15T03:00:00Z",
+    finished_at: null,
     ...overrides,
   };
 }

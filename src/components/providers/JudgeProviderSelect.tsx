@@ -1,10 +1,11 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import Link from "next/link";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useAuth } from "@/hooks/useAuth";
 import { useJudgeOptions, type JudgeOptionsApi } from "@/hooks/useJudgeOptions";
+import { isUnavailableJudge } from "@/lib/providers/judgeChoice";
 
 type Props = {
   /** Id penilai terpilih; string kosong berarti belum memilih. */
@@ -17,7 +18,7 @@ type Props = {
 const BOX =
   "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
 
-/** Pemilih penilai (LLM judge) dari provider otomatis yang aktif di halaman Provider (PBI-14 AC1). */
+/** Pemilih penilai (LLM judge) dari provider otomatis yang aktif di halaman Penyedia (PBI-14 AC1). */
 export function JudgeProviderSelect({
   value,
   onChange,
@@ -28,6 +29,12 @@ export function JudgeProviderSelect({
   const judges = useJudgeOptions(api);
   const auth = useAuth();
   const isAdmin = auth.status === "authenticated" && auth.user.role === "admin";
+  // Pilihan yang sudah tidak aktif dikosongkan begitu daftarnya diketahui, supaya tampilan
+  // "Pilih provider penilai" dan nilai yang dikirim tidak berbeda (review client#92).
+  const unavailable = judges.status === "ready" && isUnavailableJudge(value, judges.options);
+  useEffect(() => {
+    if (unavailable) onChange("");
+  }, [unavailable, onChange]);
 
   function control() {
     if (judges.status === "error") {
@@ -58,12 +65,12 @@ export function JudgeProviderSelect({
                 href="/admin/providers"
                 className="text-indigo-600 underline"
               >
-                halaman Provider
+                halaman Penyedia
               </Link>
               .
             </>
           ) : (
-            "Minta Admin menambahkannya di halaman Provider."
+            "Minta Admin menambahkannya di halaman Penyedia."
           )}
         </p>
       );

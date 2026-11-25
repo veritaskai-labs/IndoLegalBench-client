@@ -21,10 +21,6 @@ vi.mock("@/lib/providers/providerApi", () => ({
   listProductOptions: vi.fn(),
 }));
 
-vi.mock("@/lib/providers/judgeApi", () => ({
-  listJudgeOptions: vi.fn(),
-}));
-
 vi.mock("@/lib/measurements/measurementApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/measurements/measurementApi")>();
   return {
@@ -35,14 +31,12 @@ vi.mock("@/lib/measurements/measurementApi", async (importOriginal) => {
 });
 
 import { listProductOptions } from "@/lib/providers/providerApi";
-import { listJudgeOptions } from "@/lib/providers/judgeApi";
 import {
   getMeasurementSummary,
   startMeasurement,
 } from "@/lib/measurements/measurementApi";
 
 const mockListProductOptions = vi.mocked(listProductOptions);
-const mockListJudgeOptions = vi.mocked(listJudgeOptions);
 const mockGetMeasurementSummary = vi.mocked(getMeasurementSummary);
 const mockStartMeasurement = vi.mocked(startMeasurement);
 
@@ -71,16 +65,6 @@ const MOCK_SUITES: Suite[] = [
   },
 ];
 
-const JUDGE_DEEPSEEK = "8b47374e-0000-4000-8000-000000000001";
-const MOCK_JUDGES = [
-  {
-    id: JUDGE_DEEPSEEK,
-    name: "DeepSeek V4-Flash",
-    provider_type: "openai_compatible" as const,
-    model_name: "deepseek-v4-flash",
-  },
-];
-
 const MOCK_SUMMARY: SummaryResponse = {
   case_count: 40,
   total_calls: 120,
@@ -102,17 +86,11 @@ describe("CreateMeasurementForm", () => {
       suites: MOCK_SUITES,
       reload: vi.fn(),
     });
-    mockListJudgeOptions.mockResolvedValue(MOCK_JUDGES);
     mockListProductOptions.mockResolvedValue([
       { id: "prod-gemini", name: "Gemini 1.5 Pro", measurement_type: "automatic" },
       { id: "prod-deepseek", name: "DeepSeek-V3", measurement_type: "automatic" },
     ]);
   });
-
-  async function pilihPenilai(user: ReturnType<typeof userEvent.setup>) {
-    const judgeSelect = await screen.findByRole("combobox", { name: /Provider Penilai/i });
-    await user.selectOptions(judgeSelect, JUDGE_DEEPSEEK);
-  }
 
   function renderForm() {
     return render(
@@ -128,7 +106,7 @@ describe("CreateMeasurementForm", () => {
     expect(screen.getByText("1. Informasi Sesi")).toBeInTheDocument();
     expect(screen.getByText("2. Pilih Suite Kasus & Filter")).toBeInTheDocument();
     expect(screen.getByText("3. Pilih Produk AI Otomatis")).toBeInTheDocument();
-    expect(screen.getByText("4. Pengulangan & Penilai LLM")).toBeInTheDocument();
+    expect(screen.getByText("4. Pengulangan")).toBeInTheDocument();
     expect(screen.getByText("5. Ringkasan & Perkiraan Biaya")).toBeInTheDocument();
 
     expect(
@@ -143,10 +121,8 @@ describe("CreateMeasurementForm", () => {
     expect(await screen.findByText("Suite Hukum Acara Pidana")).toBeInTheDocument();
     expect(screen.getByText("Suite Ketenagakerjaan")).toBeInTheDocument();
 
-    const judgeSelect = await screen.findByRole("combobox", { name: /Provider Penilai/i });
-    expect(judgeSelect).toBeEnabled();
-    expect(judgeSelect).toHaveValue("");
-    expect(screen.getByRole("option", { name: "DeepSeek V4-Flash" })).toHaveValue(JUDGE_DEEPSEEK);
+    // K-14 (SCRUM-282): LLM judge dipilih saat menilai, bukan saat membuat sesi.
+    expect(screen.queryByRole("combobox", { name: /Provider Penilai/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/PBI-14/i)).not.toBeInTheDocument();
   });
 
@@ -444,7 +420,6 @@ describe("CreateMeasurementForm", () => {
     // Select product
     const productSelect = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
     await user.selectOptions(productSelect, "prod-gemini");
-    await pilihPenilai(user);
 
     // Get summary first
     await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
@@ -473,7 +448,6 @@ describe("CreateMeasurementForm", () => {
       product_id: "prod-gemini",
       label: "Pengukuran Resmi Q4",
       purpose: "official",
-      judge_provider_id: JUDGE_DEEPSEEK,
     });
 
     await waitFor(() => {
@@ -481,76 +455,20 @@ describe("CreateMeasurementForm", () => {
     });
   });
 
-  it("keeps Mulai off until a judge provider is chosen, then turns it on", async () => {
+  it("turns Mulai on without a judge, since the judge is chosen at grading (K-14)", async () => {
     const user = userEvent.setup();
     mockGetMeasurementSummary.mockResolvedValue(MOCK_SUMMARY);
     renderForm();
-    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Penilai");
+    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Tanpa Penilai");
     await user.click(screen.getByRole("button", { name: "Uji Coba" }));
     await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
     const productSelect = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
     await user.selectOptions(productSelect, "prod-gemini");
-    await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
-    await screen.findByTestId("summary-card");
-    const startBtn = screen.getByRole("button", { name: "Mulai Pengukuran" });
 
-    // Everything else is filled, only the judge is missing.
-    expect(startBtn).toBeDisabled();
-
-    await pilihPenilai(user);
-
-    expect(startBtn).toBeEnabled();
-  });
-
-  it("keeps Mulai off and explains when no judge provider is active", async () => {
-    const user = userEvent.setup();
-    mockListJudgeOptions.mockResolvedValue([]);
-    mockGetMeasurementSummary.mockResolvedValue(MOCK_SUMMARY);
-    renderForm();
-    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Kosong");
-    await user.click(screen.getByRole("button", { name: "Uji Coba" }));
-    await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
-    const productSelect = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
-    await user.selectOptions(productSelect, "prod-gemini");
     await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
     await screen.findByTestId("summary-card");
 
-    expect(await screen.findByText(/Belum ada provider yang aktif/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "halaman Provider" })).toHaveAttribute(
-      "href",
-      "/admin/providers",
-    );
-    expect(screen.getByRole("button", { name: "Mulai Pengukuran" })).toBeDisabled();
-  });
-
-  it("shows the server message and stays on the page when the chosen judge is refused", async () => {
-    const user = userEvent.setup();
-    mockGetMeasurementSummary.mockResolvedValue(MOCK_SUMMARY);
-    mockStartMeasurement.mockRejectedValue(
-      new ApiError(
-        422,
-        "JUDGE_PROVIDER_NOT_AVAILABLE",
-        "Provider penilai tidak tersedia atau nonaktif.",
-        "judge_provider_id",
-      ),
-    );
-    renderForm();
-    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Ditolak");
-    await user.click(screen.getByRole("button", { name: "Uji Coba" }));
-    await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
-    const productSelect = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
-    await user.selectOptions(productSelect, "prod-gemini");
-    await pilihPenilai(user);
-    await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
-    await screen.findByTestId("summary-card");
-    await user.click(screen.getByRole("button", { name: "Mulai Pengukuran" }));
-
-    await user.click(screen.getByRole("button", { name: "Ya, Mulai Pengukuran" }));
-
-    expect(
-      await screen.findByText("Provider penilai tidak tersedia atau nonaktif."),
-    ).toBeInTheDocument();
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Mulai Pengukuran" })).toBeEnabled();
   });
 
   it("navigates back to /runs when Batal is clicked", async () => {
@@ -679,7 +597,6 @@ describe("CreateMeasurementForm", () => {
     await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
     const productSelect = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
     await user.selectOptions(productSelect, "prod-gemini");
-    await pilihPenilai(user);
 
     // Fetch summary
     await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
@@ -786,8 +703,7 @@ describe("CreateMeasurementForm", () => {
       await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
       const productSelect = await screen.findByRole("combobox", { name: /Pilih Produk AI/i });
       await user.selectOptions(productSelect, "prod-gemini");
-      await pilihPenilai(user);
-      await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
+        await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
       await screen.findByTestId("summary-card");
 
       // Select purpose so canStart is true

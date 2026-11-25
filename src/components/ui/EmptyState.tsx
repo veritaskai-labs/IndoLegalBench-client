@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "./Button";
 
 interface EmptyStateProps {
   title?: string;
@@ -6,6 +7,8 @@ interface EmptyStateProps {
   action?: {
     label: string;
     onClick: () => void;
+    /** Tombol tampil tetapi mati, misalnya selama penilaian di latar belakang berjalan. */
+    disabled?: boolean;
   };
   
   inTable?: boolean;
@@ -24,7 +27,7 @@ export function EmptyState({
   const content = (
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
       {/* Ikon folder / data kosong */}
-      <div className="w-12 h-12 mb-3 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+      <div className="w-12 h-12 mb-3 rounded-full bg-surface flex items-center justify-center text-subtle">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -42,17 +45,13 @@ export function EmptyState({
         </svg>
       </div>
 
-      <h3 className="text-sm font-semibold text-slate-800 mb-1">{title}</h3>
-      <p className="text-xs text-slate-500 max-w-sm mb-4">{description}</p>
+      <h3 className="text-sm font-semibold text-ink mb-1">{title}</h3>
+      <p className="text-xs text-muted max-w-sm mb-4">{description}</p>
 
       {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer"
-        >
+        <Button onClick={action.onClick} disabled={action.disabled}>
           {action.label}
-        </button>
+        </Button>
       )}
     </div>
   );

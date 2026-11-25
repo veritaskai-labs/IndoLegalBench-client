@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
+import { Button } from "./Button";
 
 /**
  * Callback ref: buka sebagai modal saat dialog dipasang. React memanggilnya lagi dengan null
@@ -28,6 +29,7 @@ export function ConfirmDialog<T>({
   busyLabel,
   dismissLabel = "Batal",
   confirmDisabled = false,
+  destructive = false,
   onConfirm,
   errorMessage,
   onDone,
@@ -41,28 +43,34 @@ export function ConfirmDialog<T>({
   dismissLabel?: string;
   /** Aksi belum boleh dijalankan, misalnya alasan wajib belum diisi. */
   confirmDisabled?: boolean;
+  /** Aksi berisiko (hapus, nonaktifkan, batalkan sesi): tombol konfirmasi tampil merah. */
+  destructive?: boolean;
   onConfirm: () => Promise<T>;
   errorMessage: (failure: unknown) => string;
   onDone: (result: T) => void;
   onClose: (afterError: boolean) => void;
 }>) {
   const titleId = useId();
+  const confirming = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function confirm() {
+    if (confirming.current) return;
+    confirming.current = true;
     setBusy(true);
     setError(null);
     try {
       onDone(await onConfirm());
     } catch (failure) {
+      confirming.current = false;
       setError(errorMessage(failure));
       setBusy(false);
     }
   }
 
   function close() {
-    if (!busy) onClose(error !== null);
+    if (!confirming.current) onClose(error !== null);
   }
 
   return (
@@ -74,34 +82,28 @@ export function ConfirmDialog<T>({
         close();
       }}
       aria-labelledby={titleId}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
+      className="m-auto w-[calc(100%-2rem)] max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog backdrop:bg-ink/40"
     >
-      <h2 id={titleId} className="text-base font-medium">
+      <h2 id={titleId} className="font-serif text-[22px] font-medium leading-7">
         {title}
       </h2>
       {children}
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <p role="alert" className="mt-3 text-sm text-danger">
           {error}
         </p>
       )}
       <div className="mt-5 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={close}
-          disabled={busy}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm disabled:opacity-50"
-        >
+        <Button variant="ghost" onClick={close} disabled={busy}>
           {error ? "Tutup" : dismissLabel}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant={destructive ? "danger" : "primary"}
           onClick={confirm}
           disabled={busy || confirmDisabled}
-          className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
         >
           {busy ? busyLabel : confirmLabel}
-        </button>
+        </Button>
       </div>
     </dialog>
   );

@@ -6,12 +6,13 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
 import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { useGradingRuns } from "@/hooks/useGradingRuns";
+import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { useRubricVersions } from "@/hooks/useRubricVersions";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
 import { REGRADE_UNAVAILABLE_TEXT, regradeAvailability, type RegradeUnavailableReason } from "@/lib/rubrics/regradeRules";
 import { httpRubricsGateway, type RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import type { Role } from "@/types";
-import type { SessionGradingResponse } from "@/types/grading";
+import type { GradingRunQueued, SessionGradingResponse } from "@/types/grading";
 import type { SessionDetail } from "@/types/measurement";
 import { GradingHistoryList } from "./GradingHistoryList";
 import { RegradeDialog } from "./RegradeDialog";
@@ -25,14 +26,24 @@ type Props = Readonly<{
   latest: SessionGradingResponse | null;
   gradingGateway?: GradingGateway;
   rubricsGateway?: RubricsGateway;
-  /** Hasil di halaman perlu dimuat ulang: setelah nilai ulang, atau setelah dialog ditutup karena error. */
+  judgeApi?: JudgeOptionsApi;
+  /** Run yang skornya sedang tampil; null berarti hasil terbaru. */
+  selectedRunId?: string | null;
+  /** Admin membuka satu run dari riwayat (K-17/K-18). */
+  onSelectRun?: (runId: string) => void;
+  /** Hasil di halaman perlu dimuat ulang: dialog ditutup karena error. */
   onChanged: () => void;
+  /** Ada run yang antre atau berjalan di latar belakang: tombol dimatikan dengan alasannya (K-13). */
+  gradingActive?: boolean;
+  /** Server membalas 202: halaman mengikuti progres run ini dan memuat ulang hasil saat selesai. */
+  onQueued?: (queued: GradingRunQueued) => void;
 }>;
 
 /**
- * Nilai ulang dengan versi terbaru di halaman detail sesi (PBI-14 AC7). Hanya Admin: data
- * dimuat di komponen dalam, supaya peran lain tidak memanggil GET /admin/rubrics yang menjawab 403
- * dan mengalihkan mereka ke /forbidden. Kapan tombol boleh aktif ditentukan regradeAvailability.
+ * Nilai ulang dengan versi rubrik dan LLM judge pilihan, plus riwayat penilaian, di halaman detail
+ * sesi (PBI-14 AC7, K-17/K-18). Hanya Admin: data dimuat di komponen dalam, supaya peran lain tidak
+ * memanggil GET /admin/rubrics yang menjawab 403 dan mengalihkan mereka ke /forbidden. Kapan tombol
+ * boleh aktif ditentukan regradeAvailability.
  */
 export function RegradeSection(props: Props) {
   if (props.role !== "admin") return null;
@@ -53,7 +64,12 @@ function AdminRegrade({
   latest,
   gradingGateway = httpGradingGateway,
   rubricsGateway = httpRubricsGateway,
+  judgeApi,
+  selectedRunId = null,
+  onSelectRun,
   onChanged,
+  gradingActive = false,
+  onQueued,
 }: Props) {
   const { showToast } = useToast();
   const versions = useRubricVersions(rubricsGateway);
@@ -75,7 +91,7 @@ function AdminRegrade({
   // Tidak menampilkan apa pun saat memuat, supaya tombol tidak berkedip hidup lalu mati.
   if (versions.status !== "ready" || runs.status !== "ready") return null;
 
-  const availability = regradeAvailability({ role, session, versions: versions.data, latest });
+  const availability = regradeAvailability({ role, session, versions: versions.data, latest, gradingActive });
   // not_admin tidak mungkin di sini: komponen luar sudah menyaring peran.
   const reason = availability.available ? null : (availability.reason as Exclude<RegradeUnavailableReason, "not_admin">);
 
@@ -87,23 +103,25 @@ function AdminRegrade({
         disabled={!availability.available}
         className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 disabled:opacity-50"
       >
-        Nilai ulang dengan versi terbaru
+        Nilai ulang
       </button>
       {reason !== null && <p className="text-sm text-slate-500">{REGRADE_UNAVAILABLE_TEXT[reason]}</p>}
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-slate-900">Riwayat penilaian</h3>
-        <GradingHistoryList runs={runs.data} />
+        <GradingHistoryList runs={runs.data} selectedId={selectedRunId ?? latest?.grading_run_id ?? null} onSelect={onSelectRun} />
       </div>
       {open && availability.available && (
         <RegradeDialog
           session={session}
-          version={availability.version}
+          versions={versions.data}
+          defaultVersion={availability.version}
+          defaultJudgeId={latest?.judge?.judge_provider_id ?? ""}
           gateway={gradingGateway}
-          onRegraded={() => {
+          judgeApi={judgeApi}
+          onQueued={(queued) => {
             setOpen(false);
-            runs.reload();
-            onChanged();
-            showToast(`Penilaian ulang selesai dengan Versi ${availability.version.version_no}.`);
+            onQueued?.(queued);
+            showToast("Penilaian ulang berjalan di latar belakang.");
           }}
           onClose={(afterError) => {
             setOpen(false);

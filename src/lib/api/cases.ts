@@ -1,19 +1,9 @@
 import { apiFetch } from "@/lib/apiClient";
+import type { components } from "@/lib/generated/api";
+import type { CaseStatus, SplitTag } from "@/types/case";
 
-export type SplitTag = "dev" | "test";
-export type CaseStatus = "draft" | "in_review" | "needs_revision" | "approved";
-
-export interface CaseSummary {
-  id: string;
-  case_code: string;
-  title: string;
-  split_tag: SplitTag;
-  status: CaseStatus;
-  completeness_pct: number;
-  updated_at: string;
-  /** Kasus test untuk Developer AI: kode dan judul diganti server, tidak bisa dibuka (SCRUM-183). */
-  masked?: boolean;
-}
+export type { CaseStatus, SplitTag } from "@/types/case";
+export type CaseSummary = components["schemas"]["CaseSummary"];
 
 export interface ListCasesParams {
   status?: CaseStatus;

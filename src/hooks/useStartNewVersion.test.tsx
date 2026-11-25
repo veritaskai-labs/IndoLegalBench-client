@@ -18,6 +18,7 @@ function draftCase(): CaseRead {
     legal_refs: [],
     answer_criteria: {},
     split_tag: "dev",
+    origin: "manual",
     status: "draft",
     completeness_pct: 50,
     was_dev: false,

@@ -31,7 +31,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Eksekusi", href: "/runs", roles: ["admin", "developer_ai"] },
       { label: "Pengukuran manual", href: "/manual-runs", roles: ["admin", "contributor"] },
       { label: "Rubrik", href: "/admin/rubrics", roles: ["admin"] },
-      { label: "Laporan", href: "/reports", roles: ["admin", "contributor", "viewer"] },
+      { label: "Laporan", href: "/reports", roles: ["admin", "contributor", "viewer", "developer_ai"] },
     ],
   },
   {
@@ -49,4 +49,12 @@ export function navForRole(role: Role): NavGroup[] {
     ...group,
     items: group.items.filter((item) => item.roles.includes(role)),
   })).filter((group) => group.items.length > 0);
+}
+
+/** Halaman di bawah "Suite dan kasus" yang tidak punya item menu sendiri (SCRUM-341, SCRUM-340). */
+const UNDER_SUITES: readonly string[] = ["/cases", "/cases/import"];
+
+/** Apakah item menu sedang aktif untuk alamat ini. */
+export function isNavItemActive(href: string, pathname: string): boolean {
+  return pathname === href || (href === "/suites" && UNDER_SUITES.includes(pathname));
 }
