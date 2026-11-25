@@ -75,7 +75,8 @@ describe("ResultCaseList", () => {
   it("lists the cases behind the number with their version and scores", async () => {
     renderList(vi.fn().mockResolvedValue(resultCases()));
 
-    await screen.findByRole("table");
+    // Review #125: the table keeps the name it had before DataTable (sr-only caption).
+    await screen.findByRole("table", { name: "Kasus di balik angka AiYU" });
     expect(screen.getByRole("heading", { level: 1, name: "Kasus di balik angka AiYU" })).toBeInTheDocument();
     expect(screen.getByText("Kasus test · Manual · Rubrik v3 · 2 kasus")).toBeInTheDocument();
     // SCRUM-346 A2 (finding N6): the "Isi kasus: Dapat dibuka" column became an action that opens the answer.

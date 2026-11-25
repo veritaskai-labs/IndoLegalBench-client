@@ -242,7 +242,10 @@ describe("TrendView result states", () => {
     const { container } = renderView();
 
     // Assert
-    expect(await screen.findByText("Tren butuh data minimal dua bulan. Data bulan ini sudah tampil di tabel di bawah.")).toBeInTheDocument();
+    // Review #125: the one scored month is not always this month, so the note names the month.
+    expect(
+      await screen.findByText("Tren butuh data minimal dua bulan. Data Nov 2026 sudah tampil di tabel di bawah."),
+    ).toBeInTheDocument();
     expect(container.querySelectorAll("circle[data-point]")).toHaveLength(1);
   });
 
