@@ -214,7 +214,10 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
     await user.click(screen.getByRole("button", { name: "Ganti reviewer" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(/ILB-PT-0142.*Aileen/);
+    const feedback = await screen.findByRole("status");
+    expect(feedback).toHaveTextContent(/ILB-PT-0142.*Aileen/);
+    expect(feedback).toHaveProperty("tagName", "OUTPUT");
+    expect(feedback).toHaveFocus();
     expect(replaceMock).toHaveBeenCalledWith("a1", {
       new_reviewer_id: "u9",
       reason: "Reviewer cuti",
@@ -329,6 +332,56 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
       expect(screen.queryByRole("option", { name: "Esi" })).not.toBeInTheDocument(),
     );
   });
+  it.each([
+    { versions: [makeSummary(1, { author: { id: "u5", name: "Esi" } })], eligible: ["Aileen"] },
+    { versions: [], eligible: ["Aileen", "Esi"] },
+  ])("reuses the completed author lookup when reopening the same case", async ({ versions, eligible }) => {
+    const user = userEvent.setup();
+    const moved = assignment({ status: "void" });
+    queueMock.mockResolvedValue([
+      row({ void_assignments: [moved] }),
+      row({ case_id: "c2", case_code: "ILB-PT-0256", round_id: "r2", void_assignments: [moved] }),
+    ]);
+    usersMock.mockResolvedValue([ROBEN, AILEEN, ESI]);
+    versionsMock.mockResolvedValue(versions);
+
+    render(<AdminReviewsPage />);
+    const first = await screen.findByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" });
+    await user.click(first);
+    await screen.findByRole("option", { name: "Aileen" });
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+    await user.click(first);
+
+    expect(screen.getByRole("combobox", { name: "Reviewer baru" })).toBeEnabled();
+    expect(screen.getAllByRole("option").slice(1).map(option => option.textContent)).toEqual(eligible);
+    expect(versionsMock).toHaveBeenCalledExactlyOnceWith("c1");
+
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+    await user.click(screen.getByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0256" }));
+    await screen.findByRole("option", { name: "Aileen" });
+    expect(versionsMock.mock.calls).toEqual([["c1"], ["c2"]]);
+  });
+
+  it("shares an in-flight author lookup when the same case is reopened", async () => {
+    const user = userEvent.setup();
+    const moved = assignment({ status: "void" });
+    queueMock.mockResolvedValue([row({ void_assignments: [moved] })]);
+    let finish!: (versions: Awaited<ReturnType<typeof listCaseVersions>>) => void;
+    versionsMock.mockReturnValue(new Promise(resolve => { finish = resolve; }));
+
+    render(<AdminReviewsPage />);
+    const trigger = await screen.findByRole("button", { name: /^Ganti Roben/ });
+    await user.click(trigger);
+    const loading = screen.getByText("Memuat kandidat reviewer…");
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+    await user.click(trigger);
+    finish([]);
+
+    expect(await screen.findByRole("option", { name: "Aileen" })).toBeInTheDocument();
+    expect(versionsMock).toHaveBeenCalledExactlyOnceWith("c1");
+    expect(loading).toHaveProperty("tagName", "OUTPUT");
+  });
+
   // Negatif: daftar anggota gagal diambil — pilihan kosong harus ada penjelasannya.
   it("says why the reviewer list is empty when the member list fails", async () => {
     const user = userEvent.setup();
@@ -351,9 +404,7 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
   it("says the author could not be checked when the versions call fails", async () => {
     const user = userEvent.setup();
     queueMock.mockResolvedValue([row({ void_assignments: [assignment({ status: "void", void_reason: "role_changed" })] })]);
-    const failure = Promise.reject(new Error("offline"));
-    failure.catch(() => undefined);
-    versionsMock.mockReturnValue(failure);
+    versionsMock.mockRejectedValueOnce(new Error("offline"));
 
     render(<AdminReviewsPage />);
     await user.click(
@@ -363,6 +414,12 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     expect(
       await screen.findByText(/Penulis kasus tidak bisa dicek/),
     ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+    await user.click(screen.getByRole("button", { name: /^Ganti Roben/ }));
+    await screen.findByRole("option", { name: "Aileen" });
+    expect(screen.queryByText(/Penulis kasus tidak bisa dicek/)).not.toBeInTheDocument();
+    expect(versionsMock.mock.calls).toEqual([["c1"], ["c1"]]);
   });
   // AC7: penggantian tidak hanya dari antrean, tapi juga dari kasus yang sedang direview.
   it("opens the swap dialog from the in-review tab", async () => {
