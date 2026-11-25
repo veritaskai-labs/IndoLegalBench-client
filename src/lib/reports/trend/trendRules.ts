@@ -65,6 +65,10 @@ export function hasDrawablePoint(points: readonly TrendPointRead[]): boolean {
   return points.some((point) => point.value !== null);
 }
 
+export function hasSinglePoint(_points: readonly TrendPointRead[]): boolean {
+  return false;
+}
+
 /** Alasan garis diputus lebih dulu, lalu penanda titik, dalam bahasa pembaca (PBI-17 AC5). */
 export function pointNotes(point: TrendPointRead): string[] {
   return [...point.breaks.map(breakLabel), ...point.markers.map(markerLabel)];
