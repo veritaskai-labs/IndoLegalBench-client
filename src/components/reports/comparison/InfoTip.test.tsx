@@ -22,11 +22,9 @@ describe("InfoTip", () => {
   ] as const)("opens on %s and closes when it ends", (_name, open, close) => {
     renderTip();
     const button = screen.getByRole("button", { name: "Penjelasan Penanda" });
-    // Hover belongs to the icon and its text together, so it is fired on their wrapper.
-    const target = _name === "hover" ? (button.parentElement as HTMLElement) : button;
-    open(target);
+    open(button);
     expect(screen.getByRole("tooltip")).toHaveTextContent("Uji coba: sesi uji coba.");
-    close(target);
+    close(button);
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 

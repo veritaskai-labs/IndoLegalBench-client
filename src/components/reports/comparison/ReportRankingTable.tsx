@@ -11,9 +11,10 @@ import { REPORT_LABELS, sessionMarkerList } from "@/lib/reports/reportLabels";
 import type { ReportRow } from "@/lib/reports/reportSections";
 import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
 
-import { InfoTip } from "./InfoTip";
+import { InfoTip, type InfoTipAlign } from "./InfoTip";
 
-const CELL = "px-3 py-2.5 align-middle";
+/** Every body cell carries the row line, so the divider runs across the whole row (review #125). */
+const CELL = "border-t border-line-soft px-3 py-2.5 align-middle";
 const NUMBER = `${CELL} text-right tabular-nums`;
 const HEAD = "h-9 whitespace-nowrap bg-surface px-3 py-2 font-medium text-ink-soft";
 
@@ -65,11 +66,11 @@ const COLUMNS: readonly Column[] = [
   { index: 10, guide: "markers" },
 ];
 
-function HeaderLabel({ label, guide }: Readonly<{ label: string; guide?: GuideKey }>) {
+function HeaderLabel({ label, guide, align }: Readonly<{ label: string; guide?: GuideKey; align?: InfoTipAlign }>) {
   return (
     <span className="inline-flex items-center gap-1">
       <span data-column-label>{label}</span>
-      {guide && <InfoTip label={COLUMN_GUIDE[guide].term} text={COLUMN_GUIDE[guide].text} />}
+      {guide && <InfoTip label={COLUMN_GUIDE[guide].term} text={COLUMN_GUIDE[guide].text} align={align} />}
     </span>
   );
 }
@@ -129,10 +130,11 @@ export function ReportRankingTable({
           <caption className="sr-only">{caption}</caption>
           <thead>
             <tr>
-              <th scope="col" className={`${HEAD} sticky left-0 z-10 w-24 text-left`}>
-                <HeaderLabel label={labels.columns[0]} guide="rank" />
+              {/* z-20 above the sticky body cells (z-10), or they paint over the rank tooltip (review #125). */}
+              <th scope="col" className={`${HEAD} sticky left-0 z-20 w-24 text-left`}>
+                <HeaderLabel label={labels.columns[0]} guide="rank" align="start" />
               </th>
-              <th scope="col" className={`${HEAD} sticky left-24 z-10 min-w-36 text-left`}>
+              <th scope="col" className={`${HEAD} sticky left-24 z-20 min-w-36 text-left`}>
                 <HeaderLabel label={labels.columns[1]} />
               </th>
               {columns.map((column) => (
@@ -153,10 +155,10 @@ export function ReportRankingTable({
               const href = scoreHref?.(result.id);
               return (
                 <tr key={result.id}>
-                  <td className={`${CELL} sticky left-0 z-10 border-t border-line-soft bg-paper tabular-nums`}>
+                  <td className={`${CELL} sticky left-0 z-10 bg-paper tabular-nums`}>
                     {rankText(result.rank)}
                   </td>
-                  <th scope="row" className={`${CELL} sticky left-24 z-10 border-t border-line-soft bg-paper text-left`}>
+                  <th scope="row" className={`${CELL} sticky left-24 z-10 bg-paper text-left`}>
                     <span data-product className="block font-semibold">
                       {session.product_label}
                     </span>

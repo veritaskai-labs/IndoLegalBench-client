@@ -76,7 +76,15 @@ function caseColumns(reportId: string, resultId: string): Column<ReportCaseScore
 
 function CaseTable({ reportId, data }: Readonly<{ reportId: string; data: ReportResultCasesRead }>) {
   const columns = useMemo(() => caseColumns(reportId, data.result_id), [reportId, data.result_id]);
-  return <DataTable columns={columns} rows={data.cases} rowKey={(item) => item.case_id} pageSize={PAGE_SIZE} />;
+  return (
+    <DataTable
+      columns={columns}
+      rows={data.cases}
+      rowKey={(item) => item.case_id}
+      pageSize={PAGE_SIZE}
+      caption={`Kasus di balik angka ${data.product_label}`}
+    />
+  );
 }
 
 /**
