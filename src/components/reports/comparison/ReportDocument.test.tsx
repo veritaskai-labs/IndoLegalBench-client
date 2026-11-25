@@ -99,4 +99,30 @@ describe("ReportDocument", () => {
     render(<ReportDocument report={devTestReport()} language={language} />);
     expect(screen.getByText(line)).toBeInTheDocument();
   });
+
+  // SCRUM-346 A5 (PO kept it on 25 Nov): a folded "how to read this report" panel next to the title, with the same
+  // explanations as the column info buttons plus the dev and test rule (PBI-15), which has no column of its own.
+  it("offers a folded guide to reading the report", () => {
+    render(<ReportDocument report={firstReport()} />);
+    const summary = screen.getByText("Cara membaca laporan ini");
+    const details = summary.closest("details") as HTMLElement;
+    expect(details).not.toHaveAttribute("open");
+    expect([...details.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Peringkat",
+      "Skor deterministik",
+      "Skor penilai LLM",
+      "Kasus dinilai",
+      "Tingkat kegagalan",
+      "Penanda",
+      "Skor dev dan test",
+    ]);
+  });
+
+  // SCRUM-346 A6: each section opens with its highlight cards and ends with one sorted chart per score.
+  it("puts highlight cards and per-score charts in every section", () => {
+    const { container } = render(<ReportDocument report={devTestReport()} />);
+    expect(screen.getByRole("list", { name: "Sorotan Kasus test" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Sorotan Kasus dev" })).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-chart]")).toHaveLength(6);
+  });
 });
