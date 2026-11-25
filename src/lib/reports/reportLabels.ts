@@ -144,13 +144,10 @@ export function markerLabel(marker: ReportMarkerRead, language: ReportLanguage):
   return marker.detail ? `${text} (${marker.detail})` : text;
 }
 
-/** Penanda D2 satu produk dalam bahasa laporan, tanpa Uji Coba (badge Uji Coba punya warnanya sendiri). */
+/**
+ * Penanda D2 satu produk dalam bahasa laporan, untuk badge di sel Penanda. Uji Coba (is_trial) tidak di sini: tabel
+ * menaruhnya paling depan dengan warnanya sendiri, sama urutannya dengan pdf.py _penanda_sesi.
+ */
 export function sessionMarkerList(session: ReportDetailSessionRead, language: ReportLanguage): string[] {
   return (session.markers ?? []).map((marker) => markerLabel(marker, language));
-}
-
-/** Sel Penanda satu produk, sama dengan pdf.py _penanda_sesi: Uji Coba (is_trial) dulu, lalu penanda D2. */
-export function sessionMarkersText(session: ReportDetailSessionRead, language: ReportLanguage): string {
-  const trial = session.is_trial ? [REPORT_LABELS[language].trial] : [];
-  return [...trial, ...sessionMarkerList(session, language)].join("; ");
 }

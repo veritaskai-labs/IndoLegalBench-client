@@ -20,7 +20,8 @@ const PICK: Readonly<Record<ScoreMetric, (row: ReportRow) => string | null>> = {
 
 /**
  * Batang satu skor untuk grafik terurut (SCRUM-346 A6, temuan N13): dari skor tertinggi, tanpa produk yang tidak
- * punya skor (D1, K7). Skala grafik sama dengan chartScale, tapi hanya dari skor ini. Array.prototype.sort stabil,
+ * punya skor (D1, K7). Skalanya 0 sampai 1, atau skor terbesar bila server mengirim skor di atas 1 (sama dengan
+ * max(1, ...) di pdf.py). Array.prototype.sort stabil,
  * jadi skor yang sama tetap mengikuti urutan peringkat server.
  */
 export function scoreBars(rows: readonly ReportRow[], metric: ScoreMetric): ScoreBar[] {
