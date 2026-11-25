@@ -155,8 +155,8 @@ export default function AdminReviewsPage() {
   const afterReplace = useCallback((body: ReplaceReviewerBody) => {
     const name = users?.find(user => user.id === body.new_reviewer_id)?.name;
     setSuccess(`Reviewer untuk ${target?.caseCode} berhasil diganti dengan ${name}.`);
-    closeAndRefresh();
-  }, [target, users, closeAndRefresh]);
+    reloadBoth();
+  }, [target, users, reloadBoth]);
   const replacement = useReplaceReviewer(afterReplace, closeAndRefresh);
   const { reset } = replacement;
 
@@ -347,9 +347,9 @@ export default function AdminReviewsPage() {
           pending={replacement.pending}
           error={replacement.error}
           onConfirm={(body) =>
-            void replacement.replace(target.assignmentId, body)
+            replacement.replace(target.assignmentId, body)
           }
-          onClose={() => setTarget(null)}
+          onClose={() => { reset(); setTarget(null); }}
         />
       )}
     </div>

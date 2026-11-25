@@ -25,13 +25,13 @@ export function useReplaceReviewer(onDone: (body: ReplaceReviewerBody) => void, 
       setPending(true);
       setError(null);
 
-      let succeeded = false;
+      let failureMessage: string | null = null;
       let stale = false;
       try {
         await replaceReviewer(assignmentId, body);
-        succeeded = true;
       } catch (failure) {
-        setError(mapReplaceError(failure));
+        failureMessage = mapReplaceError(failure);
+        setError(failureMessage);
         stale = isStaleReplace(failure);
       } finally {
         inFlight.current = false;
@@ -39,9 +39,10 @@ export function useReplaceReviewer(onDone: (body: ReplaceReviewerBody) => void, 
       }
 
       // Di luar try: galat di onDone bukan kegagalan permintaan, dan reviewer sudah terganti.
-      if (succeeded) onDone(body);
-      // 409: yang di layar sudah basi, jadi daftarnya dimuat ulang; dialog tetap menampilkan pesannya.
+      if (!failureMessage) onDone(body);
+      // 409: yang di layar sudah basi, jadi daftarnya dimuat ulang; halaman menampilkan pesannya.
       if (stale) onStale?.();
+      return failureMessage;
     },
     [onDone, onStale],
   );
