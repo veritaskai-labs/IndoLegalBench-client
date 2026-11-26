@@ -196,7 +196,8 @@ describe("AdminMembersPage, reactivating a member", () => {
 
     await userEvent.click(await screen.findByLabelText("Toggle aktif Ani Admin"));
 
-    expect(screen.queryByRole("heading")).toBeNull();
+    // Only the page title: no confirmation dialog opened.
+    expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual(["Pengguna"]);
   });
 });
 

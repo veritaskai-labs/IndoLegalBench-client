@@ -16,6 +16,9 @@ import { adminErrorMessage } from "@/components/admin/errorMessage";
 import { memberToggleAction, replaceMember } from "@/lib/members/memberToggle";
 import { ROLE_OPTIONS } from "@/lib/members/roleOptions";
 import { activateUser } from "@/lib/userApi";
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
+import { Input } from "@/components/ui/Input";
 
 const LOAD_ERROR = "Gagal memuat daftar anggota.";
 const SELF_LOCKED = "Anda tidak dapat mengubah akun Anda sendiri.";
@@ -157,121 +160,120 @@ export default function AdminMembersPage() {
 
   const alertMessage = apiError ?? change.error;
 
+  const filterSummary = [
+    filterRoles.length === 0
+      ? "Semua peran"
+      : filterRoles.length === 1
+        ? ROLE_OPTIONS.find((option) => option.value === filterRoles[0])?.label
+        : `${filterRoles.length} peran`,
+    { all: null, active: "Aktif", inactive: "Nonaktif" }[filterStatus],
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
-    <div className="w-full">
-      {/* Action Bar */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex flex-1 max-w-2xl gap-2">
-          <input
-            type="text"
-            placeholder="Cari ID, nama atau email pengguna"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-4 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 shadow-xs"
-          />
-          <button
-            type="button"
-            aria-label="Cari"
-            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-xs shrink-0 cursor-pointer"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
+    <div className="w-full space-y-6">
+      <header>
+        <h1 className="font-serif text-4xl leading-10 text-ink">Pengguna</h1>
+        <p className="mt-2 text-muted">Kelola pengguna platform, peran akses, dan status aktifnya.</p>
+      </header>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-1 flex-wrap items-center gap-3">
+          <label className="relative block w-full max-w-sm">
+            <span className="sr-only">Cari pengguna</span>
+            <Icon name="cari" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+            <Input
+              type="search"
+              placeholder="Cari ID, nama atau email pengguna"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </label>
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Filter"
+              aria-expanded={isFilterOpen}
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-control border px-3 text-sm transition-colors ${
+                filterRoles.length > 0 || filterStatus !== "all"
+                  ? "border-accent bg-accent-wash text-accent-ink"
+                  : "border-line bg-paper text-ink hover:bg-surface"
+              }`}
             >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-          </button>
+              <span className="text-muted">Filter:</span> {filterSummary}
+            </button>
+
+            <FilterPopover
+              isOpen={isFilterOpen}
+              selectedRoles={filterRoles}
+              activeStatus={filterStatus}
+              onClose={() => setIsFilterOpen(false)}
+              onApply={(roles, status) => {
+                setFilterRoles(roles);
+                setFilterStatus(status);
+              }}
+            />
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 relative">
-          <button
-            type="button"
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-xs font-medium shadow-xs transition-colors cursor-pointer ${
-              filterRoles.length > 0 || filterStatus !== "all"
-                ? "border-indigo-600 text-indigo-700 bg-indigo-50/50"
-                : "border-slate-200 text-slate-700 bg-white hover:bg-slate-50"
-            }`}
-          >
-            Filter
-          </button>
-
-          <FilterPopover
-            isOpen={isFilterOpen}
-            selectedRoles={filterRoles}
-            activeStatus={filterStatus}
-            onClose={() => setIsFilterOpen(false)}
-            onApply={(roles, status) => {
-              setFilterRoles(roles);
-              setFilterStatus(status);
-            }}
-          />
-
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 shadow-xs cursor-pointer transition-colors"
-          >
-            Tambah pengguna
-          </button>
-        </div>
+        <Button variant="accent" onClick={() => setIsCreateOpen(true)}>
+          <Icon name="tambah" />
+          Tambah pengguna
+        </Button>
       </div>
 
       {/* Error API State */}
       {alertMessage && (
         <div
           role="alert"
-          className="mb-6 rounded-lg bg-red-50 border border-red-200 p-4 flex items-center justify-between"
+          className="flex items-center justify-between rounded-control border border-danger/30 bg-danger/5 p-4"
         >
-          <p className="text-xs text-red-800">{alertMessage}</p>
-          <button
+          <p className="text-sm text-danger-deep">{alertMessage}</p>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               change.clearError();
               void refreshUsers();
             }}
-            className="text-xs text-red-700 hover:text-red-900 font-medium px-2 py-1 rounded bg-red-100 cursor-pointer"
           >
             Coba lagi
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Tabel Pengguna */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
-        <table className="w-full text-left text-xs text-slate-700 border-collapse table-fixed">
+      <div className="overflow-x-auto rounded-control border border-line bg-paper">
+        <table className="w-full min-w-[720px] table-fixed border-collapse text-left text-sm text-ink">
           <thead>
-            <tr className="border-b border-slate-200 bg-white text-slate-900 font-semibold">
-              <th className="py-3.5 pl-6 pr-2 w-36">ID</th>
-              <th className="py-3.5 pl-2 pr-6">Nama Lengkap</th>
-              <th className="py-3.5 px-6">Email</th>
-              <th className="py-3.5 px-6 w-36">Peran</th>
-              <th className="py-3.5 px-6 text-right w-24">Aktif</th>
+            <tr className="bg-surface text-ink-soft">
+              <th className="w-36 py-2.5 pr-2 pl-4 font-medium">ID</th>
+              <th className="py-2.5 pr-4 pl-2 font-medium">Nama Lengkap</th>
+              <th className="px-4 py-2.5 font-medium">Email</th>
+              <th className="w-40 px-4 py-2.5 font-medium">Peran</th>
+              <th className="w-24 px-4 py-2.5 text-right font-medium">Aktif</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line-soft">
             {isLoading && (
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
-                  <td className="py-4 pl-6 pr-2"><div className="h-3.5 w-20 bg-slate-200 rounded" /></td>
-                  <td className="py-4 pl-2 pr-6"><div className="h-3.5 w-32 bg-slate-200 rounded" /></td>
-                  <td className="py-4 px-6"><div className="h-3.5 w-44 bg-slate-200 rounded" /></td>
-                  <td className="py-4 px-6"><div className="h-7 w-24 bg-slate-200 rounded" /></td>
-                  <td className="py-4 px-6 text-right"><div className="inline-block h-5 w-9 bg-slate-200 rounded-full" /></td>
+                  <td className="py-4 pr-2 pl-4"><div className="h-3.5 w-20 rounded bg-surface" /></td>
+                  <td className="py-4 pr-4 pl-2"><div className="h-3.5 w-32 rounded bg-surface" /></td>
+                  <td className="px-4 py-4"><div className="h-3.5 w-44 rounded bg-surface" /></td>
+                  <td className="px-4 py-4"><div className="h-8 w-28 rounded bg-surface" /></td>
+                  <td className="px-4 py-4 text-right"><div className="inline-block h-6 w-10 rounded-full bg-surface" /></td>
                 </tr>
               ))
             )}
             {!isLoading && displayedUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
-                  <p className="font-medium text-slate-600 mb-1">Tidak ada anggota ditemukan</p>
-                  <p className="text-[11px] text-slate-400">
+                <td colSpan={5} className="py-12 text-center">
+                  <p className="mb-1 font-medium text-ink">Tidak ada anggota ditemukan</p>
+                  <p className="text-xs text-muted">
                     {searchQuery || filterRoles.length > 0 || filterStatus !== "all"
                       ? "Coba sesuaikan kata kunci pencarian atau filter."
                       : "Belum ada anggota yang terdaftar."}
@@ -287,31 +289,39 @@ export default function AdminMembersPage() {
                 const isSelf = user.id === currentUserId;
                 const toggleAction = memberToggleAction(user, currentUserId);
                 return (
-                <tr key={user.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-3 pl-6 pr-2 font-mono text-slate-500 whitespace-nowrap">
+                <tr key={user.id} className="transition-colors hover:bg-surface-hover">
+                  <td className="py-3 pr-2 pl-4 font-mono text-xs whitespace-nowrap text-muted">
                     <span title={user.id}>
                       {user.id.slice(0, 8)}…
                     </span>
                   </td>
-                  <td className="py-3 pl-2 pr-6 font-medium text-slate-900">
-                    {user.name}
+                  <td className="py-3 pr-4 pl-2">
+                    <span className="flex items-center gap-2.5">
+                      <span
+                        aria-hidden="true"
+                        className="grid size-7 shrink-0 place-items-center rounded-full bg-surface text-xs font-medium text-ink-soft"
+                      >
+                        {user.name.trim()[0]?.toUpperCase()}
+                      </span>
+                      <span className="truncate font-medium">{user.name}</span>
+                    </span>
                   </td>
-                  <td className="py-3 px-6 text-slate-600 truncate">{user.email}</td>
-                  <td className="py-3 px-6">
+                  <td className="truncate px-4 py-3 text-ink-soft">{user.email}</td>
+                  <td className="px-4 py-3">
                     <select
                       aria-label={`Ubah peran ${user.name}`}
                       value={user.role}
                       disabled={!user.is_active || isSelf}
                       title={isSelf ? SELF_LOCKED : undefined}
                       onChange={(e) => handleRoleChange(user, e.target.value as Role)}
-                      className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 shadow-2xs hover:border-slate-300 focus:border-indigo-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400 cursor-pointer"
+                      className="h-8 w-full cursor-pointer rounded-control border-0 bg-surface px-3 text-sm text-ink hover:bg-surface-press disabled:cursor-not-allowed disabled:bg-surface-hover disabled:text-subtle"
                     >
                       {ROLE_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </td>
-                  <td className="py-3 px-6 text-right">
+                  <td className="px-4 py-3 text-right">
                     <button
                       type="button"
                       aria-label={`Toggle aktif ${user.name}`}
@@ -321,12 +331,12 @@ export default function AdminMembersPage() {
                         if (toggleAction === "deactivate") setDeactivatingUser(user);
                         if (toggleAction === "activate") setActivatingUser(user);
                       }}
-                      className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:cursor-not-allowed ${
-                        user.is_active ? "bg-indigo-600" : "bg-slate-200"
+                      className={`relative inline-flex h-6 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out disabled:cursor-not-allowed ${
+                        user.is_active ? "bg-ink" : "bg-line"
                       } ${toggleAction ? "cursor-pointer" : "opacity-50"}`}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-paper shadow-md ring-0 transition duration-200 ease-in-out ${
                           user.is_active ? "translate-x-4" : "translate-x-0"
                         }`}
                       />
