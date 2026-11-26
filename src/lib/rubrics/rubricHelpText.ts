@@ -10,18 +10,15 @@ export const RUBRIC_HELP = {
   approvedAt: "Tanggal versi rubrik ini disetujui. Boleh dikosongkan bila belum ada.",
   judgePromptQuality: "Instruksi untuk penilai LLM saat menilai kualitas jawaban.",
   judgePromptFormat: "Instruksi untuk penilai LLM saat menilai kesesuaian format jawaban.",
-  levelLabel: "Nama tingkat untuk skor ini, tampil di hasil penilaian.",
-  levelPassing: "Centang bila skor ini dianggap lulus.",
+  /** Satu catatan untuk seluruh tabel skala (SCRUM-375 B2), bukan enam catatan yang sama. */
+  scale: "Beri nama tiap skor. Nama ini tampil di hasil penilaian. Centang Lulus untuk skor yang dianggap lulus.",
+  /** Satu catatan untuk keenam deskripsi skor (B3); nama tiap skor tampil di samping isiannya. */
+  descriptors: "Ciri jawaban yang pantas mendapat skor tiap skor. Nama skor diambil dari Skala nilai.",
   aspectName: "Nama singkat aspek yang dinilai.",
   aspectPath: "Deterministik dinilai dengan aturan tetap, LLM judge dinilai oleh model penilai.",
   aspectWeight: "Bobot aspek ini terhadap skor akhir, berupa angka. Kosongkan bila tanpa bobot.",
   aspectDefinition: "Penjelasan arti aspek ini bagi penilai.",
 } as const;
-
-/** Catatan deskripsi per skor; satu fungsi untuk keenam skor supaya tidak ditulis enam kali. */
-export function descriptorHelp(score: number): string {
-  return `Ciri jawaban yang pantas mendapat skor ${score}.`;
-}
 
 /**
  * Contoh isian di kolom kosong. Hanya contoh bentuk isian, bukan materi uji.
