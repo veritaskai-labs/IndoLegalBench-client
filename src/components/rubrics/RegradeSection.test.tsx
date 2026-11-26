@@ -304,7 +304,7 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
 
     // Assert
     const dialog = within(screen.getByRole("dialog", { name: "Nilai ulang sesi ini?" }));
-    await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
+    await waitFor(() => expect(dialog.getByLabelText(/Penilai LLM/)).toHaveValue(""));
     expect(dialog.getByRole("button", { name: "Nilai ulang" })).toBeDisabled();
   });
 });

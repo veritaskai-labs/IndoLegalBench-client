@@ -42,21 +42,22 @@ async function chooseJudge(
   user: ReturnType<typeof userEvent.setup>,
   judgeId = "judge-a",
 ) {
-  await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), judgeId);
+  await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), judgeId);
 }
 
 describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
-  // K-16 (SCRUM-288): the judge cost comes out of the judge product's monthly budget on the
-  // Penyedia page; there is no separate judge budget any more (server SCRUM-271).
-  it("says what grading uses and that its cost comes from the judge product's budget", () => {
+  // K-16 (SCRUM-288) + SCRUM-375 C1/C2: one sentence on what grading uses; the cost note sits on the
+  // judge picker and names the page as the sidebar does (Produk AI).
+  it("says in one sentence what grading uses and where the judge cost comes from", async () => {
     const { dialog } = renderDialog(() => Promise.resolve(gradingRunQueued()));
 
-    expect(dialog.getByText(/“Run November”/)).toHaveTextContent("rubrik versi aktif");
-    const cost = dialog.getByText(/Biaya penilai LLM/);
-    expect(cost).toHaveTextContent(
-      "Biaya penilai LLM memotong anggaran bulanan produk LLM judge yang dipilih di halaman Penyedia. Sisa anggarannya ada di tabel perkiraan.",
+    expect(dialog.getByText(/“Run November”/)).toHaveTextContent(
+      "Sesi “Run November” dinilai dengan rubrik versi aktif, lewat aturan deterministik dan penilai LLM.",
     );
-    expect(cost).not.toHaveTextContent("terpisah");
+    expect(await dialog.findByLabelText(/Penilai LLM/)).toHaveAccessibleDescription(
+      "Biayanya memotong anggaran bulanan produk ini di halaman Produk AI.",
+    );
+    expect(dialog.queryByText(/halaman Penyedia/)).not.toBeInTheDocument();
   });
 
   // K-14: the judge is chosen here, so nothing is estimated or sent before one is picked.
@@ -65,7 +66,7 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     const { dialog, gateway } = renderDialog(() => Promise.resolve(gradingRunQueued()));
     const button = dialog.getByRole("button", { name: "Nilai" });
 
-    await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
+    await waitFor(() => expect(dialog.getByLabelText(/Penilai LLM/)).toHaveValue(""));
     expect(button).toBeDisabled();
     expect(gateway.estimate).not.toHaveBeenCalled();
 
@@ -79,7 +80,7 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
   it("keeps Nilai off and explains when no judge is active", async () => {
     const { dialog } = renderDialog(() => Promise.resolve(gradingRunQueued()), undefined, []);
 
-    expect(await dialog.findByText(/Belum ada provider yang aktif/)).toBeInTheDocument();
+    expect(await dialog.findByText(/Belum ada penilai LLM yang aktif/)).toBeInTheDocument();
     expect(dialog.getByRole("button", { name: "Nilai" })).toBeDisabled();
   });
 
@@ -102,7 +103,7 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     const { dialog } = renderDialog(() => Promise.resolve(gradingRunQueued()));
 
     expect(dialog.getByText(/latar belakang/)).toHaveTextContent(
-      "Penilaian berjalan di latar belakang: dialog ini tertutup begitu penilaian masuk antrean, dan progresnya tampil di halaman sesi.",
+      "Berjalan di latar belakang. Dialog tertutup setelah penilaian masuk antrean, progresnya tampil di halaman sesi.",
     );
   });
 
@@ -188,8 +189,8 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     expect(gateway.estimate).toHaveBeenCalledWith("s-1", { judgeProviderId: "judge-a" });
     expect(table.getByRole("rowheader", { name: "Jumlah percobaan" }).nextElementSibling).toHaveTextContent("12");
     expect(table.getByRole("rowheader", { name: "Perkiraan biaya" }).nextElementSibling).toHaveTextContent("Rp 15.251");
-    expect(table.getByRole("rowheader", { name: "Sisa anggaran bulanan judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
-    await waitFor(() => expect(table.getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("Judge Alfa"));
+    expect(table.getByRole("rowheader", { name: "Sisa anggaran bulanan penilai" }).nextElementSibling).toHaveTextContent("Rp 500.000");
+    expect(table.getByRole("rowheader", { name: "Versi rubrik" }).nextElementSibling).toHaveTextContent("Versi 1 · aktif");
   });
 
   it("keeps Nilai off while the estimate loads", async () => {
@@ -310,7 +311,7 @@ describe("GradeSessionDialog as the retry confirmation (K-19, SCRUM-290)", () =>
   it("keeps the retry button off until a judge is chosen", async () => {
     const { dialog, gateway } = renderRetry();
 
-    await waitFor(() => expect(dialog.getByLabelText(/Provider Penilai/)).toHaveValue(""));
+    await waitFor(() => expect(dialog.getByLabelText(/Penilai LLM/)).toHaveValue(""));
 
     expect(dialog.getByRole("button", { name: "Coba Nilai Ulang" })).toBeDisabled();
     expect(gateway.enqueue).not.toHaveBeenCalled();

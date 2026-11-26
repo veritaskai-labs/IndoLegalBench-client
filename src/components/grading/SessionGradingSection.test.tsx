@@ -122,7 +122,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     expect(await within(section).findByText("Sesi ini belum dinilai.")).toBeInTheDocument();
     await user.click(within(section).getByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
@@ -184,7 +184,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
     await user.click(await within(section).findByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
     await dialog.findByRole("alert");
@@ -215,7 +215,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       const user = userEvent.setup();
       await user.click(await within(section).findByRole("button", { name: "Nilai" }));
       const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-      await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+      await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
       await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
       await user.click(dialog.getByRole("button", { name: "Nilai" }));
       return { user, dialog };
@@ -283,7 +283,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
         const user = userEvent.setup();
         await user.click(await within(await within(section).findByRole("alert")).findByRole("button", { name: "Coba Nilai Ulang" }));
         const dialog = within(screen.getByRole("dialog", { name: "Coba nilai ulang sesi ini?" }));
-        await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+        await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
         await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
         return { user, dialog };
       }
