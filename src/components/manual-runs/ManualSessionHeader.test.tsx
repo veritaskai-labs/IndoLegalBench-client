@@ -178,6 +178,19 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
       expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toBeDisabled();
     });
 
+    it("explains why 'Kirim untuk Dinilai' is off while a run is grading, and keeps 'Tandai Selesai' free of that reason", async () => {
+      renderGradable({
+        progress: () => Promise.resolve(gradingProgress({ status: "running", attempts_graded: 10, attempts_total: 50, percent: 20 })),
+      });
+
+      const reason = "Penilaian sesi ini sedang berjalan. Tunggu sampai selesai.";
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toHaveAccessibleDescription(reason),
+      );
+      expect(screen.getByText(reason)).toBeVisible();
+      expect(screen.getByRole("button", { name: /tandai selesai/i })).not.toHaveAccessibleDescription(reason);
+    });
+
     // The manual page has no score table: the session moves to Dinilai and the report is one click away.
     it("reloads the session and links to the report when the run finishes", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -637,6 +650,10 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
           /0 dari 0 jawaban terisi \(0%\)/.test(el.textContent || ""),
       ),
     ).toBeInTheDocument();
+    const reason = "Sesi ini tidak memiliki jawaban untuk diisi.";
+    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.getByRole("button", { name: /tandai selesai/i })).toHaveAccessibleDescription(reason);
+    expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toHaveAccessibleDescription(reason);
   });
 
   it("renders finalized timestamp and hides 'Tandai Selesai' button when finalized", () => {

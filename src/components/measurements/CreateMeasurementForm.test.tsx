@@ -131,6 +131,39 @@ describe("CreateMeasurementForm", () => {
     expect(startBtn).not.toHaveAccessibleDescription();
   });
 
+  it("explains a disabled Mulai Pengukuran while the summary is computed and when the budget is exceeded", async () => {
+    const user = userEvent.setup();
+    let rejectSummary: (error: unknown) => void = () => {};
+    mockGetMeasurementSummary.mockReturnValue(
+      new Promise((_, reject) => {
+        rejectSummary = reject;
+      }),
+    );
+    renderForm();
+
+    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Anggaran");
+    await user.click(screen.getByRole("button", { name: "Pengukuran Resmi" }));
+    await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: /Pilih Produk AI/i }), "prod-gemini");
+    await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
+
+    const startBtn = screen.getByRole("button", { name: "Mulai Pengukuran" });
+    expect(startBtn).toHaveAccessibleDescription("Ringkasan biaya sedang dihitung.");
+
+    rejectSummary(
+      new ApiError(422, "BUDGET_EXCEEDED", "Perkiraan biaya melebihi sisa anggaran", null, [], null, {
+        product_name: "Gemini 1.5 Pro",
+        remaining_budget_idr: "50000.00",
+        estimated_cost_idr: "250000.00",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(startBtn).toHaveAccessibleDescription("Perkiraan biaya melebihi sisa anggaran produk."),
+    );
+    expect(startBtn).toBeDisabled();
+  });
+
   it("renders all sequential steps and form controls", async () => {
     renderForm();
 
