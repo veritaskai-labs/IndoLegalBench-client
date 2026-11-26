@@ -48,7 +48,8 @@ describe("GradingHistoryList (AC7 old results stay, SCRUM-375 C5 labelled table)
     expect(judge).toHaveTextContent("DeepSeek · deepseek-chat");
     expect(status).toHaveTextContent("Selesai");
     expect(time).toHaveTextContent("06 Nov 2026, 10.05 WIB");
-    expect(cost.textContent?.replaceAll(" ", " ")).toBe("Rp 1.166");
+    // Intl puts a no-break space after "Rp".
+    expect(cost.textContent?.replace(/\s/g, " ")).toBe("Rp 1.166");
   });
 
   // Edge: number by age, newest on top; edge because the list is sorted newest first, so the top row has the highest number.

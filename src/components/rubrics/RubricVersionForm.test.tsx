@@ -20,13 +20,19 @@ function setup({
 const saveButton = () => screen.getByRole("button", { name: "Simpan versi" });
 const templateButton = () => screen.getByRole("button", { name: "Isi dari template rubrik v1" });
 
-/** The template fills levels and aspect names; the rest of the required fields are typed. */
+/** Paste instead of typing key by key: the result is the same and the test stays fast under a loaded CI runner. */
+async function fill(user: UserEvent, label: string, text: string) {
+  await user.click(screen.getByLabelText(label));
+  await user.paste(text);
+}
+
+/** The template fills levels and aspect names; the rest of the required fields are filled in here. */
 async function fillRequired(user: UserEvent) {
   await user.click(templateButton());
   await user.type(screen.getByLabelText("Berlaku sejak"), "2026-12-01");
-  await user.type(screen.getByLabelText("Prompt penilai kualitas"), "Nilai kualitas.");
-  await user.type(screen.getByLabelText("Prompt penilai format"), "Nilai format.");
-  for (const number of [1, 2, 3]) await user.type(screen.getByLabelText(`Definisi aspek ${number}`), `Definisi ${number}`);
+  await fill(user, "Prompt penilai kualitas", "Nilai kualitas.");
+  await fill(user, "Prompt penilai format", "Nilai format.");
+  for (const number of [1, 2, 3]) await fill(user, `Definisi aspek ${number}`, `Definisi ${number}`);
 }
 
 /** Simpan versi, then confirm in the summary dialog (B4). */
@@ -439,8 +445,8 @@ describe("RubricVersionForm (AC7 form, SCRUM-375 B1–B7)", () => {
     await fillRequired(user);
     await user.selectOptions(screen.getByLabelText("Jalur aspek 1"), "deterministic");
     await user.click(screen.getByLabelText("Lulus skor 4"));
-    await user.type(screen.getByLabelText("Bobot aspek 1"), "100");
-    await user.type(screen.getByLabelText("Nama penyetuju"), "Steven & Deanne");
+    await fill(user, "Bobot aspek 1", "100");
+    await fill(user, "Nama penyetuju", "Steven & Deanne");
     await user.type(screen.getByLabelText("Tanggal persetujuan"), "2026-10-27");
 
     // Act

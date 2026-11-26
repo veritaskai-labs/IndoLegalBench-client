@@ -105,6 +105,7 @@ function SessionGradingBody({
 
       <GradingResultsBody
         results={shown}
+        rubricHref={role === "admin" ? "/admin/rubrics" : undefined}
         gradeAction={gradable ? { label: "Nilai", onClick: () => setDialog("grade"), disabled: progress.active } : undefined}
       />
 

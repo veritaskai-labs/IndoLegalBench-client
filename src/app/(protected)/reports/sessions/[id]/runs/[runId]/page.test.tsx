@@ -88,7 +88,7 @@ describe("ReportRunPage (PBI-22 AC9, one run opened from Laporan)", () => {
     render(<ReportRunPage />);
 
     // Assert
-    expect(await screen.findAllByText(/LLM judge:/)).toHaveLength(1);
+    expect(await screen.findAllByText("Penilai LLM", { selector: "dt" })).toHaveLength(1);
   });
 
   it("explains a run that is not found and lets the user try again", async () => {

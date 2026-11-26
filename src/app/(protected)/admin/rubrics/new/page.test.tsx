@@ -85,9 +85,10 @@ describe("Buat versi baru page (/admin/rubrics/new, SCRUM-375 B)", () => {
     await screen.findByText("Akan disimpan sebagai Versi 9.");
     await user.click(screen.getByRole("button", { name: "Isi dari template rubrik v1" }));
     await user.type(screen.getByLabelText("Berlaku sejak"), "2026-12-01");
-    await user.type(screen.getByLabelText("Prompt penilai kualitas"), "Kualitas.");
-    await user.type(screen.getByLabelText("Prompt penilai format"), "Format.");
-    for (const number of [1, 2, 3]) await user.type(screen.getByLabelText(`Definisi aspek ${number}`), "Definisi");
+    for (const label of ["Prompt penilai kualitas", "Prompt penilai format", "Definisi aspek 1", "Definisi aspek 2", "Definisi aspek 3"]) {
+      await user.click(screen.getByLabelText(label));
+      await user.paste("Teks");
+    }
 
     // Act
     await user.click(screen.getByRole("button", { name: "Simpan versi" }));
