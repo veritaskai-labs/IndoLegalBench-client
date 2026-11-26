@@ -14,7 +14,7 @@ const SMOOTH = "duration-200 ease-out motion-reduce:transition-none";
 const fade = (hidden: boolean) => `transition-opacity ${SMOOTH} ${hidden ? "opacity-0" : "opacity-100"}`;
 
 /** Resting on an icon this long opens the collapsed column over the page until the pointer leaves it. */
-export const PEEK_AFTER_MS = 4000;
+export const PEEK_AFTER_MS = 2000;
 
 export function Sidebar() {
   const auth = useAuth();
