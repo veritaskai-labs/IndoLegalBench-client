@@ -81,6 +81,15 @@ describe("GradingHistoryList (AC7 old results stay, SCRUM-375 C5 labelled table)
     expect(cells(rows()[0])[5]).toHaveTextContent(/^-$/);
   });
 
+  // Negative: a run that did not finish is not shown green; edge because status is a free string from the server.
+  it("shows an unfinished run's status in grey, not green", () => {
+    // Act
+    render(<GradingHistoryList runs={[gradingResponse({ status: "failed" })]} />);
+
+    // Assert
+    expect(cells(rows()[0])[3].querySelector("span")).not.toHaveClass("bg-success-wash");
+  });
+
   // Positive (C5): on the phone each run is a card with the same facts.
   it("offers the runs as cards for the phone", () => {
     // Act

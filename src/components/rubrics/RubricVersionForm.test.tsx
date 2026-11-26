@@ -470,6 +470,36 @@ describe("RubricVersionForm (AC7 form, SCRUM-375 B1–B7)", () => {
     });
   });
 
+  // Positive (B3): a description typed next to its score goes out with that score's level.
+  it("sends a typed description with its score", async () => {
+    // Arrange
+    const { user, gateway } = setup();
+    await fillRequired(user);
+    await fill(user, "Deskripsi aspek 1 skor 3", " Tambahan.");
+
+    // Act
+    await saveAndConfirm(user);
+
+    // Assert
+    await waitFor(() => expect(gateway.createVersion).toHaveBeenCalledTimes(1));
+    const level3 = vi.mocked(gateway.createVersion).mock.calls[0][0].levels.find((level) => level.score === 3);
+    expect(level3?.descriptors?.[0].descriptor).toMatch(/Tambahan\.$/);
+  });
+
+  // Positive (B1): the section picked in the nav is marked as the current one.
+  it("marks the section picked in the nav as current", async () => {
+    // Arrange
+    const { user } = setup();
+    const nav = screen.getByRole("navigation", { name: "Bagian formulir" });
+
+    // Act
+    await user.click(within(nav).getByRole("link", { name: /^Skala nilai/ }));
+
+    // Assert
+    expect(within(nav).getByRole("link", { name: /^Skala nilai/ })).toHaveAttribute("aria-current", "true");
+    expect(within(nav).getByRole("link", { name: /^Informasi versi/ })).not.toHaveAttribute("aria-current");
+  });
+
   it("tells the page about the new version", async () => {
     // Arrange
     const { user, onCreated } = setup();
