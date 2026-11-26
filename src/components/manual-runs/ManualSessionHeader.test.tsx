@@ -359,6 +359,53 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     );
   });
 
+  it("says how many answers are still missing under the disabled session actions", () => {
+    const session = createMockDetail({ filled_answers: 42, total_answers: 50 });
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    const reason = "Isi 8 jawaban lagi untuk mengaktifkan tombol ini.";
+    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.getByRole("button", { name: /tandai selesai/i })).toHaveAccessibleDescription(reason);
+    expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toHaveAccessibleDescription(reason);
+  });
+
+  it("shows no missing-answer reason once every answer is filled", () => {
+    const session = createMockDetail({ status: "complete", filled_answers: 50, total_answers: 50 });
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/jawaban lagi untuk mengaktifkan/)).not.toBeInTheDocument();
+  });
+
+  it("names the product on the platform site link", () => {
+    render(
+      <ManualSessionHeader
+        session={createMockDetail()}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Buka situs LegalHero ↗" })).toHaveAttribute("href", "https://legalhero.id");
+  });
+
   it("enables 'Tandai Selesai' and 'Kirim untuk Dinilai' when all answers are filled (AC8, AC9)", () => {
     const session = createMockDetail({
       status: "complete",

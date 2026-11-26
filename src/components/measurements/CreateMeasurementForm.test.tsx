@@ -100,6 +100,37 @@ describe("CreateMeasurementForm", () => {
     );
   }
 
+  it("explains why Tinjau Ringkasan Biaya and Mulai Pengukuran are disabled on an empty form", async () => {
+    renderForm();
+
+    expect(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" })).toHaveAccessibleDescription(
+      "Lengkapi dulu: minimal satu suite dan produk AI.",
+    );
+    expect(screen.getByRole("button", { name: "Mulai Pengukuran" })).toHaveAccessibleDescription(
+      "Lengkapi dulu: label sesi, tujuan sesi, minimal satu suite, dan produk AI.",
+    );
+  });
+
+  it("asks for the cost summary once every field is filled, and drops the reason after it is reviewed", async () => {
+    const user = userEvent.setup();
+    mockGetMeasurementSummary.mockResolvedValue(MOCK_SUMMARY);
+    renderForm();
+
+    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Lengkap");
+    await user.click(screen.getByRole("button", { name: "Pengukuran Resmi" }));
+    await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: /Pilih Produk AI/i }), "prod-gemini");
+
+    const reviewBtn = screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" });
+    const startBtn = screen.getByRole("button", { name: "Mulai Pengukuran" });
+    expect(reviewBtn).not.toHaveAccessibleDescription();
+    expect(startBtn).toHaveAccessibleDescription("Tinjau ringkasan biaya dulu untuk mengaktifkan tombol ini.");
+
+    await user.click(reviewBtn);
+    await waitFor(() => expect(screen.getByTestId("summary-card")).toBeInTheDocument());
+    expect(startBtn).not.toHaveAccessibleDescription();
+  });
+
   it("renders all sequential steps and form controls", async () => {
     renderForm();
 

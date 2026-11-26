@@ -72,6 +72,33 @@ describe("ManualSessionTable (PBI-22 AC8, AC10, AC11)", () => {
     expect(screen.getByText("Lihat detail")).toBeInTheDocument();
   });
 
+  it("draws the filled answers of each session as a bar", () => {
+    render(
+      <ManualSessionTable
+        sessions={[
+          createMockSession({
+            status: "partially_filled",
+            progress: { completed: 5, total: 20, completed_cases: 3, total_cases: 10, percent_cases_complete: 30 },
+          }),
+        ]}
+        loading={false}
+      />,
+    );
+
+    expect(screen.getByRole("progressbar", { name: "Persen jawaban terisi" })).toHaveAttribute("value", "25");
+  });
+
+  it("draws an empty bar for a session without answers to fill", () => {
+    render(
+      <ManualSessionTable
+        sessions={[createMockSession({ progress: { completed: 0, total: 0, completed_cases: 0, total_cases: 0, percent_cases_complete: 0 } })]}
+        loading={false}
+      />,
+    );
+
+    expect(screen.getByRole("progressbar", { name: "Persen jawaban terisi" })).toHaveAttribute("value", "0");
+  });
+
   it("does NOT display cost estimates, budget, or failure rate headers (AC10)", () => {
     render(<ManualSessionTable sessions={[]} loading={false} />);
 
