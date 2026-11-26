@@ -131,6 +131,27 @@ describe("CreateMeasurementForm", () => {
     expect(startBtn).not.toHaveAccessibleDescription();
   });
 
+  it("explains a disabled Mulai Pengukuran while the measurement is being started", async () => {
+    const user = userEvent.setup();
+    mockGetMeasurementSummary.mockResolvedValue(MOCK_SUMMARY);
+    mockStartMeasurement.mockImplementationOnce(() => new Promise(() => {}));
+    renderForm();
+
+    await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Mulai");
+    await user.click(screen.getByRole("button", { name: "Pengukuran Resmi" }));
+    await user.click(screen.getByRole("checkbox", { name: "Suite Hukum Acara Pidana" }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: /Pilih Produk AI/i }), "prod-gemini");
+    await user.click(screen.getByRole("button", { name: "Tinjau Ringkasan Biaya" }));
+    await waitFor(() => expect(screen.getByTestId("summary-card")).toBeInTheDocument());
+
+    const startBtn = screen.getByRole("button", { name: "Mulai Pengukuran" });
+    await user.click(startBtn);
+    await user.click(within(screen.getByTestId("start-confirm-dialog")).getByRole("button", { name: "Ya, Mulai Pengukuran" }));
+
+    expect(startBtn).toBeDisabled();
+    expect(startBtn).toHaveAccessibleDescription("Pengukuran sedang dimulai.");
+  });
+
   it("explains a disabled Mulai Pengukuran while the summary is computed and when the budget is exceeded", async () => {
     const user = userEvent.setup();
     let rejectSummary: (error: unknown) => void = () => {};
