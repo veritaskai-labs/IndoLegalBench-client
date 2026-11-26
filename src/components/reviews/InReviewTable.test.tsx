@@ -103,10 +103,12 @@ describe("InReviewTable", () => {
     expect(screen.getByText("Setuju")).toBeInTheDocument();
     expect(screen.getByText("Aileen")).toBeInTheDocument();
     expect(screen.getByText("Belum menilai")).toBeInTheDocument();
+    expect(screen.queryByText("Lihat komentar")).not.toBeInTheDocument();
   });
 
   // Positif
-  it("shows the comment that came with a verdict", () => {
+  it("keeps the verdict visible while its comment can be opened and closed", async () => {
+    const user = userEvent.setup();
     const queued = row({
       review: review({
         reviewers: [
@@ -124,7 +126,13 @@ describe("InReviewTable", () => {
     render(<InReviewTable rows={[queued]} />);
 
     expect(screen.getByText("Minta revisi")).toBeInTheDocument();
-    expect(screen.getByText("Pasal 1320 belum dikutip.")).toBeInTheDocument();
+    const toggle = screen.getByText("Lihat komentar");
+    const comment = screen.getByText("Pasal 1320 belum dikutip.");
+    expect(comment).not.toBeVisible();
+    await user.click(toggle);
+    expect(comment).toBeVisible();
+    await user.click(toggle);
+    expect(comment).not.toBeVisible();
   });
 
   // Positif (F-02)
@@ -188,24 +196,26 @@ describe("InReviewTable", () => {
   it("hands back the slot and the row when the admin replaces a reviewer", async () => {
     const user = userEvent.setup();
     const onReplace = vi.fn();
-    const queued = row();
+    const second = slot({ assignment_id: "a2", reviewer: { id: "u2", name: "Dwi Eka Sari" } });
+    const queued = row({ review: review({ reviewers: [slot(), second] }) });
 
     render(<InReviewTable rows={[queued]} onReplace={onReplace} />);
     await user.click(
-      screen.getByRole("button", { name: "Ganti reviewer Roben" }),
+      screen.getByRole("button", { name: "Ganti Dwi Eka Sari, reviewer untuk ILB-PT-0142" }),
     );
 
-    expect(onReplace).toHaveBeenCalledWith(queued.review?.reviewers[0], queued);
+    expect(onReplace).toHaveBeenCalledWith(second, queued);
   });
 
   // corner: penugasan yang sudah diganti tidak bisa diganti lagi.
-  it("offers no button for a reviewer who was already replaced", () => {
+  it.each(["replaced", "void"] as const)("offers no replacement for a %s assignment", (status) => {
     const queued = row({
-      review: review({ reviewers: [slot({ status: "replaced" })] }),
+      review: review({ reviewers: [slot({ status })] }),
     });
 
     render(<InReviewTable rows={[queued]} onReplace={vi.fn()} />);
 
+    expect(screen.getByText("Roben")).toBeVisible();
     expect(screen.queryByRole("button", { name: /^Ganti/ })).not.toBeInTheDocument();
   });
 });
