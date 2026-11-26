@@ -6,6 +6,7 @@ import { ProductSelect } from "@/components/providers/ProductSelect";
 import { useSuites } from "@/hooks/useSuites";
 import { useToast } from "@/components/ui/Toast";
 import { createManualSession, manualErrorMessage } from "@/lib/runs/manualRunsApi";
+import { missingRequirementsText } from "@/lib/ui/disabledReason";
 import type { CaseFilter, MeasurementPurpose, ManualStartRequest } from "@/types/measurement";
 import {
   CASE_FILTER_LABEL,
@@ -54,6 +55,14 @@ export function CreateManualSessionForm() {
     selectedSuiteIds.length > 0 &&
     productId !== "" &&
     isValidRepeat;
+  const submitBlockedReason = missingRequirementsText([
+    ["label sesi", label.trim().length > 0 && label.trim().length <= SESSION_LABEL_MAX_LENGTH],
+    ["tujuan sesi", purpose !== ""],
+    ["minimal satu suite", selectedSuiteIds.length > 0],
+    ["produk AI", productId !== ""],
+    [`jumlah pengulangan ${MANUAL_SESSION_MIN_REPETITIONS} sampai ${MANUAL_SESSION_MAX_REPETITIONS}`, isValidRepeat],
+  ]);
+  const submitReasonId = useId();
 
   function handleSuiteToggle(suiteId: string) {
     setSelectedSuiteIds((prev) =>
@@ -372,9 +381,15 @@ export function CreateManualSessionForm() {
         >
           Batal
         </button>
+        {submitBlockedReason && (
+          <p id={submitReasonId} className="text-right text-xs text-ink-soft">
+            {submitBlockedReason}
+          </p>
+        )}
         <button
           type="submit"
           disabled={!isFormValid || isSubmitting}
+          aria-describedby={submitBlockedReason ? submitReasonId : undefined}
           className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isSubmitting ? "Membuat Sesi…" : "Buat Sesi Pengukuran"}

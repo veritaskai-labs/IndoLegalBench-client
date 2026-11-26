@@ -62,19 +62,28 @@ function SessionDetailView({
   const ended = isSettled(session.status);
   const progress = useMeasurementProgress(session.id, { poll: !ended });
 
-  const facts: { label: string; value: React.ReactNode }[] = [
-    { label: "Status", value: <SessionStatusBadge status={session.status} stopReason={session.stop_reason} /> },
-    { label: "Produk", value: unknownName(session.product_name) },
-    { label: "Tujuan", value: MEASUREMENT_PURPOSE_LABEL[session.purpose] },
-    { label: "Filter kasus", value: CASE_FILTER_LABEL[session.split_filter] },
-    { label: "Pengulangan", value: session.repetitions },
-    { label: "Progres", value: formatProgress(session) },
-    { label: "Dibuat", value: `${formatWib(session.created_at)} · ${unknownName(session.created_by_name)}` },
-    { label: "Mulai berjalan", value: session.started_at ? formatWib(session.started_at) : "–" },
-    { label: "Berakhir", value: session.finished_at ? formatWib(session.finished_at) : "–" },
+  const factGroups: { title: string; facts: { label: string; value: React.ReactNode }[] }[] = [
     {
-      label: "Snapshot kasus",
-      value: session.snapshot_created_at ? formatWib(session.snapshot_created_at) : "Dibuat saat sesi mulai",
+      title: "Pengaturan",
+      facts: [
+        { label: "Produk", value: unknownName(session.product_name) },
+        { label: "Tujuan", value: MEASUREMENT_PURPOSE_LABEL[session.purpose] },
+        { label: "Filter kasus", value: CASE_FILTER_LABEL[session.split_filter] },
+        { label: "Pengulangan", value: session.repetitions },
+        { label: "Progres", value: formatProgress(session) },
+        {
+          label: "Snapshot kasus",
+          value: session.snapshot_created_at ? formatWib(session.snapshot_created_at) : "Dibuat saat sesi mulai",
+        },
+      ],
+    },
+    {
+      title: "Waktu",
+      facts: [
+        { label: "Dibuat", value: `${formatWib(session.created_at)} · ${unknownName(session.created_by_name)}` },
+        { label: "Mulai berjalan", value: session.started_at ? formatWib(session.started_at) : "—" },
+        { label: "Berakhir", value: session.finished_at ? formatWib(session.finished_at) : "—" },
+      ],
     },
   ];
 
@@ -82,7 +91,12 @@ function SessionDetailView({
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Pengukuran otomatis", href: "/runs" }, { label: session.label }]} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
+          <span role="status" aria-label="Status sesi">
+            <SessionStatusBadge status={session.status} stopReason={session.stop_reason} />
+          </span>
+        </div>
         <ScoreDownloadButton session={session} grading={gradingOf(results)} />
       </div>
 
@@ -92,15 +106,22 @@ function SessionDetailView({
         </p>
       )}
 
-      <section aria-label="Ringkasan sesi" className="rounded-lg border border-slate-200 bg-white p-4">
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:gap-x-6 lg:grid-cols-3">
-          {facts.map((fact) => (
-            <div key={fact.label}>
-              <dt className="text-xs font-semibold text-slate-500">{fact.label}</dt>
-              <dd className="mt-0.5 text-slate-900">{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
+      <section aria-label="Ringkasan sesi" className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        {factGroups.map((group) => (
+          <div key={group.title} role="group" aria-labelledby={`fakta-${group.title}`} className="space-y-2">
+            <p id={`fakta-${group.title}`} className="text-xs font-semibold text-muted">
+              {group.title}
+            </p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:gap-x-6 lg:grid-cols-3">
+              {group.facts.map((fact) => (
+                <div key={fact.label}>
+                  <dt className="text-xs font-semibold text-slate-500">{fact.label}</dt>
+                  <dd className="mt-0.5 text-slate-900">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
       </section>
 
       {stale && !ended && (

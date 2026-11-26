@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { GradeSessionDialog } from "@/components/grading/GradeSessionDialog";
 import { GradingProgressBar } from "@/components/grading/GradingProgressBar";
 import { RETRY_GRADING_DIALOG } from "@/lib/grading/gradingRules";
@@ -75,6 +75,12 @@ export function ManualSessionHeader({
     session.total_answers > 0
       ? Math.round((session.filled_answers / session.total_answers) * 100)
       : 0;
+  const remainingAnswers = session.total_answers - session.filled_answers;
+  const actionsBlockedReason =
+    isAdmin && !isAllFilled && remainingAnswers > 0
+      ? `Isi ${remainingAnswers} jawaban lagi untuk mengaktifkan tombol ini.`
+      : null;
+  const actionsReasonId = useId();
 
   function handleFinalized() {
     setIsFinalizeOpen(false);
@@ -170,7 +176,7 @@ export function ManualSessionHeader({
                   rel="noopener noreferrer"
                   className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
                 >
-                  Buka tautan ↗
+                  {`Buka situs ${session.product_name} ↗`}
                 </a>
               </dd>
             </div>
@@ -256,6 +262,7 @@ export function ManualSessionHeader({
                 type="button"
                 disabled={!isAllFilled}
                 onClick={() => setIsFinalizeOpen(true)}
+                aria-describedby={actionsBlockedReason ? actionsReasonId : undefined}
                 title={
                   !isAllFilled
                     ? "Semua jawaban harus terisi sebelum dapat ditandai selesai."
@@ -273,6 +280,7 @@ export function ManualSessionHeader({
                 type="button"
                 disabled={!isAllFilled || grading.active}
                 onClick={() => setGradeDialog("grade")}
+                aria-describedby={actionsBlockedReason ? actionsReasonId : undefined}
                 title={gradeButtonTitle(isAllFilled, grading.active)}
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -281,6 +289,12 @@ export function ManualSessionHeader({
             )}
           </div>
         </div>
+
+        {actionsBlockedReason && (
+          <p id={actionsReasonId} className="text-xs text-ink-soft sm:text-right">
+            {actionsBlockedReason}
+          </p>
+        )}
 
         {/* Progress bar */}
         <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
