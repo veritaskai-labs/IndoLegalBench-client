@@ -22,7 +22,9 @@ describe("toRunRow (AC7: hasil terbaru dan versi rubriknya)", () => {
       triggeredAt: "06 Nov 2026, 10.05 WIB",
       isLatest: true,
       judgeLabel: "Penilai tidak tercatat",
-      costLabel: null,
+      cost: null,
+      number: 1,
+      isCompleted: true,
     });
   });
 
@@ -117,7 +119,9 @@ describe("toRunRow with a history summary (GET /grading-runs)", () => {
       triggeredAt: "06 Nov 2026, 10.05 WIB",
       isLatest: true,
       judgeLabel: "Penilai tidak tercatat",
-      costLabel: null,
+      cost: null,
+      number: 1,
+      isCompleted: true,
     });
   });
 });
@@ -137,6 +141,31 @@ describe("toRunRows", () => {
 
     // Assert
     expect(rows.map((row) => row.id)).toEqual(["new", "mid", "old"]);
+  });
+
+  // Positive (SCRUM-375 C5): "Penilaian N" counts by age, so the first grading is always Penilaian 1.
+  it("numbers the runs by age, the oldest as 1", () => {
+    // Arrange
+    const runs = [
+      gradingResponse({ grading_run_id: "old", triggered_at: "2026-11-01T03:00:00Z" }),
+      gradingResponse({ grading_run_id: "new", triggered_at: "2026-11-06T03:00:00Z" }),
+      gradingResponse({ grading_run_id: "mid", triggered_at: "2026-11-03T03:00:00Z" }),
+    ];
+
+    // Act
+    const rows = toRunRows(runs);
+
+    // Assert
+    expect(rows.map((row) => [row.id, row.number])).toEqual([["new", 3], ["mid", 2], ["old", 1]]);
+  });
+
+  // Negative: only "completed" is a finished run; edge because status is a free string and anything else must not look green.
+  it("treats only a completed run as finished", () => {
+    // Act
+    const [row] = toRunRows([gradingResponse({ status: "failed" })]);
+
+    // Assert
+    expect(row.isCompleted).toBe(false);
   });
 
   it("does not change the array it was given", () => {
@@ -233,13 +262,13 @@ describe("toRunRow judge and cost (K-17/K-18, SCRUM-283)", () => {
     expect(row.judgeLabel).toBe("Penilai tidak tercatat");
   });
 
-  // Positive: the cost is the sum of the recorded judge calls (review on server#134), so it says "tercatat".
+  // Positive: the cost is the sum of the recorded judge calls (review on server#134); the Biaya column (C5) names it.
   it("shows the recorded judge cost in Rupiah", () => {
     // Arrange / Act
     const row = toRunRow(gradingRunSummary({ judge: JUDGE }));
 
     // Assert
-    expect(row.costLabel).toBe(`Biaya tercatat ${formatRupiah("1234.50")}`);
+    expect(row.cost).toBe(formatRupiah("1234.50"));
   });
 
   // Negative: no recorded cost is not shown as Rp 0.
@@ -248,6 +277,6 @@ describe("toRunRow judge and cost (K-17/K-18, SCRUM-283)", () => {
     const row = toRunRow(gradingRunSummary({ judge: { ...JUDGE, cost_idr: null } }));
 
     // Assert
-    expect(row.costLabel).toBeNull();
+    expect(row.cost).toBeNull();
   });
 });

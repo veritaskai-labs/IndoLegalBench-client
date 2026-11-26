@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
+import { resultMeta } from "@/test/resultMeta";
 import { gradingResponse } from "@/test/gradingFixtures";
 import ReportRunPage from "./page";
 
@@ -38,7 +39,7 @@ describe("ReportRunPage (PBI-22 AC9, one run opened from Laporan)", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Produk A" })).toBeInTheDocument();
     expect(screen.getByText("Produk: Produk Uji A")).toBeInTheDocument();
-    expect(screen.getByText("LLM judge: Judge Alfa · alfa-2")).toBeInTheDocument();
+    expect(resultMeta("Penilai LLM")).toBe("Judge Alfa · alfa-2");
     expect(runRead).toHaveBeenCalledWith("s-1", "run-1");
   });
 
@@ -73,7 +74,7 @@ describe("ReportRunPage (PBI-22 AC9, one run opened from Laporan)", () => {
 
     // Assert
     await screen.findByRole("heading", { level: 1, name: "Uji Coba Produk A" });
-    expect(screen.getByText("LLM judge: tidak tercatat")).toBeInTheDocument();
+    expect(resultMeta("Penilai LLM")).toBe("tidak tercatat");
   });
 
   // Edge (K-11, SCRUM-291): baris judge pindah ke ringkasan bersama, jadi tidak boleh tampil dua kali.
