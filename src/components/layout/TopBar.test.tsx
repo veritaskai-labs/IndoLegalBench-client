@@ -155,8 +155,8 @@ describe("TopBar", () => {
     expect(screen.getByText("Kontributor")).toHaveClass("opacity-100");
   });
 
-  // SCRUM-347: on wider screens the panel button collapses the side column instead of opening a panel.
-  it("collapses the side column from the bar on tablets and laptops", async () => {
+  // SCRUM-347: on wider screens the panel button widens the resting icon column instead of opening a panel.
+  it("widens the side column from the bar on tablets and laptops", async () => {
     useAuthMock.mockReturnValue(signedIn);
     render(
       <MobileNavProvider>
@@ -164,12 +164,12 @@ describe("TopBar", () => {
       </MobileNavProvider>,
     );
 
-    const collapse = screen.getByRole("button", { name: "Minimize menu" });
-    expect(collapse).toHaveClass("hidden", "md:grid");
-    expect(collapse).toHaveAttribute("aria-controls", "sidebar");
+    const widen = screen.getByRole("button", { name: "Lebarkan menu" });
+    expect(widen).toHaveClass("hidden", "md:grid");
+    expect(widen).toHaveAttribute("aria-controls", "sidebar");
 
-    await userEvent.click(collapse);
+    await userEvent.click(widen);
 
-    expect(screen.getByRole("button", { name: "Lebarkan menu" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Minimize menu" })).toHaveAttribute("aria-expanded", "true");
   });
 });

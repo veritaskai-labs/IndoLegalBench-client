@@ -59,5 +59,5 @@ function reassignmentColumns(onReplace: Props["onReplace"]): Column<Reassignment
 
 export function ReassignmentTable({ rows, onReplace }: Readonly<Props>) {
   const columns = useMemo(() => reassignmentColumns(onReplace), [onReplace]);
-  return <div className={styles.queue}><DataTable columns={columns} rows={rows} rowKey={row => row.round_id} /></div>;
+  return <div className={`${styles.monitor} ${styles.queue}`}><DataTable columns={columns} rows={rows} rowKey={row => row.round_id} /></div>;
 }

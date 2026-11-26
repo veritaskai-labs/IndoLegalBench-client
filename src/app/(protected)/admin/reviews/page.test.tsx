@@ -422,18 +422,35 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     expect(versionsMock.mock.calls).toEqual([["c1"], ["c1"]]);
   });
   // AC7: penggantian tidak hanya dari antrean, tapi juga dari kasus yang sedang direview.
-  it("opens the swap dialog from the in-review tab", async () => {
+  it("keeps the second reviewer's draft on back and restores that action's focus on cancel", async () => {
     const user = userEvent.setup();
     queueMock.mockResolvedValue([]);
-    inReviewMock.mockResolvedValue([IN_REVIEW]);
+    inReviewMock.mockResolvedValue([{
+      ...IN_REVIEW,
+      review: {
+        ...IN_REVIEW.review,
+        reviewers: [...IN_REVIEW.review.reviewers, {
+          assignment_id: "a2", reviewer: { id: ESI.id, name: ESI.name }, status: "active", verdict: null,
+        }],
+      },
+    }]);
 
     render(<AdminReviewsPage />);
     await user.click(screen.getByRole("tab", { name: "Dalam review" }));
-    await user.click(
-      await screen.findByRole("button", { name: "Ganti reviewer Roben" }),
-    );
+    const trigger = await screen.findByRole("button", { name: "Ganti Esi, reviewer untuk ILB-PT-0142" });
+    await user.click(trigger);
 
     expect(screen.getByRole("dialog")).toHaveTextContent("Sengketa tanah warisan");
     expect(screen.getByRole("dialog")).toHaveTextContent("Ronde 1");
+    await user.selectOptions(screen.getByRole("combobox"), await screen.findByRole("option", { name: "Aileen" }));
+    await user.type(screen.getByRole("textbox"), "Jadwal berubah");
+    await user.click(screen.getByRole("button", { name: "Tinjau penggantian" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Esi");
+    await user.click(screen.getByRole("button", { name: "Kembali" }));
+    expect(screen.getByRole("combobox")).toHaveValue(AILEEN.id);
+    expect(screen.getByRole("textbox")).toHaveValue("Jadwal berubah");
+    await user.click(screen.getByRole("button", { name: "Batal" }));
+    expect(trigger).toHaveFocus();
+    expect(replaceMock).not.toHaveBeenCalled();
   });
 });

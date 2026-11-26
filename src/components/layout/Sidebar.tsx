@@ -13,8 +13,28 @@ import { ROLE_LABEL } from "@/types";
 const SMOOTH = "duration-200 ease-out motion-reduce:transition-none";
 const fade = (hidden: boolean) => `transition-opacity ${SMOOTH} ${hidden ? "opacity-0" : "opacity-100"}`;
 
-/** Resting on an icon this long opens the collapsed column over the page until the pointer leaves it. */
+/** Resting on an icon this long widens the collapsed column until the pointer leaves it. The first
+ * view in a tab also shows the column wide for this long, so people see the menu names once. */
 export const PEEK_AFTER_MS = 2000;
+
+const INTRO_SEEN_KEY = "ilb:sidebar-intro-seen";
+
+function introDue(): boolean {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === null;
+  } catch {
+    return false;
+  }
+}
+
+/** Signing out lets the next sign-in in this tab show the menu names again. */
+export function replaySidebarIntro() {
+  try {
+    sessionStorage.removeItem(INTRO_SEEN_KEY);
+  } catch {
+    // blocked storage: the intro simply does not come back
+  }
+}
 
 export function Sidebar() {
   const auth = useAuth();
@@ -22,6 +42,8 @@ export function Sidebar() {
   const menu = useMobileNav();
   const [onIcon, setOnIcon] = useState(false);
   const [peeking, setPeeking] = useState(false);
+  const [intro, setIntro] = useState(introDue);
+  const signedIn = auth.status === "authenticated";
 
   useEffect(() => {
     if (!menu.collapsed || !onIcon) return;
@@ -29,54 +51,61 @@ export function Sidebar() {
     return () => clearTimeout(timer);
   }, [menu.collapsed, onIcon]);
 
-  if (auth.status !== "authenticated") return null;
+  useEffect(() => {
+    if (!intro || !signedIn) return;
+    try {
+      sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+    } catch {
+      // see introDue
+    }
+    const timer = setTimeout(() => setIntro(false), PEEK_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [intro, signedIn]);
+
+  if (!signedIn) return null;
   const groups = navForRole(auth.user.role);
-  const expanded = !menu.collapsed || peeking;
+  const opening = peeking || intro;
+  const expanded = !menu.collapsed || opening;
 
   return (
     <>
       {/* Laptop and tablet: a column that stays in view under the compact top bar while the page scrolls.
-          Phones open the same links from the top bar. */}
-      {/* The wrapper holds the column's place in the layout; a peeking column grows past it, over the page,
-          so the page never reflows for a peek. */}
-      <div
-        className={`hidden shrink-0 transition-[width] md:sticky md:top-12 md:z-20 md:block md:h-[calc(100dvh-4.5rem)] md:self-start ${SMOOTH} ${
-          menu.collapsed ? "w-16" : "w-62"
+          A peek widens it the same way the buttons do, so the page reflows with it. Phones open the same
+          links from the top bar. */}
+      <aside
+        id={SIDEBAR_ID}
+        aria-label="Navigasi utama"
+        onMouseLeave={() => {
+          setOnIcon(false);
+          setPeeking(false);
+          setIntro(false);
+        }}
+        className={`hidden shrink-0 flex-col overflow-x-hidden border-r border-line-soft bg-paper px-3 pt-2 pb-4 transition-[width] md:sticky md:top-12 md:flex md:h-[calc(100dvh-4.5rem)] md:self-start md:overflow-y-auto ${SMOOTH} ${
+          expanded ? "w-62" : "w-16"
         }`}
       >
-        <aside
-          id={SIDEBAR_ID}
-          aria-label="Navigasi utama"
-          onMouseLeave={() => {
-            setOnIcon(false);
-            setPeeking(false);
-          }}
-          className={`hidden h-full flex-col overflow-x-hidden overflow-y-auto border-r border-line-soft bg-paper px-3 pt-2 pb-4 transition-[width,box-shadow] md:flex ${SMOOTH} ${
-            expanded ? "w-62" : "w-16"
-          } ${peeking ? "shadow-menu" : ""}`}
-        >
-          <NavLinks groups={groups} pathname={pathname} collapsed={!expanded} onIconHover={setOnIcon} />
-          <div className="mt-auto border-t border-line-soft pt-3">
-            <button
-              type="button"
-              onClick={() => {
-                setPeeking(false);
-                // A peek is not a choice to keep the column open, so Minimize just ends it.
-                if (!peeking) menu.toggleCollapsed();
-              }}
-              aria-controls={SIDEBAR_ID}
-              aria-expanded={expanded}
-              aria-label={expanded ? "Minimize menu" : "Lebarkan menu"}
-              className="flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-control px-3 text-sm whitespace-nowrap text-muted hover:bg-surface hover:text-ink"
-            >
-              <Icon name="ciutkan" className={`transition-transform ${SMOOTH} ${expanded ? "" : "rotate-180"}`} />
-              <span aria-hidden="true" className={fade(!expanded)}>
-                Minimize
-              </span>
-            </button>
-          </div>
-        </aside>
-      </div>
+        <NavLinks groups={groups} pathname={pathname} collapsed={!expanded} onIconHover={setOnIcon} />
+        <div className="mt-auto border-t border-line-soft pt-3">
+          <button
+            type="button"
+            onClick={() => {
+              setPeeking(false);
+              setIntro(false);
+              // A peek or the intro is not a choice to keep the column open, so Minimize just ends it.
+              if (!opening) menu.toggleCollapsed();
+            }}
+            aria-controls={SIDEBAR_ID}
+            aria-expanded={expanded}
+            aria-label={expanded ? "Minimize menu" : "Lebarkan menu"}
+            className="flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-control px-3 text-sm whitespace-nowrap text-muted hover:bg-surface hover:text-ink"
+          >
+            <Icon name="ciutkan" className={`transition-transform ${SMOOTH} ${expanded ? "" : "rotate-180"}`} />
+            <span aria-hidden="true" className={fade(!expanded)}>
+              Minimize
+            </span>
+          </button>
+        </div>
+      </aside>
 
       {menu.open && (
         <MobilePanel onClose={menu.close}>
