@@ -93,9 +93,9 @@ function SessionDetailView({
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
-          <span role="status" aria-label="Status sesi">
+          <output aria-label="Status sesi">
             <SessionStatusBadge status={session.status} stopReason={session.stop_reason} />
-          </span>
+          </output>
         </div>
         <ScoreDownloadButton session={session} grading={gradingOf(results)} />
       </div>
@@ -108,10 +108,8 @@ function SessionDetailView({
 
       <section aria-label="Ringkasan sesi" className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
         {factGroups.map((group) => (
-          <div key={group.title} role="group" aria-labelledby={`fakta-${group.title}`} className="space-y-2">
-            <p id={`fakta-${group.title}`} className="text-xs font-semibold text-muted">
-              {group.title}
-            </p>
+          <fieldset key={group.title} className="m-0 min-w-0 space-y-2 border-0 p-0">
+            <legend className="p-0 text-xs font-semibold text-muted">{group.title}</legend>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:gap-x-6 lg:grid-cols-3">
               {group.facts.map((fact) => (
                 <div key={fact.label}>
@@ -120,7 +118,7 @@ function SessionDetailView({
                 </div>
               ))}
             </dl>
-          </div>
+          </fieldset>
         ))}
       </section>
 
