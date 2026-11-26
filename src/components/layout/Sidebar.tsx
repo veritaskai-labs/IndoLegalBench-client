@@ -13,8 +13,28 @@ import { ROLE_LABEL } from "@/types";
 const SMOOTH = "duration-200 ease-out motion-reduce:transition-none";
 const fade = (hidden: boolean) => `transition-opacity ${SMOOTH} ${hidden ? "opacity-0" : "opacity-100"}`;
 
-/** Resting on an icon this long opens the collapsed column over the page until the pointer leaves it. */
+/** Resting on an icon this long widens the collapsed column until the pointer leaves it. The first
+ * view in a tab also shows the column wide for this long, so people see the menu names once. */
 export const PEEK_AFTER_MS = 2000;
+
+const INTRO_SEEN_KEY = "ilb:sidebar-intro-seen";
+
+function introDue(): boolean {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === null;
+  } catch {
+    return false;
+  }
+}
+
+/** Signing out lets the next sign-in in this tab show the menu names again. */
+export function replaySidebarIntro() {
+  try {
+    sessionStorage.removeItem(INTRO_SEEN_KEY);
+  } catch {
+    // blocked storage: the intro simply does not come back
+  }
+}
 
 export function Sidebar() {
   const auth = useAuth();
@@ -22,6 +42,8 @@ export function Sidebar() {
   const menu = useMobileNav();
   const [onIcon, setOnIcon] = useState(false);
   const [peeking, setPeeking] = useState(false);
+  const [intro, setIntro] = useState(introDue);
+  const signedIn = auth.status === "authenticated";
 
   useEffect(() => {
     if (!menu.collapsed || !onIcon) return;
@@ -29,9 +51,21 @@ export function Sidebar() {
     return () => clearTimeout(timer);
   }, [menu.collapsed, onIcon]);
 
-  if (auth.status !== "authenticated") return null;
+  useEffect(() => {
+    if (!intro || !signedIn) return;
+    try {
+      sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+    } catch {
+      // see introDue
+    }
+    const timer = setTimeout(() => setIntro(false), PEEK_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [intro, signedIn]);
+
+  if (!signedIn) return null;
   const groups = navForRole(auth.user.role);
-  const expanded = !menu.collapsed || peeking;
+  const opening = peeking || intro;
+  const expanded = !menu.collapsed || opening;
 
   return (
     <>
@@ -44,6 +78,7 @@ export function Sidebar() {
         onMouseLeave={() => {
           setOnIcon(false);
           setPeeking(false);
+          setIntro(false);
         }}
         className={`hidden shrink-0 flex-col overflow-x-hidden border-r border-line-soft bg-paper px-3 pt-2 pb-4 transition-[width] md:sticky md:top-12 md:flex md:h-[calc(100dvh-4.5rem)] md:self-start md:overflow-y-auto ${SMOOTH} ${
           expanded ? "w-62" : "w-16"
@@ -55,8 +90,9 @@ export function Sidebar() {
             type="button"
             onClick={() => {
               setPeeking(false);
-              // A peek is not a choice to keep the column open, so Minimize just ends it.
-              if (!peeking) menu.toggleCollapsed();
+              setIntro(false);
+              // A peek or the intro is not a choice to keep the column open, so Minimize just ends it.
+              if (!opening) menu.toggleCollapsed();
             }}
             aria-controls={SIDEBAR_ID}
             aria-expanded={expanded}

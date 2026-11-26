@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { MOBILE_NAV_ID, SIDEBAR_ID, useMobileNav } from "@/components/layout/MobileNav";
+import { replaySidebarIntro } from "@/components/layout/Sidebar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/hooks/useAuth";
@@ -105,7 +106,7 @@ export function TopBar() {
               </span>
             </span>
             <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-line-soft sm:block" />
-            <form method="POST" action={LOGOUT_URL}>
+            <form method="POST" action={LOGOUT_URL} onSubmit={replaySidebarIntro}>
               <button
                 type="submit"
                 className="inline-flex h-9 items-center gap-1.5 rounded-control px-2 text-sm text-ink-soft transition-colors hover:bg-surface hover:text-ink"
