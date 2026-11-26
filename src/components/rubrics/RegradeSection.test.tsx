@@ -150,7 +150,7 @@ describe("RegradeSection (AC7, K-17/K-18: Nilai ulang dengan versi atau penilai 
     await user.click(within(alert).getByRole("button", { name: "Coba lagi" }));
 
     // Assert
-    expect(alert).toHaveTextContent("Gagal memuat daftar versi rubrik. Coba lagi.");
+    expect(alert).toHaveTextContent("Daftar versi rubrik gagal dimuat. Periksa koneksi, lalu coba lagi. Data rubrik tidak berubah.");
     expect(await screen.findByRole("button", { name: BUTTON })).toBeEnabled();
   });
 

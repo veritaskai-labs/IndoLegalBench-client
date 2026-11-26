@@ -1,8 +1,7 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ToastProvider } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/apiClient";
 import { makeFakeGateway, makeRubricVersion } from "@/test/rubricFixtures";
 import RubricsPage from "./page";
@@ -15,14 +14,6 @@ vi.mock("@/lib/rubrics/rubricsApi", () => ({
   },
 }));
 
-function renderPage() {
-  render(
-    <ToastProvider>
-      <RubricsPage />
-    </ToastProvider>,
-  );
-}
-
 const v1 = makeRubricVersion();
 const v2 = makeRubricVersion({ id: "v-2", version_no: 2, is_active: false, approved_by_name: null, approved_at: null });
 
@@ -30,21 +21,35 @@ beforeEach(() => {
   gateway.current = makeFakeGateway();
 });
 
-describe("Rubrik page (/admin/rubrics, PBI-14 AC7)", () => {
-  // Positive
-  it("lists the versions newest first with the form to write a new one below", async () => {
+describe("Rubrik page (/admin/rubrics, PBI-14 AC7, SCRUM-375 A)", () => {
+  // Positive: the list newest first, and writing a version is one button away on its own page (B).
+  it("lists the versions newest first with a button to the new version page", async () => {
     // Arrange
     gateway.current = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([v1, v2]) });
 
     // Act
-    renderPage();
+    render(<RubricsPage />);
 
     // Assert
     const table = await screen.findByRole("table", { name: "Versi rubrik" });
     const titles = within(table).getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0].textContent);
     expect(titles).toEqual(["Versi 2", "Versi 1"]);
     expect(screen.getByRole("heading", { level: 1, name: "Rubrik penilaian" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Simpan versi baru" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Buat versi baru" })).toHaveAttribute("href", "/admin/rubrics/new");
+  });
+
+  // Positive: the rule that versions never change stays next to the title.
+  it("says that versions are never changed in place", () => {
+    // Arrange
+    gateway.current = makeFakeGateway({ listVersions: vi.fn().mockReturnValue(new Promise(() => undefined)) });
+
+    // Act
+    render(<RubricsPage />);
+
+    // Assert
+    expect(
+      screen.getByText("Versi rubrik tidak pernah diubah. Perubahan dibuat sebagai versi baru, dan hasil lama tetap memakai versinya."),
+    ).toBeInTheDocument();
   });
 
   // State: loading, shown until the list arrives.
@@ -53,92 +58,54 @@ describe("Rubrik page (/admin/rubrics, PBI-14 AC7)", () => {
     gateway.current = makeFakeGateway({ listVersions: vi.fn().mockReturnValue(new Promise(() => undefined)) });
 
     // Act
-    renderPage();
+    render(<RubricsPage />);
 
     // Assert
     expect(screen.getByText("Memuat konten…")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  // State: empty, the way to start is the form and the v1 template.
-  it("shows an empty state and still offers the form when there is no version yet", async () => {
+  // State: empty, the button to start is still there.
+  it("shows the empty state and keeps the button when there is no version yet", async () => {
     // Arrange
     gateway.current = makeFakeGateway({ listVersions: vi.fn().mockResolvedValue([]) });
 
     // Act
-    renderPage();
+    render(<RubricsPage />);
 
     // Assert
-    expect(await screen.findByText("Belum ada versi rubrik")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Isi dari template rubrik v1" })).toBeInTheDocument();
+    expect((await screen.findAllByText("Belum ada versi rubrik")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Buat versi baru" })).toBeInTheDocument();
   });
 
-  // State: error, with a retry that loads again.
+  // State (A3): error, says the data is safe and offers a retry that loads again.
   it("shows an error with a retry that loads the list again", async () => {
     // Arrange
     const user = userEvent.setup();
     const listVersions = vi.fn().mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR")).mockResolvedValueOnce([v1]);
     gateway.current = makeFakeGateway({ listVersions });
-    renderPage();
+    render(<RubricsPage />);
     const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Daftar versi rubrik gagal dimuat. Periksa koneksi, lalu coba lagi. Data rubrik tidak berubah.");
 
     // Act
     await user.click(within(alert).getByRole("button", { name: "Coba lagi" }));
 
     // Assert
-    expect(alert).toHaveTextContent("Gagal memuat daftar versi rubrik. Coba lagi.");
     expect(await screen.findByRole("table", { name: "Versi rubrik" })).toBeInTheDocument();
     expect(listVersions).toHaveBeenCalledTimes(2);
   });
 
-  // Edge: the form is still there when the list fails, so a first version can be written anyway.
-  it("keeps the form when the list fails to load", async () => {
+  // Edge: the button stays when the list fails; edge because a first version must still be writable while the list is down.
+  it("keeps the new version button when the list fails to load", async () => {
     // Arrange
     gateway.current = makeFakeGateway({ listVersions: vi.fn().mockRejectedValue(new ApiError(500, "INTERNAL_ERROR")) });
 
     // Act
-    renderPage();
+    render(<RubricsPage />);
     await screen.findByRole("alert");
 
     // Assert
-    expect(screen.getByRole("button", { name: "Simpan versi baru" })).toBeInTheDocument();
-  });
-
-  // Positive: a saved version shows up in the list and the Admin is told.
-  it("reloads the list and says so after a version is saved", async () => {
-    // Arrange
-    const user = userEvent.setup();
-    const created = makeRubricVersion({ id: "v-2", version_no: 2, is_active: false });
-    const listVersions = vi.fn().mockResolvedValueOnce([v1]).mockResolvedValueOnce([v1, created]);
-    gateway.current = makeFakeGateway({ listVersions, createVersion: vi.fn().mockResolvedValue(created) });
-    renderPage();
-    await screen.findByRole("table", { name: "Versi rubrik" });
-
-    // Act
-    await user.click(screen.getByRole("button", { name: "Simpan versi baru" }));
-
-    // Assert
-    await waitFor(() => expect(within(screen.getByRole("table")).getByText("Versi 2")).toBeInTheDocument());
-    expect(listVersions).toHaveBeenCalledTimes(2);
-    expect(await screen.findByText("Versi 2 berhasil dibuat.")).toBeInTheDocument();
-  });
-
-  // Negative: a refused version is not added to the list and no success message is shown.
-  it("does not reload or announce anything when the server refuses the version", async () => {
-    // Arrange
-    const user = userEvent.setup();
-    const refusal = new ApiError(422, "VALIDATION_ERROR", "Nama aspek wajib diisi", "aspects[0].name");
-    const listVersions = vi.fn().mockResolvedValue([v1]);
-    gateway.current = makeFakeGateway({ listVersions, createVersion: vi.fn().mockRejectedValue(refusal) });
-    renderPage();
-    await screen.findByRole("table", { name: "Versi rubrik" });
-
-    // Act
-    await user.click(screen.getByRole("button", { name: "Simpan versi baru" }));
-
-    // Assert
-    expect(await screen.findByText("Nama aspek wajib diisi", { selector: "[role='alert']" })).toBeInTheDocument();
-    expect(listVersions).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(/berhasil dibuat/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Buat versi baru" })).toBeInTheDocument();
   });
 });

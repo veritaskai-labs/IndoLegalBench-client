@@ -46,7 +46,7 @@ describe("useRubricVersions (GET /rubrics)", () => {
     await waitFor(() => expect(result.current.status).toBe("error"));
 
     // Assert
-    expect(result.current).toMatchObject({ status: "error", message: "Gagal memuat daftar versi rubrik. Coba lagi." });
+    expect(result.current).toMatchObject({ status: "error", message: "Daftar versi rubrik gagal dimuat. Periksa koneksi, lalu coba lagi. Data rubrik tidak berubah." });
   });
 
   // Edge: after a new version is saved the page reloads the list.
