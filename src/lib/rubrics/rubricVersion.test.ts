@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { RubricVersionSummary } from "@/types/rubric";
-import { latestVersion, sortNewestFirst, toVersionRow } from "./rubricVersion";
+import { latestVersion, nextVersionNo, sortNewestFirst, toVersionRow, versionRangeText } from "./rubricVersion";
 
 function version(overrides: Partial<RubricVersionSummary> = {}): RubricVersionSummary {
   return {
@@ -35,7 +35,9 @@ describe("toVersionRow (AC7: daftar versi read-only)", () => {
       title: "Versi 1",
       effectiveDate: "27 Okt 2026",
       createdBy: "Aileen",
-      approver: "Steven & Deanne, 27 Okt 2026",
+      approverName: "Steven & Deanne",
+      approvedAt: "27 Okt 2026",
+      approver: "Steven & Deanne · 27 Okt 2026",
       statusLabel: "Aktif",
       isActive: true,
     });
@@ -63,6 +65,8 @@ describe("toVersionRow (AC7: daftar versi read-only)", () => {
 
     // Assert
     expect(row.approver).toBe("-");
+    expect(row.approverName).toBe("-");
+    expect(row.approvedAt).toBe("-");
   });
 
   it("shows the approver name alone when the approval date is missing", () => {
@@ -74,9 +78,12 @@ describe("toVersionRow (AC7: daftar versi read-only)", () => {
 
     // Assert
     expect(row.approver).toBe("Steven & Deanne");
+    expect(row.approverName).toBe("Steven & Deanne");
+    expect(row.approvedAt).toBe("-");
   });
 
   // Edge: a date without a name identifies nobody, so it is not shown by itself.
+  // A2: the date gets its own column now, but it still is not shown without a name.
   it("shows a dash when only the approval date is present", () => {
     // Arrange
     const source = version({ approved_by_name: null });
@@ -86,6 +93,8 @@ describe("toVersionRow (AC7: daftar versi read-only)", () => {
 
     // Assert
     expect(row.approver).toBe("-");
+    expect(row.approverName).toBe("-");
+    expect(row.approvedAt).toBe("-");
   });
 
   // Edge: the creator account can be gone, the server sends null.
@@ -110,6 +119,56 @@ describe("toVersionRow (AC7: daftar versi read-only)", () => {
 
     // Assert
     expect(row.approver).toBe("-");
+    expect(row.approvedAt).toBe("-");
+  });
+});
+
+describe("versionRangeText (A1: footer jumlah baris)", () => {
+  // Positive: the whole list fits on one page.
+  it("names the shown range, the total and the order", () => {
+    // Act
+    const text = versionRangeText({ from: 1, to: 8, total: 8 });
+
+    // Assert
+    expect(text).toBe("Menampilkan 1–8 dari 8 versi · terbaru di atas");
+  });
+
+  // Positive: the second page of a longer list.
+  it("names the range of a later page", () => {
+    // Act
+    const text = versionRangeText({ from: 11, to: 12, total: 12 });
+
+    // Assert
+    expect(text).toBe("Menampilkan 11–12 dari 12 versi · terbaru di atas");
+  });
+
+  // Edge: one version gives "1–1"; edge because from equals to, and a "1 dari 1" shortcut would read differently on the phone cards.
+  it("keeps the range form for a single version", () => {
+    // Act
+    const text = versionRangeText({ from: 1, to: 1, total: 1 });
+
+    // Assert
+    expect(text).toBe("Menampilkan 1–1 dari 1 versi · terbaru di atas");
+  });
+});
+
+describe("nextVersionNo (B: judul Akan disimpan sebagai Versi N)", () => {
+  // Positive: the server numbers a new version max + 1 (grading/service.py), so the page says the same.
+  it("is one above the highest number, whatever the order", () => {
+    // Act
+    const next = nextVersionNo([version({ version_no: 3 }), version({ version_no: 8 }), version({ version_no: 5 })]);
+
+    // Assert
+    expect(next).toBe(9);
+  });
+
+  // Edge: no version yet; edge because max() of nothing is undefined, and the server then starts at 1.
+  it("is 1 when there is no version yet", () => {
+    // Act
+    const next = nextVersionNo([]);
+
+    // Assert
+    expect(next).toBe(1);
   });
 });
 
