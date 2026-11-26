@@ -306,6 +306,24 @@ describe("AdminMembersPage, existing paths", () => {
     expect(screen.queryByRole("button", { name: "Apply" })).toBeNull();
   });
 
+  // SCRUM-347: the Filter button says which filter is on, as in the design ("Filter: Semua peran").
+  it("names the active filter on the Filter button", async () => {
+    await renderList();
+    const filter = screen.getByRole("button", { name: "Filter" });
+    expect(filter).toHaveTextContent("Filter: Semua peran");
+
+    await userEvent.click(filter);
+    await userEvent.click(screen.getByLabelText("Kontributor"));
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(filter).toHaveTextContent("Filter: Kontributor");
+
+    await userEvent.click(filter);
+    await userEvent.click(screen.getByLabelText("Admin"));
+    await userEvent.click(screen.getByLabelText("Aktif"));
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(filter).toHaveTextContent("Filter: 2 peran, Aktif");
+  });
+
   it("reloads the list when the admin clicks Coba lagi", async () => {
     signedInAs("admin");
     apiFetchMock.mockRejectedValueOnce(new ApiError(500, "UNKNOWN_ERROR"));

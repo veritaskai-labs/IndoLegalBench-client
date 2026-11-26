@@ -22,6 +22,14 @@ import { Input } from "@/components/ui/Input";
 
 const LOAD_ERROR = "Gagal memuat daftar anggota.";
 const SELF_LOCKED = "Anda tidak dapat mengubah akun Anda sendiri.";
+const STATUS_SUMMARY: Record<StatusFilter, string | null> = { all: null, active: "Aktif", inactive: "Nonaktif" };
+
+/** Teks pada tombol Filter, supaya filter yang aktif terlihat tanpa membuka popover. */
+function rolesSummary(roles: Role[]): string {
+  if (roles.length === 0) return "Semua peran";
+  if (roles.length > 1) return `${roles.length} peran`;
+  return ROLE_OPTIONS.find((option) => option.value === roles[0])?.label ?? "1 peran";
+}
 
 function fetchUsers(status: StatusFilter): Promise<User[]> {
   const queryParam =
@@ -160,16 +168,7 @@ export default function AdminMembersPage() {
 
   const alertMessage = apiError ?? change.error;
 
-  const filterSummary = [
-    filterRoles.length === 0
-      ? "Semua peran"
-      : filterRoles.length === 1
-        ? ROLE_OPTIONS.find((option) => option.value === filterRoles[0])?.label
-        : `${filterRoles.length} peran`,
-    { all: null, active: "Aktif", inactive: "Nonaktif" }[filterStatus],
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const filterSummary = [rolesSummary(filterRoles), STATUS_SUMMARY[filterStatus]].filter(Boolean).join(", ");
 
   return (
     <div className="w-full space-y-6">
