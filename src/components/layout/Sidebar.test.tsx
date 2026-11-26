@@ -23,6 +23,8 @@ function signedInAs(role: Role) {
 beforeEach(() => {
   useAuthMock.mockReset();
   localStorage.clear();
+  // Most tests start after the first-view intro; the intro tests clear this.
+  sessionStorage.setItem("ilb:sidebar-intro-seen", "1");
 });
 
 describe("Sidebar", () => {
@@ -69,12 +71,11 @@ describe("Sidebar", () => {
     expect(screen.queryByRole("dialog", { name: "Menu navigasi" })).not.toBeInTheDocument();
   });
 
-  // SCRUM-347: the column shrinks to icons; each link keeps its name for screen readers and a tooltip.
-  it("collapses the column to icons and back, and remembers the choice", async () => {
+  // SCRUM-347: the column rests as icons; each link keeps its name for screen readers and a tooltip.
+  // Widening it with a button locks it open, also after a reload, until Minimize.
+  it("starts as icons, and stays open once widened with the button", async () => {
     signedInAs("admin");
     const { unmount } = renderWithMenu();
-
-    await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
 
     expect(screen.getByRole("complementary")).toHaveClass("w-16");
     expect(screen.getByRole("link", { name: "Beranda" })).toHaveAttribute("title", "Beranda");
@@ -82,15 +83,54 @@ describe("Sidebar", () => {
     expect(screen.queryByText("Lebarkan menu")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Lebarkan menu" })).toHaveAttribute("aria-expanded", "false");
 
+    await userEvent.click(screen.getByRole("button", { name: "Lebarkan menu" }));
+    expect(screen.getByRole("complementary")).toHaveClass("w-62");
+
     unmount();
     renderWithMenu();
 
-    expect(screen.getByRole("complementary")).toHaveClass("w-16");
-    await userEvent.click(screen.getByRole("button", { name: "Lebarkan menu" }));
     expect(screen.getByRole("complementary")).toHaveClass("w-62");
+    await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
+    expect(screen.getByRole("complementary")).toHaveClass("w-16");
   });
 
-  // SCRUM-347: resting on an icon opens the collapsed column over the page; leaving the column closes it.
+  // SCRUM-347: the first view in a tab shows the menu names, then folds to icons by itself.
+  it("opens wide on the first view in a tab, then minimizes by itself", () => {
+    signedInAs("admin");
+    sessionStorage.clear();
+    vi.useFakeTimers();
+    try {
+      const { unmount } = renderWithMenu();
+      const column = screen.getByRole("complementary");
+
+      expect(column).toHaveClass("w-62");
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS - 1));
+      expect(column).toHaveClass("w-62");
+      act(() => vi.advanceTimersByTime(1));
+      expect(column).toHaveClass("w-16");
+
+      // Moving to another page or reloading in the same tab does not replay it.
+      unmount();
+      renderWithMenu();
+      expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Negative: Minimize during the intro only ends it; it does not lock the column open.
+  it("ends the intro on Minimize without changing the remembered choice", async () => {
+    signedInAs("admin");
+    sessionStorage.clear();
+    renderWithMenu();
+
+    await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
+
+    expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    expect(localStorage.getItem("ilb:sidebar-collapsed")).toBeNull();
+  });
+
+  // SCRUM-347: resting on an icon widens the collapsed column like the buttons do; leaving it closes it.
   it("peeks open after resting on an icon, and closes when the pointer leaves the column", () => {
     signedInAs("admin");
     localStorage.setItem("ilb:sidebar-collapsed", "1");
@@ -103,9 +143,8 @@ describe("Sidebar", () => {
       act(() => vi.advanceTimersByTime(PEEK_AFTER_MS - 1));
       expect(column).toHaveClass("w-16");
       act(() => vi.advanceTimersByTime(1));
-      expect(column).toHaveClass("w-62", "shadow-menu");
-      // The page keeps the collapsed column's place, so it does not reflow.
-      expect(column.parentElement).toHaveClass("w-16");
+      // The column itself widens, so the page beside it reflows, same as with the Minimize button.
+      expect(column).toHaveClass("w-62", "md:sticky");
 
       fireEvent.mouseLeave(column);
       expect(column).toHaveClass("w-16");
@@ -137,6 +176,7 @@ describe("Sidebar", () => {
   // Negative: an open column has nothing to peek.
   it("does not peek when the column is already open", () => {
     signedInAs("admin");
+    localStorage.setItem("ilb:sidebar-collapsed", "0");
     vi.useFakeTimers();
     try {
       renderWithMenu();
@@ -144,14 +184,16 @@ describe("Sidebar", () => {
       fireEvent.mouseEnter(screen.getByRole("link", { name: "Laporan" }));
       act(() => vi.advanceTimersByTime(PEEK_AFTER_MS));
 
-      expect(screen.getByRole("complementary")).not.toHaveClass("shadow-menu");
+      expect(screen.getByRole("complementary")).toHaveClass("w-62");
+      fireEvent.mouseLeave(screen.getByRole("complementary"));
+      expect(screen.getByRole("complementary")).toHaveClass("w-62");
     } finally {
       vi.useRealTimers();
     }
   });
 
   // Edge: blocked storage (a private window) only forgets the choice; the button still works.
-  it("still collapses when the browser refuses storage", async () => {
+  it("still widens when the browser refuses storage", async () => {
     signedInAs("admin");
     const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("blocked");
@@ -159,9 +201,9 @@ describe("Sidebar", () => {
     try {
       renderWithMenu();
 
-      await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
+      await userEvent.click(screen.getByRole("button", { name: "Lebarkan menu" }));
 
-      expect(screen.getByRole("complementary")).toHaveClass("w-16");
+      expect(screen.getByRole("complementary")).toHaveClass("w-62");
     } finally {
       setItem.mockRestore();
     }
