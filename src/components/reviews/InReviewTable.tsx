@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Badge, DataTable, type Column } from "@/components/ui";
+import { Badge, Button, DataTable, type Column } from "@/components/ui";
 import type { InReviewRow } from "@/lib/reviews/inReviewApi";
 import {
   ASSIGNMENT_STATUS_LABEL,
@@ -10,7 +10,9 @@ import {
   newVersionLabel,
   verdictLabel,
 } from "@/lib/reviews/reviewLabels";
-import type { CaseReview, ReviewerSlot } from "@/types/reviewAdmin";
+import type { ReviewerSlot } from "@/types/reviewAdmin";
+
+import styles from "./ReviewTables.module.css";
 
 type Props = {
   rows: InReviewRow[];
@@ -39,56 +41,56 @@ function inReviewColumns(onReplace: Props["onReplace"]): Column<InReviewRow>[] {
     { key: "status", header: "Status ronde", cell: row => <Badge dot>{ROUND_STATUS_LABEL[row.review.status]}</Badge> },
     {
       key: "decision", header: "Keputusan",
-      cell: row => row.review.decision ? ROUND_DECISION_LABEL[row.review.decision] : "Belum diputuskan",
+      cell: row => (
+        <span className={row.review.decision ? "text-ink" : "text-muted"}>
+          <span className={styles.roundLabel}>Keputusan ronde · </span>
+          {row.review.decision ? ROUND_DECISION_LABEL[row.review.decision] : "Belum diputuskan"}
+        </span>
+      ),
     },
     {
       key: "reviewers", header: "Reviewer dan penilaian",
-      cell: row => <ReviewerCell review={row.review} onReplace={onReplace && (slot => onReplace(slot, row))} />,
+      cell: row => <ReviewerCell row={row} onReplace={onReplace} />,
     },
   ];
 }
 
 export function InReviewTable({ rows, onReplace }: Readonly<Props>) {
   const columns = useMemo(() => inReviewColumns(onReplace), [onReplace]);
-  return <DataTable caption="Kasus dalam review" columns={columns} rows={rows} rowKey={row => row.case.id} />;
+  return (
+    <div className={`${styles.monitor} ${styles.inReview}`}>
+      <DataTable caption="Kasus dalam review" columns={columns} rows={rows} rowKey={row => row.case.id} />
+    </div>
+  );
 }
 
-function ReviewerCell({
-  review,
-  onReplace,
-}: Readonly<{
-  review: CaseReview;
-  onReplace?: (slot: ReviewerSlot) => void;
-}>) {
-  if (review.reviewers.length === 0) {
-    return <span className="text-slate-500">Belum ada reviewer</span>;
-  }
+function ReviewerCell({ row, onReplace }: Readonly<{ row: InReviewRow; onReplace?: Props["onReplace"] }>) {
+  if (row.review.reviewers.length === 0) return <span className="text-muted">Belum ada reviewer</span>;
 
   return (
-    <ul className="space-y-2">
-      {review.reviewers.map((slot) => (
+    <ul className={styles.people}>
+      {row.review.reviewers.map(slot => (
         <li key={slot.assignment_id}>
-          <span className="text-slate-900">{slot.reviewer.name}</span>{" "}
-          <span className="text-xs text-slate-500">
-            {ASSIGNMENT_STATUS_LABEL[slot.status]}
-          </span>
-          <div className="text-xs text-slate-700">
-            {verdictLabel(slot.verdict)}
+          <div>
+            <span className="font-semibold">{slot.reviewer.name}</span>{" "}
+            <span className="text-xs text-muted">· {ASSIGNMENT_STATUS_LABEL[slot.status]}</span>
+            <div className="text-xs text-muted">{verdictLabel(slot.verdict)}</div>
           </div>
-          {slot.verdict?.comment ? (
-            <p className="mt-1 text-xs text-slate-600">{slot.verdict.comment}</p>
-          ) : null}
-          {/* AC7: hanya penugasan aktif yang bisa diganti; yang replaced atau void sudah selesai. */}
-          {onReplace && slot.status === "active" ? (
-            <button
-              type="button"
-              aria-label={`Ganti reviewer ${slot.reviewer.name}`}
-              onClick={() => onReplace(slot)}
-              className="mt-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
-            >
-              Ganti reviewer
-            </button>
-          ) : null}
+          {onReplace && slot.status === "active" && (
+            <Button variant="ghost" size="sm"
+              aria-label={`Ganti ${slot.reviewer.name}, reviewer untuk ${row.case.case_code}`}
+              onClick={() => onReplace(slot, row)}>
+              Ganti
+            </Button>
+          )}
+          {slot.verdict?.comment && (
+            <details className="col-span-full text-xs text-muted">
+              <summary className="w-fit cursor-pointer" aria-label={`Lihat komentar ${slot.reviewer.name}`}>
+                Lihat komentar
+              </summary>
+              <p className="my-1 whitespace-pre-wrap">{slot.verdict.comment}</p>
+            </details>
+          )}
         </li>
       ))}
     </ul>
