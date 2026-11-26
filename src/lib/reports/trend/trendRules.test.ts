@@ -7,6 +7,7 @@ import { trendPoint, trendRead } from "@/test/trendFixtures";
 import {
   effectiveTrendScope,
   hasDrawablePoint,
+  hasSinglePoint,
   pointNotes,
   productOptions,
   trendErrorMessage,
@@ -149,6 +150,26 @@ describe("hasDrawablePoint (AC11)", () => {
   // Edge case
   it("is false for a product with no points", () => {
     expect(hasDrawablePoint([])).toBe(false);
+  });
+});
+
+// SCRUM-346 A3 (finding N3): one month with a score draws a lone dot; the page then says a trend needs two.
+describe("hasSinglePoint", () => {
+  // Positive
+  it.each([
+    ["one scored month", [trendPoint({ value: "0.80" })]],
+    ["one scored month next to an empty one", [trendPoint({ value: null }), trendPoint({ value: "0.00" })]],
+  ])("is true for %s", (_case, points) => {
+    expect(hasSinglePoint(points)).toBe(true);
+  });
+
+  // Negative and edge: two scored months draw a line; no scored month draws nothing (AC11 says that instead).
+  it.each([
+    ["two scored months", [trendPoint({ value: "0.80" }), trendPoint({ value: "0.85" })]],
+    ["no scored month", [trendPoint({ value: null })]],
+    ["no points", []],
+  ])("is false for %s", (_case, points) => {
+    expect(hasSinglePoint(points)).toBe(false);
   });
 });
 

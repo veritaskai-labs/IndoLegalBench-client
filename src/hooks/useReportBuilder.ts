@@ -151,7 +151,7 @@ export function useReportBuilder(
     score_scope: scoreScope,
     measurement_filter: filter,
     product_label_mode: choices.productLabelMode,
-    // Server default, and the language the web report body uses. Letting the user choose it is PBI-26.
+    // Same as the web report body (PO decision 25 Nov, SCRUM-346 N7). Letting the user choose it is PBI-26.
     language: REPORT_LANGUAGE,
   };
 

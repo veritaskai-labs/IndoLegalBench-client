@@ -137,4 +137,15 @@ describe("DataTable", () => {
 
     expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
   });
+
+  // Review #125 (Rafa): a table should have a name for screen readers; an optional caption gives it one.
+  it("names the table with an optional screen-reader caption", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} caption="Daftar peserta" />);
+    expect(screen.getByRole("table", { name: "Daftar peserta" })).toBeInTheDocument();
+  });
+
+  it("has no caption when none is given", () => {
+    const { container } = render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} />);
+    expect(container.querySelector("caption")).toBeNull();
+  });
 });

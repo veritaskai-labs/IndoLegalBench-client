@@ -1,7 +1,7 @@
 import { formatScore } from "@/lib/grading/scoreFormat";
 import type { MeasurementKind, ProductLabelMode, ReportDetail, ReportLanguage } from "@/types/reports";
 
-import { REPORT_LABELS } from "./reportLabels";
+import { measurementKindLabel, REPORT_LABELS } from "./reportLabels";
 
 const DASH = "–";
 const WIB_OFFSET_MS = 7 * 60 * 60 * 1000;
@@ -26,6 +26,21 @@ export function modelVersionText(version: string | null, labelMode: ProductLabel
   if (labelMode === "code") return REPORT_LABELS[language].hidden;
   if (!version) return DASH;
   return version;
+}
+
+/**
+ * Baris kecil di bawah nama produk pada tabel peringkat (SCRUM-346 A1): jenis pengukuran (PBI-15 AC5) dan versi
+ * model. Versi yang tidak tercatat dilewati, bukan tanda pisah; versi yang disamarkan mode kode tetap ditulis.
+ */
+export function productSubline(
+  kind: MeasurementKind,
+  version: string | null,
+  labelMode: ProductLabelMode,
+  language: ReportLanguage,
+): string {
+  const kindText = measurementKindLabel(kind, language);
+  const shown = modelVersionText(version, labelMode, language);
+  return shown === DASH ? kindText : `${kindText} · ${shown}`;
 }
 
 /**

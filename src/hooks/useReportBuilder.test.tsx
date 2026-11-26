@@ -211,7 +211,7 @@ describe("useReportBuilder: Create (AC1, AC4, AC13)", () => {
       score_scope: "dev",
       measurement_filter: "all",
       product_label_mode: "code",
-      language: "en", // server default; choosing the report language is PBI-26
+      language: "id", // PO decision 25 Nov (SCRUM-346 N7): new reports are Indonesian; choosing it is PBI-26
     });
     expect(result.current.outcome).toEqual({ kind: "saved", reportId: "r-1" });
   });
