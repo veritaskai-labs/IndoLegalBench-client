@@ -264,7 +264,7 @@ export function ManualSessionHeader({
             {isAdmin && !isFinalized && (
               <button
                 type="button"
-                disabled={!isAllFilled}
+                disabled={actionsBlockedReason !== null}
                 onClick={() => setIsFinalizeOpen(true)}
                 aria-describedby={actionsBlockedReason ? actionsReasonId : undefined}
                 title={
@@ -282,7 +282,7 @@ export function ManualSessionHeader({
             {isAdmin && (
               <button
                 type="button"
-                disabled={!isAllFilled || grading.active}
+                disabled={gradeBlockedReason !== null}
                 onClick={() => setGradeDialog("grade")}
                 aria-describedby={gradeBlockedReason ? actionsReasonId : undefined}
                 title={gradeButtonTitle(isAllFilled, grading.active)}

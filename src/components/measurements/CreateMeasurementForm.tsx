@@ -172,32 +172,23 @@ export function CreateMeasurementForm() {
     }
   }
 
-  const canRequestSummary =
-    selectedSuiteIds.length > 0 && Boolean(productId) && hasValidRepeat;
-  const canStart =
-    label.trim().length > 0 &&
-    selectedSuiteIds.length > 0 &&
-    Boolean(productId) &&
-    Boolean(purpose) &&
-    hasValidRepeat &&
-    summary !== null &&
-    budgetExceeded === null &&
-    !isSummaryLoading &&
-    !isStarting;
-
   const choiceRequirements = [
     ["minimal satu suite", selectedSuiteIds.length > 0],
     ["produk AI", Boolean(productId)],
     ["jumlah pengulangan 1 sampai 5", hasValidRepeat],
   ] as const;
-  const summaryBlockedReason = isSummaryLoading ? null : missingRequirementsText(choiceRequirements);
+  const missingChoices = missingRequirementsText(choiceRequirements);
+  const canRequestSummary = missingChoices === null;
+  const summaryBlockedReason = isSummaryLoading ? null : missingChoices;
   const startBlockedReason =
     missingRequirementsText([
       ["label sesi", label.trim().length > 0],
       ["tujuan sesi", Boolean(purpose)],
       ...choiceRequirements,
-    ]) ?? summaryStateReason();
-  function summaryStateReason(): string | null {
+    ]) ?? startStateReason();
+  const canStart = startBlockedReason === null;
+  function startStateReason(): string | null {
+    if (isStarting) return "Pengukuran sedang dimulai.";
     if (isSummaryLoading) return "Ringkasan biaya sedang dihitung.";
     if (budgetExceeded !== null) return "Perkiraan biaya melebihi sisa anggaran produk.";
     if (summary === null) return "Tinjau ringkasan biaya dulu untuk mengaktifkan tombol ini.";
