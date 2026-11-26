@@ -23,14 +23,15 @@ type MobileNav = {
 };
 
 // Outside the app shell (tests, the login screen) the menu simply never opens.
-const CLOSED: MobileNav = { open: false, toggle: () => {}, close: () => {}, collapsed: false, toggleCollapsed: () => {} };
+const CLOSED: MobileNav = { open: false, toggle: () => {}, close: () => {}, collapsed: true, toggleCollapsed: () => {} };
 
-// A private window or blocked storage only loses the remembered choice, never the toggle itself.
+// The column rests collapsed; only a click on a widen button keeps it open. A private window or
+// blocked storage only loses that choice, never the toggle itself.
 function readCollapsed(): boolean {
   try {
-    return localStorage.getItem(COLLAPSED_KEY) === "1";
+    return localStorage.getItem(COLLAPSED_KEY) !== "0";
   } catch {
-    return false;
+    return true;
   }
 }
 
