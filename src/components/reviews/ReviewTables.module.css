@@ -1,19 +1,52 @@
-.queue { container-type: inline-size; }
-.queue th, .queue td { width: 1%; white-space: nowrap; }
-.queue th:nth-child(2), .queue td:nth-child(2) { width: auto; white-space: normal; overflow-wrap: anywhere; }
-.queue td:last-child { white-space: normal; }
-.queue code { font-size: 12px; font-weight: 700; }
+.monitor { container-type: inline-size; }
+.monitor code { font-size: 12px; font-weight: 700; }
+.roundLabel { display: none; }
+.people { overflow-wrap: anywhere; }
+.people li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; }
+.people li + li { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line-soft); }
 
-/* Keep the same sortable headers, data and page controls in the narrow layout. */
-@container (max-width: 46rem) {
-  .queue table, .queue tbody, .queue thead { display: block; }
-  .queue thead tr, .queue tbody tr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px; }
-  .queue thead tr { background: var(--surface); }
-  .queue tbody tr { border-top: 1px solid var(--line-soft); }
-  .queue th, .queue td, .queue td:nth-child(2) { width: auto; height: auto; padding: 0; border: 0; }
-  .queue th:nth-child(n+4) { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
-  .queue td:nth-child(2), .queue td:last-child { flex-basis: 100%; }
+@container (width >= 960px) {
+  .monitor th:not(:nth-child(2)) { width: 1%; }
+  .monitor td:is(:first-child, :nth-child(3), :nth-child(4)) { white-space: nowrap; }
+  .monitor td:nth-child(2) { min-width: 224px; overflow-wrap: anywhere; }
+  .inReview th:last-child { width: 27%; }
+  .inReview td:nth-child(5) { white-space: nowrap; }
+  .queue td:nth-child(5) { white-space: nowrap; }
+}
+
+@container (width < 960px) {
+  .monitor table, .monitor tbody, .monitor thead { display: block; }
+  .monitor thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    padding: 2px 12px;
+    background: var(--surface);
+  }
+  .monitor th { flex: none; width: auto; height: auto; padding: 0; }
+  .monitor th button { min-height: 32px; }
+  .monitor th:nth-child(n+4) { position: absolute; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; }
+  .monitor tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 5px 12px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .monitor td { min-width: 0; height: auto; padding: 0; border: 0; overflow-wrap: anywhere; }
+  .monitor td:first-child { grid-area: 1 / 1; }
+  .monitor td:nth-child(3) { grid-area: 1 / 2; text-align: right; }
+  .monitor td:nth-child(2), .monitor td:last-child, .queue td:nth-child(5) { grid-column: 1 / -1; }
+  .inReview td:nth-child(5) { text-align: right; }
+  .roundLabel { display: inline; }
+  .people { border-top: 1px solid var(--line-soft); padding-top: 6px; margin-top: 2px; }
   .queue td:last-child ul { display: flex; flex-wrap: wrap; gap: 8px; }
   .queue td:last-child li { margin: 0; }
   .queue td:last-child li > span[aria-hidden] { left: 0; right: auto; }
+}
+
+@container (max-width: 480px) {
+  .monitor td:nth-child(4), .monitor td:nth-child(5) { grid-column: 1 / -1; text-align: left; }
 }
