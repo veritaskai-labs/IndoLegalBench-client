@@ -33,6 +33,8 @@ type Props<T> = {
   empty?: ReactNode;
   /** Screen-reader name of the table, rendered as an sr-only caption. */
   caption?: string;
+  /** Footer text for the rows on the current page (1-based, inclusive), e.g. "Menampilkan 1–8 dari 8". Left out when there are no rows. */
+  summary?: (range: Readonly<{ from: number; to: number; total: number }>) => ReactNode;
 };
 
 function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
@@ -53,7 +55,7 @@ function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
 }
 
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
-export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, caption }: Readonly<Props<T>>) {
+export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, caption, summary }: Readonly<Props<T>>) {
   const [sort, setSort] = useState<SortState | null>(null);
   const [page, setPage] = useState(1);
 
@@ -138,6 +140,15 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, capt
           </tbody>
         </table>
       </div>
+      {summary && paged.total > 0 && (
+        <p className="text-[13px] text-muted">
+          {summary({
+            from: (paged.page - 1) * pageSize + 1,
+            to: (paged.page - 1) * pageSize + paged.items.length,
+            total: paged.total,
+          })}
+        </p>
+      )}
       {paged.lastPage > 1 && <Pager page={paged.page} lastPage={paged.lastPage} onPageChange={setPage} />}
     </div>
   );
