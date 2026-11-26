@@ -57,13 +57,15 @@ const QUEUED = {
 };
 
 describe("DashboardPage", () => {
-  it("greets the user by first name", () => {
+  // SCRUM-347: the page is called Beranda, as in the menu; the greeting moves to the line below.
+  it("is titled Beranda and greets the user by first name", () => {
     authenticatedAs("Rina Kusuma Dewi");
     useDashboardMock.mockReturnValue({ status: "loading", reload: vi.fn() });
 
     render(<DashboardPage />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Selamat pagi, Rina");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Beranda");
+    expect(screen.getByText(/^Selamat pagi, Rina\. Ringkasan status pengukuran/)).toBeInTheDocument();
   });
 
   it("uses the whole name when it is a single word", () => {
@@ -72,7 +74,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Selamat pagi, Rina");
+    expect(screen.getByText(/^Selamat pagi, Rina\. /)).toBeInTheDocument();
   });
 
   it("shows the greeting without a name when the user is not authenticated yet", () => {
@@ -81,7 +83,7 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/^Selamat pagi,$/);
+    expect(screen.getByText(/^Selamat pagi\. Ringkasan/)).toBeInTheDocument();
   });
 
   // AC1
@@ -92,7 +94,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
     
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
-    expect(screen.getByText(/10 kasus/)).toBeInTheDocument();
+    expect(screen.getByText("Total 10 kasus")).toBeInTheDocument();
   });
 
   // AC2
@@ -103,6 +105,18 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(screen.getByText("Diperbarui 09.05")).toBeInTheDocument();
+  });
+
+  // SCRUM-347 R2: the refresh icon is a real button that reads the summary again.
+  it("reads the summary again from the refresh button", async () => {
+    authenticatedAs("Rina");
+    const reload = vi.fn();
+    useDashboardMock.mockReturnValue({ status: "ready", summary: summary(), reload });
+
+    render(<DashboardPage />);
+    screen.getByRole("button", { name: /^Muat ulang data\..*Diperbarui 09\.05$/ }).click();
+
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   // AC6
@@ -172,7 +186,7 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
 
     expect(useDashboardMock).toHaveBeenCalledWith(false);
-    expect(screen.getByText("Dasbor belum tersedia untuk peran Anda")).toBeInTheDocument();
+    expect(screen.getByText("Beranda belum tersedia untuk peran Anda")).toBeInTheDocument();
   });
 
   // Negative
@@ -226,7 +240,7 @@ describe("DashboardPage", () => {
 
     // Assert
     expect(useDashboardMock).toHaveBeenCalledWith(false);
-    expect(screen.getByText("Dasbor belum tersedia untuk peran Anda")).toBeInTheDocument();
+    expect(screen.getByText("Beranda belum tersedia untuk peran Anda")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Akun Anda hanya membaca kasus, jadi belum ada ringkasan kerja yang bisa ditampilkan.",
