@@ -128,11 +128,7 @@ function InReviewPanel({
     );
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <InReviewTable rows={inReview.data} onReplace={onReplace} />
-    </div>
-  );
+  return <InReviewTable rows={inReview.data} onReplace={onReplace} />;
 }
 
 export default function AdminReviewsPage() {
