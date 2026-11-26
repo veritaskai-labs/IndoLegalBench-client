@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Me, Role } from "@/types";
 import { MobileNavProvider, useMobileNav } from "./MobileNav";
-import { Sidebar } from "./Sidebar";
+import { PEEK_AFTER_MS, Sidebar } from "./Sidebar";
 
 const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
 
@@ -22,6 +22,7 @@ function signedInAs(role: Role) {
 
 beforeEach(() => {
   useAuthMock.mockReset();
+  localStorage.clear();
 });
 
 describe("Sidebar", () => {
@@ -38,9 +39,9 @@ describe("Sidebar", () => {
 
     render(<Sidebar />);
 
-    expect(screen.getByRole("link", { name: "Dasbor" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Beranda" })).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Penyedia" }),
+      screen.queryByRole("link", { name: "Produk AI" }),
     ).not.toBeInTheDocument();
   });
 
@@ -49,12 +50,12 @@ describe("Sidebar", () => {
 
     render(<Sidebar />);
 
-    expect(screen.getByRole("link", { name: "Dasbor" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Beranda" })).toHaveAttribute(
       "aria-current",
       "page",
     );
     expect(
-      screen.getByRole("link", { name: "Penyedia" }),
+      screen.getByRole("link", { name: "Produk AI" }),
     ).not.toHaveAttribute("aria-current");
   });
 
@@ -68,6 +69,104 @@ describe("Sidebar", () => {
     expect(screen.queryByRole("dialog", { name: "Menu navigasi" })).not.toBeInTheDocument();
   });
 
+  // SCRUM-347: the column shrinks to icons; each link keeps its name for screen readers and a tooltip.
+  it("collapses the column to icons and back, and remembers the choice", async () => {
+    signedInAs("admin");
+    const { unmount } = renderWithMenu();
+
+    await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
+
+    expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    expect(screen.getByRole("link", { name: "Beranda" })).toHaveAttribute("title", "Beranda");
+    // Only the word Minimize is ever drawn; the expand action has no visible label.
+    expect(screen.queryByText("Lebarkan menu")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lebarkan menu" })).toHaveAttribute("aria-expanded", "false");
+
+    unmount();
+    renderWithMenu();
+
+    expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    await userEvent.click(screen.getByRole("button", { name: "Lebarkan menu" }));
+    expect(screen.getByRole("complementary")).toHaveClass("w-62");
+  });
+
+  // SCRUM-347: resting on an icon opens the collapsed column over the page; leaving the column closes it.
+  it("peeks open after resting on an icon, and closes when the pointer leaves the column", () => {
+    signedInAs("admin");
+    localStorage.setItem("ilb:sidebar-collapsed", "1");
+    vi.useFakeTimers();
+    try {
+      renderWithMenu();
+      const column = screen.getByRole("complementary");
+
+      fireEvent.mouseEnter(screen.getByRole("link", { name: "Laporan" }));
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS - 1));
+      expect(column).toHaveClass("w-16");
+      act(() => vi.advanceTimersByTime(1));
+      expect(column).toHaveClass("w-62", "shadow-menu");
+      // The page keeps the collapsed column's place, so it does not reflow.
+      expect(column.parentElement).toHaveClass("w-16");
+
+      fireEvent.mouseLeave(column);
+      expect(column).toHaveClass("w-16");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Negative: passing over the icons on the way somewhere else does not open the column.
+  it("does not peek when the pointer moves off the icon early", () => {
+    signedInAs("admin");
+    localStorage.setItem("ilb:sidebar-collapsed", "1");
+    vi.useFakeTimers();
+    try {
+      renderWithMenu();
+      const link = screen.getByRole("link", { name: "Laporan" });
+
+      fireEvent.mouseEnter(link);
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS / 2));
+      fireEvent.mouseLeave(link);
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS));
+
+      expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Negative: an open column has nothing to peek.
+  it("does not peek when the column is already open", () => {
+    signedInAs("admin");
+    vi.useFakeTimers();
+    try {
+      renderWithMenu();
+
+      fireEvent.mouseEnter(screen.getByRole("link", { name: "Laporan" }));
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS));
+
+      expect(screen.getByRole("complementary")).not.toHaveClass("shadow-menu");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Edge: blocked storage (a private window) only forgets the choice; the button still works.
+  it("still collapses when the browser refuses storage", async () => {
+    signedInAs("admin");
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    try {
+      renderWithMenu();
+
+      await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
+
+      expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
   it("shows the same links in a panel when the phone menu is open", async () => {
     signedInAs("contributor");
     renderWithMenu();
@@ -78,8 +177,8 @@ describe("Sidebar", () => {
     // Sonar S6819: a native <dialog>, not a div with role="dialog".
     expect(panel.tagName).toBe("DIALOG");
     expect(panel).toHaveAttribute("id", "mobile-nav");
-    expect(within(panel).getByRole("link", { name: "Dasbor" })).toBeInTheDocument();
-    expect(within(panel).queryByRole("link", { name: "Penyedia" })).not.toBeInTheDocument();
+    expect(within(panel).getByRole("link", { name: "Beranda" })).toBeInTheDocument();
+    expect(within(panel).queryByRole("link", { name: "Produk AI" })).not.toBeInTheDocument();
   });
 
   // Review #63: below sm the top bar shows only the initials, and a tooltip does not show on touch.
@@ -151,7 +250,7 @@ describe("Sidebar", () => {
     await userEvent.click(screen.getByRole("button", { name: "menu" }));
 
     const panel = screen.getByRole("dialog", { name: "Menu navigasi" });
-    await userEvent.click(within(panel).getByRole("link", { name: "Dasbor" }));
+    await userEvent.click(within(panel).getByRole("link", { name: "Beranda" }));
 
     expect(screen.queryByRole("dialog", { name: "Menu navigasi" })).not.toBeInTheDocument();
   });

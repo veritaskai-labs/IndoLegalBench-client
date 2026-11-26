@@ -4,7 +4,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import { AuditDetailPanel } from "@/components/audit/AuditDetailPanel";
 import { AuditPager } from "@/components/audit/AuditPager";
 import { AuditTable } from "@/components/audit/AuditTable";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
+import { EmptyState, ErrorState, Icon, LoadingSkeleton } from "@/components/ui";
 import { auditExportUrl, listAuditActors, type AuditActor } from "@/lib/audit/auditApi";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import type { AuditEntry } from "@/types/audit";
@@ -56,7 +56,7 @@ export default function AuditPage() {
   } else {
     results = (
       <>
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-control border border-line bg-paper">
           <AuditTable entries={state.entries} onRowClick={setSelected} />
         </div>
 
@@ -66,31 +66,27 @@ export default function AuditPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Log audit</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="font-serif text-4xl leading-10 text-ink">Riwayat aktivitas</h1>
+          <p className="mt-2 text-muted">
             Catatan disimpan 90 hari, lalu dihapus otomatis. Unduh bila perlu disimpan lebih lama.
           </p>
         </div>
         <div className="flex gap-2">
-          <a
-            href={auditExportUrl(exportFilter, "csv")}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <a href={auditExportUrl(exportFilter, "csv")} className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-paper px-3.5 text-sm text-ink transition-colors hover:bg-surface">
+            <Icon name="unduh" />
             Unduh CSV
           </a>
-          <a
-            href={auditExportUrl(exportFilter, "pdf")}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <a href={auditExportUrl(exportFilter, "pdf")} className="inline-flex h-9 items-center gap-1.5 rounded-control border border-line bg-paper px-3.5 text-sm text-ink transition-colors hover:bg-surface">
+            <Icon name="unduh" />
             Unduh PDF
           </a>
         </div>
       </header>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-control border border-line bg-paper p-4">
         <AuditFilterBar
         value={{ ...exportFilter, page }}
          actors={actors}

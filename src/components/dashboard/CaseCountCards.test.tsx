@@ -42,7 +42,7 @@ describe("CaseCountCards", () => {
   it("shows how many cases there are in total", () => {
     render(<CaseCountCards counts={COUNTS} total={10} waiting={2} />);
 
-    expect(screen.getByText(/10 kasus/)).toBeInTheDocument();
+    expect(screen.getByText("Total 10 kasus")).toBeInTheDocument();
   });
 
   // AC1: jumlah kasus yang menunggu review adalah angka tersendiri.
@@ -107,7 +107,7 @@ describe("CaseCountCards, own cases", () => {
     render(<CaseCountCards title="Kasus Anda" counts={ZERO} total={0} emptyNote="Anda belum menulis kasus." />);
 
     expect(screen.getByText("Anda belum menulis kasus.")).toBeInTheDocument();
-    expect(screen.getAllByText("0")).toHaveLength(4);
+    for (const card of screen.getAllByRole("listitem")) expect(within(card).getByText("0")).toBeInTheDocument();
   });
 
   // Negative: the note is only for an empty list.
