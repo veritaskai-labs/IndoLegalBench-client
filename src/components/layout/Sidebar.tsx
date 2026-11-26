@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { MOBILE_NAV_ID, useMobileNav } from "@/components/layout/MobileNav";
+import { MOBILE_NAV_ID, SIDEBAR_ID, useMobileNav } from "@/components/layout/MobileNav";
+import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/hooks/useAuth";
 import { isNavItemActive, navForRole, type NavGroup } from "@/lib/nav";
 import { ROLE_LABEL } from "@/types";
-
-const COLUMN = "flex-col justify-between border-r border-slate-200 bg-white p-4";
 
 export function Sidebar() {
   const auth = useAuth();
@@ -20,17 +19,41 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Laptop and tablet: a fixed column. Phones open the same links from the top bar. */}
-      <aside className={`hidden w-64 shrink-0 md:flex ${COLUMN}`}>
-        <NavLinks groups={groups} pathname={pathname} />
+      {/* Laptop and tablet: a column that stays in view under the compact top bar while the page scrolls.
+          Phones open the same links from the top bar. */}
+      <aside
+        id={SIDEBAR_ID}
+        aria-label="Navigasi utama"
+        className={`hidden shrink-0 flex-col border-r border-line-soft bg-paper pt-2 pb-4 md:sticky md:top-12 md:flex md:h-[calc(100dvh-4.5rem)] md:self-start md:overflow-y-auto ${
+          menu.collapsed ? "w-16 px-2" : "w-62 px-3"
+        }`}
+      >
+        <NavLinks groups={groups} pathname={pathname} collapsed={menu.collapsed} />
+        <div className="mt-auto border-t border-line-soft pt-3">
+          <button
+            type="button"
+            onClick={menu.toggleCollapsed}
+            aria-controls={SIDEBAR_ID}
+            aria-expanded={!menu.collapsed}
+            title={menu.collapsed ? "Lebarkan menu" : undefined}
+            className={`flex h-9 w-full items-center gap-2.5 rounded-control text-sm text-muted hover:bg-surface hover:text-ink ${
+              menu.collapsed ? "justify-center" : "px-3"
+            }`}
+          >
+            <Icon name={menu.collapsed ? "lebarkan" : "ciutkan"} />
+            <span className={menu.collapsed ? "sr-only" : undefined}>
+              {menu.collapsed ? "Lebarkan menu" : "Ciutkan menu"}
+            </span>
+          </button>
+        </div>
       </aside>
 
       {menu.open && (
         <MobilePanel onClose={menu.close}>
           {/* Below sm the top bar only shows initials, so the panel says who is signed in. */}
-          <p className="mb-4 border-b border-slate-200 px-3 pb-4 text-sm leading-tight">
-            <span className="block font-medium text-slate-900">{auth.user.name}</span>
-            <span className="block text-xs text-slate-500">{ROLE_LABEL[auth.user.role]}</span>
+          <p className="mb-2 border-b border-line-soft px-3 pb-4 text-sm leading-tight">
+            <span className="block font-medium text-ink">{auth.user.name}</span>
+            <span className="block text-xs text-muted">{ROLE_LABEL[auth.user.role]}</span>
           </p>
           <NavLinks groups={groups} pathname={pathname} onNavigate={menu.close} />
         </MobilePanel>
@@ -73,7 +96,7 @@ function MobilePanel({ onClose, children }: Readonly<{ onClose: () => void; chil
         onClick={onClose}
         className="absolute inset-0 h-full w-full bg-slate-900/40"
       />
-      <div className="absolute inset-y-0 left-0 flex w-64 max-w-[80vw] flex-col overflow-y-auto border-r border-slate-200 bg-white p-4">
+      <div className="absolute inset-y-0 left-0 flex w-62 max-w-[80vw] flex-col overflow-y-auto border-r border-line-soft bg-paper p-3">
         {children}
       </div>
     </dialog>
@@ -83,46 +106,44 @@ function MobilePanel({ onClose, children }: Readonly<{ onClose: () => void; chil
 function NavLinks({
   groups,
   pathname,
+  collapsed = false,
   onNavigate,
-}: Readonly<{ groups: NavGroup[]; pathname: string; onNavigate?: () => void }>) {
+}: Readonly<{ groups: NavGroup[]; pathname: string; collapsed?: boolean; onNavigate?: () => void }>) {
   return (
-    <>
-      <nav className="space-y-6">
-        {groups.map((group) => (
-          <div key={group.heading}>
-            <p className="px-3 pb-2 font-mono text-[11px] uppercase tracking-wider text-slate-400">
-              {group.heading}
-            </p>
-            <ul className="space-y-1">
-              {group.items.map((item) => {
-                const active = isNavItemActive(item.href, pathname);
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      aria-current={active ? "page" : undefined}
-                      className={`block rounded-md px-3 py-2 text-sm ${
-                        active
-                          ? "bg-indigo-50 font-medium text-indigo-700"
-                          : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
-
-      <p className="mt-auto border-t border-slate-200 pt-4 font-mono text-[11px] text-slate-400">
-        hanya data sintetis
-        <br />
-        L1 · L3 · L9 ditegakkan
-      </p>
-    </>
+    <nav>
+      {groups.map((group, index) => (
+        <div key={group.heading}>
+          {/* Collapsed, the headings give way to a rule between groups. */}
+          {collapsed
+            ? index > 0 && <hr className="mx-2 my-3 border-line-soft" />
+            : group.heading && (
+                <p className="px-3 pt-5 pb-1.5 text-xs font-medium uppercase tracking-[0.04em] text-subtle">
+                  {group.heading}
+                </p>
+              )}
+          <ul className="space-y-0.5">
+            {group.items.map((item) => {
+              const active = isNavItemActive(item.href, pathname);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    title={collapsed ? item.label : undefined}
+                    className={`flex h-9 items-center gap-2.5 rounded-control text-sm ${collapsed ? "justify-center" : "px-3"} ${
+                      active ? "bg-ink text-paper" : "text-ink hover:bg-surface"
+                    }`}
+                  >
+                    <Icon name={item.icon} className="opacity-80" />
+                    <span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
   );
 }

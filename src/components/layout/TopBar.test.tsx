@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileNavProvider } from "./MobileNav";
@@ -25,7 +25,15 @@ const signedIn = {
 
 beforeEach(() => {
   useAuthMock.mockReset();
+  localStorage.clear();
 });
+
+function scrollTo(y: number) {
+  Object.defineProperty(window, "scrollY", { value: y, configurable: true });
+  act(() => {
+    window.dispatchEvent(new Event("scroll"));
+  });
+}
 
 describe("TopBar", () => {
   it("shows initials, name and role label", () => {
@@ -112,5 +120,55 @@ describe("TopBar", () => {
 
     expect(screen.getByText("Rina Hapsari").parentElement).toHaveClass("hidden", "sm:block");
     expect(screen.getByText("RH")).toHaveAttribute("title", "Rina Hapsari · Kontributor");
+  });
+
+  // SCRUM-347: the brand goes to the role's first page, because Developer AI has no Beranda.
+  it.each([
+    ["contributor", "/dashboard", "IndoLegalBench, ke Beranda"],
+    ["developer_ai", "/suites", "IndoLegalBench, ke Suite dan kasus"],
+  ])("links the brand for %s to %s", (role, href, name) => {
+    useAuthMock.mockReturnValue({ ...signedIn, user: { ...signedIn.user, role } });
+
+    render(<TopBar />);
+
+    expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+  });
+
+  // SCRUM-347: full height at the very top; once the page scrolls the bar stays, compact, without the role.
+  it("turns compact and drops the role line once the page scrolls, and back at the top", () => {
+    useAuthMock.mockReturnValue(signedIn);
+    render(<TopBar />);
+    expect(screen.getByRole("banner")).toHaveClass("fixed", "h-18");
+
+    try {
+      scrollTo(120);
+
+      expect(screen.getByRole("banner")).toHaveClass("h-12");
+      expect(screen.queryByText("Kontributor")).not.toBeInTheDocument();
+      expect(screen.getByText("Rina Hapsari")).toBeInTheDocument();
+    } finally {
+      scrollTo(0);
+    }
+
+    expect(screen.getByRole("banner")).toHaveClass("h-18");
+    expect(screen.getByText("Kontributor")).toBeInTheDocument();
+  });
+
+  // SCRUM-347: on wider screens the panel button collapses the side column instead of opening a panel.
+  it("collapses the side column from the bar on tablets and laptops", async () => {
+    useAuthMock.mockReturnValue(signedIn);
+    render(
+      <MobileNavProvider>
+        <TopBar />
+      </MobileNavProvider>,
+    );
+
+    const collapse = screen.getByRole("button", { name: "Ciutkan menu" });
+    expect(collapse).toHaveClass("hidden", "md:grid");
+    expect(collapse).toHaveAttribute("aria-controls", "sidebar");
+
+    await userEvent.click(collapse);
+
+    expect(screen.getByRole("button", { name: "Lebarkan menu" })).toHaveAttribute("aria-expanded", "false");
   });
 });

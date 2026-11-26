@@ -1,9 +1,13 @@
 "use client";
 
-import { MOBILE_NAV_ID, useMobileNav } from "@/components/layout/MobileNav";
+import Link from "next/link";
+import { useSyncExternalStore } from "react";
+import { MOBILE_NAV_ID, SIDEBAR_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/hooks/useAuth";
 import { LOGOUT_URL } from "@/lib/auth";
+import { navForRole } from "@/lib/nav";
 import { ROLE_LABEL } from "@/types";
 
 function initials(name: string) {
@@ -14,64 +18,96 @@ function initials(name: string) {
     .join("");
 }
 
+function subscribeToScroll(onChange: () => void) {
+  window.addEventListener("scroll", onChange, { passive: true });
+  return () => window.removeEventListener("scroll", onChange);
+}
+const isScrolled = () => window.scrollY > 0;
+const atTopOnServer = () => false;
+
+const ICON_BUTTON = "place-items-center rounded-control text-ink hover:bg-surface";
+
 export function TopBar() {
   const auth = useAuth();
   const menu = useMobileNav();
+  // SCRUM-347: at the very top the bar is full height; once the page scrolls it stays on top, compact.
+  const scrolled = useSyncExternalStore(subscribeToScroll, isScrolled, atTopOnServer);
+  const user = auth.status === "authenticated" ? auth.user : null;
+  // The brand leads to the role's first page, because Developer AI has no Beranda.
+  const home = user === null ? undefined : navForRole(user.role)[0]?.items[0];
+  const brand = `font-serif font-bold text-ink ${scrolled ? "text-lg" : "text-lg sm:text-[22px]"} leading-7`;
 
+  // The bar is fixed over a spacer that keeps the full height, so shrinking it never shortens the page:
+  // on a page barely taller than the window, that would scroll it back to the top and flicker.
   return (
-    <header className="flex items-center justify-between gap-3 bg-slate-900 px-4 py-3 sm:px-6">
-      <span className="flex items-center gap-2 text-sm font-semibold text-white">
-        {auth.status === "authenticated" && (
-          // Phones only: the sidebar is hidden below md (SCRUM-204 E2E F3).
-          <button
-            type="button"
-            onClick={menu.toggle}
-            aria-expanded={menu.open}
-            aria-controls={MOBILE_NAV_ID}
-            aria-label={menu.open ? "Tutup menu" : "Buka menu"}
-            className="-ml-2 grid h-11 w-11 place-items-center rounded-md text-slate-300 hover:bg-slate-800 hover:text-white md:hidden"
-          >
-            <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-              <path
-                fillRule="evenodd"
-                d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm.75 4.5a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75Z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        )}
-        <span className="h-5 w-5 rounded bg-indigo-500" />
-        <span>IndoLegalBench</span>
-      </span>
-
-      {auth.status === "authenticated" && (
-        <div className="flex items-center gap-3">
-          <NotificationBell />
-          <span
-            title={`${auth.user.name} · ${ROLE_LABEL[auth.user.role]}`}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-indigo-600 text-xs font-semibold text-white"
-          >
-            {initials(auth.user.name)}
-          </span>
-          {/* Phones keep the initials; the name and role pushed the bar past 375 px. */}
-          <span className="hidden text-right text-xs leading-tight sm:block">
-            <span className="block font-medium text-white">
-              {auth.user.name}
-            </span>
-            <span className="block text-slate-400">
-              {ROLE_LABEL[auth.user.role]}
-            </span>
-          </span>
-          <form method="POST" action={LOGOUT_URL}>
-            <button
-              type="submit"
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-            >
-              Keluar
-            </button>
-          </form>
+    <div className="h-18 shrink-0">
+      <header
+        className={`fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-3 border-b border-line-soft bg-paper px-4 transition-[height,box-shadow] sm:px-5 ${
+          scrolled ? "h-12 shadow-[0_4px_16px_rgba(0,0,0,0.06)]" : "h-18"
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {user !== null && (
+            <>
+              {/* Phones: the side column is hidden below md, so this opens it as a panel (SCRUM-204 E2E F3). */}
+              <button
+                type="button"
+                onClick={menu.toggle}
+                aria-expanded={menu.open}
+                aria-controls={MOBILE_NAV_ID}
+                aria-label={menu.open ? "Tutup menu" : "Buka menu"}
+                className={`-ml-2 grid h-11 w-11 md:hidden ${ICON_BUTTON}`}
+              >
+                <Icon name="panel" size={18} />
+              </button>
+              <button
+                type="button"
+                onClick={menu.toggleCollapsed}
+                aria-expanded={!menu.collapsed}
+                aria-controls={SIDEBAR_ID}
+                aria-label={menu.collapsed ? "Lebarkan menu" : "Ciutkan menu"}
+                className={`-ml-1 hidden h-9 w-9 md:grid ${ICON_BUTTON}`}
+              >
+                <Icon name="panel" size={18} />
+              </button>
+            </>
+          )}
+          {home ? (
+            <Link href={home.href} aria-label={`IndoLegalBench, ke ${home.label}`} className={brand}>
+              IndoLegalBench
+            </Link>
+          ) : (
+            <span className={brand}>IndoLegalBench</span>
+          )}
         </div>
-      )}
-    </header>
+
+        {user !== null && (
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span
+              title={`${user.name} · ${ROLE_LABEL[user.role]}`}
+              className="ml-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent text-sm font-semibold text-paper"
+            >
+              {initials(user.name)}
+            </span>
+            {/* Phones keep the initials; the name and role pushed the bar past 375 px. */}
+            <span className="hidden leading-4 sm:block">
+              <span className="block text-sm font-medium text-ink">{user.name}</span>
+              {!scrolled && <span className="block text-xs text-muted">{ROLE_LABEL[user.role]}</span>}
+            </span>
+            <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-line-soft sm:block" />
+            <form method="POST" action={LOGOUT_URL}>
+              <button
+                type="submit"
+                className="inline-flex h-9 items-center gap-1.5 rounded-control px-2 text-sm text-ink-soft transition-colors hover:bg-surface hover:text-ink"
+              >
+                <Icon name="keluar" />
+                <span className="sr-only sm:not-sr-only">Keluar</span>
+              </button>
+            </form>
+          </div>
+        )}
+      </header>
+    </div>
   );
 }
