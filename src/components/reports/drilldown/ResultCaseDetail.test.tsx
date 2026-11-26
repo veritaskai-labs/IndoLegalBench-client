@@ -154,7 +154,9 @@ describe("ResultCaseDetail", () => {
       ),
     );
 
-    expect(await screen.findByRole("region", { name: "Bukti percobaan 3" })).toBeInTheDocument();
+    // The evidence loads in an effect after the region renders, so wait for its result, not only the region.
+    const region = await screen.findByRole("region", { name: "Bukti percobaan 3" });
+    expect(await within(region).findByText("Tidak ada bukti.")).toBeInTheDocument();
     expect(screen.getAllByRole("region", { name: /^Bukti percobaan/ })).toHaveLength(1);
     expect(gateway.evidence).toHaveBeenCalledWith("r-1", "res-1", "c-1", 3);
   });
