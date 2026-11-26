@@ -48,13 +48,6 @@ export function CreateManualSessionForm() {
     typeof repeatCount === "number" &&
     repeatCount >= MANUAL_SESSION_MIN_REPETITIONS &&
     repeatCount <= MANUAL_SESSION_MAX_REPETITIONS;
-  const isFormValid =
-    label.trim().length > 0 &&
-    label.trim().length <= SESSION_LABEL_MAX_LENGTH &&
-    purpose !== "" &&
-    selectedSuiteIds.length > 0 &&
-    productId !== "" &&
-    isValidRepeat;
   const submitBlockedReason = missingRequirementsText([
     ["label sesi", label.trim().length > 0 && label.trim().length <= SESSION_LABEL_MAX_LENGTH],
     ["tujuan sesi", purpose !== ""],
@@ -62,6 +55,7 @@ export function CreateManualSessionForm() {
     ["produk AI", productId !== ""],
     [`jumlah pengulangan ${MANUAL_SESSION_MIN_REPETITIONS} sampai ${MANUAL_SESSION_MAX_REPETITIONS}`, isValidRepeat],
   ]);
+  const isFormValid = submitBlockedReason === null;
   const submitReasonId = useId();
 
   function handleSuiteToggle(suiteId: string) {
@@ -373,7 +367,7 @@ export function CreateManualSessionForm() {
       </section>
 
       {/* Tombol Aksi */}
-      <div className="flex items-center justify-end gap-3 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
         <button
           type="button"
           onClick={() => router.push("/manual-runs")}
@@ -382,7 +376,7 @@ export function CreateManualSessionForm() {
           Batal
         </button>
         {submitBlockedReason && (
-          <p id={submitReasonId} className="text-right text-xs text-ink-soft">
+          <p id={submitReasonId} className="order-first min-w-0 basis-full text-right text-xs text-ink-soft sm:order-none sm:basis-auto sm:max-w-sm">
             {submitBlockedReason}
           </p>
         )}

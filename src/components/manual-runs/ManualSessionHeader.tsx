@@ -22,6 +22,11 @@ import type { Role } from "@/types";
 import type { ManualSessionDetail } from "@/types/measurement";
 
 /** Penjelasan tombol "Kirim untuk Dinilai": kenapa mati, atau apa yang dilakukannya. */
+function missingAnswersReason(remainingAnswers: number): string {
+  if (remainingAnswers <= 0) return "Sesi ini tidak memiliki jawaban untuk diisi.";
+  return `Isi ${remainingAnswers} jawaban lagi untuk mengaktifkan tombol ini.`;
+}
+
 function gradeButtonTitle(isAllFilled: boolean, gradingActive: boolean): string {
   if (!isAllFilled) return "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai.";
   if (gradingActive) return "Penilaian sesi ini sedang berjalan di latar belakang.";
@@ -76,10 +81,9 @@ export function ManualSessionHeader({
       ? Math.round((session.filled_answers / session.total_answers) * 100)
       : 0;
   const remainingAnswers = session.total_answers - session.filled_answers;
-  const actionsBlockedReason =
-    isAdmin && !isAllFilled && remainingAnswers > 0
-      ? `Isi ${remainingAnswers} jawaban lagi untuk mengaktifkan tombol ini.`
-      : null;
+  const actionsBlockedReason = isAdmin && !isAllFilled ? missingAnswersReason(remainingAnswers) : null;
+  const gradeBlockedReason =
+    actionsBlockedReason ?? (isAdmin && grading.active ? "Penilaian sesi ini sedang berjalan. Tunggu sampai selesai." : null);
   const actionsReasonId = useId();
 
   function handleFinalized() {
@@ -280,7 +284,7 @@ export function ManualSessionHeader({
                 type="button"
                 disabled={!isAllFilled || grading.active}
                 onClick={() => setGradeDialog("grade")}
-                aria-describedby={actionsBlockedReason ? actionsReasonId : undefined}
+                aria-describedby={gradeBlockedReason ? actionsReasonId : undefined}
                 title={gradeButtonTitle(isAllFilled, grading.active)}
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -290,9 +294,9 @@ export function ManualSessionHeader({
           </div>
         </div>
 
-        {actionsBlockedReason && (
+        {gradeBlockedReason && (
           <p id={actionsReasonId} className="text-xs text-ink-soft sm:text-right">
-            {actionsBlockedReason}
+            {gradeBlockedReason}
           </p>
         )}
 

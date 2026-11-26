@@ -196,10 +196,13 @@ export function CreateMeasurementForm() {
       ["label sesi", label.trim().length > 0],
       ["tujuan sesi", Boolean(purpose)],
       ...choiceRequirements,
-    ]) ??
-    (summary === null && budgetExceeded === null && !isSummaryLoading
-      ? "Tinjau ringkasan biaya dulu untuk mengaktifkan tombol ini."
-      : null);
+    ]) ?? summaryStateReason();
+  function summaryStateReason(): string | null {
+    if (isSummaryLoading) return "Ringkasan biaya sedang dihitung.";
+    if (budgetExceeded !== null) return "Perkiraan biaya melebihi sisa anggaran produk.";
+    if (summary === null) return "Tinjau ringkasan biaya dulu untuk mengaktifkan tombol ini.";
+    return null;
+  }
   const summaryReasonId = useId();
   const startReasonId = useId();
 
@@ -536,7 +539,7 @@ export function CreateMeasurementForm() {
       </section>
 
       {/* Tombol Aksi Bawah */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200">
         <button
           type="button"
           onClick={() => router.push("/runs")}
@@ -545,9 +548,9 @@ export function CreateMeasurementForm() {
           Batal
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap-reverse items-center justify-end gap-x-3 gap-y-2">
           {startBlockedReason && (
-            <p id={startReasonId} className="text-right text-xs text-ink-soft">
+            <p id={startReasonId} className="min-w-0 max-w-sm text-right text-xs text-ink-soft">
               {startBlockedReason}
             </p>
           )}
