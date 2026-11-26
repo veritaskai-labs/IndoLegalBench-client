@@ -134,7 +134,7 @@ describe("CreateMeasurementForm", () => {
   it("explains a disabled Mulai Pengukuran while the measurement is being started", async () => {
     const user = userEvent.setup();
     mockGetMeasurementSummary.mockResolvedValue(MOCK_SUMMARY);
-    mockStartMeasurement.mockImplementationOnce(() => new Promise(() => {}));
+    mockStartMeasurement.mockImplementationOnce(() => new Promise<never>(() => undefined));
     renderForm();
 
     await user.type(screen.getByPlaceholderText(/Contoh: Evaluasi Perdata v1.2/i), "Sesi Mulai");
@@ -154,7 +154,7 @@ describe("CreateMeasurementForm", () => {
 
   it("explains a disabled Mulai Pengukuran while the summary is computed and when the budget is exceeded", async () => {
     const user = userEvent.setup();
-    let rejectSummary: (error: unknown) => void = () => {};
+    let rejectSummary!: (error: unknown) => void;
     mockGetMeasurementSummary.mockReturnValue(
       new Promise((_, reject) => {
         rejectSummary = reject;

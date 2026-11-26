@@ -159,7 +159,9 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     render(<SessionDetailPage />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
-    expect(screen.getByRole("status", { name: "Status sesi" })).toHaveTextContent("Selesai");
+    const status = screen.getByRole("status", { name: "Status sesi" });
+    expect(status.tagName).toBe("OUTPUT");
+    expect(status).toHaveTextContent("Selesai");
     const facts = within(screen.getByRole("region", { name: "Ringkasan sesi" }));
     expect(facts.queryByText("Status")).not.toBeInTheDocument();
     expect(facts.getByText("Gemini")).toBeInTheDocument();
@@ -244,7 +246,9 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     get.mockResolvedValue(session());
     render(<SessionDetailPage />);
 
-    const settings = within(await screen.findByRole("group", { name: "Pengaturan" }));
+    const settingsGroup = await screen.findByRole("group", { name: "Pengaturan" });
+    expect(settingsGroup.tagName).toBe("FIELDSET");
+    const settings = within(settingsGroup);
     for (const label of ["Produk", "Tujuan", "Filter kasus", "Pengulangan", "Progres", "Snapshot kasus"]) {
       expect(settings.getByText(label)).toBeInTheDocument();
     }
