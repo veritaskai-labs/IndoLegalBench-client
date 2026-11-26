@@ -49,7 +49,7 @@ export default function ManualRunsPage() {
             className="inline-flex items-center justify-center gap-1.5 rounded-control bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink-hover transition-colors"
           >
             <span aria-hidden="true">+</span>
-            Pengukuran manual baru
+            <span>Pengukuran manual baru</span>
           </Link>
         )}
       </header>
