@@ -29,7 +29,7 @@ async function fill(user: UserEvent, label: string, text: string) {
 /** The template fills levels and aspect names; the rest of the required fields are filled in here. */
 async function fillRequired(user: UserEvent) {
   await user.click(templateButton());
-  await user.type(screen.getByLabelText("Berlaku sejak"), "2026-12-01");
+  await fill(user, "Berlaku sejak", "2026-12-01");
   await fill(user, "Prompt penilai kualitas", "Nilai kualitas.");
   await fill(user, "Prompt penilai format", "Nilai format.");
   for (const number of [1, 2, 3]) await fill(user, `Definisi aspek ${number}`, `Definisi ${number}`);
@@ -464,7 +464,7 @@ describe("RubricVersionForm (AC7 form, SCRUM-375 B1–B7)", () => {
     });
     expect(request.aspects[0]).toMatchObject({ name: "Kesimpulan", grader_path: "deterministic", weight: 100, definition: "Definisi 1" });
     expect(request.levels.find((level) => level.score === 4)?.is_passing).toBe(false);
-    expect(request.levels[0].descriptors[0]).toEqual({
+    expect(request.levels[0].descriptors?.[0]).toEqual({
       aspect_name: "Kesimpulan",
       descriptor: "AI memberikan jawaban yang sepenuhnya benar dan tepat sasaran.",
     });
