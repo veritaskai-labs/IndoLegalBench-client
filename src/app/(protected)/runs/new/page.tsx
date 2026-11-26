@@ -34,7 +34,7 @@ export default function NewMeasurementPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <Breadcrumb
         items={[
-          { label: "Eksekusi", onClick: () => router.push("/runs") },
+          { label: "Pengukuran otomatis", onClick: () => router.push("/runs") },
           { label: "Buat Pengukuran" },
         ]}
       />

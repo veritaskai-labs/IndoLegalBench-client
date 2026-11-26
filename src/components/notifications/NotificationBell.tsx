@@ -130,7 +130,7 @@ export function NotificationBell() {
             >
               <span
                 aria-hidden="true"
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read_at === null ? "bg-indigo-500" : "bg-transparent"}`}
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read_at === null ? "bg-accent" : "bg-transparent"}`}
               />
               <span className="min-w-0 space-y-0.5">
                 <span
@@ -158,13 +158,13 @@ export function NotificationBell() {
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={toggle}
-        className="relative grid h-8 w-8 place-items-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+        className="relative grid h-9 w-9 place-items-center rounded-control text-ink transition-colors hover:bg-surface"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-5 w-5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
         </svg>
         {badge && (
-          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] font-semibold leading-4 text-paper">
             {badge}
           </span>
         )}
@@ -183,7 +183,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={() => void readAll()}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                className="text-xs font-medium text-accent hover:text-accent-ink"
               >
                 Tandai semua dibaca
               </button>

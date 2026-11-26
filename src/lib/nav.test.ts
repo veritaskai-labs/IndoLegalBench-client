@@ -18,7 +18,7 @@ describe("navForRole", () => {
   // PBI-24 AC6 + AC10: writing work, the review queue and reports in one menu.
   it("gives contributor the writing, review and report pages", () => {
     expect(labels("contributor")).toEqual([
-      "Dasbor",
+      "Beranda",
       "Suite dan kasus",
       "Antrean tinjauan",
       "Pengukuran manual",
@@ -27,32 +27,33 @@ describe("navForRole", () => {
   });
 
   it("gives viewer reports but no admin pages", () => {
-    expect(labels("viewer")).toEqual(["Dasbor", "Laporan"]);
+    expect(labels("viewer")).toEqual(["Beranda", "Laporan"]);
   });
 
   // PBI-11 AC1 & D10: Admin and Developer AI can run automatic measurements.
   it("gives developer AI the suites, execution and report pages, without the dashboard (PBI-11, PBI-15)", () => {
-    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Eksekusi", "Laporan"]);
+    expect(labels("developer_ai")).toEqual(["Suite dan kasus", "Pengukuran otomatis", "Laporan"]);
   });
 
   it("gives admin the admin pages and reports but not the review queue", () => {
     expect(labels("admin")).toEqual([
-      "Dasbor",
+      "Beranda",
       "Suite dan kasus",
-      "Penyedia",
-      "Eksekusi",
+      "Review kasus",
+      "Rubrik penilaian",
+      "Produk AI",
+      "Pengukuran otomatis",
       "Pengukuran manual",
-      "Rubrik",
       "Laporan",
-      "Anggota",
-      "Pemantauan review",
-      "Log audit",
+      "Pengguna",
+      "Riwayat aktivitas",
     ]);
   });
 
   it("drops groups left empty for the role", () => {
     expect(navForRole("contributor").map((group) => group.heading)).toEqual([
-      "Konteks",
+      "",
+      "Persiapan",
       "Pengukuran",
     ]);
   });
@@ -133,8 +134,17 @@ describe("isNavItemActive", () => {
     expect(isNavItemActive(href, pathname)).toBe(true);
   });
 
-  // Positive: the case list and the CSV import live under "Suite dan kasus" (SCRUM-341, SCRUM-340).
-  it.each(["/cases", "/cases/import"])("marks Suite dan kasus active on %s", (pathname) => {
+  // SCRUM-347: a detail page keeps its parent item lit, as in the prototype.
+  it.each([
+    ["/runs", "/runs/new"],
+    ["/reports", "/reports/comparisons/r-1"],
+    ["/admin/rubrics", "/admin/rubrics/new"],
+  ])("marks %s active on its detail page %s", (href, pathname) => {
+    expect(isNavItemActive(href, pathname)).toBe(true);
+  });
+
+  // Positive: the case pages live under "Suite dan kasus" (SCRUM-341, SCRUM-340).
+  it.each(["/cases", "/cases/import", "/cases/c-1/edit"])("marks Suite dan kasus active on %s", (pathname) => {
     // Arrange / Act / Assert
     expect(isNavItemActive("/suites", pathname)).toBe(true);
   });
@@ -146,7 +156,7 @@ describe("isNavItemActive", () => {
     ["/reports", "/cases/import"],
     ["/suites", "/suites-lama"],
     ["/suites", "/cases-lama"],
-    ["/suites", "/cases/c-1/edit"],
+    ["/reviews", "/admin/reviews"],
   ])("does not mark %s active on %s", (href, pathname) => {
     // Arrange / Act / Assert
     expect(isNavItemActive(href, pathname)).toBe(false);

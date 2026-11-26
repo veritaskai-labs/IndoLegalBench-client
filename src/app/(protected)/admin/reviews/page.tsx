@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { InReviewTable } from "@/components/reviews/InReviewTable";
 import { ReassignmentTable } from "@/components/reviews/ReassignmentTable";
 import { SwapReviewerDialog } from "@/components/reviews/SwapReviewerDialog";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
+import { EmptyState, ErrorState, LoadingSkeleton, LoadingState } from "@/components/ui";
 import { useInReviewCases } from "@/hooks/useInReviewCases";
 import { useNeedsReassignment } from "@/hooks/useNeedsReassignment";
 import { useReplaceReviewer } from "@/hooks/useReplaceReviewer";
@@ -19,10 +19,17 @@ import type {
   ReassignmentAssignment,
   ReassignmentRow,
   ReviewerSlot,
+  ReplaceReviewerBody,
 } from "@/types/reviewAdmin";
 import type { User } from "@/types/user-management";
 
 type Tab = "queue" | "decisions";
+type AuthorLookup = {
+  request: Promise<string | null>;
+  authorId?: string | null;
+};
+
+const feedbackClass = "block rounded-control bg-surface p-3 text-sm";
 
 /**
  * Penugasan yang sedang diganti, dalam bentuk yang tidak terikat pada tabel asalnya:
@@ -32,6 +39,8 @@ type Target = {
   assignmentId: string;
   caseId: string;
   caseCode: string;
+  caseTitle: string;
+  roundNo: number;
   reviewerId: string;
   reviewerName: string;
   takenReviewerIds: string[];
@@ -73,7 +82,7 @@ function ReassignmentPanel({
   }
 
   if (queue.status === "loading") {
-    return <LoadingSkeleton variant="lines" rows={5} />;
+    return <LoadingState label="Memuat penugasan…" />;
   }
 
   if (queue.data.length === 0) {
@@ -85,11 +94,7 @@ function ReassignmentPanel({
     );
   }
 
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <ReassignmentTable rows={queue.data} onReplace={onReplace} />
-    </div>
-  );
+  return <ReassignmentTable rows={queue.data} onReplace={onReplace} />;
 }
 
 /** Isi tab kasus yang sedang direview, dengan urutan keadaan yang sama. */
@@ -133,10 +138,17 @@ function InReviewPanel({
 export default function AdminReviewsPage() {
   const [tab, setTab] = useState<Tab>("queue");
   const [target, setTarget] = useState<Target | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[] | null>(null);
   const [usersFailed, setUsersFailed] = useState(false);
   const [authorId, setAuthorId] = useState<string | null>(null);
   const [authorFailed, setAuthorFailed] = useState(false);
+
+  const [checkingAuthor, setCheckingAuthor] = useState(false);
+  const [success, setSuccess] = useState("");
+  const opener = useRef<HTMLElement | null>(null);
+  const successFeedback = useRef<HTMLOutputElement>(null);
+  const errorFeedback = useRef<HTMLParagraphElement>(null);
+  const authorLookups = useRef(new Map<string, AuthorLookup>());
 
   const queue = useNeedsReassignment();
   const { reload } = queue;
@@ -149,13 +161,24 @@ export default function AdminReviewsPage() {
     reloadInReview();
   }, [reload, reloadInReview]);
 
-  const afterReplace = useCallback(() => {
+  const closeAndRefresh = useCallback(() => {
     setTarget(null);
     reloadBoth();
   }, [reloadBoth]);
-
-  const replacement = useReplaceReviewer(afterReplace, reloadBoth);
+  const afterReplace = useCallback((body: ReplaceReviewerBody) => {
+    const name = users?.find(user => user.id === body.new_reviewer_id)?.name;
+    setSuccess(`Reviewer untuk ${target?.caseCode} berhasil diganti dengan ${name}.`);
+    reloadBoth();
+  }, [target, users, reloadBoth]);
+  const replacement = useReplaceReviewer(afterReplace, closeAndRefresh);
   const { reset } = replacement;
+
+  useEffect(() => {
+    if (target || !opener.current) return;
+    const returnTarget = opener.current.isConnected ? opener.current : document.getElementById(`tab-${tab}`);
+    (successFeedback.current ?? errorFeedback.current ?? returnTarget)?.focus();
+    opener.current = null;
+  }, [target, tab]);
 
   // Kandidat reviewer diambil sekali; daftar anggota tidak berubah selama halaman terbuka.
   useEffect(() => {
@@ -178,24 +201,41 @@ export default function AdminReviewsPage() {
 
   /**
    * AC7 mengecualikan penulis kasus. Antrean dari server belum membawa field author,
-   * jadi penulisnya dicari dari versi 1 lewat isCaseCreator — hanya saat dialog dibuka,
-   * dan hanya di antara kandidat, karena di luar itu tidak berpengaruh.
+   * jadi penulisnya dicari dari versi 1. Simpan hasil per kasus selama halaman terbuka
+   * dan gunakan permintaan yang sama jika dialog dibuka lagi sebelum pencarian selesai.
    */
   useEffect(() => {
-    if (target === null) return;
+    if (target === null || users === null) return;
+
+    const { caseId } = target;
+    const lookups = authorLookups.current;
+    const lookup = lookups.get(caseId);
+    const request: Promise<string | null> = lookup?.request ?? listCaseVersions(caseId).then(
+      (versions) => {
+        const authorId = users.find((item) => isCaseCreator(versions, item.id))?.id ?? null;
+        lookups.set(caseId, { request, authorId });
+        return authorId;
+      },
+      (error: unknown) => {
+        lookups.delete(caseId);
+        throw error;
+      },
+    );
+    if (!lookup) lookups.set(caseId, { request });
 
     let cancelled = false;
-    listCaseVersions(target.caseId)
-      .then((versions) => {
+    request
+      .then((authorId) => {
         if (cancelled) return;
-        const author = users.find((item) => isCaseCreator(versions, item.id));
-        setAuthorId(author?.id ?? null);
+        setAuthorId(authorId);
+        setCheckingAuthor(false);
         setAuthorFailed(false);
       })
       .catch(() => {
         if (cancelled) return;
         setAuthorId(null);
         setAuthorFailed(true);
+        setCheckingAuthor(false);
       });
 
     return () => {
@@ -205,8 +245,12 @@ export default function AdminReviewsPage() {
 
   const openDialog = useCallback(
     (next: Target) => {
+      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       reset();
-      setAuthorId(null);
+      setSuccess("");
+      const cachedAuthor = authorLookups.current.get(next.caseId)?.authorId;
+      setCheckingAuthor(cachedAuthor === undefined);
+      setAuthorId(cachedAuthor ?? null);
       setAuthorFailed(false);
       setTarget(next);
     },
@@ -220,6 +264,8 @@ export default function AdminReviewsPage() {
         assignmentId: assignment.id,
         caseId: row.case_id,
         caseCode: row.case_code,
+        caseTitle: row.case_title,
+        roundNo: row.round_no,
         reviewerId: assignment.reviewer_id,
         reviewerName: reviewerName(assignment),
         takenReviewerIds: activeAssignments(row).map(
@@ -237,6 +283,8 @@ export default function AdminReviewsPage() {
         assignmentId: slot.assignment_id,
         caseId: row.case.id,
         caseCode: row.case.case_code,
+        caseTitle: row.case.title,
+        roundNo: row.review.round_no,
         reviewerId: slot.reviewer.id,
         reviewerName: slot.reviewer.name,
         takenReviewerIds: (row.review?.reviewers ?? [])
@@ -248,7 +296,8 @@ export default function AdminReviewsPage() {
   );
 
   /** Pola tablist: panah kiri/kanan berpindah tab dan memindahkan fokus, hanya ada dua tab. */
-  const moveTab = (event: KeyboardEvent<HTMLButtonElement>) => {    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+  const moveTab = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
     event.preventDefault();
     const next: Tab = tab === "queue" ? "decisions" : "queue";
     setTab(next);
@@ -256,12 +305,12 @@ export default function AdminReviewsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-screen-2xl space-y-4">
       <header>
-        <h1 className="text-xl font-semibold text-slate-900">
-          Pemantauan review
+        <h1 className="font-serif text-3xl leading-tight text-ink sm:text-4xl">
+          Review kasus
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-muted">
           Pantau kasus yang sedang direview dan tangani kasus yang kehilangan
           reviewer.
         </p>
@@ -270,7 +319,7 @@ export default function AdminReviewsPage() {
       <div
         role="tablist"
         aria-label="Tampilan pemantauan"
-        className="flex gap-2 border-b border-slate-200"
+        className="flex gap-2 border-b border-line-soft"
       >
         {TABS.map((name) => (
           <button
@@ -285,14 +334,21 @@ export default function AdminReviewsPage() {
             onKeyDown={moveTab}
             className={
               tab === name
-                ? "-mb-px border-b-2 border-slate-900 px-3 py-2 text-sm font-medium text-slate-900"
-                : "px-3 py-2 text-sm text-slate-500 hover:text-slate-700"
+                ? "-mb-px border-b-2 border-ink px-3 py-2 text-sm font-medium text-ink"
+                : "px-3 py-2 text-sm text-muted hover:text-slate-700"
             }
           >
             {TAB_LABEL[name]}
           </button>
         ))}
       </div>
+
+      {!target && success && (
+        <output ref={successFeedback} tabIndex={-1} className={feedbackClass}>{success}</output>
+      )}
+      {!target && replacement.error && (
+        <p ref={errorFeedback} tabIndex={-1} role="alert" className={feedbackClass}>{replacement.error}</p>
+      )}
 
       {tab === "queue" ? (
         <section
@@ -315,16 +371,19 @@ export default function AdminReviewsPage() {
       {target && (
         <SwapReviewerDialog
           caseCode={target.caseCode}
+          caseTitle={target.caseTitle}
+          roundNo={target.roundNo}
+          loadingCandidates={users === null || checkingAuthor}
           currentReviewerId={target.reviewerId}
           currentReviewerName={target.reviewerName}
-          candidates={candidatesExcept(users, target.takenReviewerIds, authorId)}
+          candidates={candidatesExcept(users ?? [], target.takenReviewerIds, authorId)}
           notice={dialogNotice(usersFailed, authorFailed)}
           pending={replacement.pending}
           error={replacement.error}
           onConfirm={(body) =>
-            void replacement.replace(target.assignmentId, body)
+            replacement.replace(target.assignmentId, body)
           }
-          onClose={() => setTarget(null)}
+          onClose={() => { reset(); setTarget(null); }}
         />
       )}
     </div>

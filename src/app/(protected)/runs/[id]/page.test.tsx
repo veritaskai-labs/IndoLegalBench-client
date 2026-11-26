@@ -182,7 +182,7 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     get.mockResolvedValue(session());
     render(<SessionDetailPage />);
 
-    expect(await screen.findByRole("link", { name: "Eksekusi" })).toHaveAttribute("href", "/runs");
+    expect(await screen.findByRole("link", { name: "Pengukuran otomatis" })).toHaveAttribute("href", "/runs");
   });
 
   // The URL segment arrives encoded; runsApi encodes it again, so the page must decode it once.
@@ -556,7 +556,7 @@ describe("SessionDetailPage load states", () => {
     render(<SessionDetailPage />);
 
     expect(await screen.findByText("Sesi tidak ditemukan.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Kembali ke Eksekusi" })).toHaveAttribute("href", "/runs");
+    expect(screen.getByRole("link", { name: "Kembali ke Pengukuran otomatis" })).toHaveAttribute("href", "/runs");
   });
 
   it("shows an error with a retry that loads again", async () => {

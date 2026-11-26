@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { actorOptionLabel } from "@/lib/audit/actorLabel";
 import type { AuditActor } from "@/lib/audit/auditApi";
 import { ENTITY_LABEL } from "@/lib/audit/entityLabels";
@@ -19,7 +20,14 @@ const FIELD =
   "rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-800 " +
   "focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
 
-export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Props) {
+// The browser's own picker button stays, invisible, over the design's calendar icon, so a click there still
+// opens the picker. shortcut: Firefox draws its own button that cannot be hidden, upgrade with a custom picker.
+const DATE_FIELD =
+  `${FIELD} relative w-full pr-9 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-y-0 [&::-webkit-calendar-picker-indicator]:right-0 ` +
+  "[&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-9 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0";
+const CALENDAR = "pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-ink";
+
+export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Readonly<Props>) {
   // Kode kasus baru dicari saat Enter atau keluar dari kolom, bukan per ketikan.
   const [caseCode, setCaseCode] = useState(value.case_code ?? "");
 
@@ -38,30 +46,36 @@ export function AuditFilterBar({ value, actors, minDate, maxDate, onChange }: Pr
         <label htmlFor="audit-from" className="text-xs font-medium text-slate-600">
           Dari tanggal
         </label>
-        <input
-          id="audit-from"
-          type="date"
-          className={FIELD}
-          value={value.from}
-          min={minDate}
-          max={maxDate}
-          onChange={(e) => patch({ from: e.target.value })}
-        />
+        <span className="relative block">
+          <input
+            id="audit-from"
+            type="date"
+            className={DATE_FIELD}
+            value={value.from}
+            min={minDate}
+            max={maxDate}
+            onChange={(e) => patch({ from: e.target.value })}
+          />
+          <Icon name="kalender" className={CALENDAR} />
+        </span>
       </div>
 
       <div className="flex flex-col gap-1">
         <label htmlFor="audit-to" className="text-xs font-medium text-slate-600">
           Sampai tanggal
         </label>
-        <input
-          id="audit-to"
-          type="date"
-          className={FIELD}
-          value={value.to}
-          min={minDate}
-          max={maxDate}
-          onChange={(e) => patch({ to: e.target.value })}
-        />
+        <span className="relative block">
+          <input
+            id="audit-to"
+            type="date"
+            className={DATE_FIELD}
+            value={value.to}
+            min={minDate}
+            max={maxDate}
+            onChange={(e) => patch({ to: e.target.value })}
+          />
+          <Icon name="kalender" className={CALENDAR} />
+        </span>
       </div>
 
       <div className="flex flex-col gap-1">
