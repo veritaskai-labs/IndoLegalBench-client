@@ -26,6 +26,7 @@ const isScrolled = () => window.scrollY > 0;
 const atTopOnServer = () => false;
 
 const ICON_BUTTON = "place-items-center rounded-control text-ink hover:bg-surface";
+const SMOOTH = "duration-200 ease-out motion-reduce:transition-none";
 
 export function TopBar() {
   const auth = useAuth();
@@ -35,14 +36,14 @@ export function TopBar() {
   const user = auth.status === "authenticated" ? auth.user : null;
   // The brand leads to the role's first page, because Developer AI has no Beranda.
   const home = user === null ? undefined : navForRole(user.role)[0]?.items[0];
-  const brand = `font-serif font-bold text-ink ${scrolled ? "text-lg" : "text-lg sm:text-[22px]"} leading-7`;
+  const brand = `font-serif font-bold leading-7 text-ink transition-[font-size] ${SMOOTH} ${scrolled ? "text-lg" : "text-lg sm:text-[22px]"}`;
 
   // The bar is fixed over a spacer that keeps the full height, so shrinking it never shortens the page:
   // on a page barely taller than the window, that would scroll it back to the top and flicker.
   return (
     <div className="h-18 shrink-0">
       <header
-        className={`fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-3 border-b border-line-soft bg-paper px-4 transition-[height,box-shadow] sm:px-5 ${
+        className={`fixed inset-x-0 top-0 z-30 flex items-center justify-between gap-3 border-b border-line-soft bg-paper px-4 transition-[height,box-shadow] sm:px-5 ${SMOOTH} ${
           scrolled ? "h-12 shadow-[0_4px_16px_rgba(0,0,0,0.06)]" : "h-18"
         }`}
       >
@@ -93,7 +94,15 @@ export function TopBar() {
             {/* Phones keep the initials; the name and role pushed the bar past 375 px. */}
             <span className="hidden leading-4 sm:block">
               <span className="block text-sm font-medium text-ink">{user.name}</span>
-              {!scrolled && <span className="block text-xs text-muted">{ROLE_LABEL[user.role]}</span>}
+              {/* Folds away instead of vanishing, so the name slides to the middle. */}
+              <span
+                aria-hidden={scrolled}
+                className={`block overflow-hidden text-xs text-muted transition-[max-height,opacity] ${SMOOTH} ${
+                  scrolled ? "max-h-0 opacity-0" : "max-h-4 opacity-100"
+                }`}
+              >
+                {ROLE_LABEL[user.role]}
+              </span>
             </span>
             <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-line-soft sm:block" />
             <form method="POST" action={LOGOUT_URL}>

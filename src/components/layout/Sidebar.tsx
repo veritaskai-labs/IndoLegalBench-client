@@ -9,6 +9,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { isNavItemActive, navForRole, type NavGroup } from "@/lib/nav";
 import { ROLE_LABEL } from "@/types";
 
+// Collapsing only animates the width and fades the words: icons keep their place, so nothing jumps.
+const SMOOTH = "duration-200 ease-out motion-reduce:transition-none";
+const fade = (hidden: boolean) => `transition-opacity ${SMOOTH} ${hidden ? "opacity-0" : "opacity-100"}`;
+
 export function Sidebar() {
   const auth = useAuth();
   const pathname = usePathname();
@@ -24,8 +28,8 @@ export function Sidebar() {
       <aside
         id={SIDEBAR_ID}
         aria-label="Navigasi utama"
-        className={`hidden shrink-0 flex-col border-r border-line-soft bg-paper pt-2 pb-4 md:sticky md:top-12 md:flex md:h-[calc(100dvh-4.5rem)] md:self-start md:overflow-y-auto ${
-          menu.collapsed ? "w-16 px-2" : "w-62 px-3"
+        className={`hidden shrink-0 flex-col overflow-x-hidden border-r border-line-soft bg-paper px-3 pt-2 pb-4 transition-[width] md:sticky md:top-12 md:flex md:h-[calc(100dvh-4.5rem)] md:self-start md:overflow-y-auto ${SMOOTH} ${
+          menu.collapsed ? "w-16" : "w-62"
         }`}
       >
         <NavLinks groups={groups} pathname={pathname} collapsed={menu.collapsed} />
@@ -36,14 +40,10 @@ export function Sidebar() {
             aria-controls={SIDEBAR_ID}
             aria-expanded={!menu.collapsed}
             title={menu.collapsed ? "Lebarkan menu" : undefined}
-            className={`flex h-9 w-full items-center gap-2.5 rounded-control text-sm text-muted hover:bg-surface hover:text-ink ${
-              menu.collapsed ? "justify-center" : "px-3"
-            }`}
+            className="flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-control px-3 text-sm whitespace-nowrap text-muted hover:bg-surface hover:text-ink"
           >
-            <Icon name={menu.collapsed ? "lebarkan" : "ciutkan"} />
-            <span className={menu.collapsed ? "sr-only" : undefined}>
-              {menu.collapsed ? "Lebarkan menu" : "Ciutkan menu"}
-            </span>
+            <Icon name="ciutkan" className={`transition-transform ${SMOOTH} ${menu.collapsed ? "rotate-180" : ""}`} />
+            <span className={fade(menu.collapsed)}>{menu.collapsed ? "Lebarkan menu" : "Ciutkan menu"}</span>
           </button>
         </div>
       </aside>
@@ -111,16 +111,15 @@ function NavLinks({
 }: Readonly<{ groups: NavGroup[]; pathname: string; collapsed?: boolean; onNavigate?: () => void }>) {
   return (
     <nav>
-      {groups.map((group, index) => (
+      {groups.map((group) => (
         <div key={group.heading}>
-          {/* Collapsed, the headings give way to a rule between groups. */}
-          {collapsed
-            ? index > 0 && <hr className="mx-2 my-3 border-line-soft" />
-            : group.heading && (
-                <p className="px-3 pt-5 pb-1.5 text-xs font-medium uppercase tracking-[0.04em] text-subtle">
-                  {group.heading}
-                </p>
-              )}
+          {/* Collapsed, the heading fades into a rule of the same height, so the links below stay put. */}
+          {group.heading && (
+            <p className="relative flex h-[42px] items-end px-3 pb-1.5 text-xs font-medium tracking-[0.04em] whitespace-nowrap text-subtle uppercase">
+              <span className={fade(collapsed)}>{group.heading}</span>
+              <span aria-hidden="true" className={`absolute inset-x-2 top-1/2 h-px bg-line-soft ${fade(!collapsed)}`} />
+            </p>
+          )}
           <ul className="space-y-0.5">
             {group.items.map((item) => {
               const active = isNavItemActive(item.href, pathname);
@@ -131,12 +130,12 @@ function NavLinks({
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     title={collapsed ? item.label : undefined}
-                    className={`flex h-9 items-center gap-2.5 rounded-control text-sm ${collapsed ? "justify-center" : "px-3"} ${
+                    className={`flex h-9 items-center gap-2.5 overflow-hidden rounded-control px-3 text-sm whitespace-nowrap ${
                       active ? "bg-ink text-paper" : "text-ink hover:bg-surface"
                     }`}
                   >
                     <Icon name={item.icon} className="opacity-80" />
-                    <span className={collapsed ? "sr-only" : undefined}>{item.label}</span>
+                    <span className={fade(collapsed)}>{item.label}</span>
                   </Link>
                 </li>
               );

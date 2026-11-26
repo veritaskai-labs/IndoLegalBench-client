@@ -144,14 +144,15 @@ describe("TopBar", () => {
       scrollTo(120);
 
       expect(screen.getByRole("banner")).toHaveClass("h-12");
-      expect(screen.queryByText("Kontributor")).not.toBeInTheDocument();
+      expect(screen.getByText("Kontributor")).toHaveClass("max-h-0", "opacity-0");
+      expect(screen.getByText("Kontributor")).toHaveAttribute("aria-hidden", "true");
       expect(screen.getByText("Rina Hapsari")).toBeInTheDocument();
     } finally {
       scrollTo(0);
     }
 
     expect(screen.getByRole("banner")).toHaveClass("h-18");
-    expect(screen.getByText("Kontributor")).toBeInTheDocument();
+    expect(screen.getByText("Kontributor")).toHaveClass("opacity-100");
   });
 
   // SCRUM-347: on wider screens the panel button collapses the side column instead of opening a panel.

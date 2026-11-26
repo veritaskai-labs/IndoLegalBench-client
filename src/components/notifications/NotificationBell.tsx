@@ -130,7 +130,7 @@ export function NotificationBell() {
             >
               <span
                 aria-hidden="true"
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read_at === null ? "bg-indigo-500" : "bg-transparent"}`}
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read_at === null ? "bg-accent" : "bg-transparent"}`}
               />
               <span className="min-w-0 space-y-0.5">
                 <span
@@ -183,7 +183,7 @@ export function NotificationBell() {
               <button
                 type="button"
                 onClick={() => void readAll()}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                className="text-xs font-medium text-accent hover:text-accent-ink"
               >
                 Tandai semua dibaca
               </button>
