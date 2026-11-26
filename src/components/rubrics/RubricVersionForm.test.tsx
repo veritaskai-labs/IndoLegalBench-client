@@ -320,6 +320,20 @@ describe("RubricVersionForm (AC7 form, SCRUM-375 B1–B7)", () => {
     await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
   });
 
+  // Edge (B6): the trail leaves the page too; edge because a plain link there would skip the question Batal asks.
+  it("asks before the trail back to the list throws away typed text", async () => {
+    // Arrange
+    const { user, onCancel } = setup();
+    await user.type(screen.getByLabelText("Nama aspek 1"), "x");
+
+    // Act
+    await user.click(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("button", { name: "Rubrik penilaian" }));
+
+    // Assert
+    expect(screen.getByRole("dialog", { name: "Buang isian versi baru?" })).toBeInTheDocument();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
   // Negative (B5): an empty required field stops the save in the browser, says where, and moves focus there.
   it("stops the save, names what is missing and focuses the first empty field", async () => {
     // Arrange
