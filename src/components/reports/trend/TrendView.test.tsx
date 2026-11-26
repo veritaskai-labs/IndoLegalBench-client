@@ -232,6 +232,36 @@ describe("TrendView result states", () => {
     expect(screen.getByRole("button", { name: "Unduh PDF" })).toBeInTheDocument();
   });
 
+  // Edge (SCRUM-346 A3, finding N3): a single scored month draws one dot and says why there is no line yet.
+  it("explains that a trend needs two months when only one has a score", async () => {
+    // Arrange
+    signedInAs("admin");
+    trendGateway.get.mockResolvedValue(trendRead({ points: [trendPoint({ month: "2026-11-01", value: "0.80" })] }));
+
+    // Act
+    const { container } = renderView();
+
+    // Assert
+    // Review #125: the one scored month is not always this month, so the note names the month.
+    expect(
+      await screen.findByText("Tren butuh data minimal dua bulan. Data Nov 2026 sudah tampil di tabel di bawah."),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("circle[data-point]")).toHaveLength(1);
+  });
+
+  // Negative (A3): two months draw a line, so the one-month note stays away.
+  it("does not show the one-month note when two months have a score", async () => {
+    // Arrange
+    signedInAs("admin");
+
+    // Act
+    renderView();
+
+    // Assert
+    await screen.findByRole("table");
+    expect(screen.queryByText(/Tren butuh data minimal dua bulan/)).toBeNull();
+  });
+
   // Negative
   it("shows the warning and draws no line when there are no shared cases (AC11)", async () => {
     // Arrange

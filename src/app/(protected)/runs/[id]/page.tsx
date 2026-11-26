@@ -42,7 +42,7 @@ export default function SessionDetailPage() {
       <div className="space-y-4">
         <ErrorState variant="card" message={detail.message} onRetry={detail.reload} />
         <Link href="/runs" className="text-sm font-medium text-slate-900 hover:underline">
-          Kembali ke Eksekusi
+          Kembali ke Pengukuran otomatis
         </Link>
       </div>
     );
@@ -80,7 +80,7 @@ function SessionDetailView({
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: "Eksekusi", href: "/runs" }, { label: session.label }]} />
+      <Breadcrumb items={[{ label: "Pengukuran otomatis", href: "/runs" }, { label: session.label }]} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
         <ScoreDownloadButton session={session} grading={gradingOf(results)} />

@@ -8,11 +8,12 @@ import { devTestReport, firstReport } from "@/test/reportFixtures";
 import type { ReportDetail, ReportLanguage } from "@/types/reports";
 
 /** Skenario data contoh sintetis (L3) dari fixture bersama; bukan hasil pengukuran produk mana pun. */
-// Bahasa tidak lagi ada di detail laporan (SCRUM-363), jadi skenario berbahasa Indonesia membawanya sendiri.
+// Bahasa tidak lagi ada di detail laporan (SCRUM-363). Bawaannya Indonesia (SCRUM-346 N7); skenario "first" tetap
+// Inggris untuk meninjau laporan yang dibuat sebelum perubahan itu.
 type Scenario = { report: ReportDetail; language?: ReportLanguage };
 
 const SCENARIOS: Readonly<Record<string, () => Scenario>> = {
-  first: () => ({ report: firstReport() }),
+  first: () => ({ report: firstReport(), language: "en" }),
   "first-id": () => ({ report: firstReport(), language: "id" }),
   "dev-test": () => ({ report: devTestReport(), language: "id" }),
   empty: () => ({ report: firstReport({ sessions: [], case_basis: [] }) }),

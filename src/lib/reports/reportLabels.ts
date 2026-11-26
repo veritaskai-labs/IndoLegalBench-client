@@ -115,11 +115,12 @@ function labelsFor(language: ReportLanguage): ReportLabels {
 }
 
 /**
- * Bahasa isi laporan di web. Detail laporan tidak lagi membawa bahasanya (server #161, SCRUM-363 AC10), dan
- * report builder selalu membuat laporan berbahasa Inggris, sama dengan bawaan server, jadi isi web sama dengan
- * PDF-nya. Pilihan bahasa laporan kembali di PBI-26.
+ * Bahasa isi laporan di web dan bahasa yang dikirim report builder saat membuat laporan, jadi isi web sama dengan
+ * PDF-nya (Fase 0 K3). Indonesia sejak keputusan PO 25 Nov (SCRUM-346, temuan N7). Detail laporan tidak membawa
+ * bahasanya (server #161, SCRUM-363 AC10), jadi laporan lama yang dibuat dalam bahasa Inggris tampil Indonesia
+ * di web sementara PDF-nya tetap Inggris. Pilihan bahasa laporan kembali di PBI-26.
  */
-export const REPORT_LANGUAGE: ReportLanguage = "en";
+export const REPORT_LANGUAGE: ReportLanguage = "id";
 
 export const REPORT_LABELS: Readonly<Record<ReportLanguage, ReportLabels>> = {
   id: labelsFor("id"),
@@ -143,8 +144,10 @@ export function markerLabel(marker: ReportMarkerRead, language: ReportLanguage):
   return marker.detail ? `${text} (${marker.detail})` : text;
 }
 
-/** Sel Penanda satu produk, sama dengan pdf.py _penanda_sesi: Uji Coba (is_trial) dulu, lalu penanda D2. */
-export function sessionMarkersText(session: ReportDetailSessionRead, language: ReportLanguage): string {
-  const trial = session.is_trial ? [REPORT_LABELS[language].trial] : [];
-  return [...trial, ...(session.markers ?? []).map((marker) => markerLabel(marker, language))].join("; ");
+/**
+ * Penanda D2 satu produk dalam bahasa laporan, untuk badge di sel Penanda. Uji Coba (is_trial) tidak di sini: tabel
+ * menaruhnya paling depan dengan warnanya sendiri, sama urutannya dengan pdf.py _penanda_sesi.
+ */
+export function sessionMarkerList(session: ReportDetailSessionRead, language: ReportLanguage): string[] {
+  return (session.markers ?? []).map((marker) => markerLabel(marker, language));
 }

@@ -46,7 +46,7 @@ describe("ReportPreviewPage (development only)", () => {
   it("renders a report without results for the empty scenario", () => {
     params.scenario = "empty";
     render(<ReportPreviewPage />);
-    expect(screen.getByText("This report has no results.")).toBeInTheDocument();
+    expect(screen.getByText("Tidak ada hasil untuk laporan ini.")).toBeInTheDocument();
   });
 
   it("links every scenario so testers can switch between them", () => {

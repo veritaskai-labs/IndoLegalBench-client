@@ -31,6 +31,8 @@ type Props<T> = {
   pageSize?: number;
   /** Shown in place of the rows when there are none, e.g. an EmptyState message with a next step. */
   empty?: ReactNode;
+  /** Screen-reader name of the table, rendered as an sr-only caption. */
+  caption?: string;
 };
 
 function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
@@ -51,7 +53,7 @@ function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
 }
 
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
-export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Readonly<Props<T>>) {
+export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, caption }: Readonly<Props<T>>) {
   const [sort, setSort] = useState<SortState | null>(null);
   const [page, setPage] = useState(1);
 
@@ -86,6 +88,7 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Re
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-control border border-line bg-paper">
         <table className="w-full border-separate border-spacing-0 text-[13px] leading-[19.5px]">
+          {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
             <tr>
               {columns.map((column) => {
