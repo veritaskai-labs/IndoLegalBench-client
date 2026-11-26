@@ -23,7 +23,7 @@ function ActorCell({ entry }: Readonly<{ entry: AuditEntry }>) {
 export function AuditTable({ entries, onRowClick }: Readonly<Props>) {
   return (
         <table className="w-full text-left text-sm">
-      <thead className="border-b border-slate-200 text-xs font-medium text-slate-600">
+      <thead className="bg-surface text-sm font-medium text-ink-soft">
         <tr>
           <th className="py-3 px-4">Waktu</th>
           <th className="py-3 px-4">Pelaku</th>
