@@ -104,7 +104,7 @@ describe("NewMeasurementPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    const breadcrumbLink = screen.getByRole("button", { name: "Eksekusi" });
+    const breadcrumbLink = screen.getByRole("button", { name: "Pengukuran otomatis" });
     await user.click(breadcrumbLink);
 
     expect(pushMock).toHaveBeenCalledWith("/runs");
