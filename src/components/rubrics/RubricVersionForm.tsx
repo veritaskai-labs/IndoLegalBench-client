@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-import { Button, ConfirmDialog, Icon } from "@/components/ui";
+import { Breadcrumb, Button, ConfirmDialog, Icon } from "@/components/ui";
 import { useCreateRubricVersion } from "@/hooks/useCreateRubricVersion";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { createEmptyDraft, createRubricV1Draft } from "@/lib/rubrics/rubricDraft";
@@ -157,7 +157,9 @@ export function RubricVersionForm({
       }}
       className="space-y-6"
     >
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      {/* Jejak lewat onClick, bukan href: kembali ke daftar juga menanyakan dulu bila form berisi (B6). */}
+      <Breadcrumb items={[{ label: "Rubrik penilaian", onClick: cancel }, { label: "Buat versi baru" }]} />
+      <header className="-mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-serif text-3xl leading-10 text-ink sm:text-4xl">Buat versi baru</h1>
           {versionName && <p className="text-sm text-muted">{`Akan disimpan sebagai ${versionName}.`}</p>}
