@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Me, Role } from "@/types";
 import { MobileNavProvider, useMobileNav } from "./MobileNav";
-import { Sidebar } from "./Sidebar";
+import { PEEK_AFTER_MS, Sidebar } from "./Sidebar";
 
 const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
 
@@ -74,10 +74,12 @@ describe("Sidebar", () => {
     signedInAs("admin");
     const { unmount } = renderWithMenu();
 
-    await userEvent.click(screen.getByRole("button", { name: "Ciutkan menu" }));
+    await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
 
     expect(screen.getByRole("complementary")).toHaveClass("w-16");
     expect(screen.getByRole("link", { name: "Beranda" })).toHaveAttribute("title", "Beranda");
+    // Only the word Minimize is ever drawn; the expand action has no visible label.
+    expect(screen.queryByText("Lebarkan menu")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Lebarkan menu" })).toHaveAttribute("aria-expanded", "false");
 
     unmount();
@@ -86,6 +88,66 @@ describe("Sidebar", () => {
     expect(screen.getByRole("complementary")).toHaveClass("w-16");
     await userEvent.click(screen.getByRole("button", { name: "Lebarkan menu" }));
     expect(screen.getByRole("complementary")).toHaveClass("w-62");
+  });
+
+  // SCRUM-347: resting on an icon opens the collapsed column over the page; leaving the column closes it.
+  it("peeks open after resting on an icon, and closes when the pointer leaves the column", () => {
+    signedInAs("admin");
+    localStorage.setItem("ilb:sidebar-collapsed", "1");
+    vi.useFakeTimers();
+    try {
+      renderWithMenu();
+      const column = screen.getByRole("complementary");
+
+      fireEvent.mouseEnter(screen.getByRole("link", { name: "Laporan" }));
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS - 1));
+      expect(column).toHaveClass("w-16");
+      act(() => vi.advanceTimersByTime(1));
+      expect(column).toHaveClass("w-62", "shadow-menu");
+      // The page keeps the collapsed column's place, so it does not reflow.
+      expect(column.parentElement).toHaveClass("w-16");
+
+      fireEvent.mouseLeave(column);
+      expect(column).toHaveClass("w-16");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Negative: passing over the icons on the way somewhere else does not open the column.
+  it("does not peek when the pointer moves off the icon early", () => {
+    signedInAs("admin");
+    localStorage.setItem("ilb:sidebar-collapsed", "1");
+    vi.useFakeTimers();
+    try {
+      renderWithMenu();
+      const link = screen.getByRole("link", { name: "Laporan" });
+
+      fireEvent.mouseEnter(link);
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS / 2));
+      fireEvent.mouseLeave(link);
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS));
+
+      expect(screen.getByRole("complementary")).toHaveClass("w-16");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Negative: an open column has nothing to peek.
+  it("does not peek when the column is already open", () => {
+    signedInAs("admin");
+    vi.useFakeTimers();
+    try {
+      renderWithMenu();
+
+      fireEvent.mouseEnter(screen.getByRole("link", { name: "Laporan" }));
+      act(() => vi.advanceTimersByTime(PEEK_AFTER_MS));
+
+      expect(screen.getByRole("complementary")).not.toHaveClass("shadow-menu");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // Edge: blocked storage (a private window) only forgets the choice; the button still works.
@@ -97,7 +159,7 @@ describe("Sidebar", () => {
     try {
       renderWithMenu();
 
-      await userEvent.click(screen.getByRole("button", { name: "Ciutkan menu" }));
+      await userEvent.click(screen.getByRole("button", { name: "Minimize menu" }));
 
       expect(screen.getByRole("complementary")).toHaveClass("w-16");
     } finally {

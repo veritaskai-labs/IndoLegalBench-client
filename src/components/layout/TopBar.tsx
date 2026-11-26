@@ -66,7 +66,7 @@ export function TopBar() {
                 onClick={menu.toggleCollapsed}
                 aria-expanded={!menu.collapsed}
                 aria-controls={SIDEBAR_ID}
-                aria-label={menu.collapsed ? "Lebarkan menu" : "Ciutkan menu"}
+                aria-label={menu.collapsed ? "Lebarkan menu" : "Minimize menu"}
                 className={`-ml-1 hidden h-9 w-9 md:grid ${ICON_BUTTON}`}
               >
                 <Icon name="panel" size={18} />

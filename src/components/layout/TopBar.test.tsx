@@ -164,7 +164,7 @@ describe("TopBar", () => {
       </MobileNavProvider>,
     );
 
-    const collapse = screen.getByRole("button", { name: "Ciutkan menu" });
+    const collapse = screen.getByRole("button", { name: "Minimize menu" });
     expect(collapse).toHaveClass("hidden", "md:grid");
     expect(collapse).toHaveAttribute("aria-controls", "sidebar");
 
