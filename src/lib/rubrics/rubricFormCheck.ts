@@ -65,9 +65,11 @@ export function requiredProblems(draft: RubricDraft): RequiredProblem[] {
   return problems;
 }
 
-/** Bagian form untuk navigasi kanan (B1): centang bila lengkap, jumlah isian kosong bila belum. */
-export function formSections(draft: RubricDraft): FormSection[] {
-  const problems = requiredProblems(draft);
+/**
+ * Bagian form untuk navigasi kanan (B1): centang bila lengkap, jumlah isian kosong bila belum. Form
+ * yang sudah menghitung requiredProblems memberikannya, jadi pemeriksaan tidak berjalan dua kali per ketikan.
+ */
+export function formSections(draft: RubricDraft, problems: readonly RequiredProblem[] = requiredProblems(draft)): FormSection[] {
   const section = (id: string, title: string): FormSection => {
     const count = problems.filter((problem) => problem.sectionId === id).length;
     return { id, title, problems: count, complete: count === 0 };

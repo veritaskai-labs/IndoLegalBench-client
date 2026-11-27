@@ -109,7 +109,7 @@ export function RubricVersionForm({
   useUnsavedChangesWarning(!empty);
 
   const problems = requiredProblems(draft);
-  const sections = formSections(draft);
+  const sections = formSections(draft, problems);
   const flagged = showProblems && problems.length > 0;
   const versionName = nextVersionNo === null ? null : `Versi ${nextVersionNo}`;
 
