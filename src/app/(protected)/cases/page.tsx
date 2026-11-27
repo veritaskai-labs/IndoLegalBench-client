@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CasePreviewDrawer } from "@/components/cases/CasePreviewDrawer";
@@ -8,7 +8,7 @@ import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import { DuplicateCaseDialog } from "@/components/cases/DuplicateCaseDialog";
 import { SplitTagBadge } from "@/components/cases/SplitTagBadge";
 import { SuiteCaseNav } from "@/components/cases/SuiteCaseNav";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui";
+import { Button, buttonClasses, type Column, DataTable, EmptyState, ErrorState, Icon, Input, LoadingState } from "@/components/ui";
 import { Pager } from "@/components/ui/Pager";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,10 +17,9 @@ import { listDirectoryCases, type CaseDirectoryQuery, type CaseDirectoryRow } fr
 import { caseEditPath } from "@/lib/cases/casePaths";
 import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import { canCreateCase } from "@/lib/cases/permissions";
+import { formatRelativeTime, formatWib } from "@/lib/datetime/formatWib";
 import type { CaseStatus } from "@/types/case";
 
-const FIELD = "min-h-10 min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 font-normal text-slate-900 focus-visible:outline-2 focus-visible:outline-indigo-600";
-const ACTION = "inline-flex min-h-9 items-center rounded-md px-2.5 font-medium focus-visible:outline-2 focus-visible:outline-indigo-600";
 const FIRST_PAGE: CaseDirectoryQuery = { q: "", status: "", suiteId: "", page: 1 };
 
 export default function CasesPage() {
@@ -67,43 +66,122 @@ function CaseDirectory() {
   const canReset = Boolean(query.trim() || request.q || request.status || request.suiteId);
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-xl font-semibold text-slate-900">Suite dan kasus</h1>
+    <div className="space-y-6">
+      <header>
+        <h1 className="font-serif text-4xl leading-10 text-ink">Suite dan kasus</h1>
+        <p className="mt-2 text-sm text-muted">
+          Cari, pratinjau, dan duplikasi kasus uji hukum dari seluruh suite.
+        </p>
+      </header>
+
       <SuiteCaseNav current="/cases" />
-      <div className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 text-sm sm:grid-cols-[2fr_1fr_1fr]">
-        <div className="grid min-w-0 gap-1.5">
-          <label htmlFor="case-directory-keyword" className="font-medium text-slate-700">Cari kasus</label>
-          <input id="case-directory-keyword" type="search" maxLength={200} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari ID atau judul kasus" className={FIELD} />
-        </div>
-        <div className="grid min-w-0 gap-1.5">
-          <label htmlFor="case-directory-status" className="font-medium text-slate-700">Status</label>
-          <select id="case-directory-status" value={request.status} onChange={(event) => {
-            const status = event.target.value as CaseStatus | "";
-            setRequest((current) => ({ ...current, status, page: 1 }));
-          }} className={FIELD}>
-            <option value="">Semua status</option>
-            {Object.entries(CASE_STATUS_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </div>
-        <div className="grid min-w-0 gap-1.5">
-          <label htmlFor="case-directory-suite" className="font-medium text-slate-700">Suite</label>
-          <select id="case-directory-suite" value={request.suiteId} onChange={(event) => {
-            const suiteId = event.target.value;
-            setRequest((current) => ({ ...current, suiteId, page: 1 }));
-          }} disabled={!suitesReady} className={FIELD}>
-            <option value="">Semua suite</option>
-            {request.suiteId && !suites.some(({ id }) => id === request.suiteId) && (
-              <option value={request.suiteId}>Suite tidak tersedia</option>
-            )}
-            {suites.map((suite) => <option key={suite.id} value={suite.id}>{suite.name}{suite.status === "archived" ? " (Arsip)" : ""}</option>)}
-          </select>
+
+      <div className="space-y-3">
+        <label className="relative block w-full sm:max-w-sm">
+          <span className="sr-only">Cari kasus</span>
+          <Icon
+            name="cari"
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+          />
+          <Input
+            id="case-directory-keyword"
+            type="search"
+            maxLength={200}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Cari ID atau judul kasus"
+            className="pl-9"
+          />
+        </label>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-ink-soft">Filter Status:</span>
+              <fieldset
+                className="m-0 flex min-w-0 flex-wrap items-center gap-1.5 border-0 p-0"
+                aria-label="Filter status kasus"
+              >
+                <button
+                  type="button"
+                  aria-pressed={request.status === ""}
+                  onClick={() => setRequest((current) => ({ ...current, status: "", page: 1 }))}
+                  className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    request.status === ""
+                      ? "border-accent bg-accent-wash font-semibold text-accent-ink"
+                      : "border-line bg-paper text-ink-soft hover:bg-surface"
+                  }`}
+                >
+                  Semua
+                </button>
+                {Object.entries(CASE_STATUS_LABEL).map(([value, label]) => {
+                  const selected = request.status === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setRequest((current) => ({
+                          ...current,
+                          status: value as CaseStatus,
+                          page: 1,
+                        }))
+                      }
+                      className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        selected
+                          ? "border-accent bg-accent-wash font-semibold text-accent-ink"
+                          : "border-line bg-paper text-ink-soft hover:bg-surface"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </fieldset>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="case-directory-suite" className="text-xs font-medium text-ink-soft">
+                Pilih suite
+              </label>
+              <select
+                id="case-directory-suite"
+                value={request.suiteId}
+                onChange={(event) => {
+                  const suiteId = event.target.value;
+                  setRequest((current) => ({ ...current, suiteId, page: 1 }));
+                }}
+                disabled={!suitesReady}
+                className="h-8 min-w-0 rounded-control border border-line bg-paper px-3 text-xs text-ink disabled:cursor-not-allowed disabled:bg-disabled-bg disabled:text-disabled-ink"
+              >
+                <option value="">Semua suite</option>
+                {request.suiteId && !suites.some(({ id }) => id === request.suiteId) && (
+                  <option value={request.suiteId}>Suite tidak tersedia</option>
+                )}
+                {suites.map((suite) => (
+                  <option key={suite.id} value={suite.id}>
+                    {suite.name}
+                    {suite.status === "archived" ? " (Arsip)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setQuery("");
+              setRequest(FIRST_PAGE);
+            }}
+            disabled={!canReset}
+          >
+            Reset filter
+          </Button>
         </div>
       </div>
-      {canReset && (
-        <button type="button" onClick={() => { setQuery(""); setRequest(FIRST_PAGE); }} className="min-h-9 rounded px-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50">
-          Reset filter
-        </button>
-      )}
       {suitesFailed && <ErrorState message="Gagal memuat daftar suite." onRetry={refreshSuites} />}
       <CaseResults
         request={request}
@@ -155,6 +233,94 @@ function CaseResults({ request, revision, onPageChange, onPreview, onDuplicate }
     if (pastEnd) onPageChange(lastPage);
   }, [pastEnd, lastPage, onPageChange]);
 
+  const columns = useMemo<Column<CaseDirectoryRow>[]>(
+    () => [
+      {
+        key: "case_code",
+        header: "ID Kasus",
+        sortable: true,
+        cell: (row) => (
+          <Link
+            href={caseEditPath(row.id)}
+            className="font-mono text-xs font-semibold text-ink hover:underline"
+          >
+            {row.case_code}
+          </Link>
+        ),
+      },
+      {
+        key: "title",
+        header: "Judul Pertanyaan",
+        sortable: true,
+        sortValue: (row) => row.title || "Kasus tanpa judul",
+        cell: (row) => (
+          <span className="font-medium text-ink">
+            {row.title || "Kasus tanpa judul"}
+          </span>
+        ),
+      },
+      {
+        key: "suite_name",
+        header: "Suite",
+        sortable: true,
+        cell: (row) => (
+          <span className="text-ink-soft">
+            {row.suite_name}
+            {row.suite_archived && <span className="block text-xs text-muted">Arsip</span>}
+          </span>
+        ),
+      },
+      {
+        key: "split_tag",
+        header: "Tag",
+        cell: (row) => <SplitTagBadge tag={row.split_tag} />,
+      },
+      {
+        key: "status",
+        header: "Status",
+        cell: (row) => <CaseStatusBadge status={row.status} />,
+      },
+      {
+        key: "updated_at",
+        header: "Terakhir Diubah",
+        sortable: true,
+        sortValue: (row) => row.updated_at,
+        cell: (row) => (
+          <span title={formatWib(row.updated_at)} className="text-ink-soft">
+            {formatRelativeTime(row.updated_at)}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        header: "Aksi",
+        cell: (row) => (
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              aria-label={`Pratinjau ${row.case_code}`}
+              onClick={() => onPreview(row)}
+              className={buttonClasses({ variant: "ghost", size: "sm" })}
+            >
+              Pratinjau
+            </button>
+            {!row.suite_archived && (
+              <button
+                type="button"
+                aria-label={`Duplikat ${row.case_code}`}
+                onClick={() => onDuplicate(row)}
+                className="inline-flex h-8 cursor-pointer items-center justify-center rounded-control px-3 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-wash"
+              >
+                Duplikat
+              </button>
+            )}
+          </div>
+        ),
+      },
+    ],
+    [onDuplicate, onPreview],
+  );
+
   if (resource.status === "loading" || pastEnd) return <LoadingState label="Memuat kasus…" />;
   if (resource.status === "error") return <ErrorState message={resource.message} onRetry={resource.reload} />;
 
@@ -162,46 +328,24 @@ function CaseResults({ request, revision, onPageChange, onPreview, onDuplicate }
   const filtered = Boolean(request.q || request.status || request.suiteId);
 
   return (
-    <div className="space-y-2">
-      <output className="block text-sm text-slate-600">{total} kasus</output>
+    <div className="space-y-3">
+      <output className="block text-[13px] text-muted">{total} kasus</output>
       {items.length === 0 ? (
-        <div className="rounded-md border border-slate-200 bg-white">
+        <div className="rounded-control border border-line bg-paper">
           <EmptyState title={filtered ? "Tidak ada kasus yang sesuai" : "Belum ada kasus"}
             description={filtered ? "Ubah kata kunci atau filter untuk melihat hasil lain." : "Kasus yang ditambahkan ke suite akan muncul di sini."}
           />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
-          <table className="w-full min-w-[40rem] text-left text-sm" aria-label="Daftar kasus">
-            <thead className="border-b border-slate-200 bg-slate-50 text-slate-700">
-              <tr>{["ID Kasus", "Judul Pertanyaan", "Suite", "Tag", "Status", "Aksi"].map((label) => (
-                <th key={label} scope="col" className="px-3 py-3 font-semibold">{label}</th>
-              ))}</tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-900">
-              {items.map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50">
-                  <th scope="row" className="px-3 py-2 font-mono text-xs font-medium [overflow-wrap:anywhere]">
-                    <Link href={caseEditPath(row.id)} className="hover:underline">{row.case_code}</Link>
-                  </th>
-                  <td className="px-3 py-2 [overflow-wrap:anywhere]">{row.title || "Kasus tanpa judul"}</td>
-                  <td className="px-3 py-2 [overflow-wrap:anywhere]">
-                    {row.suite_name}{row.suite_archived && <span className="block text-xs text-slate-500">Arsip</span>}
-                  </td>
-                  <td className="px-3 py-2"><SplitTagBadge tag={row.split_tag} /></td>
-                  <td className="px-3 py-2"><CaseStatusBadge status={row.status} /></td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-1">
-                      <button type="button" aria-label={`Pratinjau ${row.case_code}`} onClick={() => onPreview(row)} className={`${ACTION} border border-slate-300 hover:bg-white`}>Pratinjau</button>
-                      {!row.suite_archived && (
-                        <button type="button" aria-label={`Duplikat ${row.case_code}`} onClick={() => onDuplicate(row)} className={`${ACTION} text-indigo-700 hover:bg-indigo-50`}>Duplikat</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="[&_th:first-child]:pl-4 [&_td:first-child]:pl-4 [&_th:last-child]:w-px [&_th:last-child]:pr-4 [&_td:last-child]:w-px [&_td:last-child]:pr-4 [&_td:last-child]:whitespace-nowrap">
+          <DataTable
+            columns={columns}
+            rows={items}
+            rowKey={(row) => row.id}
+            pageSize={20}
+            caption="Daftar kasus"
+            initialSort={{ key: "updated_at", direction: "desc" }}
+          />
         </div>
       )}
       {lastPage > 1 && <Pager page={page} lastPage={lastPage} onPageChange={onPageChange} />}
