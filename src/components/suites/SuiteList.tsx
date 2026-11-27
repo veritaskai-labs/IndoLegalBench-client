@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Badge,
   buttonClasses,
@@ -52,7 +53,8 @@ function ActionIconButton({
   onClick: () => void;
   children: ReactNode;
 }>) {
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function clearTimer() {
@@ -65,13 +67,19 @@ function ActionIconButton({
   function scheduleTooltip() {
     clearTimer();
     timerRef.current = setTimeout(() => {
-      setShowTooltip(true);
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (rect) {
+        setCoords({
+          top: rect.top - 6,
+          right: Math.max(8, window.innerWidth - rect.right),
+        });
+      }
     }, TOOLTIP_DELAY_MS);
   }
 
   function hideTooltip() {
     clearTimer();
-    setShowTooltip(false);
+    setCoords(null);
   }
 
   useEffect(() => clearTimer, []);
@@ -79,6 +87,7 @@ function ActionIconButton({
   return (
     <div className="relative inline-flex">
       <button
+        ref={buttonRef}
         type="button"
         aria-label={ariaLabel}
         onClick={() => {
@@ -97,14 +106,17 @@ function ActionIconButton({
       >
         {children}
       </button>
-      {showTooltip && (
-        <span
-          role="tooltip"
-          className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded-tag bg-ink px-2 py-1 text-xs font-medium text-paper shadow-menu"
-        >
-          {tooltip}
-        </span>
-      )}
+      {coords !== null &&
+        createPortal(
+          <span
+            role="tooltip"
+            style={{ top: coords.top, right: coords.right }}
+            className="pointer-events-none fixed z-50 -translate-y-full whitespace-nowrap rounded-tag bg-ink px-2 py-1 text-xs font-medium text-paper shadow-menu"
+          >
+            {tooltip}
+          </span>,
+          document.body,
+        )}
     </div>
   );
 }
