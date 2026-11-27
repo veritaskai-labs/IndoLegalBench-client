@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 
 import { Badge } from "@/components/ui/Badge";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { formatScore } from "@/lib/grading/scoreFormat";
 import { failureRateText, productSubline, rankText } from "@/lib/reports/reportCells";
 import { COLUMN_GUIDE, type GuideKey } from "@/lib/reports/reportGuide";
@@ -114,15 +115,9 @@ export function ReportRankingTable({
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <button
-          type="button"
-          aria-expanded={full}
-          aria-controls={tableId}
-          onClick={() => setFull((current) => !current)}
-          className="rounded-control border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-hover"
-        >
+        <Button variant="ghost" size="sm" aria-expanded={full} aria-controls={tableId} onClick={() => setFull((current) => !current)}>
           {full ? "Ringkas kolom" : "Tampilkan kolom lengkap"}
-        </button>
+        </Button>
       </div>
       {/* shortcut: no tabIndex (Sonar S6845); Chrome, Edge and Firefox focus a scroll box by keyboard, Safari does not, add a focusable wrapper if Safari users report it. */}
       <section aria-label={caption} className="relative overflow-x-auto rounded-control border border-line bg-paper">
@@ -189,7 +184,7 @@ export function ReportRankingTable({
                     <td className={`${CELL} text-right`}>
                       <Link
                         href={href}
-                        className="relative inline-flex h-8 items-center whitespace-nowrap rounded-control border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover"
+                        className={`${buttonClasses({ variant: "ghost", size: "sm" })} relative`}
                       >
                         Lihat kasus <span className="sr-only">{session.product_label}</span>
                         <span aria-hidden="true"> ›</span>
