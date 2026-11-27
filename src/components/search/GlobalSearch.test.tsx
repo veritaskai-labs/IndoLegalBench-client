@@ -58,9 +58,11 @@ afterEach(() => {
 
 describe("GlobalSearch (SCRUM-352)", () => {
   it("is a search landmark with a labelled search box", () => {
-    setup();
+    const { container } = setup();
 
-    expect(screen.getByRole("search")).toContainElement(box());
+    // Browsers expose <search> as the search landmark; aria-query (used by Testing Library) has no
+    // element mapping for it yet, so getByRole("search") cannot find it and the element is checked.
+    expect(container.querySelector("search")).toContainElement(box());
     expect(box()).toHaveAttribute("placeholder", "Cari suite, kasus, sesi…");
   });
 

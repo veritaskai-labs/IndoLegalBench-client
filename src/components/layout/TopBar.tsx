@@ -5,10 +5,12 @@ import { useSyncExternalStore } from "react";
 import { MOBILE_NAV_ID, SIDEBAR_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { replaySidebarIntro } from "@/components/layout/Sidebar";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/hooks/useAuth";
 import { LOGOUT_URL } from "@/lib/auth";
 import { navForRole } from "@/lib/nav";
+import { canSearch } from "@/lib/search/searchResults";
 import { ROLE_LABEL } from "@/types";
 
 function initials(name: string) {
@@ -82,6 +84,9 @@ export function TopBar() {
             <span className={brand}>IndoLegalBench</span>
           )}
         </div>
+
+        {/* SCRUM-352: search from every page; Viewer gets no box (PBI-16, PO 27 Nov). */}
+        {user !== null && canSearch(user.role) && <GlobalSearch role={user.role} />}
 
         {user !== null && (
           <div className="flex items-center gap-2">

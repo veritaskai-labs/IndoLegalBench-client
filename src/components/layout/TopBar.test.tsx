@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileNavProvider } from "./MobileNav";
@@ -201,5 +202,15 @@ describe("TopBar", () => {
     render(<TopBar />);
 
     expect(screen.queryByText(/Kotak cari/)).toBeNull();
+  });
+
+  // The server has no window, so the first HTML is the full-height bar; the browser takes over after.
+  it("renders the full-height bar on the server", () => {
+    useAuthMock.mockReturnValue(signedIn);
+
+    const html = renderToString(<TopBar />);
+
+    expect(html).toContain("h-18");
+    expect(html).not.toContain("h-12");
   });
 });
