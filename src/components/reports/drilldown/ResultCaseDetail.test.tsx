@@ -1,12 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { forgetResultCases } from "@/hooks/useReportDrilldown";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
 import type { ReportsGateway } from "@/lib/reports/reportsApi";
-import { caseDetail, firstReport, otherProduct, reportAttempt } from "@/test/reportFixtures";
+import { caseDetail, caseScore, firstReport, otherProduct, reportAttempt, resultCases } from "@/test/reportFixtures";
 
 import { ResultCaseDetail } from "./ResultCaseDetail";
 
@@ -22,14 +23,22 @@ beforeEach(() => {
   useAuthMock.mockReturnValue({ status: "loading" });
 });
 
+// The case list behind "Kasus berikutnya" is remembered between pages (SCRUM-378); every test starts without it.
+afterEach(forgetResultCases);
+
 /** The report the case belongs to; by default it never answers, like a slow network. */
 function fakeReports(detail: ReportsGateway["detail"] = vi.fn().mockReturnValue(new Promise(() => {}))): ReportsGateway {
   return { detail, list: vi.fn(), pdf: vi.fn(), eligibleSessions: vi.fn(), create: vi.fn(), validate: vi.fn() };
 }
 
-function renderDetail(caseDetailLoader: DrilldownGateway["caseDetail"], reports: ReportsGateway = fakeReports()) {
+/** By default the case list for the navigation (SCRUM-378) never answers, so the older tests see no navigation. */
+function renderDetail(
+  caseDetailLoader: DrilldownGateway["caseDetail"],
+  reports: ReportsGateway = fakeReports(),
+  cases: DrilldownGateway["cases"] = vi.fn().mockReturnValue(new Promise(() => {})),
+) {
   const gateway: DrilldownGateway = {
-    cases: vi.fn(),
+    cases,
     caseDetail: caseDetailLoader,
     evidence: vi.fn().mockResolvedValue([]),
     evidenceFile: vi.fn(),
@@ -301,5 +310,37 @@ describe("ResultCaseDetail product comparison", () => {
       "href",
       "/reports/comparisons/r-1/results/res-1",
     );
+  });
+
+  // Positif, SCRUM-378: the navigation sits under the trail, and the way back keeps the sort of the list.
+  it("offers the next case and a way back in the order of the list it came from", async () => {
+    const sort = { key: "det_score", direction: "asc" } as const;
+    const twoCases = resultCases({ cases: [caseScore(), caseScore({ case_id: "c-3", case_code: "ILB-003", det_score: "0.90" })] });
+    const gateway: DrilldownGateway = {
+      cases: vi.fn().mockResolvedValue(twoCases),
+      caseDetail: vi.fn().mockResolvedValue(caseDetail()),
+      evidence: vi.fn(),
+      evidenceFile: vi.fn(),
+    };
+    render(<ResultCaseDetail reportId="r-1" resultId="res-1" caseId="c-1" sort={sort} gateway={gateway} reportsGateway={fakeReports()} />);
+
+    const nav = await screen.findByRole("navigation", { name: "Kasus lain di angka ini" });
+    expect(within(nav).getByRole("link", { name: "Kasus berikutnya ILB-003" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1/results/res-1/cases/c-3?urut=det_score-asc",
+    );
+    expect(await screen.findByRole("link", { name: "Kembali ke daftar kasus" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1/results/res-1?urut=det_score-asc",
+    );
+  });
+
+  // Edge, SCRUM-378: a case that fails to load still lets the user move on to the next one.
+  it("keeps the navigation when the case itself fails", async () => {
+    const twoCases = resultCases({ cases: [caseScore(), caseScore({ case_id: "c-3", case_code: "ILB-003" })] });
+    renderDetail(vi.fn().mockRejectedValue(new ApiError(500, "ANY")), fakeReports(), vi.fn().mockResolvedValue(twoCases));
+
+    expect(await screen.findByRole("link", { name: "Kasus berikutnya ILB-003" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
   });
 });

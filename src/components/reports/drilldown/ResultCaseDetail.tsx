@@ -24,9 +24,11 @@ import {
 } from "@/lib/reports/drilldownRules";
 import { measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
+import type { SortState } from "@/lib/ui/tableModel";
 import type { MeasurementKind, ReportAttemptRead, ReportCaseDetailRead, ReportOtherProductRead } from "@/types/reports";
 
 import { AttemptEvidence } from "./AttemptEvidence";
+import { CaseNavigation } from "./CaseNavigation";
 
 // Bagian aplikasi berbahasa Indonesia (Fase 0 K3); jawaban asli tampil apa adanya.
 const LABELS = REPORT_LABELS.id;
@@ -297,23 +299,28 @@ function CaseBody({
  * tidak boleh melihat isinya mendapat pesan server dengan email untuk meminta isi kasus (AC3), tanpa Coba lagi.
  * Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4). Laporannya dimuat sebagai konteks untuk judul di
  * breadcrumb (SCRUM-346 A2); bila gagal, breadcrumb memakai "Detail laporan".
+ *
+ * SCRUM-378: "Kasus sebelumnya" dan "Kasus berikutnya" di bawah breadcrumb, dalam urutan daftar asalnya (sort dari
+ * alamat). Navigasinya tetap ada walau kasus ini gagal dimuat, jadi pengguna bisa lanjut ke kasus berikutnya.
  */
 export function ResultCaseDetail({
   reportId,
   resultId,
   caseId,
+  sort = null,
   gateway = httpDrilldownGateway,
   reportsGateway = httpReportsGateway,
 }: Readonly<{
   reportId: string;
   resultId: string;
   caseId: string;
+  sort?: SortState | null;
   gateway?: DrilldownGateway;
   reportsGateway?: ReportsGateway;
 }>) {
   const detail = useResultCase(reportId, resultId, caseId, gateway);
   const report = useReport(reportId, reportsGateway);
-  const listHref = resultCasesHref(reportId, resultId);
+  const listHref = resultCasesHref(reportId, resultId, sort);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
   const evidence = canOpenEvidence(role) ? { reportId, resultId, caseId, gateway } : null;
@@ -327,6 +334,7 @@ export function ResultCaseDetail({
           { label: detail.status === "ready" ? detail.data.case_code : "Kasus" },
         ]}
       />
+      <CaseNavigation reportId={reportId} resultId={resultId} caseId={caseId} sort={sort} gateway={gateway} />
       {detail.status === "loading" && <LoadingState label="Memuat kasus…" />}
       {detail.status === "error" && (
         <ErrorState
