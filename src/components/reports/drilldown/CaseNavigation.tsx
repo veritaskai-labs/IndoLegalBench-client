@@ -8,8 +8,10 @@ import { canRetryDrilldown, caseNeighbours, resultCaseHref } from "@/lib/reports
 import type { SortState } from "@/lib/ui/tableModel";
 import type { ReportCaseScoreRead } from "@/types/reports";
 
+// min-w-0 dan flex-wrap: di ponsel tiap tautan hanya selebar setengah layar, jadi label dan kode boleh turun baris
+// (review #135: kode panjang membuat kedua tautan bertumpuk di 375 px).
 const STEP =
-  "inline-flex min-h-9 items-center gap-1 rounded-control border border-line px-3 py-1.5 text-sm font-medium";
+  "inline-flex min-h-9 min-w-0 max-w-full flex-wrap items-center gap-x-1 rounded-control border border-line px-3 py-1.5 text-sm font-medium";
 
 type Direction = "previous" | "next";
 
@@ -33,7 +35,8 @@ function Step({
   const place = direction === "next" ? "justify-self-end sm:order-3" : "justify-self-start sm:order-1";
   if (target === null) {
     return (
-      <span aria-disabled="true" className={`${STEP} ${place} cursor-not-allowed text-subtle`}>
+      // role="link" supaya aria-disabled dibacakan ("link, dimmed"); span biasa dibaca sebagai teks (review #135).
+      <span role="link" aria-disabled="true" className={`${STEP} ${place} cursor-not-allowed text-subtle`}>
         {arrowBefore}
         {STEP_LABEL[direction]}
         {arrowAfter}
@@ -42,11 +45,13 @@ function Step({
   }
   return (
     <Link href={href(target.case_id)} className={`${STEP} ${place} bg-paper text-ink hover:bg-surface-hover`}>
-      {arrowBefore}
-      {/* Spasi sungguhan, supaya nama tautan dibacakan "Kasus berikutnya ILB-004", bukan digabung. */}
-      {STEP_LABEL[direction]}{" "}
-      <span className="font-normal text-muted">{target.case_code}</span>
-      {arrowAfter}
+      {/* Panah ikut labelnya; bila sempit, hanya kode yang turun baris. */}
+      <span className="whitespace-nowrap">
+        {arrowBefore} {STEP_LABEL[direction]} {arrowAfter}
+      </span>
+      {/* Spasi sungguhan, supaya nama tautan dibacakan "Kasus berikutnya ILB-004", bukan digabung. */}{" "}
+      {/* Kode kasus boleh sampai 64 karakter tanpa spasi, jadi boleh dipotong di mana saja. */}
+      <span className="min-w-0 font-normal text-muted [overflow-wrap:anywhere]">{target.case_code}</span>
     </Link>
   );
 }
@@ -91,7 +96,7 @@ export function CaseNavigation({
   const href = (target: string) => resultCaseHref(reportId, resultId, target, sort);
 
   return (
-    <nav aria-label="Kasus lain di angka ini" className="grid grid-cols-2 items-center gap-2 sm:flex sm:justify-between">
+    <nav aria-label="Kasus lain di angka ini" className="grid grid-cols-2 items-start gap-2 sm:flex sm:items-center sm:justify-between">
       <p className="col-span-2 text-center text-sm text-muted sm:order-2 sm:col-span-1">
         Kasus {found.position} dari {found.total}
       </p>

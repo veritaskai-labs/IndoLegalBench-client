@@ -2,7 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { forgetResultCases, useResultCases } from "@/hooks/useReportDrilldown";
+import { forgetDrilldownMemory, useResultCases } from "@/hooks/useReportDrilldown";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import type { SortState } from "@/lib/ui/tableModel";
@@ -10,7 +10,7 @@ import { caseScore, resultCases } from "@/test/reportFixtures";
 
 import { CaseNavigation } from "./CaseNavigation";
 
-afterEach(forgetResultCases);
+afterEach(forgetDrilldownMemory);
 
 /** Five cases behind res-1; ILB-002 is closed for this role (AC3), so four can be opened. */
 const FIVE = resultCases({
@@ -81,8 +81,10 @@ describe("CaseNavigation", () => {
     renderNavigation("c-1");
 
     const nav = await screen.findByRole("navigation", { name: "Kasus lain di angka ini" });
-    expect(within(nav).queryByRole("link", { name: /Kasus sebelumnya/ })).not.toBeInTheDocument();
-    expect(within(nav).getByText("Kasus sebelumnya")).toHaveAttribute("aria-disabled", "true");
+    // Review #135: role="link" so screen readers announce it as a dimmed link, not as plain text.
+    const previous = within(nav).getByRole("link", { name: "Kasus sebelumnya" });
+    expect(previous).toHaveAttribute("aria-disabled", "true");
+    expect(previous).not.toHaveAttribute("href");
     expect(within(nav).getByText("Kasus 1 dari 4")).toBeInTheDocument();
   });
 
@@ -91,8 +93,9 @@ describe("CaseNavigation", () => {
     renderNavigation("c-5");
 
     const nav = await screen.findByRole("navigation", { name: "Kasus lain di angka ini" });
-    expect(within(nav).queryByRole("link", { name: /Kasus berikutnya/ })).not.toBeInTheDocument();
-    expect(within(nav).getByText("Kasus berikutnya")).toHaveAttribute("aria-disabled", "true");
+    const next = within(nav).getByRole("link", { name: "Kasus berikutnya" });
+    expect(next).toHaveAttribute("aria-disabled", "true");
+    expect(next).not.toHaveAttribute("href");
     expect(within(nav).getByRole("link", { name: "Kasus sebelumnya ILB-004" })).toBeInTheDocument();
   });
 
@@ -156,5 +159,19 @@ describe("CaseNavigation", () => {
 
     expect(await screen.findByRole("navigation", { name: "Kasus lain di angka ini" })).toBeInTheDocument();
     expect(gateway.cases).toHaveBeenCalledTimes(1);
+  });
+
+  // Edge, review #135: case codes can be 64 characters without spaces. At 375 px each link is half the screen, so
+  // the code must be allowed to break anywhere, or the two links overlap (measured in Chrome: 0 px overlap after).
+  it("lets a long case code wrap inside its link instead of pushing the other link", async () => {
+    const long = "X".repeat(64);
+    const gateway = fakeGateway(
+      vi.fn().mockResolvedValue(resultCases({ cases: [caseScore({ case_id: "c-1" }), caseScore({ case_id: "c-2", case_code: long })] })),
+    );
+    renderNavigation("c-1", gateway);
+
+    const link = await screen.findByRole("link", { name: `Kasus berikutnya ${long}` });
+
+    expect(within(link).getByText(long)).toHaveClass("[overflow-wrap:anywhere]", "min-w-0");
   });
 });
