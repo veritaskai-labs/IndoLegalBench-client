@@ -48,7 +48,7 @@ function SectionNav({
   return (
     <nav
       aria-label="Bagian formulir"
-      className="sticky top-14 z-10 -mx-4 bg-paper px-4 py-2 lg:top-24 lg:order-2 lg:mx-0 lg:self-start lg:p-0"
+      className="sticky top-14 z-10 -mx-4 min-w-0 bg-paper px-4 py-2 lg:top-24 lg:order-2 lg:mx-0 lg:self-start lg:p-0"
     >
       <ul className="flex gap-2 overflow-x-auto lg:flex-col lg:gap-0.5 lg:overflow-visible">
         {sections.map((section) => {
@@ -62,7 +62,7 @@ function SectionNav({
                 href={`#${section.id}`}
                 aria-current={current === section.id ? "true" : undefined}
                 onClick={() => onPick(section.id)}
-                className={`flex h-9 items-center gap-2 whitespace-nowrap rounded-control border border-line px-3 text-[13px] hover:bg-surface aria-[current=true]:bg-surface aria-[current=true]:font-medium lg:h-8 lg:border-0 ${flagged ? "text-danger" : "text-ink"}`}
+                className={`relative flex h-9 items-center gap-2 whitespace-nowrap rounded-control border border-line px-3 text-[13px] hover:bg-surface aria-[current=true]:bg-surface aria-[current=true]:font-medium lg:h-8 lg:border-0 ${flagged ? "text-danger" : "text-ink"}`}
               >
                 {icon}
                 <span>{section.title}</span>
