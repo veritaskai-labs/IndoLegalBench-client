@@ -367,4 +367,12 @@ describe("ResultCaseDetail product comparison", () => {
     expect(reports.detail).toHaveBeenCalledTimes(1);
     expect(gateway.cases).toHaveBeenCalledTimes(1);
   });
+
+  // Edge, review #135: a 64-character case code must wrap in the title instead of widening the page on a phone.
+  it("lets a long case code wrap in the title", async () => {
+    const long = "X".repeat(64);
+    renderDetail(vi.fn().mockResolvedValue(caseDetail({ case_code: long })));
+
+    expect(await screen.findByRole("heading", { level: 1, name: `${long} v2: PHK sepihak` })).toHaveClass("[overflow-wrap:anywhere]");
+  });
 });

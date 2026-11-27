@@ -270,7 +270,8 @@ function CaseBody({
         <Link href={listHref} className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink hover:underline">
           <span aria-hidden="true">‹</span> Kembali ke daftar kasus
         </Link>
-        <h1 className="text-xl font-semibold text-slate-900">
+        {/* Kode kasus boleh sampai 64 karakter tanpa spasi; tanpa ini judul melebar keluar layar ponsel (review #135). */}
+        <h1 className="text-xl font-semibold text-slate-900 [overflow-wrap:anywhere]">
           {data.case_code} v{data.case_version_no}: {data.title}
         </h1>
         <p className="text-sm text-slate-600">
