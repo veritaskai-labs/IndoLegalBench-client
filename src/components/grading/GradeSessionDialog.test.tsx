@@ -162,7 +162,7 @@ describe("GradeSessionDialog (PBI-14 AC6, K-14)", () => {
     await dialog.findByRole("table", TABLE);
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
-    expect(await dialog.findByRole("alert")).toHaveTextContent("Pilih LLM judge dulu sebelum menilai.");
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Pilih penilai LLM dulu sebelum menilai.");
   });
 
   it("closes without grading on Batal", async () => {

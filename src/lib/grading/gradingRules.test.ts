@@ -322,11 +322,11 @@ describe("gradingFailureMessage (K-19, SCRUM-290: alasan run gagal dari error_co
 
   // Positive: every code the server stores in grading_run_progress.error_code has its own sentence.
   it.each([
-    ["judge_not_configured", "LLM judge belum dipilih untuk penilaian ini. Pilih judge lalu coba lagi."],
-    ["judge_unavailable", "LLM judge tidak dapat dihubungi. Periksa produk LLM judge di halaman Produk AI lalu coba lagi."],
-    ["judge_pricing_missing", "Harga token produk LLM judge belum lengkap. Lengkapi harga masuk dan keluar di halaman Produk AI."],
-    ["judge_budget_exhausted", "Anggaran bulanan produk LLM judge habis. Tambah anggarannya di halaman Produk AI atau pilih judge lain."],
-    ["judge_incomplete", "LLM judge tidak memberi penilaian yang lengkap. Coba nilai ulang."],
+    ["judge_not_configured", "Penilai LLM belum dipilih untuk penilaian ini. Pilih penilai LLM lalu coba lagi."],
+    ["judge_unavailable", "Penilai LLM tidak dapat dihubungi. Periksa produknya di halaman Produk AI lalu coba lagi."],
+    ["judge_pricing_missing", "Harga token produk penilai LLM belum lengkap. Lengkapi harga masuk dan keluar di halaman Produk AI."],
+    ["judge_budget_exhausted", "Anggaran bulanan produk penilai LLM habis. Tambah anggarannya di halaman Produk AI atau pilih penilai lain."],
+    ["judge_incomplete", "Penilai LLM tidak memberi penilaian yang lengkap. Coba nilai ulang."],
     ["NO_SCORE", "Tidak ada jawaban yang dapat diberi skor, misalnya karena semua jawaban kosong atau ditolak."],
     ["GRADING_INTERRUPTED", "Penilaian terhenti di tengah jalan karena layanan penilai berhenti."],
     ["SESSION_ARCHIVED", "Sesi diarsipkan saat penilaian berjalan."],
