@@ -178,6 +178,19 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
       expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toBeDisabled();
     });
 
+    it("explains why 'Kirim untuk Dinilai' is off while a run is grading, and keeps 'Tandai Selesai' free of that reason", async () => {
+      renderGradable({
+        progress: () => Promise.resolve(gradingProgress({ status: "running", attempts_graded: 10, attempts_total: 50, percent: 20 })),
+      });
+
+      const reason = "Penilaian sesi ini sedang berjalan. Tunggu sampai selesai.";
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toHaveAccessibleDescription(reason),
+      );
+      expect(screen.getByText(reason)).toBeVisible();
+      expect(screen.getByRole("button", { name: /tandai selesai/i })).not.toHaveAccessibleDescription(reason);
+    });
+
     // The manual page has no score table: the session moves to Dinilai and the report is one click away.
     it("reloads the session and links to the report when the run finishes", async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -357,6 +370,53 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
       "title",
       "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai.",
     );
+  });
+
+  it("says how many answers are still missing under the disabled session actions", () => {
+    const session = createMockDetail({ filled_answers: 42, total_answers: 50 });
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    const reason = "Isi 8 jawaban lagi untuk mengaktifkan tombol ini.";
+    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.getByRole("button", { name: /tandai selesai/i })).toHaveAccessibleDescription(reason);
+    expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toHaveAccessibleDescription(reason);
+  });
+
+  it("shows no missing-answer reason once every answer is filled", () => {
+    const session = createMockDetail({ status: "complete", filled_answers: 50, total_answers: 50 });
+    render(
+      <ManualSessionHeader
+        session={session}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/jawaban lagi untuk mengaktifkan/)).not.toBeInTheDocument();
+  });
+
+  it("names the product on the platform site link", () => {
+    render(
+      <ManualSessionHeader
+        session={createMockDetail()}
+        role="admin"
+        unfilledOnly={false}
+        onToggleUnfilled={vi.fn()}
+        onSessionUpdated={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Buka situs LegalHero ↗" })).toHaveAttribute("href", "https://legalhero.id");
   });
 
   it("enables 'Tandai Selesai' and 'Kirim untuk Dinilai' when all answers are filled (AC8, AC9)", () => {
@@ -590,6 +650,10 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
           /0 dari 0 jawaban terisi \(0%\)/.test(el.textContent || ""),
       ),
     ).toBeInTheDocument();
+    const reason = "Sesi ini tidak memiliki jawaban untuk diisi.";
+    expect(screen.getByText(reason)).toBeVisible();
+    expect(screen.getByRole("button", { name: /tandai selesai/i })).toHaveAccessibleDescription(reason);
+    expect(screen.getByRole("button", { name: /kirim untuk dinilai/i })).toHaveAccessibleDescription(reason);
   });
 
   it("renders finalized timestamp and hides 'Tandai Selesai' button when finalized", () => {

@@ -234,6 +234,25 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     expect(pushMock).toHaveBeenCalledWith("/manual-runs");
   });
 
+  it("explains why Buat Sesi Pengukuran is disabled and drops the reason once the form is complete", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    const submitBtn = screen.getByRole("button", { name: "Buat Sesi Pengukuran" });
+    expect(submitBtn).toHaveAccessibleDescription(
+      "Lengkapi dulu: label sesi, tujuan sesi, minimal satu suite, dan produk AI.",
+    );
+
+    await user.type(screen.getByLabelText(/Nama \/ Label Sesi/), "Pengukuran Batch 1 LegalHero");
+    await user.click(screen.getByRole("button", { name: "Pengukuran Resmi" }));
+    expect(submitBtn).toHaveAccessibleDescription("Lengkapi dulu: minimal satu suite dan produk AI.");
+
+    await user.click(screen.getByLabelText("Suite Hukum Pidana"));
+    await user.selectOptions(screen.getByTestId("product-select"), "prod-manual-1");
+    expect(submitBtn).toBeEnabled();
+    expect(submitBtn).not.toHaveAccessibleDescription();
+  });
+
   it("submits the form successfully and redirects to detail page", async () => {
     const user = userEvent.setup();
     mockCreateManualSession.mockResolvedValueOnce({

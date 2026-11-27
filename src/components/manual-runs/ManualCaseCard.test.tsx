@@ -75,7 +75,8 @@ describe("ManualCaseCard (PBI-22 AC3, AC4, AC8)", () => {
     expect(screen.getByText("KASUS-001")).toBeInTheDocument();
     expect(screen.getByText("dev")).toBeInTheDocument();
     expect(screen.getByText("Sengketa Kontrak Kerja")).toBeInTheDocument();
-    expect(screen.getByText("Belum terisi")).toBeInTheDocument();
+    const caseHeader = screen.getByText("KASUS-001").closest("header") as HTMLElement;
+    expect(within(caseHeader).getByText("Belum terisi")).toBeInTheDocument();
     expect(screen.getByText(QUESTION)).toBeInTheDocument();
   });
 
