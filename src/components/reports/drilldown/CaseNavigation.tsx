@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 
+import { buttonClasses } from "@/components/ui/Button";
 import { useResultCases } from "@/hooks/useReportDrilldown";
 import { type DrilldownGateway, httpDrilldownGateway } from "@/lib/reports/drilldownApi";
 import { canRetryDrilldown, caseNeighbours, resultCaseHref } from "@/lib/reports/drilldownRules";
 import type { SortState } from "@/lib/ui/tableModel";
 import type { ReportCaseScoreRead } from "@/types/reports";
 
-// min-w-0 dan flex-wrap: di ponsel tiap tautan hanya selebar setengah layar, jadi label dan kode boleh turun baris
-// (review #135: kode panjang membuat kedua tautan bertumpuk di 375 px).
-const STEP =
-  "inline-flex min-h-9 min-w-0 max-w-full flex-wrap items-center gap-x-1 rounded-control border border-line px-3 py-1.5 text-sm font-medium";
+// Tampilan Button ghost dari SCRUM-343, termasuk tampilan nonaktifnya, supaya sama dengan Pager di daftar kasus
+// (review #135, PBI-25). multiline dan min-w-0: di ponsel tiap tautan hanya selebar setengah layar, jadi kode
+// panjang boleh turun baris tanpa menimpa tautan sebelahnya.
+const STEP = `${buttonClasses({ variant: "ghost", multiline: true })} min-w-0 max-w-full`;
+const STEP_OFF = `${buttonClasses({ variant: "ghost", multiline: true, disabled: true })} min-w-0 max-w-full`;
 
 type Direction = "previous" | "next";
 
@@ -37,7 +39,7 @@ function Step({
     return (
       // Hanya penanda visual: pembaca layar sudah mendengar "Kasus 1 dari 4" dan hanya tautan yang ada. Bukan
       // role="link" (review #135, Sonar: role link tanpa href), jadi disembunyikan dari pembaca layar.
-      <span aria-hidden="true" className={`${STEP} ${place} cursor-not-allowed text-subtle`}>
+      <span aria-hidden="true" className={`${STEP_OFF} ${place}`}>
         {arrowBefore}
         {STEP_LABEL[direction]}
         {arrowAfter}
@@ -45,14 +47,14 @@ function Step({
     );
   }
   return (
-    <Link href={href(target.case_id)} className={`${STEP} ${place} bg-paper text-ink hover:bg-surface-hover`}>
+    <Link href={href(target.case_id)} className={`${STEP} ${place}`}>
       {/* Panah ikut labelnya; bila sempit, hanya kode yang turun baris. */}
       <span className="whitespace-nowrap">
         {arrowBefore} {STEP_LABEL[direction]} {arrowAfter}
       </span>
       {/* Spasi sungguhan, supaya nama tautan dibacakan "Kasus berikutnya ILB-004", bukan digabung. */}{" "}
       {/* Kode kasus boleh sampai 64 karakter tanpa spasi, jadi boleh dipotong di mana saja. */}
-      <span className="min-w-0 font-normal text-muted [overflow-wrap:anywhere]">{target.case_code}</span>
+      <span className="min-w-0 text-muted [overflow-wrap:anywhere]">{target.case_code}</span>
     </Link>
   );
 }

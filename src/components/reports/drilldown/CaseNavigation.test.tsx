@@ -2,6 +2,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { buttonClasses } from "@/components/ui/Button";
 import { forgetDrilldownMemory, useResultCases } from "@/hooks/useReportDrilldown";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
@@ -172,5 +173,18 @@ describe("CaseNavigation", () => {
     const link = await screen.findByRole("link", { name: `Kasus berikutnya ${long}` });
 
     expect(within(link).getByText(long)).toHaveClass("[overflow-wrap:anywhere]", "min-w-0");
+  });
+
+  // Review #135 (PBI-25 one look): the steps look like the shared Button ghost, and a dimmed step like the turned-off
+  // Pager button the user just saw on the case list.
+  it("uses the shared Button look for the steps and their turned-off state", async () => {
+    renderNavigation("c-1");
+
+    const nav = await screen.findByRole("navigation", { name: "Kasus lain di angka ini" });
+    const next = within(nav).getByRole("link", { name: "Kasus berikutnya ILB-003" });
+    expect(next).toHaveClass(...buttonClasses({ variant: "ghost", multiline: true }).split(" "));
+    expect(within(nav).getByText("Kasus sebelumnya")).toHaveClass(
+      ...buttonClasses({ variant: "ghost", multiline: true, disabled: true }).split(" "),
+    );
   });
 });

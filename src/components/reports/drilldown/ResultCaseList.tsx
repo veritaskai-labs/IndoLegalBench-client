@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { buttonClasses } from "@/components/ui/Button";
 import { type Column, DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -63,7 +64,7 @@ function caseColumns(reportId: string, resultId: string, sort: SortState | null)
         item.content_visible ? (
           <Link
             href={href(item)}
-            className="relative inline-flex h-8 items-center whitespace-nowrap rounded-control border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover"
+            className={`${buttonClasses({ variant: "ghost", size: "sm" })} relative`}
           >
             Buka jawaban <span className="sr-only">{item.case_code}</span>
             <span aria-hidden="true"> ›</span>
@@ -120,7 +121,8 @@ function ProductSwitch({
               <Link
                 href={resultCasesHref(reportId, product.resultId, sort)}
                 aria-current={current ? "page" : undefined}
-                className="inline-flex h-8 items-center rounded-full border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-paper"
+                // Pil, bukan tombol: bentuk dan isi hitamnya tetap; hanya hover-nya sama dengan Button ghost (review #135).
+                className="inline-flex h-8 items-center rounded-full border border-line px-3 text-xs font-medium text-ink hover:bg-surface aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-paper"
               >
                 {product.label}
               </Link>
