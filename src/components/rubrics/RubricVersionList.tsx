@@ -84,7 +84,7 @@ function VersionCards({ rows }: Readonly<{ rows: VersionRow[] }>) {
           </li>
         ))}
       </ul>
-      <p className="text-[13px] text-muted">{`${from}–${from + paged.items.length - 1} dari ${paged.total} versi`}</p>
+      <p className="text-[13px] text-muted">{versionRangeText({ from, to: from + paged.items.length - 1, total: paged.total })}</p>
       {paged.lastPage > 1 && <Pager page={paged.page} lastPage={paged.lastPage} onPageChange={setPage} />}
     </div>
   );
