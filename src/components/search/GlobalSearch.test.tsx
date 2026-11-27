@@ -105,6 +105,19 @@ describe("GlobalSearch (SCRUM-352)", () => {
     expect(box()).toHaveFocus();
   });
 
+  // Found in the browser: focusing the box from a result reopened the panel through its focus handler.
+  it("closes on Escape from a result and puts focus back in the box", async () => {
+    const { user } = setup();
+    await searchFor(user, "pidana");
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getAllByRole("link")[0]).toHaveFocus();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(box()).toHaveFocus();
+  });
+
   it("opens again when the user types after Escape", async () => {
     const { user } = setup();
     await searchFor(user, "pidana");
