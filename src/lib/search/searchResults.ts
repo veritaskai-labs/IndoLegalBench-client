@@ -40,7 +40,12 @@ export function toGroups(response: SearchResponse, role: Role): SearchGroup[] {
     group(
       "cases",
       "Kasus",
-      response.cases.map((hit) => ({ ...base(hit), href: caseHref(hit.id, role), meta: hit.case_code })),
+      response.cases.map((hit) => ({
+        ...base(hit),
+        href: caseHref(hit.id, role),
+        // Kasus tanpa judul diberi label kode kasus oleh server; jangan tampilkan dua kali.
+        meta: hit.case_code === hit.label ? null : hit.case_code,
+      })),
     ),
     group(
       "sessions",
