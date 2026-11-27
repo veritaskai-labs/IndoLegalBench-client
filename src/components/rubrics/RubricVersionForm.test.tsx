@@ -86,6 +86,19 @@ describe("RubricVersionForm (AC7 form, SCRUM-375 B1–B7)", () => {
     expect(within(nav).getByRole("link", { name: "Aspek 1, belum lengkap" })).toHaveAttribute("href", "#aspek-1");
   });
 
+  // Edge (B7, AC5): at 375 px the chip row is wider than the screen. Edge because a grid item without
+  // min-w-0 grows to its content (the page became 523 px), and sr-only spans escape the scroll box
+  // unless their chip is the positioned box. jsdom has no layout, so the two classes are checked.
+  it("keeps the phone chip row inside the screen width", () => {
+    // Arrange / Act
+    setup();
+
+    // Assert
+    const nav = screen.getByRole("navigation", { name: "Bagian formulir" });
+    expect(nav).toHaveClass("min-w-0");
+    for (const link of within(nav).getAllByRole("link")) expect(link).toHaveClass("relative");
+  });
+
   // Positive (title): the title says which number the version will get, as the server will (max + 1).
   it("says which version number will be saved", () => {
     // Arrange / Act
