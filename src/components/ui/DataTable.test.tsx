@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { type Column, DataTable } from "./DataTable";
 
 type Row = { id: string; name: string; score: number };
@@ -147,5 +147,25 @@ describe("DataTable", () => {
   it("has no caption when none is given", () => {
     const { container } = render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} />);
     expect(container.querySelector("caption")).toBeNull();
+  });
+
+  // Positif, SCRUM-378: a page can start the table in a sort it kept, e.g. after "Kembali ke daftar kasus".
+  it("starts in the given sort and shows it on the header", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} initialSort={{ key: "score", direction: "desc" }} />);
+
+    expect(bodyNames()).toEqual(["Ani", "Citra", "Budi"]);
+    expect(screen.getByRole("columnheader", { name: /Skor/ })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  // Positif, SCRUM-378: every sort the user picks is reported, so the page can keep it in the address.
+  it("reports each sort the user picks", async () => {
+    const onSortChange = vi.fn();
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} onSortChange={onSortChange} />);
+    const header = within(screen.getByRole("columnheader", { name: /Skor/ })).getByRole("button");
+
+    await userEvent.click(header);
+    await userEvent.click(header);
+
+    expect(onSortChange.mock.calls).toEqual([[{ key: "score", direction: "asc" }], [{ key: "score", direction: "desc" }]]);
   });
 });
