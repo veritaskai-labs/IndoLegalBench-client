@@ -12,6 +12,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 vi.mock("@/components/notifications/NotificationBell", () => ({
   NotificationBell: () => <span>Lonceng notifikasi</span>,
 }));
+// The search box has its own tests (GlobalSearch.test.tsx); here only whether and for whom it is shown.
+vi.mock("@/components/search/GlobalSearch", () => ({
+  GlobalSearch: ({ role }: { role: string }) => <span>Kotak cari untuk {role}</span>,
+}));
 
 const signedIn = {
   status: "authenticated",
@@ -171,5 +175,31 @@ describe("TopBar", () => {
     await userEvent.click(widen);
 
     expect(screen.getByRole("button", { name: "Minimize menu" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  // SCRUM-352 AC1: the search box sits in the header of every protected page.
+  it.each(["admin", "contributor", "developer_ai"] as const)("shows the search box to %s", (role) => {
+    useAuthMock.mockReturnValue({ ...signedIn, user: { ...signedIn.user, role } });
+
+    render(<TopBar />);
+
+    expect(screen.getByText(`Kotak cari untuk ${role}`)).toBeInTheDocument();
+  });
+
+  // PO 27 Nov: Viewer may not see test-case content (PBI-16), so there is no search box at all.
+  it("shows no search box to Viewer", () => {
+    useAuthMock.mockReturnValue({ ...signedIn, user: { ...signedIn.user, role: "viewer" } });
+
+    render(<TopBar />);
+
+    expect(screen.queryByText(/Kotak cari/)).toBeNull();
+  });
+
+  it("shows no search box while the session is loading", () => {
+    useAuthMock.mockReturnValue({ status: "loading" });
+
+    render(<TopBar />);
+
+    expect(screen.queryByText(/Kotak cari/)).toBeNull();
   });
 });
