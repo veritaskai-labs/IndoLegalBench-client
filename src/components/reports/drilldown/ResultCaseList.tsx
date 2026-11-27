@@ -23,6 +23,7 @@ import {
 } from "@/lib/reports/drilldownRules";
 import { measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
+import type { SortState } from "@/lib/ui/tableModel";
 import type { ReportCaseScoreRead, ReportResultCasesRead } from "@/types/reports";
 
 // Bagian aplikasi berbahasa Indonesia (Fase 0 K3); hanya isi laporan yang mengikuti bahasa laporan.
@@ -33,10 +34,11 @@ const PAGE_SIZE = 10;
 /**
  * Kolom daftar kasus (SCRUM-346 A2): pengurutan dan paginasi bersama DataTable (AC4). Kode kasus menjadi tautan
  * hanya bila server menyatakan isinya boleh dibuka peran ini (AC3, content_visible); kolom terakhir adalah aksi
- * "Buka jawaban" untuk kasus yang sama, atau "Tertutup" (temuan N6).
+ * "Buka jawaban" untuk kasus yang sama, atau "Tertutup" (temuan N6). Tautannya membawa urutan daftar, supaya
+ * "Kasus berikutnya" di detail kasus mengikuti urutan yang sama (SCRUM-378).
  */
-function caseColumns(reportId: string, resultId: string): Column<ReportCaseScoreRead>[] {
-  const href = (item: ReportCaseScoreRead) => resultCaseHref(reportId, resultId, item.case_id);
+function caseColumns(reportId: string, resultId: string, sort: SortState | null): Column<ReportCaseScoreRead>[] {
+  const href = (item: ReportCaseScoreRead) => resultCaseHref(reportId, resultId, item.case_id, sort);
   return [
     {
       key: "case_code",
@@ -74,8 +76,17 @@ function caseColumns(reportId: string, resultId: string): Column<ReportCaseScore
   ];
 }
 
-function CaseTable({ reportId, data }: Readonly<{ reportId: string; data: ReportResultCasesRead }>) {
-  const columns = useMemo(() => caseColumns(reportId, data.result_id), [reportId, data.result_id]);
+/** Urutan daftar dan perubahannya; disimpan halaman di alamat (?urut=), lihat parseCaseSort (SCRUM-378). */
+type SortProps = Readonly<{ sort: SortState | null; onSortChange?: (sort: SortState) => void }>;
+
+function CaseTable({ reportId, data, sort, onSortChange }: Readonly<{ reportId: string; data: ReportResultCasesRead }> & SortProps) {
+  // Kunci dan arahnya, bukan objek sort, supaya objek baru dari alamat yang sama tidak membangun ulang kolom.
+  const sortKey = sort?.key;
+  const direction = sort?.direction;
+  const columns = useMemo(
+    () => caseColumns(reportId, data.result_id, sortKey && direction ? { key: sortKey, direction } : null),
+    [reportId, data.result_id, sortKey, direction],
+  );
   return (
     <DataTable
       columns={columns}
@@ -83,6 +94,8 @@ function CaseTable({ reportId, data }: Readonly<{ reportId: string; data: Report
       rowKey={(item) => item.case_id}
       pageSize={PAGE_SIZE}
       caption={`Kasus di balik angka ${data.product_label}`}
+      initialSort={sort}
+      onSortChange={onSortChange}
     />
   );
 }
@@ -95,7 +108,8 @@ function ProductSwitch({
   reportId,
   resultId,
   products,
-}: Readonly<{ reportId: string; resultId: string; products: readonly ProductNumber[] }>) {
+  sort,
+}: Readonly<{ reportId: string; resultId: string; products: readonly ProductNumber[]; sort: SortState | null }>) {
   if (products.length < 2) return null;
   return (
     <nav aria-label="Produk di laporan ini">
@@ -105,7 +119,7 @@ function ProductSwitch({
           return (
             <li key={product.resultId}>
               <Link
-                href={resultCasesHref(reportId, product.resultId)}
+                href={resultCasesHref(reportId, product.resultId, sort)}
                 aria-current={current ? "page" : undefined}
                 className="inline-flex h-8 items-center rounded-full border border-line px-3 text-xs font-medium text-ink hover:bg-surface-hover aria-[current=page]:border-ink aria-[current=page]:bg-ink aria-[current=page]:text-paper"
               >
@@ -123,7 +137,9 @@ function CaseListBody({
   reportId,
   data,
   products,
-}: Readonly<{ reportId: string; data: ReportResultCasesRead; products: readonly ProductNumber[] }>) {
+  sort,
+  onSortChange,
+}: Readonly<{ reportId: string; data: ReportResultCasesRead; products: readonly ProductNumber[] }> & SortProps) {
   const someHidden = data.cases.some((item) => !item.content_visible);
   return (
     <div className="space-y-4">
@@ -134,11 +150,11 @@ function CaseListBody({
           {data.rubric_version} · {data.cases.length} kasus
         </p>
       </div>
-      <ProductSwitch reportId={reportId} resultId={data.result_id} products={products} />
+      <ProductSwitch reportId={reportId} resultId={data.result_id} products={products} sort={sort} />
       {data.cases.length === 0 ? (
         <EmptyState title="Tidak ada kasus di balik angka ini" description="Angka ini tidak dibentuk oleh kasus dasar mana pun." />
       ) : (
-        <CaseTable reportId={reportId} data={data} />
+        <CaseTable reportId={reportId} data={data} sort={sort} onSortChange={onSortChange} />
       )}
       {someHidden && (
         <p role="note" className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
@@ -153,14 +169,24 @@ function CaseListBody({
  * Daftar kasus dan versi kasus di balik satu angka laporan, beserta skornya (PBI-16 AC1, D6 langkah 1–3). Semua
  * peran yang boleh membaca laporan melihat daftar ini; isi kasus hanya terbuka sesuai content_visible (AC3).
  * Laporannya ikut dimuat sebagai konteks (SCRUM-346 A2): judul di breadcrumb dan pindah produk. Bila laporan gagal
- * dimuat, daftar tetap tampil dengan breadcrumb biasa.
+ * dimuat, daftar tetap tampil dengan breadcrumb biasa. Urutan yang dipilih datang dari alamat dan dilaporkan
+ * kembali ke halaman, supaya kembali dari detail kasus membuka urutan yang sama (SCRUM-378).
  */
 export function ResultCaseList({
   reportId,
   resultId,
+  sort = null,
+  onSortChange,
   gateway = httpDrilldownGateway,
   reportsGateway = httpReportsGateway,
-}: Readonly<{ reportId: string; resultId: string; gateway?: DrilldownGateway; reportsGateway?: ReportsGateway }>) {
+}: Readonly<{
+  reportId: string;
+  resultId: string;
+  sort?: SortState | null;
+  onSortChange?: (sort: SortState) => void;
+  gateway?: DrilldownGateway;
+  reportsGateway?: ReportsGateway;
+}>) {
   const cases = useResultCases(reportId, resultId, gateway);
   const report = useReport(reportId, reportsGateway);
   const products =
@@ -182,7 +208,9 @@ export function ResultCaseList({
           onRetry={canRetryDrilldown(cases.message) ? cases.reload : undefined}
         />
       )}
-      {cases.status === "ready" && <CaseListBody reportId={reportId} data={cases.data} products={products} />}
+      {cases.status === "ready" && (
+        <CaseListBody reportId={reportId} data={cases.data} products={products} sort={sort} onSortChange={onSortChange} />
+      )}
     </div>
   );
 }
