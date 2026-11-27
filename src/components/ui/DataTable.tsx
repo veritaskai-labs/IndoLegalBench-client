@@ -37,6 +37,10 @@ type Props<T> = {
   summary?: (range: Readonly<{ from: number; to: number; total: number }>) => ReactNode;
   /** Extra classes for one row, e.g. a marker that must follow the row's real height. */
   rowClassName?: (row: T) => string | undefined;
+  /** Sort to start with, e.g. one kept in the address. Read once, like the initial value of useState. */
+  initialSort?: SortState | null;
+  /** Told about every sort the user picks, so a page can keep it (for example in the address). */
+  onSortChange?: (sort: SortState) => void;
 };
 
 function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
@@ -57,8 +61,19 @@ function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
 }
 
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
-export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, caption, summary, rowClassName }: Readonly<Props<T>>) {
-  const [sort, setSort] = useState<SortState | null>(null);
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  pageSize = 10,
+  empty,
+  caption,
+  summary,
+  rowClassName,
+  initialSort = null,
+  onSortChange,
+}: Readonly<Props<T>>) {
+  const [sort, setSort] = useState<SortState | null>(initialSort);
   const [page, setPage] = useState(1);
 
   // Back to page one when the rows really change (filter, refetch), but not on a re-render with the same rows.
@@ -84,8 +99,10 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, capt
   const paged = paginate(sorted, page, pageSize);
 
   function toggleSort(key: string) {
-    setSort((current) => nextSort(current, key));
+    const next = nextSort(sort, key);
+    setSort(next);
     setPage(1);
+    onSortChange?.(next);
   }
 
   return (

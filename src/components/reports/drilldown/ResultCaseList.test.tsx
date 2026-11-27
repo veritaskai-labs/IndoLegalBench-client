@@ -1,14 +1,20 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { buttonClasses } from "@/components/ui/Button";
+import { forgetDrilldownMemory } from "@/hooks/useReportDrilldown";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
 import type { ReportsGateway } from "@/lib/reports/reportsApi";
 import { caseScore, firstReport, reportResult, reportSession, resultCases } from "@/test/reportFixtures";
+import type { SortState } from "@/lib/ui/tableModel";
 import type { ReportDetail } from "@/types/reports";
 
 import { ResultCaseList } from "./ResultCaseList";
+
+// The last loaded case list is remembered for the case detail (SCRUM-378); every test starts without it.
+afterEach(forgetDrilldownMemory);
 
 function fakeGateway(cases: DrilldownGateway["cases"]): DrilldownGateway {
   return { cases, caseDetail: vi.fn(), evidence: vi.fn(), evidenceFile: vi.fn() };
@@ -19,8 +25,22 @@ function fakeReports(detail: ReportsGateway["detail"] = vi.fn().mockReturnValue(
   return { detail, list: vi.fn(), pdf: vi.fn(), eligibleSessions: vi.fn(), create: vi.fn(), validate: vi.fn() };
 }
 
-function renderList(cases: DrilldownGateway["cases"], reports: ReportsGateway = fakeReports()) {
-  render(<ResultCaseList reportId="r-1" resultId="res-1" gateway={fakeGateway(cases)} reportsGateway={reports} />);
+function renderList(
+  cases: DrilldownGateway["cases"],
+  reports: ReportsGateway = fakeReports(),
+  sort: SortState | null = null,
+  onSortChange?: (sort: SortState) => void,
+) {
+  render(
+    <ResultCaseList
+      reportId="r-1"
+      resultId="res-1"
+      sort={sort}
+      onSortChange={onSortChange}
+      gateway={fakeGateway(cases)}
+      reportsGateway={reports}
+    />,
+  );
 }
 
 /**
@@ -216,5 +236,40 @@ describe("ResultCaseList", () => {
     await screen.findByRole("table");
     expect(detail).toHaveBeenCalledWith("r-1");
     expect(screen.queryByRole("navigation", { name: "Produk di laporan ini" })).toBeNull();
+  });
+
+  // Positif, SCRUM-378: the sort picked here reaches the page, and every link carries it, so "Kasus berikutnya" and
+  // the other products follow the same order.
+  it("hands the picked sort to the page and keeps the sort from the address in its links", async () => {
+    const onSortChange = vi.fn();
+    const sort = { key: "llm_score", direction: "desc" } as const;
+    renderList(vi.fn().mockResolvedValue(resultCases()), fakeReports(vi.fn().mockResolvedValue(reportWithTwoProducts())), sort, onSortChange);
+
+    const products = await screen.findByRole("navigation", { name: "Produk di laporan ini" });
+    expect(within(products).getByRole("link", { name: "DeepSeek" })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1/results/res-2?urut=llm_score-desc",
+    );
+    expect(screen.getByRole("link", { name: /Buka jawaban/ })).toHaveAttribute(
+      "href",
+      "/reports/comparisons/r-1/results/res-1/cases/c-1?urut=llm_score-desc",
+    );
+    fireEvent.click(within(screen.getByRole("columnheader", { name: /Kode kasus/ })).getByRole("button"));
+    expect(onSortChange).toHaveBeenCalledWith({ key: "case_code", direction: "asc" });
+  });
+
+  // Review #135 (PBI-25 one look): "Buka jawaban" looks like the shared ghost Button; the product switch stays a pill
+  // with its black active state, and only its hover matches the Button (bg-surface, not the row hover).
+  it("gives Buka jawaban the Button look and keeps the product pills with the Button hover", async () => {
+    renderList(vi.fn().mockResolvedValue(resultCases()), fakeReports(vi.fn().mockResolvedValue(reportWithTwoProducts())));
+
+    const products = await screen.findByRole("navigation", { name: "Produk di laporan ini" });
+    expect(screen.getByRole("link", { name: /Buka jawaban/ })).toHaveClass(
+      ...buttonClasses({ variant: "ghost", size: "sm" }).split(" "),
+      "relative",
+    );
+    const pill = within(products).getByRole("link", { name: "DeepSeek" });
+    expect(pill).toHaveClass("rounded-full", "hover:bg-surface", "aria-[current=page]:bg-ink");
+    expect(pill).not.toHaveClass("hover:bg-surface-hover");
   });
 });

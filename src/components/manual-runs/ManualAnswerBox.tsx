@@ -11,7 +11,7 @@ import { AnswerHistoryDialog } from "./AnswerHistoryDialog";
 import { EvidencePanel } from "./EvidencePanel";
 
 function statusLabel(slot: ManualAttemptSlot): string {
-  if (!slot.filled) return "Belum diisi";
+  if (!slot.filled) return "Belum terisi";
   return slot.platform_refused ? "Platform menolak" : "Terisi";
 }
 

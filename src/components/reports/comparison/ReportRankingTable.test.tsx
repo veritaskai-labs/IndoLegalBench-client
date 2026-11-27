@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { buttonClasses } from "@/components/ui/Button";
 import { reportSections } from "@/lib/reports/reportSections";
 import { firstReport, reportResult, reportSession } from "@/test/reportFixtures";
 import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
@@ -225,5 +226,17 @@ describe("ReportRankingTable", () => {
 
     expect(screen.queryAllByRole("link")).toHaveLength(0);
     expect(within(table).queryByText("Kasus di balik angka")).toBeNull();
+  });
+
+  // Review #135 (PBI-25 one look): the column toggle is the shared Button and "Lihat kasus" looks exactly like it.
+  it("uses the shared ghost Button look for the column toggle and Lihat kasus", () => {
+    const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
+    renderTable("id", [session], "real_name", (resultId) => `/drill/${resultId}`);
+    const ghostSmall = buttonClasses({ variant: "ghost", size: "sm" }).split(" ");
+
+    const toggle = screen.getByRole("button", { name: "Tampilkan kolom lengkap" });
+    expect(toggle).toHaveClass(...ghostSmall);
+    expect(toggle).toHaveAttribute("type", "button");
+    expect(screen.getByRole("link", { name: "Lihat kasus AiYU" })).toHaveClass(...ghostSmall, "relative");
   });
 });

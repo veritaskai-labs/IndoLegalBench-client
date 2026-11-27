@@ -240,19 +240,19 @@ export default function ProvidersPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
               <tr>
-                <th scope="col" className="px-4 py-3">Nama</th>
-                <th scope="col" className="px-4 py-3">Jenis</th>
-                <th scope="col" className="px-4 py-3">Penyedia</th>
-                <th scope="col" className="px-4 py-3">Model</th>
-                <th scope="col" className="px-4 py-3">Kredensial</th>
-                <th scope="col" className="px-4 py-3">Limit/menit</th>
-                <th scope="col" className="px-4 py-3">Budget/bulan</th>
-                <th scope="col" className="px-4 py-3">Sisa anggaran bulan ini</th>
-                <th scope="col" className="px-4 py-3">Jumlah sesi</th>
-                <th scope="col" className="px-4 py-3">Status</th>
-                <th scope="col" className="px-4 py-3">Uji terakhir</th>
-                <th scope="col" className="px-4 py-3">Didaftarkan</th>
-                <th scope="col" className="px-4 py-3">
+                <th scope="col" className="px-3 py-2.5">Nama</th>
+                <th scope="col" className="px-3 py-2.5">Jenis</th>
+                <th scope="col" className="px-3 py-2.5">Penyedia / jenis API</th>
+                <th scope="col" className="px-3 py-2.5">Model</th>
+                <th scope="col" className="px-3 py-2.5">Kredensial</th>
+                <th scope="col" className="px-3 py-2.5">Limit/menit</th>
+                <th scope="col" className="px-3 py-2.5">Budget/bulan</th>
+                <th scope="col" className="px-3 py-2.5">Sisa anggaran bulan ini</th>
+                <th scope="col" className="px-3 py-2.5">Jumlah sesi</th>
+                <th scope="col" className="px-3 py-2.5">Status</th>
+                <th scope="col" className="px-3 py-2.5">Uji terakhir</th>
+                <th scope="col" className="px-3 py-2.5">Didaftarkan</th>
+                <th scope="col" className="px-3 py-2.5">
                   <span className="sr-only">Aksi</span>
                 </th>
               </tr>
@@ -338,29 +338,29 @@ function ProductRow({
   const manual = product.measurement_type === "manual";
   return (
     <tr className="align-top">
-      <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2.5 font-medium text-slate-900">{product.name}</td>
+      <td className="px-3 py-2.5">
         <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[product.measurement_type]}`}>
           {MEASUREMENT_TYPE_LABEL[product.measurement_type]}
         </span>
       </td>
-      <td className="px-4 py-3 text-slate-600">
+      <td className="px-3 py-2.5 text-slate-600">
         {product.vendor_label ?? (product.provider_type && PROVIDER_TYPE_LABEL[product.provider_type])}
       </td>
-      <td className="px-4 py-3 font-mono text-xs text-slate-600">{manual ? <NotApplicable /> : product.model_name}</td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2.5 font-mono text-xs text-slate-600">{manual ? <NotApplicable /> : product.model_name}</td>
+      <td className="px-3 py-2.5">
         {manual ? <NotApplicable /> : product.credential_hint != null && <CredentialHint hint={product.credential_hint} />}
       </td>
-      <td className="px-4 py-3 text-slate-600">{manual ? <NotApplicable /> : product.rate_limit_per_minute}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+      <td className="px-3 py-2.5 text-slate-600">{manual ? <NotApplicable /> : product.rate_limit_per_minute}</td>
+      <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">
         {manual ? <NotApplicable /> : product.monthly_budget_idr != null && formatRupiah(product.monthly_budget_idr)}
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+      <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">
         {manual || product.remaining_budget_idr == null ? <NotApplicable /> : formatRupiahDown(product.remaining_budget_idr)}
       </td>
       {/* Produk manual juga punya sesi (PBI-22). Termasuk sesi yang diarsipkan. */}
-      <td className="px-4 py-3 text-slate-600">{product.session_count}</td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-2.5 text-slate-600">{product.session_count}</td>
+      <td className="px-3 py-2.5">
         <span
           className={`rounded px-2 py-0.5 text-xs font-medium ${
             product.is_active ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"
@@ -369,12 +369,12 @@ function ProductRow({
           {product.is_active ? "Aktif" : "Nonaktif"}
         </span>
       </td>
-      <td className="max-w-xs px-4 py-3 text-xs" aria-live="polite">
+      <td className="max-w-xs px-3 py-2.5 text-xs" aria-live="polite">
         {manual ? <NotApplicable /> : <LastTest product={product} testing={testing} live={live} />}
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatDate(product.created_at)}</td>
-      <td className="px-4 py-3">
-        <div className="flex flex-col items-start gap-1.5 text-xs font-medium">
+      <td className="px-3 py-2.5 whitespace-nowrap text-slate-600">{formatDate(product.created_at)}</td>
+      <td className="px-3 py-2.5">
+        <div className="grid grid-cols-[auto_auto] justify-start gap-x-3 gap-y-1 text-xs font-medium whitespace-nowrap">
           {!manual && (
             <button
               type="button"
@@ -408,7 +408,7 @@ function ProductRow({
 
 function NotApplicable() {
   return (
-    <span className="text-slate-400">
+    <span className="font-sans text-sm text-slate-400">
       <span aria-hidden="true">—</span>
       <span className="sr-only">Tidak berlaku</span>
     </span>
