@@ -35,8 +35,9 @@ function Step({
   const place = direction === "next" ? "justify-self-end sm:order-3" : "justify-self-start sm:order-1";
   if (target === null) {
     return (
-      // role="link" supaya aria-disabled dibacakan ("link, dimmed"); span biasa dibaca sebagai teks (review #135).
-      <span role="link" aria-disabled="true" className={`${STEP} ${place} cursor-not-allowed text-subtle`}>
+      // Hanya penanda visual: pembaca layar sudah mendengar "Kasus 1 dari 4" dan hanya tautan yang ada. Bukan
+      // role="link" (review #135, Sonar: role link tanpa href), jadi disembunyikan dari pembaca layar.
+      <span aria-hidden="true" className={`${STEP} ${place} cursor-not-allowed text-subtle`}>
         {arrowBefore}
         {STEP_LABEL[direction]}
         {arrowAfter}

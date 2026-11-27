@@ -81,10 +81,10 @@ describe("CaseNavigation", () => {
     renderNavigation("c-1");
 
     const nav = await screen.findByRole("navigation", { name: "Kasus lain di angka ini" });
-    // Review #135: role="link" so screen readers announce it as a dimmed link, not as plain text.
-    const previous = within(nav).getByRole("link", { name: "Kasus sebelumnya" });
-    expect(previous).toHaveAttribute("aria-disabled", "true");
-    expect(previous).not.toHaveAttribute("href");
+    // Review #135 and Sonar: no fake link. The dimmed step is only visual; screen readers hear the position and
+    // the one link that exists.
+    expect(within(nav).queryByRole("link", { name: /Kasus sebelumnya/ })).not.toBeInTheDocument();
+    expect(within(nav).getByText("Kasus sebelumnya")).toHaveAttribute("aria-hidden", "true");
     expect(within(nav).getByText("Kasus 1 dari 4")).toBeInTheDocument();
   });
 
@@ -93,9 +93,8 @@ describe("CaseNavigation", () => {
     renderNavigation("c-5");
 
     const nav = await screen.findByRole("navigation", { name: "Kasus lain di angka ini" });
-    const next = within(nav).getByRole("link", { name: "Kasus berikutnya" });
-    expect(next).toHaveAttribute("aria-disabled", "true");
-    expect(next).not.toHaveAttribute("href");
+    expect(within(nav).queryByRole("link", { name: /Kasus berikutnya/ })).not.toBeInTheDocument();
+    expect(within(nav).getByText("Kasus berikutnya")).toHaveAttribute("aria-hidden", "true");
     expect(within(nav).getByRole("link", { name: "Kasus sebelumnya ILB-004" })).toBeInTheDocument();
   });
 
