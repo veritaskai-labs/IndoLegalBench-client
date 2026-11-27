@@ -41,7 +41,6 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
   }, [phoneOpen]);
 
   function close() {
-    setOpenOn(null);
     if (phoneOpen) {
       setPhoneOpenOn(null);
       search.setQuery("");
@@ -49,6 +48,8 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
     } else {
       input.current?.focus();
     }
+    // After the focus move: focusing the box from a result fires its onFocus, which opens the panel.
+    setOpenOn(null);
   }
 
   function choose() {
