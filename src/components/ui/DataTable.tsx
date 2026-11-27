@@ -41,6 +41,10 @@ type Props<T> = {
   initialSort?: SortState | null;
   /** Told about every sort the user picks, so a page can keep it (for example in the address). */
   onSortChange?: (sort: SortState) => void;
+  /** Reset to page 1 when rows change (default true). Set false to stay on the current page across reloads. */
+  resetPageOnDataChange?: boolean;
+  /** Optional row click handler; clicks originating from interactive controls inside the row are ignored. */
+  onRowClick?: (row: T) => void;
 };
 
 function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
@@ -72,6 +76,8 @@ export function DataTable<T>({
   rowClassName,
   initialSort = null,
   onSortChange,
+  resetPageOnDataChange = true,
+  onRowClick,
 }: Readonly<Props<T>>) {
   const [sort, setSort] = useState<SortState | null>(initialSort);
   const [page, setPage] = useState(1);
@@ -80,7 +86,7 @@ export function DataTable<T>({
   const [seenRows, setSeenRows] = useState(rows);
   if (seenRows !== rows) {
     setSeenRows(rows);
-    if (!sameRows(seenRows, rows)) setPage(1);
+    if (resetPageOnDataChange && !sameRows(seenRows, rows)) setPage(1);
   }
 
   // Only the active column's sort hooks matter, so inline columns do not invalidate the sorted rows.
@@ -147,7 +153,20 @@ export function DataTable<T>({
               </tr>
             ) : (
               paged.items.map((row) => (
-                <tr key={rowKey(row)} className={`hover:bg-surface-hover ${rowClassName?.(row) ?? ""}`}>
+                <tr
+                  key={rowKey(row)}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          if ((event.target as HTMLElement).closest("a, button, input, select, textarea")) {
+                            return;
+                          }
+                          onRowClick(row);
+                        }
+                      : undefined
+                  }
+                  className={`hover:bg-surface-hover ${onRowClick ? "cursor-pointer " : ""}${rowClassName?.(row) ?? ""}`}
+                >
                   {columns.map((column) => (
                     <td key={column.key} className="h-[52px] border-t border-line-soft px-3 py-2.5 align-middle">
                       {column.cell(row)}
