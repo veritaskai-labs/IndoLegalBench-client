@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
+import { Button, FormField, Input } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import type { Suite } from "@/types/suite";
 
@@ -12,9 +13,6 @@ type Props = {
 };
 
 export function SuiteFormDialog({ suite, onClose, onSaved }: Props) {
-  const nameId = useId();
-  const descriptionId = useId();
-
   const [name, setName] = useState(suite?.name ?? "");
   const [description, setDescription] = useState(suite?.description ?? "");
   const [nameError, setNameError] = useState<string | null>(null);
@@ -57,82 +55,57 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-label={suite ? "Ubah suite" : "Buat suite"}
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+        className="w-full max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog"
       >
-        <h2 className="text-base font-semibold text-slate-900">
+        <h2 className="font-serif text-[22px] font-medium leading-7 text-ink">
           {suite ? "Ubah suite" : "Buat suite"}
         </h2>
 
         {formError && (
           <div
             role="alert"
-            className="mt-4 rounded-md bg-red-50 px-3 py-2 text-xs text-red-800"
+            className="mt-4 rounded-control bg-danger-wash px-3 py-2 text-xs text-danger"
           >
             {formError}
           </div>
         )}
 
         <div className="mt-4 space-y-4">
-          <div>
-            <label
-              htmlFor={nameId}
-              className="block text-sm font-medium text-slate-700"
-            >
-              Nama
-            </label>
-            <input
-              id={nameId}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              aria-invalid={nameError !== null}
-              aria-describedby={nameError ? `${nameId}-error` : undefined}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-            />
-            {nameError && (
-              <p id={`${nameId}-error`} className="mt-1 text-xs text-red-700">
-                {nameError}
-              </p>
+          <FormField label="Nama" error={nameError ?? undefined}>
+            {(control) => (
+              <Input
+                {...control}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
             )}
-          </div>
+          </FormField>
 
-          <div>
-            <label
-              htmlFor={descriptionId}
-              className="block text-sm font-medium text-slate-700"
-            >
-              Deskripsi
-            </label>
-            <textarea
-              id={descriptionId}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              rows={3}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-            />
-          </div>
+          <FormField label="Deskripsi">
+            {(control) => (
+              <textarea
+                {...control}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                rows={3}
+                className="w-full rounded-control border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-subtle"
+              />
+            )}
+          </FormField>
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
             Batal
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving}
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-          >
+          </Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
             Simpan
-          </button>
+          </Button>
         </div>
       </div>
     </div>

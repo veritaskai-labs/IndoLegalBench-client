@@ -1,28 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { SuiteCaseNav } from "@/components/cases/SuiteCaseNav";
+import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
 import { SuiteFormDialog } from "@/components/suites/SuiteFormDialog";
 import { SuiteList } from "@/components/suites/SuiteList";
+import { Button, ErrorState, Icon, Input } from "@/components/ui";
+import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/hooks/useAuth";
-import { isDeveloperAiSession } from "@/lib/auth";
 import { useSuites } from "@/hooks/useSuites";
-import type { Suite, SuiteStatus } from "@/types/suite";
-import { DeleteSuiteDialog } from "@/components/suites/DeleteSuiteDialog";
 import { apiFetch } from "@/lib/apiClient";
+import { isDeveloperAiSession } from "@/lib/auth";
 import { canCreateCase } from "@/lib/cases/permissions";
+import type { Suite, SuiteStatus } from "@/types/suite";
 
 const TABS: { value: SuiteStatus; label: string }[] = [
   { value: "active", label: "Aktif" },
   { value: "archived", label: "Arsip" },
 ];
 
-type DialogState = | { mode: "closed" } | { mode: "create" } | { mode: "edit"; suite: Suite } | { mode: "delete"; suite: Suite };
+type DialogState =
+  | { mode: "closed" }
+  | { mode: "create" }
+  | { mode: "edit"; suite: Suite }
+  | { mode: "delete"; suite: Suite };
 
 export default function SuitesPage() {
   const [status, setStatus] = useState<SuiteStatus>("active");
+  const [searchQuery, setSearchQuery] = useState("");
   const suites = useSuites(status);
   const auth = useAuth();
+  const { showToast } = useToast();
   const canCreate = canCreateCase(
     auth.status === "authenticated" ? auth.user.role : null,
   );
@@ -31,13 +39,42 @@ export default function SuitesPage() {
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
   const [actionError, setActionError] = useState<string | null>(null);
 
-    async function toggleArchive(suite: Suite) {
+  const filteredSuites = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return suites.suites;
+    return suites.suites.filter(
+      (suite) =>
+        suite.name.toLowerCase().includes(query) ||
+        (suite.description ?? "").toLowerCase().includes(query),
+    );
+  }, [suites.suites, searchQuery]);
+
+  async function toggleArchive(suite: Suite) {
     const action = suite.status === "archived" ? "unarchive" : "archive";
     setActionError(null);
 
     try {
       await apiFetch(`/suites/${suite.id}/${action}`, { method: "POST" });
       suites.reload();
+      if (action === "archive") {
+        showToast(
+          <>
+            Suite <strong>{suite.name}</strong> berhasil diarsipkan.
+          </>,
+          {
+            label: "Batalkan pengarsipan",
+            onClick: () => {
+              void toggleArchive({ ...suite, status: "archived" });
+            },
+          },
+        );
+      } else {
+        showToast(
+          <>
+            Suite <strong>{suite.name}</strong> berhasil diaktifkan.
+          </>,
+        );
+      }
     } catch {
       setActionError(
         action === "archive"
@@ -49,59 +86,76 @@ export default function SuitesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">{canCreate ? "Suite dan kasus" : "Suite"}</h1>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setDialog({ mode: "create" })}
-            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            Buat Suite
-          </button>
-        )}
-      </div>
+      <header>
+        <h1 className="font-serif text-4xl leading-10 text-ink">Suite dan kasus</h1>
+        <p className="mt-2 text-sm text-muted">
+          Kelompok kasus uji hukum. Buka suite untuk melihat, menambah, dan mengelola kasus di dalamnya.
+        </p>
+      </header>
 
       {canCreate && <SuiteCaseNav current="/suites" />}
 
-      <div
-        role="tablist"
-        aria-label="Status suite"
-        className="flex gap-1 border-b border-slate-200"
-      >
-        {TABS.map((tab) => {
-          const selected = status === tab.value;
-          return (
-            <button
-              key={tab.value}
-              role="tab"
-              type="button"
-              aria-selected={selected}
-              onClick={() => setStatus(tab.value)}
-              className={
-                selected
-                  ? "border-b-2 border-slate-900 px-4 py-2 text-sm font-medium text-slate-900"
-                  : "border-b-2 border-transparent px-4 py-2 text-sm text-slate-500 hover:text-slate-700"
-              }
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="relative block w-full sm:max-w-sm">
+          <span className="sr-only">Cari suite</span>
+          <Icon name="cari" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+          <Input
+            type="search"
+            placeholder="Cari suite"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </label>
+
+        {canManage && (
+          <Button
+            variant="primary"
+            onClick={() => setDialog({ mode: "create" })}
+            className="w-full sm:w-auto"
+          >
+            <Icon name="tambah" size={14} />
+            Buat Suite
+          </Button>
+        )}
       </div>
 
-      {actionError && (
+      <div>
         <div
-          role="alert"
-          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800"
+          role="tablist"
+          aria-label="Status suite"
+          className="inline-flex divide-x divide-line overflow-hidden rounded-control border border-line bg-paper"
         >
-          {actionError}
+          {TABS.map((tab) => {
+            const selected = status === tab.value;
+            return (
+              <button
+                key={tab.value}
+                role="tab"
+                type="button"
+                aria-selected={selected}
+                onClick={() => setStatus(tab.value)}
+                className={`cursor-pointer px-5 py-2 text-sm font-medium transition-colors ${
+                  selected
+                    ? "bg-accent-wash text-accent-ink"
+                    : "bg-paper text-ink-soft hover:bg-surface-hover hover:text-ink"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {actionError && <ErrorState variant="banner" message={actionError} />}
 
       <SuiteList
         status={suites.status}
-        suites={suites.suites}
+        suites={filteredSuites}
+        filterKey={`${status}:${searchQuery.trim()}`}
+        isFiltered={searchQuery.trim() !== ""}
+        onResetSearch={() => setSearchQuery("")}
         canCreateCase={canCreate}
         canManage={canManage}
         onRetry={suites.reload}
