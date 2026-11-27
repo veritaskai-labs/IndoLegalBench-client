@@ -16,6 +16,16 @@ export type QueryCheck =
   | { kind: "tooLong" }
   | { kind: "ok"; q: string };
 
+/**
+ * Rapikan kata kunci seperti server (spasi di kedua ujung dibuang dulu, baru panjangnya dihitung) dan
+ * putuskan apakah layak dikirim. Panjang dihitung per karakter Unicode, sama dengan len() di Python,
+ * bukan per unit UTF-16 seperti String.length.
+ */
 export function normaliseQuery(raw: string): QueryCheck {
-  throw new Error(`not implemented: ${raw}`);
+  const q = raw.trim();
+  const length = [...q].length;
+  if (length === 0) return { kind: "empty" };
+  if (length < SEARCH_MIN_CHARS) return { kind: "tooShort" };
+  if (length > SEARCH_MAX_CHARS) return { kind: "tooLong" };
+  return { kind: "ok", q };
 }
