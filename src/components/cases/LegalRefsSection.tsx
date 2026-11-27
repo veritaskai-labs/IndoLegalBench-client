@@ -39,21 +39,26 @@ export function LegalRefsSection({
   const errorWithPreview: ErrorLookup = (path) => errorFor(path) ?? previewErrors.get(path);
 
   return (
-    <FormSection title="Rujukan hukum" help={CASE_HELP.legalRefs} error={errorFor("legal_refs")}>
+    <FormSection
+      id="section-rujukan-hukum"
+      title="Rujukan hukum"
+      help={CASE_HELP.legalRefs}
+      error={errorFor("legal_refs")}
+    >
       {regulationTypes.status === "error" && (
-        <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm">
-          <p className="text-red-800">{regulationTypes.message}</p>
+        <div role="alert" className="rounded-control border border-danger/30 bg-danger-wash p-3 text-sm">
+          <p className="text-danger">{regulationTypes.message}</p>
           <button
             type="button"
             onClick={regulationTypes.reload}
-            className="mt-2 text-xs font-medium text-red-800 underline"
+            className="mt-2 cursor-pointer text-xs font-medium text-danger underline"
           >
             Coba lagi
           </button>
         </div>
       )}
       {preview.failed && (
-        <output className="block text-xs text-slate-600">
+        <output className="block text-xs text-muted">
           Pratinjau rujukan belum bisa dimuat. Rujukan tetap bisa disimpan.
         </output>
       )}

@@ -168,24 +168,47 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <Breadcrumb
-        items={[
-          { label: "Suite", onClick: () => leaveTo("/suites") },
-          { label: suiteName, onClick: () => leaveTo(suitePath) },
-          { label: saved.case_code },
-        ]}
-      />
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="mb-2">
+        <Breadcrumb
+          items={[
+            { label: "Suite dan kasus", onClick: () => leaveTo("/suites") },
+            { label: suiteName, onClick: () => leaveTo(suitePath) },
+            { label: saved.case_code },
+          ]}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => leaveTo(suitePath)}
+        aria-label="Kembali ke suite"
+        className="sticky top-20 z-10 float-left mr-2.5 mt-1 inline-flex size-8 cursor-pointer items-center justify-center rounded-control border border-line bg-paper/90 text-ink-soft shadow-xs backdrop-blur-xs transition-colors hover:bg-surface hover:text-ink"
+      >
+        <svg
+          aria-hidden="true"
+          width={18}
+          height={18}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-semibold text-slate-900">{saved.case_code}</h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="font-serif text-4xl leading-10 text-ink">{saved.case_code}</h1>
             <CaseStatusBadge status={saved.status} />
             <SplitTagBadge tag={saved.split_tag} wasDev={saved.was_dev} />
           </div>
           {dirty && (
-            <p className="text-xs font-medium text-amber-700">Ada perubahan yang belum disimpan</p>
+            <p className="text-xs font-medium text-warning-ink">Ada perubahan yang belum disimpan</p>
           )}
         </div>
         {canChangeTag && (
@@ -195,7 +218,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
               onClick={() => setChangingTag(true)}
               // Form dimuat ulang setelah tag berubah, jadi perubahan yang belum disimpan akan hilang.
               disabled={dirty}
-              className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-control bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path d="M13.6 2.6a2 2 0 0 1 2.8 2.8l-8.5 8.5-3.6.8.8-3.6 8.5-8.5Z" />
@@ -204,21 +227,14 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
               Ubah tag
             </button>
             {dirty && (
-              <p className="text-[11px] text-slate-500">Simpan perubahan dulu untuk mengubah tag</p>
+              <p className="text-[11px] text-muted">Simpan perubahan dulu untuk mengubah tag</p>
             )}
           </div>
         )}
       </header>
 
-      <button
-        type="button"
-        onClick={() => leaveTo(suitePath)}
-        className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer"
-      >
-        Kembali ke suite
-      </button>
-
-      <CaseTabs active={tab} onChange={setTab} />
+      <div className="clear-left mt-6 space-y-6">
+        <CaseTabs active={tab} onChange={setTab} />
 
       {/* Editor tetap terpasang saat tab riwayat dibuka, supaya perubahan yang belum disimpan tidak hilang. */}
       <div
@@ -303,6 +319,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
           <VersionHistoryTab key={caseId} caseId={caseId} />
         </div>
       )}
+      </div>
     </div>
   );
 }

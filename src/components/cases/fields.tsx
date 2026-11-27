@@ -2,7 +2,7 @@ import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 
 export const CONTROL_CLASS =
-  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 aria-[invalid=true]:border-red-600";
+  "mt-2 w-full rounded-control border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-subtle aria-[invalid=true]:border-danger";
 
 type FieldProps = {
   label: string;
@@ -13,22 +13,43 @@ type FieldProps = {
   hint?: string;
   /** Contoh isian di dalam kolom kosong, misalnya "156". */
   placeholder?: string;
+  required?: boolean;
+  optional?: boolean;
 };
 
 export function FieldLabel({
   htmlFor,
+  required,
+  optional,
   children,
-}: Readonly<{ htmlFor: string; children: ReactNode }>) {
+}: Readonly<{
+  htmlFor: string;
+  required?: boolean;
+  optional?: boolean;
+  children: ReactNode;
+}>) {
   return (
-    <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700">
-      {children}
-    </label>
+    <div className="flex items-center gap-1.5">
+      <label htmlFor={htmlFor} className="block text-sm font-medium text-ink">
+        {children}
+      </label>
+      {required && (
+        <span aria-hidden="true" className="text-sm font-medium text-accent">
+          *
+        </span>
+      )}
+      {optional && (
+        <span className="rounded-tag bg-surface px-1.5 py-px text-[11px] font-medium text-muted">
+          Opsional
+        </span>
+      )}
+    </div>
   );
 }
 
 export function ErrorText({ id, message }: { id?: string; message: string }) {
   return (
-    <p id={id} className="mt-1 text-xs text-red-700">
+    <p id={id} className="mt-1 text-xs text-danger">
       {message}
     </p>
   );
@@ -41,7 +62,7 @@ export function invalidProps(errorId: string, error: string | undefined) {
 
 export function HintText({ id, text }: Readonly<{ id: string; text: string }>) {
   return (
-    <p id={id} className="mt-0.5 text-xs text-slate-500">
+    <p id={id} className="mt-0.5 text-xs text-muted">
       {text}
     </p>
   );
@@ -59,13 +80,17 @@ export function TextField({
   error,
   hint,
   placeholder,
+  required,
+  optional,
   type = "text",
 }: FieldProps & { type?: "text" | "number" }) {
   const id = useId();
   const errorId = `${id}-error`;
   return (
-    <div>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+    <div className="flex h-full flex-col">
+      <FieldLabel htmlFor={id} required={required} optional={optional}>
+        {label}
+      </FieldLabel>
       {hint !== undefined && <HintText id={`${id}-hint`} text={hint} />}
       <input
         id={id}
@@ -73,9 +98,11 @@ export function TextField({
         placeholder={placeholder}
         {...registration}
         {...describedBy(id, hint, error)}
-        className={CONTROL_CLASS}
+        className={`${CONTROL_CLASS} mt-auto`}
       />
-      {error !== undefined && <ErrorText id={errorId} message={error} />}
+      <div className="min-h-5">
+        {error !== undefined && <ErrorText id={errorId} message={error} />}
+      </div>
     </div>
   );
 }
@@ -86,13 +113,17 @@ export function TextAreaField({
   error,
   hint,
   placeholder,
+  required,
+  optional,
   rows = 3,
 }: FieldProps & { rows?: number }) {
   const id = useId();
   const errorId = `${id}-error`;
   return (
     <div>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} required={required} optional={optional}>
+        {label}
+      </FieldLabel>
       {hint !== undefined && <HintText id={`${id}-hint`} text={hint} />}
       <textarea
         id={id}
@@ -157,11 +188,13 @@ export function SelectField<T extends string>({
 
 /** Kartu satu bagian form. fieldset + legend memberi nama grup untuk pembaca layar. */
 export function FormSection({
+  id,
   title,
   help,
   error,
   children,
 }: {
+  id?: string;
   title: string;
   /** Penjelasan singkat bagian ini untuk penulis kasus. */
   help?: string;
@@ -170,11 +203,19 @@ export function FormSection({
   children: ReactNode;
 }) {
   return (
-    <fieldset className="rounded-lg border border-slate-200 bg-white p-6">
-      <legend className="px-1 text-base font-semibold text-slate-900">{title}</legend>
-      {help !== undefined && <p className="text-sm text-slate-600">{help}</p>}
-      {error !== undefined && <ErrorText message={error} />}
-      <div className="mt-2 space-y-4">{children}</div>
+    <fieldset
+      id={id}
+      className="scroll-mt-20 overflow-hidden rounded-control border border-line bg-paper p-0"
+    >
+      <legend className="sr-only">{title}</legend>
+      <div className="border-b border-line-soft bg-surface px-6 py-4">
+        <h2 className="font-serif text-[22px] font-medium leading-7 text-ink">
+          {title}
+        </h2>
+        {help !== undefined && <p className="mt-1 text-xs text-muted">{help}</p>}
+        {error !== undefined && <ErrorText message={error} />}
+      </div>
+      <div className="space-y-4 p-6">{children}</div>
     </fieldset>
   );
 }
@@ -197,20 +238,27 @@ export function RowGroup({
   return (
     <fieldset
       aria-invalid={invalid || undefined}
-      className={`rounded-md border p-4 ${invalid ? "border-red-600 bg-red-50/40" : "border-slate-200"}`}
+      className={`rounded-control border p-4 ${
+        invalid ? "border-danger bg-danger-wash/50" : "border-line"
+      }`}
     >
-      <legend className={`px-1 text-sm font-medium ${invalid ? "text-red-700" : "text-slate-700"}`}>
+      <legend className="sr-only">{title}</legend>
+      <h3
+        className={`mb-3 text-sm font-semibold ${
+          invalid ? "text-danger" : "text-ink"
+        }`}
+      >
         {title}
-      </legend>
+      </h3>
       {invalid && (
-        <p className="mb-2 text-xs font-medium text-red-700">Baris ini perlu diperbaiki.</p>
+        <p className="mb-2 text-xs font-medium text-danger">Baris ini perlu diperbaiki.</p>
       )}
       <div className="space-y-3">{children}</div>
       <button
         type="button"
         onClick={onRemove}
         aria-label={removeLabel}
-        className="mt-3 text-xs font-medium text-red-700 hover:underline"
+        className="mt-3 cursor-pointer text-xs font-medium text-danger hover:underline"
       >
         Hapus
       </button>
@@ -223,7 +271,7 @@ export function AddRowButton({ label, onClick }: { label: string; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-md border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+      className="w-full cursor-pointer rounded-control border border-dashed border-line px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:bg-surface hover:text-ink"
     >
       {label}
     </button>
