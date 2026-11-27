@@ -22,22 +22,13 @@ function StatusBadge({ row }: Readonly<{ row: VersionRow }>) {
 }
 
 /**
- * Kolom pertama mengisi tinggi sel, supaya garis hijau versi aktif (A1) menempel di tepi kiri baris
- * tanpa mengubah DataTable bersama.
+ * Garis hijau versi aktif (A1) di tepi kiri baris. Bayangan inset di sel pertama mengikuti tinggi baris
+ * yang sebenarnya, juga bila nama penyetuju yang panjang membuat baris lebih tinggi.
  */
-function VersionCell({ row }: Readonly<{ row: VersionRow }>) {
-  return (
-    <div
-      data-active={row.isActive}
-      className={`-mx-3 -my-2.5 flex h-[52px] items-center border-l-[3px] px-3 text-sm font-semibold text-ink ${row.isActive ? "border-success" : "border-transparent"}`}
-    >
-      {row.title}
-    </div>
-  );
-}
+const ACTIVE_ROW = "[&>td:first-child]:shadow-[inset_3px_0_0_var(--color-success)]";
 
 const COLUMNS: readonly Column<VersionRow>[] = [
-  { key: "title", header: "Versi", cell: (row) => <VersionCell row={row} /> },
+  { key: "title", header: "Versi", cell: (row) => <span className="text-sm font-semibold text-ink">{row.title}</span> },
   { key: "effectiveDate", header: "Berlaku sejak", cell: (row) => <span className="text-muted">{row.effectiveDate}</span> },
   { key: "createdBy", header: "Dibuat oleh", cell: (row) => row.createdBy },
   { key: "approverName", header: "Disetujui oleh", cell: (row) => row.approverName },
@@ -109,6 +100,7 @@ export function RubricVersionList({ versions }: Readonly<{ versions: RubricVersi
           rowKey={(row) => row.id}
           empty={<EmptyState title={EMPTY_TITLE} description={EMPTY_TEXT} />}
           summary={versionRangeText}
+          rowClassName={(row) => (row.isActive ? ACTIVE_ROW : undefined)}
         />
       </div>
       <div className="sm:hidden">

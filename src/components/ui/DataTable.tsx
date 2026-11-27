@@ -35,6 +35,8 @@ type Props<T> = {
   caption?: string;
   /** Footer text for the rows on the current page (1-based, inclusive), e.g. "Menampilkan 1–8 dari 8". Left out when there are no rows. */
   summary?: (range: Readonly<{ from: number; to: number; total: number }>) => ReactNode;
+  /** Extra classes for one row, e.g. a marker that must follow the row's real height. */
+  rowClassName?: (row: T) => string | undefined;
 };
 
 function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
@@ -55,7 +57,7 @@ function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
 }
 
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
-export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, caption, summary }: Readonly<Props<T>>) {
+export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, caption, summary, rowClassName }: Readonly<Props<T>>) {
   const [sort, setSort] = useState<SortState | null>(null);
   const [page, setPage] = useState(1);
 
@@ -128,7 +130,7 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty, capt
               </tr>
             ) : (
               paged.items.map((row) => (
-                <tr key={rowKey(row)} className="hover:bg-surface-hover">
+                <tr key={rowKey(row)} className={`hover:bg-surface-hover ${rowClassName?.(row) ?? ""}`}>
                   {columns.map((column) => (
                     <td key={column.key} className="h-[52px] border-t border-line-soft px-3 py-2.5 align-middle">
                       {column.cell(row)}
