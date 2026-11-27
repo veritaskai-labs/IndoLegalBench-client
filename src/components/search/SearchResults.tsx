@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useId } from "react";
+import { useId, type KeyboardEvent } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { GlobalSearchState } from "@/hooks/useGlobalSearch";
@@ -11,12 +11,16 @@ type Props = {
   onRetry: () => void;
   /** Dipanggil saat pengguna memilih hasil, sebelum pindah halaman. */
   onChoose: () => void;
+  /** Tombol panah dan Escape di sebuah hasil (diatur oleh kotak cari). */
+  onLinkKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
 };
+
+type GroupProps = Pick<Props, "onChoose" | "onLinkKeyDown"> & { group: SearchGroup };
 
 const NOTE = "px-4 py-3 text-sm text-muted";
 
 /** Isi panel hasil pencarian global (SCRUM-352). Hanya menampilkan; logikanya di lib/search dan hook. */
-export function SearchResults({ state, onRetry, onChoose }: Readonly<Props>) {
+export function SearchResults({ state, onRetry, onChoose, onLinkKeyDown }: Readonly<Props>) {
   switch (state.status) {
     case "idle":
       return null;
@@ -44,14 +48,14 @@ export function SearchResults({ state, onRetry, onChoose }: Readonly<Props>) {
         <>
           <output className="sr-only">{resultCount(state.groups)} hasil</output>
           {state.groups.map((group) => (
-            <ResultGroup key={group.key} group={group} onChoose={onChoose} />
+            <ResultGroup key={group.key} group={group} onChoose={onChoose} onLinkKeyDown={onLinkKeyDown} />
           ))}
         </>
       );
   }
 }
 
-function ResultGroup({ group, onChoose }: Readonly<{ group: SearchGroup; onChoose: () => void }>) {
+function ResultGroup({ group, onChoose, onLinkKeyDown }: Readonly<GroupProps>) {
   const headingId = useId();
   return (
     <section aria-labelledby={headingId} className="border-b border-line-soft py-2 last:border-b-0">
@@ -64,6 +68,7 @@ function ResultGroup({ group, onChoose }: Readonly<{ group: SearchGroup; onChoos
             <Link
               href={row.href}
               onClick={onChoose}
+              onKeyDown={onLinkKeyDown}
               className="flex items-center gap-2 px-4 py-2 text-sm text-ink hover:bg-surface focus-visible:bg-surface focus-visible:outline-none"
             >
               <span className="min-w-0 flex-1">

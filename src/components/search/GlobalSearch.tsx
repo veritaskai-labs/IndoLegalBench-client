@@ -68,15 +68,16 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
     search.searchNow();
   }
 
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+  // Sits on the box and on each result link, not on a wrapper: a key listener on a non-interactive
+  // element is Sonar S6847.
+  function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
       close();
       return;
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    // The only links inside the box are the results.
-    const links = Array.from(event.currentTarget.querySelectorAll("a"));
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>(`[id="${panelId}"] a`));
     if (links.length === 0) return;
     event.preventDefault();
     const at = links.indexOf(document.activeElement as HTMLAnchorElement);
@@ -92,7 +93,7 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
   const showPanel = open && search.state.status !== "idle";
 
   return (
-    <div ref={wrapper} onKeyDown={onKeyDown} className="ml-auto md:ml-0 md:max-w-md md:flex-1">
+    <div ref={wrapper} className="ml-auto md:ml-0 md:max-w-md md:flex-1">
       <button
         ref={magnifier}
         type="button"
@@ -128,6 +129,7 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
               setOpenOn(pathname);
             }}
             onFocus={() => setOpenOn(pathname)}
+            onKeyDown={onKeyDown}
             aria-controls={panelId}
             className="h-9 w-full rounded-control border border-line bg-paper pl-9 pr-3 text-sm text-ink placeholder:text-subtle"
           />
@@ -147,7 +149,14 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
           hidden={!showPanel}
           className="fixed inset-x-0 top-14 bottom-0 overflow-y-auto bg-paper md:absolute md:inset-x-0 md:top-full md:bottom-auto md:mt-2 md:max-h-[70vh] md:rounded-control md:border md:border-line-soft md:shadow-lg"
         >
-          {showPanel && <SearchResults state={search.state} onRetry={search.searchNow} onChoose={choose} />}
+          {showPanel && (
+            <SearchResults
+              state={search.state}
+              onRetry={search.searchNow}
+              onChoose={choose}
+              onLinkKeyDown={onKeyDown}
+            />
+          )}
         </div>
       </search>
     </div>
