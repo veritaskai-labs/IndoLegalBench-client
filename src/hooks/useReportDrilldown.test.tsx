@@ -1,11 +1,13 @@
-import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
 
-import { useResultCase, useResultCases } from "./useReportDrilldown";
+import { forgetResultCases, useResultCase, useResultCases } from "./useReportDrilldown";
+
+afterEach(forgetResultCases);
 
 function fakeGateway(overrides: Partial<DrilldownGateway> = {}): DrilldownGateway {
   return {
@@ -35,6 +37,41 @@ describe("useResultCases (AC1)", () => {
     const { result } = renderHook(() => useResultCases("r-1", "res-1", gateway));
 
     await waitFor(() => expect(result.current).toMatchObject({ status: "error", message: HIDDEN_DRILLDOWN }));
+  });
+
+  // Positif, SCRUM-378: the case detail reuses the list the case list page just loaded, without a third request.
+  it("reuses the list it loaded last for the same number", async () => {
+    const gateway = fakeGateway();
+    const first = renderHook(() => useResultCases("r-1", "res-1", gateway));
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    first.unmount();
+
+    const again = renderHook(() => useResultCases("r-1", "res-1", gateway));
+
+    await waitFor(() => expect(again.result.current.status).toBe("ready"));
+    expect(gateway.cases).toHaveBeenCalledTimes(1);
+  });
+
+  // Negatif: another number is loaded from the server, and a failure is never remembered, so a retry asks again.
+  it("asks the server for another number and after a failure", async () => {
+    const cases = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(500, "ANY"))
+      .mockResolvedValue({ cases: [] });
+    const gateway = fakeGateway({ cases });
+
+    const failed = renderHook(() => useResultCases("r-1", "res-1", gateway));
+    await waitFor(() => expect(failed.result.current.status).toBe("error"));
+    act(() => failed.result.current.reload());
+    await waitFor(() => expect(failed.result.current.status).toBe("ready"));
+    const other = renderHook(() => useResultCases("r-1", "res-2", gateway));
+    await waitFor(() => expect(other.result.current.status).toBe("ready"));
+
+    expect(cases.mock.calls).toEqual([
+      ["r-1", "res-1"],
+      ["r-1", "res-1"],
+      ["r-1", "res-2"],
+    ]);
   });
 });
 
