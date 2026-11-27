@@ -1,8 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Suite } from "@/types/suite";
 import { SuiteList } from "./SuiteList";
+
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: pushMock }) }));
+
+beforeEach(() => {
+  pushMock.mockReset();
+});
 
 function makeSuite(overrides: Partial<Suite> = {}): Suite {
   return {
@@ -208,7 +215,7 @@ describe("SuiteList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides delete for an archived suite", () => {
+  it("offers delete for an archived suite", () => {
     const suite = makeSuite({ status: "archived" });
 
     render(
@@ -223,8 +230,8 @@ describe("SuiteList", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "Hapus Perburuhan" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Hapus Perburuhan" }),
+    ).toBeInTheDocument();
   });
 
 
@@ -261,8 +268,16 @@ describe("SuiteList", () => {
     }
 
     // Positive
-    it("links an active suite to its new case page for someone who may write cases", () => {
-      renderRow(makeSuite(), true);
+    it("links an active suite with cases to Tambah kasus", () => {
+      renderRow(makeSuite({ case_count: 3 }), true);
+
+      expect(
+        screen.getByRole("link", { name: "Tambah kasus di Perburuhan" }),
+      ).toHaveAttribute("href", "/suites/11111111-1111-1111-1111-111111111111/cases/new");
+    });
+
+    it("links an active suite with zero cases to Buat kasus", () => {
+      renderRow(makeSuite({ case_count: 0, is_empty: true }), true);
 
       expect(
         screen.getByRole("link", { name: "Buat kasus di Perburuhan" }),
@@ -274,7 +289,7 @@ describe("SuiteList", () => {
       renderRow(makeSuite(), false);
 
       expect(
-        screen.queryByRole("link", { name: "Buat kasus di Perburuhan" }),
+        screen.queryByRole("link", { name: /Tambah kasus|Buat kasus/ }),
       ).not.toBeInTheDocument();
     });
 
@@ -290,7 +305,7 @@ describe("SuiteList", () => {
         />,
       );
 
-      expect(screen.queryByRole("link", { name: /Buat kasus/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Tambah kasus|Buat kasus/ })).not.toBeInTheDocument();
     });
 
     // Corner
@@ -298,16 +313,92 @@ describe("SuiteList", () => {
       renderRow(makeSuite({ status: "archived" }), true);
 
       expect(
-        screen.queryByRole("link", { name: "Buat kasus di Perburuhan" }),
+        screen.queryByRole("link", { name: /Tambah kasus|Buat kasus/ }),
       ).not.toBeInTheDocument();
     });
 
     it("encodes the suite id in the link", () => {
-      renderRow(makeSuite({ id: "a/b?c" }), true);
+      renderRow(makeSuite({ id: "a/b?c", case_count: 0 }), true);
 
       expect(
         screen.getByRole("link", { name: "Buat kasus di Perburuhan" }),
       ).toHaveAttribute("href", "/suites/a%2Fb%3Fc/cases/new");
     });
+  });
+
+  it("shows a search empty state with reset action when filtered", async () => {
+    const user = userEvent.setup();
+    const onResetSearch = vi.fn();
+
+    render(
+      <SuiteList
+        status="ready"
+        suites={[]}
+        isFiltered
+        onResetSearch={onResetSearch}
+        onRetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Tidak ada suite yang cocok")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reset pencarian" }));
+    expect(onResetSearch).toHaveBeenCalled();
+  });
+
+  it("shows tooltips on action icon buttons after 1 second of hover", () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <SuiteList
+          status="ready"
+          suites={[makeSuite()]}
+          onRetry={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onArchive={vi.fn()}
+        />,
+      );
+
+      const editBtn = screen.getByRole("button", { name: "Ubah Perburuhan" });
+      fireEvent.mouseEnter(editBtn);
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(screen.getByRole("tooltip")).toHaveTextContent("Ubah judul atau deskripsi suite");
+
+      fireEvent.mouseLeave(editBtn);
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("navigates to suite detail when clicking a row, but not when clicking an action button", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const suite = makeSuite({ id: "suite-123", description: "Deskripsi uji" });
+
+    render(
+      <SuiteList
+        status="ready"
+        suites={[suite]}
+        onRetry={vi.fn()}
+        onEdit={onEdit}
+        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Ubah Perburuhan" }));
+    expect(onEdit).toHaveBeenCalledWith(suite);
+    expect(pushMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByText("Deskripsi uji"));
+    expect(pushMock).toHaveBeenCalledWith("/suites/suite-123");
   });
 });
