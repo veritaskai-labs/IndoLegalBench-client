@@ -212,4 +212,55 @@ describe("DataTable", () => {
 
     expect(onSortChange.mock.calls).toEqual([[{ key: "score", direction: "asc" }], [{ key: "score", direction: "desc" }]]);
   });
+
+  it("keeps the current page when resetPageOnDataChange is false", async () => {
+    const many = [
+      ...data,
+      { id: "4", name: "Dina", score: 75 },
+    ];
+    const { rerender } = render(
+      <DataTable columns={columns} rows={many} rowKey={(r) => r.id} pageSize={2} resetPageOnDataChange={false} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+
+    rerender(
+      <DataTable
+        columns={columns}
+        rows={many.map((row) => (row.id === "4" ? { ...row, name: "Dina Baru" } : row))}
+        rowKey={(r) => r.id}
+        pageSize={2}
+        resetPageOnDataChange={false}
+      />,
+    );
+    expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+    expect(screen.getByText("Dina Baru")).toBeInTheDocument();
+  });
+
+  it("calls onRowClick when clicking a row cell, but ignores nested buttons", async () => {
+    const onRowClick = vi.fn();
+    const onAction = vi.fn();
+    const withAction: Column<Row>[] = [
+      ...columns,
+      {
+        key: "act",
+        header: "Aksi",
+        cell: (r) => (
+          <button type="button" onClick={() => onAction(r.id)}>
+            Pilih {r.name}
+          </button>
+        ),
+      },
+    ];
+
+    render(<DataTable columns={withAction} rows={data} rowKey={(r) => r.id} onRowClick={onRowClick} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Pilih Ani" }));
+    expect(onAction).toHaveBeenCalledWith("2");
+    expect(onRowClick).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByText("Budi"));
+    expect(onRowClick).toHaveBeenCalledWith(data[0]);
+  });
 });
