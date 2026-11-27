@@ -91,6 +91,23 @@ describe("RunsPage session list (PBI-11 AC10)", () => {
     expect(await screen.findByRole("link", { name: "Uji Coba DeepSeek" })).toHaveAttribute("href", "/runs/a%2Fb");
   });
 
+  it("offers Lihat detail on every row, next to Arsipkan", async () => {
+    list.mockResolvedValue([session({ id: "a/b" })]);
+    renderPage();
+    const cells = within(await row("Uji Coba DeepSeek"));
+
+    expect(cells.getByRole("link", { name: "Lihat detail Uji Coba DeepSeek" })).toHaveAttribute("href", "/runs/a%2Fb");
+    expect(cells.getByRole("button", { name: "Arsipkan Uji Coba DeepSeek" })).toBeInTheDocument();
+  });
+
+  it("draws the case progress of each row as a bar", async () => {
+    list.mockResolvedValue([session({ status: "running", progress: { completed: 21, total: 60, completed_cases: 7, total_cases: 20, percent_cases_complete: 35 } })]);
+    renderPage();
+    const cells = within(await row("Uji Coba DeepSeek"));
+
+    expect(cells.getByRole("progressbar", { name: "Persen kasus selesai" })).toHaveAttribute("value", "35");
+  });
+
   // Positive: every column of one row.
   it("shows label, creation time in WIB, creator, product, cases, repetitions, status and progress", async () => {
     list.mockResolvedValue([session({ status: "running", progress: { completed: 21, total: 60, completed_cases: 7, total_cases: 20, percent_cases_complete: 35 } })]);

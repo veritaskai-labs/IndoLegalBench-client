@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SessionStatusBadge } from "@/components/runs/SessionStatusBadge";
-import { LoadingSkeleton } from "@/components/ui";
+import { LoadingSkeleton, ProgressBar } from "@/components/ui";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { caseCountText, unknownName } from "@/lib/runs/sessionRules";
 import type { SessionListItem } from "@/types/measurement";
@@ -46,6 +46,7 @@ export function ManualSessionTable({
 function ManualSessionRow({ session }: Readonly<{ session: SessionListItem }>) {
   const { completed, total } = session.progress;
   const progressText = `${completed} dari ${total} jawaban terisi`;
+  const progressPercent = total > 0 ? (completed / total) * 100 : 0;
 
   return (
     <tr className="align-top hover:bg-slate-50/50">
@@ -62,7 +63,10 @@ function ManualSessionRow({ session }: Readonly<{ session: SessionListItem }>) {
       <td className="px-4 py-3">
         <SessionStatusBadge status={session.status} />
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">{progressText}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-slate-600 font-medium">
+        {progressText}
+        <ProgressBar percent={progressPercent} label="Persen jawaban terisi" className="mt-1.5" />
+      </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <Link
           href={`/manual-runs/${encodeURIComponent(session.id)}`}
