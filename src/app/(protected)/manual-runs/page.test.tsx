@@ -74,7 +74,7 @@ describe("ManualRunsPage (PBI-22 AC8, AC11)", () => {
     expect(replaceMock).toHaveBeenCalledWith("/forbidden");
   });
 
-  it("allows Contributor to view sessions, but hides 'Pengukuran Manual Baru' button", () => {
+  it("allows Contributor to view sessions, but hides 'Pengukuran manual baru' button", () => {
     signedInAs("contributor");
     useManualSessionsMock.mockReturnValue({
       status: "ready",
@@ -84,12 +84,12 @@ describe("ManualRunsPage (PBI-22 AC8, AC11)", () => {
 
     render(<ManualRunsPage />);
 
-    expect(screen.getByRole("heading", { name: "Pengukuran Manual" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pengukuran manual" })).toBeInTheDocument();
     expect(screen.getByText("Sesi LegalHero Batch 1")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Pengukuran Manual Baru" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Pengukuran manual baru" })).not.toBeInTheDocument();
   });
 
-  it("allows Admin to view sessions and shows 'Pengukuran Manual Baru' button", () => {
+  it("allows Admin to view sessions and shows 'Pengukuran manual baru' button", () => {
     signedInAs("admin");
     useManualSessionsMock.mockReturnValue({
       status: "ready",
@@ -99,11 +99,12 @@ describe("ManualRunsPage (PBI-22 AC8, AC11)", () => {
 
     render(<ManualRunsPage />);
 
-    expect(screen.getByRole("heading", { name: "Pengukuran Manual" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pengukuran manual" })).toBeInTheDocument();
     expect(screen.getByText("Sesi LegalHero Batch 1")).toBeInTheDocument();
-    const createBtn = screen.getByRole("link", { name: "Pengukuran Manual Baru" });
+    const createBtn = screen.getByRole("link", { name: "Pengukuran manual baru" });
     expect(createBtn).toBeInTheDocument();
     expect(createBtn).toHaveAttribute("href", "/manual-runs/new");
+    expect(createBtn).toHaveClass("bg-ink", "text-paper");
   });
 
   it("renders empty state when there are no manual sessions", () => {

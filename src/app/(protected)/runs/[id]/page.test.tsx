@@ -159,8 +159,11 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     render(<SessionDetailPage />);
 
     expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
+    const status = screen.getByRole("status", { name: "Status sesi" });
+    expect(status.tagName).toBe("OUTPUT");
+    expect(status).toHaveTextContent("Selesai");
     const facts = within(screen.getByRole("region", { name: "Ringkasan sesi" }));
-    expect(facts.getByText("Selesai")).toBeInTheDocument();
+    expect(facts.queryByText("Status")).not.toBeInTheDocument();
     expect(facts.getByText("Gemini")).toBeInTheDocument();
     expect(facts.getByText("Uji Coba")).toBeInTheDocument();
     expect(facts.getByText("Semua (Dev & Test)")).toBeInTheDocument();
@@ -203,8 +206,7 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     get.mockResolvedValue(session({ status: "paused", stop_reason: reason, stopped_at: "2026-11-03T02:20:00Z" }));
     render(<SessionDetailPage />);
 
-    const facts = within(await screen.findByRole("region", { name: "Ringkasan sesi" }));
-    expect(facts.getByText("Status").nextElementSibling).toHaveTextContent(label);
+    expect(await screen.findByRole("status", { name: "Status sesi" })).toHaveTextContent(label);
   });
 
   it("says when a session has been archived", async () => {
@@ -229,6 +231,31 @@ describe("SessionDetailPage header (PBI-11 AC6, AC10)", () => {
     expect(facts.getByText("Snapshot kasus").nextElementSibling).toHaveTextContent("Dibuat saat sesi mulai");
     expect(facts.getByText("Menunggu antrean")).toBeInTheDocument();
     expect(screen.getByText("Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.")).toBeInTheDocument();
+  });
+
+  it("marks the start and end of a session that has not run with an em dash", async () => {
+    get.mockResolvedValue(session({ status: "queued", started_at: null, finished_at: null }));
+    render(<SessionDetailPage />);
+
+    const facts = within(await screen.findByRole("region", { name: "Ringkasan sesi" }));
+    expect(facts.getByText("Mulai berjalan").nextElementSibling).toHaveTextContent(/^—$/);
+    expect(facts.getByText("Berakhir").nextElementSibling).toHaveTextContent(/^—$/);
+  });
+
+  it("groups the settings apart from the times of the session", async () => {
+    get.mockResolvedValue(session());
+    render(<SessionDetailPage />);
+
+    const settingsGroup = await screen.findByRole("group", { name: "Pengaturan" });
+    expect(settingsGroup.tagName).toBe("FIELDSET");
+    const settings = within(settingsGroup);
+    for (const label of ["Produk", "Tujuan", "Filter kasus", "Pengulangan", "Progres", "Snapshot kasus"]) {
+      expect(settings.getByText(label)).toBeInTheDocument();
+    }
+    const times = within(screen.getByRole("group", { name: "Waktu" }));
+    for (const label of ["Dibuat", "Mulai berjalan", "Berakhir"]) {
+      expect(times.getByText(label)).toBeInTheDocument();
+    }
   });
 
 it("updates the session status and failures without reloading the page", async () => {
@@ -264,19 +291,13 @@ it("updates the session status and failures without reloading the page", async (
       await Promise.resolve();
     });
 
-    expect(
-      within(screen.getByRole("region", { name: "Ringkasan sesi" }))
-        .getByText("Berjalan"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Status sesi" })).toHaveTextContent("Berjalan");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
 
-    expect(
-      within(screen.getByRole("region", { name: "Ringkasan sesi" }))
-        .getByText("Selesai dengan kegagalan"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Status sesi" })).toHaveTextContent("Selesai dengan kegagalan");
 
     expect(
       screen.getByText("1 panggilan gagal karena masalah teknis"),

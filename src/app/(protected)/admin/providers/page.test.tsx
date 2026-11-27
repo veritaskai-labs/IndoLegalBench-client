@@ -230,7 +230,7 @@ describe("ProvidersPage type filter and columns (PBI-23 AC6)", () => {
     expect(justisio.getByText("PT Justisio Contoh")).toBeInTheDocument();
     expect(justisio.getByText("30 Okt 2026")).toBeInTheDocument();
     expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual(
-      expect.arrayContaining(["Jenis", "Penyedia", "Didaftarkan"]),
+      expect.arrayContaining(["Jenis", "Penyedia / jenis API", "Didaftarkan"]),
     );
   });
 
@@ -304,6 +304,16 @@ describe("ProvidersPage manual product row (PBI-23 AC3)", () => {
     const cells = within(await row("LegalHero"));
     expect(cells.getAllByText("—")).toHaveLength(6);
     expect(cells.queryByText("Belum pernah diuji")).not.toBeInTheDocument();
+  });
+
+  it("draws every not-applicable dash in the same font, also inside the monospace model column", async () => {
+    list.mockResolvedValue([manual()]);
+    renderPage();
+
+    const cells = within(await row("LegalHero"));
+    for (const dash of cells.getAllByText("—")) {
+      expect(dash.parentElement).toHaveClass("font-sans");
+    }
   });
 
   // Until SCRUM-202 brings the manual form, Ubah would open automatic fields.
