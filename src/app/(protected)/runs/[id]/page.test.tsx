@@ -762,7 +762,7 @@ describe("SessionDetailPage grading (PBI-14 AC6, AC8)", () => {
     const results = await screen.findByRole("region", { name: "Hasil penilaian" });
     await user.click(await within(results).findByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
     // The start button stays off until the cost estimate for that judge is shown.
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));

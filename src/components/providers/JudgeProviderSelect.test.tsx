@@ -60,10 +60,10 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     const select = await screen.findByRole("combobox", {
-      name: /Provider Penilai/i,
+      name: /Penilai LLM/i,
     });
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "Pilih provider penilai",
+      "Pilih penilai LLM",
       "DeepSeek V4-Flash",
       "Gemini 2.5 Pro",
     ]);
@@ -79,7 +79,7 @@ describe("JudgeProviderSelect", () => {
     api.listJudgeOptions.mockResolvedValue([DEEPSEEK, GEMINI]);
     renderSelect();
     const select = await screen.findByRole("combobox", {
-      name: /Provider Penilai/i,
+      name: /Penilai LLM/i,
     });
 
     // Act
@@ -98,8 +98,18 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(
-      await screen.findByRole("combobox", { name: /Provider Penilai/i }),
+      await screen.findByRole("combobox", { name: /Penilai LLM/i }),
     ).toHaveValue(DEEPSEEK.id);
+  });
+
+  // Positive (SCRUM-375 C2): the same term as the sidebar, marked required, with the cost note read with the picker.
+  it("names the picker Penilai LLM, marks it required and explains where the cost goes", async () => {
+    api.listJudgeOptions.mockResolvedValue([DEEPSEEK]);
+    renderSelect();
+
+    const picker = await screen.findByRole("combobox", { name: "Penilai LLM (LLM judge)" });
+    expect(picker).toHaveAttribute("aria-required", "true");
+    expect(picker).toHaveAccessibleDescription("Biayanya memotong anggaran bulanan produk ini di halaman Produk AI.");
   });
 
   it("shows a loading note while the list is on its way", () => {
@@ -110,7 +120,7 @@ describe("JudgeProviderSelect", () => {
     renderSelect();
 
     // Assert
-    expect(screen.getByText("Memuat provider penilai…")).toBeInTheDocument();
+    expect(screen.getByText("Memuat penilai LLM…")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
@@ -123,10 +133,10 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(
-      await screen.findByText(/Belum ada provider yang aktif/),
+      await screen.findByText(/Belum ada penilai LLM yang aktif/),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "halaman Penyedia" }),
+      screen.getByRole("link", { name: "halaman Produk AI" }),
     ).toHaveAttribute("href", "/admin/providers");
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
@@ -141,7 +151,7 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(
-      await screen.findByText(/Minta Admin menambahkannya di halaman Penyedia/),
+      await screen.findByText(/Minta Admin menambahkannya di halaman Produk AI/),
     ).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
@@ -172,7 +182,7 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(
-      await screen.findByRole("combobox", { name: /Provider Penilai/i }),
+      await screen.findByRole("combobox", { name: /Penilai LLM/i }),
     ).toBeDisabled();
   });
 
@@ -197,7 +207,7 @@ describe("JudgeProviderSelect", () => {
     renderSelect({ value: GEMINI.id });
 
     // Assert
-    expect(await screen.findByRole("combobox", { name: /Provider Penilai/i })).toHaveValue(GEMINI.id);
+    expect(await screen.findByRole("combobox", { name: /Penilai LLM/i })).toHaveValue(GEMINI.id);
     expect(onChange).not.toHaveBeenCalled();
   });
 

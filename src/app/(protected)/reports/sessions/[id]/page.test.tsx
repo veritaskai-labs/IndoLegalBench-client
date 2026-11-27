@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
 import { httpGradingGateway } from "@/lib/grading/gradingApi";
 import { gradedAttempt, gradedCase, gradingResponse } from "@/test/gradingFixtures";
+import { resultMeta } from "@/test/resultMeta";
 import SessionResultsReportPage from "./page";
 
 // The page reads the id from the URL; useParams hands it over still encoded.
@@ -98,7 +99,7 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
 
     expect(await screen.findByRole("table", { name: "Skor sesi" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Skor per kasus" })).toHaveTextContent("KC-001");
-    expect(screen.getByText(/Versi rubrik v1/)).toBeInTheDocument();
+    expect(resultMeta("Rubrik")).toBe("Versi 1");
   });
 
   // Positif (K-11, SCRUM-291, TC_87): Viewer di Laporan melihat LLM judge yang menilai sesi ini.
@@ -112,7 +113,10 @@ describe("SessionResultsReportPage (PBI-14 AC8, Viewer under Laporan)", () => {
     render(<SessionResultsReportPage />);
 
     // Assert
-    expect(await screen.findByText("LLM judge: Judge Alfa · alfa-2")).toBeInTheDocument();
+    await screen.findByRole("table", { name: "Skor sesi" });
+    expect(resultMeta("Penilai LLM")).toBe("Judge Alfa · alfa-2");
+    // Laporan is also for roles that cannot open /admin/rubrics, so the version is not a link there.
+    expect(screen.queryByRole("link", { name: "Versi 1" })).not.toBeInTheDocument();
   });
 
   // PO: Viewer sees scores and, on a row, the grading detail and rubric version. The question and the

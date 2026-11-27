@@ -15,10 +15,15 @@ type Props = {
   api?: JudgeOptionsApi;
 };
 
-const BOX =
-  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900";
+const BOX = "h-9 w-full rounded-control border border-line bg-paper px-3 text-sm text-ink";
 
-/** Pemilih penilai (LLM judge) dari provider otomatis yang aktif di halaman Penyedia (PBI-14 AC1). */
+const COST_NOTE = "Biayanya memotong anggaran bulanan produk ini di halaman Produk AI.";
+
+/**
+ * Pemilih penilai LLM (LLM judge) dari produk otomatis yang aktif di halaman Produk AI (PBI-14 AC1).
+ * SCRUM-375 C2: satu istilah, "Penilai LLM (LLM judge)", dan nama halaman sama dengan sidebar; catatan
+ * biaya dibaca bersama pilihannya lewat aria-describedby.
+ */
 export function JudgeProviderSelect({
   value,
   onChange,
@@ -26,11 +31,12 @@ export function JudgeProviderSelect({
   api,
 }: Readonly<Props>) {
   const id = useId();
+  const noteId = `${id}-catatan`;
   const judges = useJudgeOptions(api);
   const auth = useAuth();
   const isAdmin = auth.status === "authenticated" && auth.user.role === "admin";
   // Pilihan yang sudah tidak aktif dikosongkan begitu daftarnya diketahui, supaya tampilan
-  // "Pilih provider penilai" dan nilai yang dikirim tidak berbeda (review client#92).
+  // "Pilih penilai LLM" dan nilai yang dikirim tidak berbeda (review client#92).
   const unavailable = judges.status === "ready" && isUnavailableJudge(value, judges.options);
   useEffect(() => {
     if (unavailable) onChange("");
@@ -38,39 +44,30 @@ export function JudgeProviderSelect({
 
   function control() {
     if (judges.status === "error") {
-      return (
-        <ErrorState
-          message="Gagal memuat provider penilai."
-          onRetry={judges.reload}
-          className="mt-1"
-        />
-      );
+      return <ErrorState message="Gagal memuat penilai LLM." onRetry={judges.reload} className="mt-1" />;
     }
     if (judges.status !== "ready") {
       return (
-        <output className={`${BOX} flex items-center gap-2 text-slate-500`}>
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
-          <span>Memuat provider penilai…</span>
+        <output className={`${BOX} mt-1 flex items-center gap-2 text-muted`}>
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
+          <span>Memuat penilai LLM…</span>
         </output>
       );
     }
     if (judges.options.length === 0) {
       return (
-        <p className="mt-1 text-sm text-slate-500">
-          Belum ada provider yang aktif.{" "}
+        <p className="mt-1 text-sm text-muted">
+          Belum ada penilai LLM yang aktif.{" "}
           {isAdmin ? (
             <>
               Tambahkan di{" "}
-              <Link
-                href="/admin/providers"
-                className="text-indigo-600 underline"
-              >
-                halaman Penyedia
+              <Link href="/admin/providers" className="text-accent-ink underline">
+                halaman Produk AI
               </Link>
               .
             </>
           ) : (
-            "Minta Admin menambahkannya di halaman Penyedia."
+            "Minta Admin menambahkannya di halaman Produk AI."
           )}
         </p>
       );
@@ -82,9 +79,11 @@ export function JudgeProviderSelect({
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
         required
-        className={BOX}
+        aria-required="true"
+        aria-describedby={noteId}
+        className={`${BOX} mt-1`}
       >
-        <option value="">Pilih provider penilai</option>
+        <option value="">Pilih penilai LLM</option>
         {judges.options.map((option) => (
           <option key={option.id} value={option.id}>
             {option.name}
@@ -96,9 +95,17 @@ export function JudgeProviderSelect({
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
-        Provider Penilai (LLM Judge) <span className="text-red-500">*</span>
-      </label>
+      <div className="flex items-baseline">
+        <label htmlFor={id} className="block text-sm font-medium text-ink">
+          Penilai LLM (LLM judge)
+        </label>
+        <span aria-hidden="true" className="ml-0.5 text-accent">
+          *
+        </span>
+      </div>
+      <p id={noteId} className="text-xs leading-4 text-muted">
+        {COST_NOTE}
+      </p>
       {control()}
     </div>
   );

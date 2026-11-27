@@ -21,8 +21,12 @@ export interface RunRow {
   isLatest: boolean;
   /** Judge yang menilai run ini (K-17), mis. "DeepSeek · deepseek-chat". */
   judgeLabel: string;
-  /** Total biaya panggilan judge yang tercatat; null bila tidak ada yang tercatat. */
-  costLabel: string | null;
+  /** Total biaya panggilan judge yang tercatat, mis. "Rp 1.166"; null bila tidak ada yang tercatat. */
+  cost: string | null;
+  /** "Penilaian N" (SCRUM-375 C5): urutan menurut waktu, yang pertama 1. */
+  number: number;
+  /** Hanya "completed" yang dianggap selesai; status lain tidak boleh tampil hijau. */
+  isCompleted: boolean;
 }
 
 /** Record atas enum kontrak, bukan switch: jenis baru dari server membuat tsc gagal di sini. */
@@ -50,15 +54,16 @@ function judgeText(judge: GradingJudge | null | undefined): string {
 }
 
 /**
- * "tercatat", bukan total pasti: server menjumlahkan hanya panggilan yang punya biaya (review
- * server#134), jadi panggilan judge yang gagal tanpa biaya tidak ikut.
+ * Jumlah biaya yang tercatat, bukan total pasti: server menjumlahkan hanya panggilan yang punya biaya
+ * (review server#134), jadi panggilan judge yang gagal tanpa biaya tidak ikut.
  */
 function costText(judge: GradingJudge | null | undefined): string | null {
   const cost = judge?.cost_idr;
-  return cost === null || cost === undefined ? null : `Biaya tercatat ${formatRupiah(cost)}`;
+  return cost === null || cost === undefined ? null : formatRupiah(cost);
 }
 
-export function toRunRow(run: RunSource): RunRow {
+/** number hanya diketahui dari seluruh riwayat; satu run tanpa riwayat dianggap yang pertama. */
+export function toRunRow(run: RunSource, number = 1): RunRow {
   return {
     id: run.grading_run_id,
     kindLabel: KIND_LABEL[run.kind],
@@ -67,7 +72,9 @@ export function toRunRow(run: RunSource): RunRow {
     triggeredAt: formatWib(run.triggered_at),
     isLatest: run.is_latest ?? true,
     judgeLabel: judgeText(run.judge),
-    costLabel: costText(run.judge),
+    cost: costText(run.judge),
+    number,
+    isCompleted: run.status === "completed",
   };
 }
 
@@ -84,9 +91,9 @@ function newestFirst(a: RunSource, b: RunSource): number {
   return second > first ? 1 : -1;
 }
 
-/** Terbaru di atas. Salinan dan sort yang stabil: yang sama waktunya tetap dalam urutan masuk. */
+/** Terbaru di atas, bernomor menurut umur (yang terlama 1). Salinan dan sort yang stabil. */
 export function toRunRows(runs: RunSource[]): RunRow[] {
-  return [...runs].sort(newestFirst).map(toRunRow);
+  return [...runs].sort(newestFirst).map((run, index) => toRunRow(run, runs.length - index));
 }
 
 /** Keterangan di atas skor saat yang tampil adalah run lama, supaya tidak dikira hasil terbaru. */

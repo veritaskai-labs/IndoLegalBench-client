@@ -139,9 +139,53 @@ describe("DataTable", () => {
   });
 
   // Review #125 (Rafa): a table should have a name for screen readers; an optional caption gives it one.
+  // Positive (SCRUM-375 A1): a footer that names the rows on the current page, also when it all fits on one page.
+  it("shows the summary with the range of the current page and follows the pager", async () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={data}
+        rowKey={(r) => r.id}
+        pageSize={2}
+        summary={({ from, to, total }) => `Baris ${from}–${to} dari ${total}`}
+      />,
+    );
+    expect(screen.getByText("Baris 1–2 dari 3")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+
+    expect(screen.getByText("Baris 3–3 dari 3")).toBeInTheDocument();
+  });
+
+  // Edge: no rows means no range to name; edge because from would be 1 and to 0, a "1–0" footer under the empty slot.
+  it("leaves the summary out when there are no rows", () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={[]}
+        rowKey={(r: Row) => r.id}
+        empty={<span>Kosong</span>}
+        summary={({ total }) => `Total ${total}`}
+      />,
+    );
+
+    expect(screen.queryByText(/Total/)).toBeNull();
+  });
+
   it("names the table with an optional screen-reader caption", () => {
     render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} caption="Daftar peserta" />);
     expect(screen.getByRole("table", { name: "Daftar peserta" })).toBeInTheDocument();
+  });
+
+  // Edge: a row marker drawn inside a cell stops at a fixed height, while the row grows when a cell wraps.
+  // A class on the row itself follows the real row height.
+  it("puts the optional row class on each row's own element", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} rowClassName={(r) => (r.id === "2" ? "marked" : undefined)} />);
+    const marked = within(screen.getByRole("table"))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => row.classList.contains("marked"));
+    expect(marked).toEqual([false, true, false]);
   });
 
   it("has no caption when none is given", () => {

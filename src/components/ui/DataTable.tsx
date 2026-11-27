@@ -33,6 +33,10 @@ type Props<T> = {
   empty?: ReactNode;
   /** Screen-reader name of the table, rendered as an sr-only caption. */
   caption?: string;
+  /** Footer text for the rows on the current page (1-based, inclusive), e.g. "Menampilkan 1–8 dari 8". Left out when there are no rows. */
+  summary?: (range: Readonly<{ from: number; to: number; total: number }>) => ReactNode;
+  /** Extra classes for one row, e.g. a marker that must follow the row's real height. */
+  rowClassName?: (row: T) => string | undefined;
   /** Sort to start with, e.g. one kept in the address. Read once, like the initial value of useState. */
   initialSort?: SortState | null;
   /** Told about every sort the user picks, so a page can keep it (for example in the address). */
@@ -64,6 +68,8 @@ export function DataTable<T>({
   pageSize = 10,
   empty,
   caption,
+  summary,
+  rowClassName,
   initialSort = null,
   onSortChange,
 }: Readonly<Props<T>>) {
@@ -141,7 +147,7 @@ export function DataTable<T>({
               </tr>
             ) : (
               paged.items.map((row) => (
-                <tr key={rowKey(row)} className="hover:bg-surface-hover">
+                <tr key={rowKey(row)} className={`hover:bg-surface-hover ${rowClassName?.(row) ?? ""}`}>
                   {columns.map((column) => (
                     <td key={column.key} className="h-[52px] border-t border-line-soft px-3 py-2.5 align-middle">
                       {column.cell(row)}
@@ -153,6 +159,15 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+      {summary && paged.total > 0 && (
+        <p className="text-[13px] text-muted">
+          {summary({
+            from: (paged.page - 1) * pageSize + 1,
+            to: (paged.page - 1) * pageSize + paged.items.length,
+            total: paged.total,
+          })}
+        </p>
+      )}
       {paged.lastPage > 1 && <Pager page={paged.page} lastPage={paged.lastPage} onPageChange={setPage} />}
     </div>
   );

@@ -81,7 +81,7 @@ describe("loadErrorMessage", () => {
     const message = loadErrorMessage(error);
 
     // Assert
-    expect(message).toBe("Gagal memuat daftar versi rubrik. Coba lagi.");
+    expect(message).toBe("Daftar versi rubrik gagal dimuat. Periksa koneksi, lalu coba lagi. Data rubrik tidak berubah.");
   });
 });
 

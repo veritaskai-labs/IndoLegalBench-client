@@ -9,6 +9,7 @@ import type { GradingGateway } from "@/lib/grading/gradingApi";
 import type { RubricsGateway } from "@/lib/rubrics/rubricsApi";
 import { PROGRESS_POLL_MS } from "@/hooks/useMeasurementProgress";
 import { gradeEstimate, gradingProgress, gradingResponse, gradingRunQueued, gradingRunSummary } from "@/test/gradingFixtures";
+import { resultMeta } from "@/test/resultMeta";
 import { makeFakeGateway, makeRubricSummary } from "@/test/rubricFixtures";
 import type { Role } from "@/types";
 import type { SessionStatus } from "@/types/measurement";
@@ -80,8 +81,15 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
     expect(await within(section).findByRole("table", { name: "Skor sesi" })).toBeInTheDocument();
     expect(within(section).getByRole("table", { name: "Skor per kasus" })).toBeInTheDocument();
-    expect(section).toHaveTextContent("Versi rubrik v1");
-    expect(section).toHaveTextContent("Dinilai 07 Nov 2026, 10.00 WIB");
+    expect(resultMeta("Rubrik", section)).toBe("Versi 1");
+    expect(resultMeta("Dinilai", section)).toBe("07 Nov 2026, 10.00 WIB");
+  });
+
+  // Positive (SCRUM-375 C4): an Admin can jump from the version to the rubric list.
+  it("links the rubric version to the rubric list for an Admin", async () => {
+    const { section } = renderSection({ results: () => Promise.resolve(gradingResponse()) });
+
+    expect(await within(section).findByRole("link", { name: "Versi 1" })).toHaveAttribute("href", "/admin/rubrics");
   });
 
   // Positif (K-11, SCRUM-291, TC_88): halaman detail sesi menyebut LLM judge yang menilai hasil yang tampil.
@@ -93,7 +101,8 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     const { section } = renderSection({ results });
 
     // Assert
-    expect(await within(section).findByText("LLM judge: DeepSeek · deepseek-chat")).toBeInTheDocument();
+    await within(section).findByRole("table", { name: "Skor sesi" });
+    expect(resultMeta("Penilai LLM", section)).toBe("DeepSeek · deepseek-chat");
   });
 
   // Edge: cases is optional in the contract (default_factory=list).
@@ -122,7 +131,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
     expect(await within(section).findByText("Sesi ini belum dinilai.")).toBeInTheDocument();
     await user.click(within(section).getByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
 
@@ -184,7 +193,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
     await user.click(await within(section).findByRole("button", { name: "Nilai" }));
     const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-    await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+    await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
     await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
     await user.click(dialog.getByRole("button", { name: "Nilai" }));
     await dialog.findByRole("alert");
@@ -215,7 +224,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
       const user = userEvent.setup();
       await user.click(await within(section).findByRole("button", { name: "Nilai" }));
       const dialog = within(screen.getByRole("dialog", { name: "Nilai sesi ini?" }));
-      await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+      await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
       await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
       await user.click(dialog.getByRole("button", { name: "Nilai" }));
       return { user, dialog };
@@ -283,7 +292,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
         const user = userEvent.setup();
         await user.click(await within(await within(section).findByRole("alert")).findByRole("button", { name: "Coba Nilai Ulang" }));
         const dialog = within(screen.getByRole("dialog", { name: "Coba nilai ulang sesi ini?" }));
-        await user.selectOptions(await dialog.findByLabelText(/Provider Penilai/), "judge-a");
+        await user.selectOptions(await dialog.findByLabelText(/Penilai LLM/), "judge-a");
         await dialog.findByRole("table", { name: "Perkiraan biaya penilaian" });
         return { user, dialog };
       }
@@ -435,7 +444,7 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
 
       await vi.advanceTimersByTimeAsync(PROGRESS_POLL_MS);
 
-      await waitFor(() => expect(section).toHaveTextContent("Versi rubrik v2"));
+      await waitFor(() => expect(resultMeta("Rubrik", section)).toBe("Versi 2"));
       expect(results).toHaveBeenCalledTimes(2);
       await waitFor(() => expect(runs).toHaveBeenCalledTimes(2));
       vi.useRealTimers();
@@ -491,8 +500,8 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
         runs: () => Promise.resolve(HISTORY),
         run,
       });
-      const list = await within(rendered.section).findByRole("list", { name: "Riwayat penilaian" });
-      const [, older] = within(list).getAllByRole("listitem");
+      const table = await within(rendered.section).findByRole("table", { name: "Riwayat penilaian" });
+      const [, , older] = within(table).getAllByRole("row");
       await user.click(within(older).getByRole("button"));
       return { ...rendered, user };
     }
@@ -542,8 +551,8 @@ describe("SessionGradingSection (PBI-14 AC6, AC8)", () => {
         listVersions: () => Promise.resolve([V1]),
         runs: () => Promise.resolve(HISTORY),
       });
-      const list = await within(section).findByRole("list", { name: "Riwayat penilaian" });
-      const [newer] = within(list).getAllByRole("listitem");
+      const table = await within(section).findByRole("table", { name: "Riwayat penilaian" });
+      const [, newer] = within(table).getAllByRole("row");
 
       // Act
       await user.click(within(newer).getByRole("button"));
