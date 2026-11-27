@@ -3,25 +3,40 @@
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { httpDrilldownGateway, type DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { drilldownErrorMessage } from "@/lib/reports/drilldownRules";
-import type { ReportCaseDetailRead, ReportResultCasesRead } from "@/types/reports";
+import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
+import { reportErrorMessage } from "@/lib/reports/reportRules";
+import type { ReportCaseDetailRead, ReportDetail, ReportResultCasesRead } from "@/types/reports";
 
 /**
- * Daftar kasus terakhir yang berhasil dimuat (SCRUM-378). Detail kasus butuh daftar yang sama untuk "Kasus
- * berikutnya"; dari halaman daftar, daftarnya dipakai ulang tanpa request ketiga. Hanya satu daftar yang diingat,
- * dan laporan beku setelah dibuat, jadi isinya tidak basi. Hanya kode dan skor: isi kasus tetap dijaga server.
+ * Ingatan satu entri untuk data drill-down yang beku (SCRUM-378). Berpindah antara daftar kasus dan detail kasus,
+ * atau dari satu kasus ke kasus berikutnya, tidak meminta ulang data yang sama. Laporan beku setelah dibuat (server
+ * tidak punya rute ubah laporan; status terbit tidak dipakai di sini), jadi isinya tidak basi. Hanya hasil yang
+ * berhasil yang diingat, jadi Coba lagi selalu bertanya ke server.
  */
-let lastCases: { key: string; data: ReportResultCasesRead } | null = null;
-
-/** Untuk tes: lupakan daftar yang diingat supaya tiap tes mulai bersih. */
-export function forgetResultCases(): void {
-  lastCases = null;
+function rememberLast<T>() {
+  let last: { key: string; data: T } | null = null;
+  return {
+    async load(key: string, fetch: () => Promise<T>): Promise<T> {
+      if (last?.key === key) return last.data;
+      const data = await fetch();
+      last = { key, data };
+      return data;
+    },
+    forget() {
+      last = null;
+    },
+  };
 }
 
-async function loadResultCases(key: string, load: () => Promise<ReportResultCasesRead>): Promise<ReportResultCasesRead> {
-  if (lastCases?.key === key) return lastCases.data;
-  const data = await load();
-  lastCases = { key, data };
-  return data;
+/** Daftar kasus terakhir: kode dan skor saja; isi kasus tetap dijaga server. */
+const casesMemory = rememberLast<ReportResultCasesRead>();
+/** Laporan terakhir, untuk judul di breadcrumb dan pindah produk (review #135: tidak diminta ulang per kasus). */
+const reportMemory = rememberLast<ReportDetail>();
+
+/** Untuk tes: lupakan semua yang diingat supaya tiap tes mulai bersih. */
+export function forgetDrilldownMemory(): void {
+  casesMemory.forget();
+  reportMemory.forget();
 }
 
 /**
@@ -32,7 +47,7 @@ export function useResultCases(reportId: string, resultId: string, gateway: Dril
   const key = `result-cases|${reportId}|${resultId}`;
   return useAsyncResource<ReportResultCasesRead>(
     key,
-    () => loadResultCases(key, () => gateway.cases(reportId, resultId)),
+    () => casesMemory.load(key, () => gateway.cases(reportId, resultId)),
     drilldownErrorMessage,
   );
 }
@@ -49,4 +64,14 @@ export function useResultCase(
     () => gateway.caseDetail(reportId, resultId, caseId),
     drilldownErrorMessage,
   );
+}
+
+/**
+ * Laporan sebagai konteks halaman drill-down: judul di breadcrumb dan pindah produk (SCRUM-346 A2). Diingat seperti
+ * daftar kasus, supaya melangkah melalui 30 kasus tidak meminta laporan yang sama 30 kali (review #135). Halaman
+ * laporan sendiri tetap memakai useReport tanpa ingatan, karena statusnya berubah saat diterbitkan.
+ */
+export function useDrilldownReport(reportId: string, gateway: ReportsGateway = httpReportsGateway) {
+  const key = `drilldown-report|${reportId}`;
+  return useAsyncResource<ReportDetail>(key, () => reportMemory.load(key, () => gateway.detail(reportId)), reportErrorMessage);
 }

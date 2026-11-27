@@ -8,8 +8,7 @@ import { type Column, DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
-import { useResultCases } from "@/hooks/useReportDrilldown";
-import { useReport } from "@/hooks/useReports";
+import { useDrilldownReport, useResultCases } from "@/hooks/useReportDrilldown";
 import { formatScore } from "@/lib/grading/scoreFormat";
 import { httpDrilldownGateway, type DrilldownGateway } from "@/lib/reports/drilldownApi";
 import {
@@ -188,7 +187,7 @@ export function ResultCaseList({
   reportsGateway?: ReportsGateway;
 }>) {
   const cases = useResultCases(reportId, resultId, gateway);
-  const report = useReport(reportId, reportsGateway);
+  const report = useDrilldownReport(reportId, reportsGateway);
   const products =
     report.status === "ready" && cases.status === "ready" ? sameSplitProducts(report.data, cases.data.score_split) : [];
 

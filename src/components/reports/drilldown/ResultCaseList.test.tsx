@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { forgetResultCases } from "@/hooks/useReportDrilldown";
+import { forgetDrilldownMemory } from "@/hooks/useReportDrilldown";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
@@ -13,7 +13,7 @@ import type { ReportDetail } from "@/types/reports";
 import { ResultCaseList } from "./ResultCaseList";
 
 // The last loaded case list is remembered for the case detail (SCRUM-378); every test starts without it.
-afterEach(forgetResultCases);
+afterEach(forgetDrilldownMemory);
 
 function fakeGateway(cases: DrilldownGateway["cases"]): DrilldownGateway {
   return { cases, caseDetail: vi.fn(), evidence: vi.fn(), evidenceFile: vi.fn() };

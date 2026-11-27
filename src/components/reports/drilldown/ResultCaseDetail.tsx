@@ -8,8 +8,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
-import { useResultCase } from "@/hooks/useReportDrilldown";
-import { useReport } from "@/hooks/useReports";
+import { useDrilldownReport, useResultCase } from "@/hooks/useReportDrilldown";
 import { formatWibDate } from "@/lib/datetime/formatWib";
 import { ATTEMPT_SOURCE_LABEL, reasonLabel } from "@/lib/grading/gradingView";
 import { formatScore } from "@/lib/grading/scoreFormat";
@@ -319,7 +318,7 @@ export function ResultCaseDetail({
   reportsGateway?: ReportsGateway;
 }>) {
   const detail = useResultCase(reportId, resultId, caseId, gateway);
-  const report = useReport(reportId, reportsGateway);
+  const report = useDrilldownReport(reportId, reportsGateway);
   const listHref = resultCasesHref(reportId, resultId, sort);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;

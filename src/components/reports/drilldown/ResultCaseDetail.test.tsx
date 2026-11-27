@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { forgetResultCases } from "@/hooks/useReportDrilldown";
+import { forgetDrilldownMemory } from "@/hooks/useReportDrilldown";
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 // The case list behind "Kasus berikutnya" is remembered between pages (SCRUM-378); every test starts without it.
-afterEach(forgetResultCases);
+afterEach(forgetDrilldownMemory);
 
 /** The report the case belongs to; by default it never answers, like a slow network. */
 function fakeReports(detail: ReportsGateway["detail"] = vi.fn().mockReturnValue(new Promise(() => {}))): ReportsGateway {
@@ -342,5 +342,29 @@ describe("ResultCaseDetail product comparison", () => {
 
     expect(await screen.findByRole("link", { name: "Kasus berikutnya ILB-003" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
+  });
+
+  // Review #135 (performance): "Kasus berikutnya" opens another case of the same report, which must not fetch the
+  // report again just for the breadcrumb title; only the new case is requested.
+  it("asks for the next case only, not again for the report or the list", async () => {
+    const reports = fakeReports(vi.fn().mockResolvedValue(firstReport({ title: "Perbandingan November" })));
+    const gateway: DrilldownGateway = {
+      cases: vi.fn().mockResolvedValue(resultCases({ cases: [caseScore(), caseScore({ case_id: "c-3", case_code: "ILB-003" })] })),
+      caseDetail: vi.fn().mockResolvedValue(caseDetail()),
+      evidence: vi.fn(),
+      evidenceFile: vi.fn(),
+    };
+    const view = render(<ResultCaseDetail reportId="r-1" resultId="res-1" caseId="c-1" gateway={gateway} reportsGateway={reports} />);
+    expect(await screen.findByRole("link", { name: "Perbandingan November" })).toBeInTheDocument();
+    await screen.findByRole("link", { name: "Kasus berikutnya ILB-003" });
+
+    view.unmount();
+    render(<ResultCaseDetail reportId="r-1" resultId="res-1" caseId="c-3" gateway={gateway} reportsGateway={reports} />);
+
+    expect(await screen.findByRole("link", { name: "Kasus sebelumnya ILB-001" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Perbandingan November" })).toBeInTheDocument();
+    expect(gateway.caseDetail).toHaveBeenCalledTimes(2);
+    expect(reports.detail).toHaveBeenCalledTimes(1);
+    expect(gateway.cases).toHaveBeenCalledTimes(1);
   });
 });

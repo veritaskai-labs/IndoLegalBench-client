@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { forgetResultCases } from "@/hooks/useReportDrilldown";
+import { forgetDrilldownMemory } from "@/hooks/useReportDrilldown";
 import { httpDrilldownGateway } from "@/lib/reports/drilldownApi";
 import { caseDetail, caseScore, resultCases } from "@/test/reportFixtures";
 
@@ -22,7 +22,7 @@ vi.mock("@/lib/reports/drilldownApi", () => ({
 afterEach(() => {
   search.params = new URLSearchParams();
   search.replace.mockReset();
-  forgetResultCases();
+  forgetDrilldownMemory();
 });
 
 describe("ResultCasePage (PBI-16 AC2)", () => {
