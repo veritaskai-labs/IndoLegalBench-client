@@ -107,14 +107,14 @@ describe("RubricVersionList (AC7 read-only list, SCRUM-375 A1–A3)", () => {
     expect(within(cards[0]).getByText("Versi 8")).toBeInTheDocument();
     expect(within(cards[0]).getByText("Aktif")).toBeInTheDocument();
     expect(within(cards[0]).getByText("Steven & Deanne · 27 Okt 2026")).toBeInTheDocument();
-    expect(screen.getByText("1–5 dari 8 versi")).toBeInTheDocument();
+    expect(screen.getByText("Menampilkan 1–5 dari 8 versi · terbaru di atas")).toBeInTheDocument();
 
     // Act: 8 versions fit one table page, so the only pager is the phone one
     await user.click(screen.getByRole("button", { name: "Berikutnya" }));
 
     // Assert
     expect(cardsOf()).toHaveLength(3);
-    expect(screen.getByText("6–8 dari 8 versi")).toBeInTheDocument();
+    expect(screen.getByText("Menampilkan 6–8 dari 8 versi · terbaru di atas")).toBeInTheDocument();
   });
 
   // Edge: the approver of a new version may still be TBA; edge because the date then has nobody to belong to.
