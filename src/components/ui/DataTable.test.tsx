@@ -177,6 +177,17 @@ describe("DataTable", () => {
     expect(screen.getByRole("table", { name: "Daftar peserta" })).toBeInTheDocument();
   });
 
+  // Edge: a row marker drawn inside a cell stops at a fixed height, while the row grows when a cell wraps.
+  // A class on the row itself follows the real row height.
+  it("puts the optional row class on each row's own element", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} rowClassName={(r) => (r.id === "2" ? "marked" : undefined)} />);
+    const marked = within(screen.getByRole("table"))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => row.classList.contains("marked"));
+    expect(marked).toEqual([false, true, false]);
+  });
+
   it("has no caption when none is given", () => {
     const { container } = render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} />);
     expect(container.querySelector("caption")).toBeNull();

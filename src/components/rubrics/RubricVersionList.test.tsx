@@ -42,15 +42,15 @@ describe("RubricVersionList (AC7 read-only list, SCRUM-375 A1–A3)", () => {
     expect(cells).toEqual(["Versi 1", "10 Nov 2026", "Aileen", "Steven & Deanne", "27 Okt 2026", "Aktif"]);
   });
 
-  // Positive (A1): the active version carries a marker, so it stands out from the grey "Tidak aktif" rows.
-  it("marks only the active row", () => {
+  // Positive (A1): the active version carries a green edge, so it stands out from the grey "Tidak aktif" rows.
+  // Edge: the edge sits on the row, not in a fixed-height cell; at 768 px a long approver name wraps
+  // and the row grew to 119 px while a 52 px edge covered less than half of it.
+  it("marks only the active row, on the row itself", () => {
     // Act
     render(<RubricVersionList versions={versions(3)} />);
 
     // Assert
-    const marked = rowsOf(screen.getByRole("table")).map(
-      (row) => within(row).getAllByRole("cell")[0].querySelector("[data-active='true']") !== null,
-    );
+    const marked = rowsOf(screen.getByRole("table")).map((row) => row.className.includes("inset_3px_0_0_var(--color-success)"));
     expect(marked).toEqual([true, false, false]);
   });
 
