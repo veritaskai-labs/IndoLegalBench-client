@@ -129,7 +129,9 @@ describe("RegulationTypeSelect", () => {
     // Arrange: globals.css memutihkan warna teks body saat OS memakai mode gelap (SCRUM-175).
     // jsdom tidak menghitung kelas Tailwind, jadi yang dibandingkan kelas warnanya.
     const user = userEvent.setup();
-    const warnaInput = CONTROL_CLASS.split(" ").find((kelas) => /^text-slate-\d+$/.test(kelas));
+    const warnaInput = CONTROL_CLASS.split(" ").find((kelas) =>
+      /^text-(?:ink|slate-\d+)$/.test(kelas),
+    );
     render(<Harness />);
 
     // Act
