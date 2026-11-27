@@ -15,9 +15,12 @@ export function sourceFiles(dir: string): SourceFile[] {
 }
 
 /** `path:line` for each line where `isViolation` holds. */
-export function violations(files: SourceFile[], isViolation: (line: string) => boolean): string[] {
+export function violations(
+  files: SourceFile[],
+  isViolation: (line: string, index: number, lines: string[]) => boolean,
+): string[] {
   return files.flatMap((file) =>
-    file.lines.flatMap((line, index) => (isViolation(line) ? [`${file.path}:${index + 1}`] : [])),
+    file.lines.flatMap((line, index) => (isViolation(line, index, file.lines) ? [`${file.path}:${index + 1}`] : [])),
   );
 }
 
