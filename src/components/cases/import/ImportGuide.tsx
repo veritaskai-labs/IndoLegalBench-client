@@ -5,7 +5,7 @@ const CODE = "rounded bg-slate-100 px-1 font-mono text-xs text-slate-800";
 /** Panduan menyiapkan CSV impor kasus di Google Sheets (PBI-4 AC5). Contoh selalu placeholder (L1). */
 export function ImportGuide() {
   return (
-    <details open className="rounded-lg border border-slate-200 bg-white p-4">
+    <details className="rounded-lg border border-slate-200 bg-white p-4">
       <summary className="cursor-pointer text-sm font-semibold text-slate-900">
         Panduan menyiapkan CSV di Google Sheets
       </summary>

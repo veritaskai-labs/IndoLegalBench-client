@@ -1,15 +1,12 @@
 "use client";
 
-import { useCallback, useState, type ChangeEvent, type SubmitEvent } from "react";
+import { useCallback, useRef, useState, type ChangeEvent, type SubmitEvent } from "react";
+import { Button } from "@/components/ui";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { ImportGateway } from "@/lib/cases/importApi";
 import { importErrorMessage, isFileRejected } from "@/lib/cases/importErrors";
 import { NO_FILE_MESSAGE, precheckFile } from "@/lib/cases/importRules";
 import type { ImportSummary } from "@/types/caseImport";
-
-const BUTTON =
-  "w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 " +
-  "disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto";
 
 const REJECTED_TITLE = "Berkas ditolak, tidak ada kasus yang disimpan.";
 
@@ -32,6 +29,7 @@ export function ImportUploadForm({
   onImported,
 }: Readonly<{ gateway: Pick<ImportGateway, "uploadCsv">; onImported: (summary: ImportSummary) => void }>) {
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const upload = useCallback(async () => {
     if (file === null) throw new PrecheckError(NO_FILE_MESSAGE);
@@ -58,30 +56,44 @@ export function ImportUploadForm({
 
   return (
     <form onSubmit={submit} className="space-y-3" noValidate>
-      <div className="space-y-1">
-        <label htmlFor="berkas-csv" className="block text-sm font-medium text-slate-800">
+      <div className="space-y-1.5">
+        <label htmlFor="berkas-csv" className="block text-sm font-medium text-ink">
           Berkas CSV
         </label>
         <input
+          ref={fileInputRef}
           id="berkas-csv"
           type="file"
           accept=".csv,text/csv"
           onChange={choose}
           disabled={pending}
-          className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-800"
+          className="sr-only"
         />
-        {file && <p className="break-all text-xs text-slate-500">Dipilih: {file.name}</p>}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={pending}
+          >
+            Pilih berkas
+          </Button>
+          <span className="break-all text-sm text-muted">
+            {file ? file.name : "Belum ada berkas yang terpilih"}
+          </span>
+        </div>
+        {file && <p className="break-all text-xs text-muted">Dipilih: {file.name}</p>}
       </div>
-      <button type="submit" className={BUTTON} disabled={pending}>
+      <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto">
         {pending ? "Mengimpor…" : "Impor"}
-      </button>
+      </Button>
       {pending && (
-        <output className="block text-sm text-slate-600">
+        <output className="block text-sm text-ink-soft">
           Mengimpor berkas. Ini bisa sampai 30 detik, jangan tutup halaman.
         </output>
       )}
       {shownError && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {shownError}
         </p>
       )}
