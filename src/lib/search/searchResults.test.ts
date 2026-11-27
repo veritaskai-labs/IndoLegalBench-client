@@ -61,6 +61,12 @@ describe("toGroups (SCRUM-352)", () => {
     expect(toGroups(response, "developer_ai")[0]?.rows[0]?.href).toBe("/cases/c-1");
   });
 
+  it("leaves out the case code when the server already used it as the label (case without a title)", () => {
+    const untitled = { id: "c-9", label: "UJI-DEV-01", archived: false, case_code: "UJI-DEV-01" };
+
+    expect(toGroups({ ...EMPTY, cases: [untitled] }, "admin")[0]?.rows[0]?.meta).toBeNull();
+  });
+
   it("labels sessions by type and follows the destination the server chose", () => {
     const response = {
       ...EMPTY,
