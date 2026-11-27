@@ -4,15 +4,14 @@ import { GUIDE_COLUMNS } from "@/lib/cases/importGuide";
 import { ImportGuide } from "./ImportGuide";
 
 describe("ImportGuide (AC5)", () => {
-  // Positive: the guide is open by default so a first-time importer reads it.
-  it("starts open under a heading the user can collapse", () => {
+  it("starts closed under a heading the user can expand", () => {
     // Arrange / Act
     const { container } = render(<ImportGuide />);
 
     // Assert
     const details = container.querySelector("details");
     expect(details).not.toBeNull();
-    expect(details).toHaveAttribute("open");
+    expect(details).not.toHaveAttribute("open");
     expect(within(details as HTMLElement).getByText("Panduan menyiapkan CSV di Google Sheets")).toBeInTheDocument();
   });
 
