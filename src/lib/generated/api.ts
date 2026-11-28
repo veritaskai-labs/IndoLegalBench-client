@@ -294,7 +294,7 @@ export interface paths {
         };
         /**
          * Daftar kasus lintas suite dengan pencarian dan filter
-         * @description List the cases of every suite, newest update first (PBI-4 AC3, SCRUM-339).
+         * @description List the cases of every suite, newest update first unless sorted (PBI-4 AC3, SCRUM-339/379).
          *
          *     Contributor and Admin only: rows are not masked, so Developer AI keeps the
          *     per-suite list that hides test cases.
@@ -2870,6 +2870,12 @@ export interface components {
             /** Case Code */
             case_code: string;
         };
+        /**
+         * CaseSortKey
+         * @description Kolom daftar kasus yang bermakna untuk diurutkan. Kolom Aksi dan hitungan tidak termasuk.
+         * @enum {string}
+         */
+        CaseSortKey: "case_code" | "title" | "status" | "suite" | "split_tag" | "updated_at";
         /**
          * CaseStatus
          * @description Server-owned lifecycle. Clients do not send this on create or update.
@@ -6471,6 +6477,11 @@ export interface components {
          */
         SessionValidity: "all" | "valid" | "invalid";
         /**
+         * SortOrder
+         * @enum {string}
+         */
+        SortOrder: "asc" | "desc";
+        /**
          * SplitTag
          * @description Dataset split stored on a version. Only dev and test are valid.
          * @enum {string}
@@ -7715,6 +7726,10 @@ export interface operations {
                 status?: components["schemas"]["CaseStatus"] | null;
                 /** @description Satu suite. Suite yang tidak ada memberi daftar kosong. */
                 suite_id?: string | null;
+                /** @description Kolom urutan. Hanya kolom data yang diizinkan; kolom Aksi dan hitungan (completeness_pct) ditolak 422. Kode kasus menjadi kunci kedua. */
+                sort?: components["schemas"]["CaseSortKey"];
+                /** @description Arah urutan. Kosong: waktu diubah dari yang terbaru, kolom lain naik. */
+                order?: components["schemas"]["SortOrder"] | null;
                 page?: number;
                 size?: number;
             };
