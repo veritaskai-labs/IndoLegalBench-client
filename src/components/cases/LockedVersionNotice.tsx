@@ -11,7 +11,7 @@ type Props = {
 };
 
 /** Penjelasan kenapa form terkunci, dan jalan keluarnya untuk kasus yang disetujui. */
-export function LockedVersionNotice({ approved, canStart, pending, error, onStart }: Props) {
+export function LockedVersionNotice({ approved, canStart, pending, error, onStart }: Readonly<Props>) {
   return (
     <section
       aria-label="Versi terkunci"

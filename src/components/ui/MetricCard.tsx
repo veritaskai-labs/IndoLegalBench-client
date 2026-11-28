@@ -16,7 +16,7 @@ export function MetricCard({
   sampleInfo,
   note,
   className = "",
-}: MetricCardProps) {
+}: Readonly<MetricCardProps>) {
 const calculatedPercent = (() => {
     if (typeof progressPercent === "number") {
       return Math.min(Math.max(progressPercent, 0), 100);

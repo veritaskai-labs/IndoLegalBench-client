@@ -14,7 +14,7 @@ export function ProviderCard({
   tosReviewed = false,
   keyEncrypted = false,
   className = "",
-}: ProviderCardProps) {
+}: Readonly<ProviderCardProps>) {
   return (
     <div
       className={`bg-white border border-slate-200 rounded p-4 flex flex-col justify-between text-xs ${className}`}

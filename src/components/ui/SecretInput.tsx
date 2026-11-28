@@ -28,7 +28,7 @@ export function SecretInput({
   error,
   autoComplete = "new-password",
   required = false,
-}: Props) {
+}: Readonly<Props>) {
   const id = useId();
   const [visible, setVisible] = useState(false);
   const describedBy =

@@ -19,7 +19,7 @@ export function FilterPopover({
   activeStatus: initialStatus,
   onClose,
   onApply,
-}: FilterPopoverProps) {
+}: Readonly<FilterPopoverProps>) {
   const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [status, setStatus] = useState<StatusFilter>(initialStatus);
 

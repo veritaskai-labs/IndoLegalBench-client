@@ -13,7 +13,7 @@ interface CreateUserModalProps {
   onSubmit: (payload: UserCreateRequest) => Promise<void>;
 }
 
-export function CreateUserModal({ isOpen, onClose, onSubmit }: CreateUserModalProps) {
+export function CreateUserModal({ isOpen, onClose, onSubmit }: Readonly<CreateUserModalProps>) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role | "">("");

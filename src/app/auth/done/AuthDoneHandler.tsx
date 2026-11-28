@@ -60,7 +60,7 @@ function readField(body: unknown, key: string): unknown {
   return undefined;
 }
 
-export function AuthDoneHandler({ initialErrorCode }: AuthDoneHandlerProps) {
+export function AuthDoneHandler({ initialErrorCode }: Readonly<AuthDoneHandlerProps>) {
   const router = useRouter();
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<ViewState>(
