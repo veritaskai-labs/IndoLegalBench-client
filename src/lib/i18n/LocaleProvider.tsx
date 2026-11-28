@@ -1,21 +1,31 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 import { DEFAULT_LOCALE, text, type Locale } from "./locale";
+import { mockLocale, setMockLocale } from "./localeMock";
 
-const LocaleContext = createContext<Locale>(DEFAULT_LOCALE);
+const LocaleContext = createContext<Locale | null>(null);
 
-/** Holds the language for the screens under it. The app root does not mount this yet (SCRUM-356). */
+/**
+ * Test stand-in that pins the language mock for the tree under it.
+ * Production does not mount this. SCRUM-356's real source will replace the mock.
+ */
 export function LocaleProvider({
   locale,
   children,
 }: Readonly<{ locale: Locale; children: ReactNode }>) {
+  const prior = useRef<Locale | null>(null);
+  if (prior.current === null) prior.current = mockLocale();
+  setMockLocale(locale);
+  useEffect(() => {
+    return () => setMockLocale(prior.current ?? DEFAULT_LOCALE);
+  }, []);
   return <LocaleContext.Provider value={locale}>{children}</LocaleContext.Provider>;
 }
 
-/** Indonesian until a provider says otherwise. */
+/** The mock language, or the language a test pinned on this tree. */
 export function useLocale(): Locale {
-  return useContext(LocaleContext);
+  return useContext(LocaleContext) ?? mockLocale();
 }
 
 /** The catalog entry for the language on screen. */

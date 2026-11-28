@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { getCaseReview, listAssignedReviews, submitVerdict } from "@/lib/reviews/reviewApi";
 import { session } from "@/test/authMock";
 import {
@@ -206,6 +207,22 @@ describe("ReviewAssignmentPage", () => {
     expect(await screen.findByText("Anda tidak bisa meninjau kasus yang Anda tulis.")).toBeInTheDocument();
     expect(screen.queryByRole("form", { name: "Penilaian Anda" })).not.toBeInTheDocument();
     expect(reviewMock).not.toHaveBeenCalled();
+  });
+
+  // The language source is still SCRUM-356. This test sets that mock to English.
+  it("shows the author blocker in English when the language mock is English", async () => {
+    listMock.mockResolvedValue([
+      makeAssigned({ assignment_id: ASSIGNMENT_ID, case: makeReviewCopy({ author_id: "u1" }) }),
+    ]);
+
+    render(
+      <LocaleProvider locale="en">
+        <ReviewAssignmentPage />
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByText("You cannot review a case you wrote.")).toBeInTheDocument();
+    expect(screen.queryByText("Anda tidak bisa meninjau kasus yang Anda tulis.")).not.toBeInTheDocument();
   });
 
   // Edge

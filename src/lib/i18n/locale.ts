@@ -1,14 +1,11 @@
 /**
- * Locale lookup for the case, review, product and measurement screens (SCRUM-357).
+ * Catalog lookup for the case, review, product and measurement screens (SCRUM-357).
  *
- * The codes are the account field from SCRUM-354: GET /me `language` and
- * PATCH /me/language accept only "en" and "id". SCRUM-356 will read that
- * field on load, pass it to LocaleProvider, and write a change with the PATCH.
- * This module does not call either endpoint and does not render a switch.
- *
- * The server default is "en". The screen stays Indonesian until that provider
- * is mounted, so the copy already on screen does not flip, and the generated
- * MeResponse type is left alone until server PR #177 is merged.
+ * The codes are "id" and "en" only. How the chosen language arrives (the
+ * switch, GET /me, PATCH /me/language) is SCRUM-356 and is not known yet, so
+ * screens read the mock in localeMock.ts. This file does not call the server
+ * and does not render a switch. The generated MeResponse type is left alone
+ * until that server change is merged.
  */
 
 export const LOCALES = ["id", "en"] as const;

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { messages } from "./locale";
+import { resetMockLocale, setMockLocale } from "./localeMock";
 import { LocaleProvider, useLocale, useText } from "./LocaleProvider";
 
 function LocaleProbe() {
@@ -8,6 +9,22 @@ function LocaleProbe() {
 }
 
 describe("LocaleProvider", () => {
+  afterEach(() => {
+    resetMockLocale();
+  });
+
+  // SCRUM-356 is unfinished. The screen reads a mock, and the mock does not call the server.
+  it("reads the mock language and does not ask the server", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("no network"));
+    setMockLocale("en");
+
+    render(<LocaleProbe />);
+
+    expect(screen.getByText("en")).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
   it("speaks Indonesian when nobody has chosen a language", () => {
     render(<LocaleProbe />);
     expect(screen.getByText("id")).toBeInTheDocument();

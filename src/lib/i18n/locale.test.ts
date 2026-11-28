@@ -7,7 +7,7 @@ const SAMPLE = {
 };
 
 describe("locale lookup", () => {
-  // Same two codes as GET /me language and PATCH /me/language (SCRUM-354). No third code, no "EN".
+  // Two codes only. The account field uses the same pair, but this lookup does not call it.
   it("offers Indonesian and English, and no other language", () => {
     expect(LOCALES).toEqual(["id", "en"]);
   });

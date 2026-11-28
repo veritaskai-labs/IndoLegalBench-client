@@ -13,34 +13,67 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useAssignedReview } from "@/hooks/useAssignedReview";
 import { useAuth } from "@/hooks/useAuth";
 import { useCaseReview } from "@/hooks/useCaseReview";
-import { BLOCKER_MESSAGE } from "@/lib/reviews/reviewLabels";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { blockerMessage } from "@/lib/reviews/reviewLabels";
 import { isReviewerRole, reviewBlocker, submittedVerdict } from "@/lib/reviews/verdictRules";
 import { decodeRouteParam } from "@/lib/routeParams";
 import type { AssignedReview, VerdictResult } from "@/types/review";
 
-const BACK_LINK = (
-  <Link href="/reviews" className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
-    Kembali ke antrean tinjauan
-  </Link>
-);
+const COPY = messages({
+  id: {
+    back: "Kembali ke antrean tinjauan",
+    queue: "Antrean tinjauan",
+    verdictTab: "Penilaian",
+    historyTab: "Riwayat",
+    sectionsLabel: "Bagian penilaian",
+    notAssigned: "Akun Anda tidak ditugaskan menilai kasus ini.",
+    loading: "Memuat penugasan…",
+    missingTitle: "Penugasan tidak ditemukan",
+    missingDescription:
+      "Penugasan ini sudah selesai, diganti, atau bukan milik Anda. Antrean hanya memuat kasus yang masih ditinjau.",
+  },
+  en: {
+    back: "Back to the review queue",
+    queue: "Review queue",
+    verdictTab: "Verdict",
+    historyTab: "History",
+    sectionsLabel: "Review sections",
+    notAssigned: "Your account is not assigned to review this case.",
+    loading: "Loading assignment…",
+    missingTitle: "Assignment not found",
+    missingDescription:
+      "This assignment is finished, was replaced, or is not yours. The queue only lists cases still under review.",
+  },
+});
+
+function BackToQueue() {
+  const copy = useText(COPY);
+  return (
+    <Link href="/reviews" className="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+      {copy.back}
+    </Link>
+  );
+}
 
 type ReviewTab = "verdict" | "history";
 
 const TAB_PREFIX = "review";
-const REVIEW_TABS: readonly TabItem<ReviewTab>[] = [
-  { id: "verdict", label: "Penilaian" },
-  { id: "history", label: "Riwayat" },
-];
 
 /** Satu penugasan yang sudah dimuat: isi kasus, form atau penilaian terkirim, dan peninjau kedua. */
 function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview }>) {
+  const copy = useText(COPY);
   const [result, setResult] = useState<VerdictResult | null>(null);
   const [tab, setTab] = useState<ReviewTab>("verdict");
   const [historyOpened, setHistoryOpened] = useState(false);
-  const copy = assignment.case;
+  const tabs: readonly TabItem<ReviewTab>[] = [
+    { id: "verdict", label: copy.verdictTab },
+    { id: "history", label: copy.historyTab },
+  ];
+  const caseCopy = assignment.case;
   const verdict = submittedVerdict(result, assignment.my_verdict);
   // Kunci muat ulang: setelah verdict terkirim, round bisa saja sudah selesai dan penilaian kedua terbuka.
-  const caseReview = useCaseReview(copy.case_id, true, result?.submitted_at ?? "");
+  const caseReview = useCaseReview(caseCopy.case_id, true, result?.submitted_at ?? "");
 
   function showTab(next: ReviewTab) {
     setTab(next);
@@ -49,9 +82,9 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <Breadcrumb items={[{ label: "Antrean tinjauan", href: "/reviews" }, { label: copy.case_code }]} />
+      <Breadcrumb items={[{ label: copy.queue, href: "/reviews" }, { label: assignment.case.case_code }]} />
 
-      <Tabs tabs={REVIEW_TABS} active={tab} onChange={showTab} label="Bagian penilaian" idPrefix={TAB_PREFIX} />
+      <Tabs tabs={tabs} active={tab} onChange={showTab} label={copy.sectionsLabel} idPrefix={TAB_PREFIX} />
       {/* Form tetap terpasang saat riwayat dibuka, supaya draf tidak hilang. */}
       <div
         role="tabpanel"
@@ -60,11 +93,11 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
         hidden={tab !== "verdict"}
         className="space-y-6"
       >
-        <ReviewCaseContent copy={copy} />
+        <ReviewCaseContent copy={caseCopy} />
         {/* K-09: penilaian sendiri dan peninjau kedua berdampingan. */}
         <div className="grid gap-6 md:grid-cols-2">
           {verdict === null ? (
-            <VerdictForm assignmentId={assignment.assignment_id} versionNo={copy.version_no} onSubmitted={setResult} />
+            <VerdictForm assignmentId={assignment.assignment_id} versionNo={caseCopy.version_no} onSubmitted={setResult} />
           ) : (
             <OwnVerdictNotice
               assignmentId={assignment.assignment_id}
@@ -83,7 +116,7 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
         aria-labelledby={tabElementId(TAB_PREFIX, "history")}
         hidden={tab !== "history"}
       >
-        {historyOpened && <CaseAuditHistory key={result?.submitted_at ?? ""} caseId={copy.case_id} />}
+        {historyOpened && <CaseAuditHistory key={result?.submitted_at ?? ""} caseId={caseCopy.case_id} />}
       </div>
     </div>
   );
@@ -91,6 +124,9 @@ function AssignmentReview({ assignment }: Readonly<{ assignment: AssignedReview 
 
 /** Halaman penilaian satu penugasan. Hanya reviewer yang ditugaskan; selain itu tidak ada permintaan ke server. */
 export default function ReviewAssignmentPage() {
+  const copy = useText(COPY);
+  // Blocker sentences follow the language mock. SCRUM-356 has no API yet.
+  const locale = useLocale();
   const assignmentId = decodeRouteParam(useParams<{ assignmentId: string }>().assignmentId);
   const auth = useAuth();
   const user = auth.status === "authenticated" ? auth.user : null;
@@ -102,13 +138,13 @@ export default function ReviewAssignmentPage() {
   if (!isReviewer) {
     return (
       <div className="space-y-3">
-        <EmptyState title={BLOCKER_MESSAGE.not_reviewer} description="Akun Anda tidak ditugaskan menilai kasus ini." />
-        {BACK_LINK}
+        <EmptyState title={blockerMessage("not_reviewer", locale)} description={copy.notAssigned} />
+        <BackToQueue />
       </div>
     );
   }
 
-  if (found.status === "loading") return <LoadingState label="Memuat penugasan…" />;
+  if (found.status === "loading") return <LoadingState label={copy.loading} />;
 
   if (found.status === "error") {
     return <ErrorState variant="card" message={found.message} onRetry={found.reload} />;
@@ -117,11 +153,8 @@ export default function ReviewAssignmentPage() {
   if (found.assignment === null) {
     return (
       <div className="space-y-3">
-        <EmptyState
-          title="Penugasan tidak ditemukan"
-          description="Penugasan ini sudah selesai, diganti, atau bukan milik Anda. Antrean hanya memuat kasus yang masih ditinjau."
-        />
-        {BACK_LINK}
+        <EmptyState title={copy.missingTitle} description={copy.missingDescription} />
+        <BackToQueue />
       </div>
     );
   }
@@ -130,8 +163,8 @@ export default function ReviewAssignmentPage() {
   if (blocker !== null) {
     return (
       <div className="space-y-3">
-        <ErrorState variant="card" message={BLOCKER_MESSAGE[blocker]} />
-        {BACK_LINK}
+        <ErrorState variant="card" message={blockerMessage(blocker, locale)} />
+        <BackToQueue />
       </div>
     );
   }
