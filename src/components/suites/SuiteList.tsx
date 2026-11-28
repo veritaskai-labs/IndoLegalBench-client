@@ -11,6 +11,7 @@ import {
   DataTable,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingSkeleton,
 } from "@/components/ui";
 import { formatRelativeTime, formatWib, formatWibDate } from "@/lib/datetime/formatWib";
@@ -118,89 +119,6 @@ function ActionIconButton({
           document.body,
         )}
     </div>
-  );
-}
-
-function EditIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-    </svg>
-  );
-}
-
-function ArchiveIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="18" height="4" rx="1" />
-      <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
-      <path d="M10 12h4" />
-    </svg>
-  );
-}
-
-function UnarchiveIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3" y="4" width="18" height="4" rx="1" />
-      <path d="M5 8v10a2 2 0 0 0 2 2h1" />
-      <path d="M19 8v10a2 2 0 0 1-2 2h-1" />
-      <path d="M12 20v-9" />
-      <path d="m8.5 14.5 3.5-3.5 3.5 3.5" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 6h18" />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-      <path d="M10 11v6" />
-      <path d="M14 11v6" />
-    </svg>
   );
 }
 
@@ -322,7 +240,7 @@ function buildSuiteColumns({
                 tooltip="Ubah judul atau deskripsi suite"
                 onClick={() => onEdit(suite)}
               >
-                <EditIcon />
+                <Icon name="manual" />
               </ActionIconButton>
               <ActionIconButton
                 ariaLabel={
@@ -337,16 +255,18 @@ function buildSuiteColumns({
                 }
                 onClick={() => onArchive(suite)}
               >
-                {suite.status === "archived" ? <UnarchiveIcon /> : <ArchiveIcon />}
+                <Icon name={suite.status === "archived" ? "aktifkan" : "arsipkan"} />
               </ActionIconButton>
-              <ActionIconButton
-                ariaLabel={`Hapus ${suite.name}`}
-                tooltip="Hapus suite"
-                tone="danger"
-                onClick={() => onDelete(suite)}
-              >
-                <TrashIcon />
-              </ActionIconButton>
+              {suite.status === "active" && (
+                <ActionIconButton
+                  ariaLabel={`Hapus ${suite.name}`}
+                  tooltip="Hapus suite"
+                  tone="danger"
+                  onClick={() => onDelete(suite)}
+                >
+                  <Icon name="hapus" />
+                </ActionIconButton>
+              )}
             </div>
           </div>
         );
