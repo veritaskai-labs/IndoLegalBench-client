@@ -1,8 +1,10 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
+import { LoadingState } from "./LoadingState";
 
 describe("Reusable States UI Components", () => {
   describe("LoadingSkeleton", () => {
@@ -94,6 +96,16 @@ describe("Reusable States UI Components", () => {
       expect(handleAction).toHaveBeenCalledTimes(1);
     });
 
+    it("uses the English empty copy when that language is on screen", () => {
+      render(
+        <LocaleProvider locale="en">
+          <EmptyState />
+        </LocaleProvider>,
+      );
+      expect(screen.getByText("No data found")).toBeInTheDocument();
+      expect(screen.getByText("Nothing is listed yet, or nothing matches the search.")).toBeInTheDocument();
+    });
+
     it("merender di dalam baris tabel saat prop inTable={true}", () => {
       render(
         <table>
@@ -137,6 +149,33 @@ describe("Reusable States UI Components", () => {
     it("tidak merender tombol coba lagi jika onRetry tidak disediakan", () => {
       render(<ErrorState message="Galat tanpa retry" />);
       expect(screen.queryByRole("button", { name: "Coba lagi" })).not.toBeInTheDocument();
+    });
+
+    it("names the card and the retry button in English", () => {
+      render(
+        <LocaleProvider locale="en">
+          <ErrorState variant="card" onRetry={() => {}} />
+        </LocaleProvider>,
+      );
+      expect(screen.getByText("Could not load data")).toBeInTheDocument();
+      expect(screen.getByText("Something went wrong while loading the data.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    });
+  });
+
+  describe("LoadingState", () => {
+    it("says Memuat until a caller passes its own label", () => {
+      render(<LoadingState />);
+      expect(screen.getByRole("status")).toHaveTextContent("Memuat…");
+    });
+
+    it("says Loading in English", () => {
+      render(
+        <LocaleProvider locale="en">
+          <LoadingState />
+        </LocaleProvider>,
+      );
+      expect(screen.getByRole("status")).toHaveTextContent("Loading…");
     });
   });
 });

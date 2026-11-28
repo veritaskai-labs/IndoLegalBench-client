@@ -1,4 +1,8 @@
+"use client";
+
 import React from "react";
+import { CHROME } from "@/lib/i18n/chrome";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import { Button } from "./Button";
 
 interface EmptyStateProps {
@@ -17,13 +21,16 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  title = "Tidak ada data ditemukan",
-  description = "Belum ada item yang terdaftar atau sesuai kriteria pencarian.",
+  title,
+  description,
   action,
   inTable = false,
   colSpan = 5,
   className = "",
 }: EmptyStateProps) {
+  const chrome = useText(CHROME);
+  const heading = title ?? chrome.emptyTitle;
+  const body = description ?? chrome.emptyDescription;
   const content = (
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
       {/* Ikon folder / data kosong */}
@@ -45,8 +52,8 @@ export function EmptyState({
         </svg>
       </div>
 
-      <h3 className="text-sm font-semibold text-ink mb-1">{title}</h3>
-      <p className="text-xs text-muted max-w-sm mb-4">{description}</p>
+      <h3 className="text-sm font-semibold text-ink mb-1">{heading}</h3>
+      <p className="text-xs text-muted max-w-sm mb-4">{body}</p>
 
       {action && (
         <Button onClick={action.onClick} disabled={action.disabled}>

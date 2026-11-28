@@ -1,4 +1,8 @@
+"use client";
+
 import { type ReactNode, useId } from "react";
+import { CHROME } from "@/lib/i18n/chrome";
+import { useText } from "@/lib/i18n/LocaleProvider";
 
 /** Props the field hands to its control so label, hint and error stay connected. */
 export type FieldControlProps = {
@@ -19,6 +23,7 @@ type Props = {
 
 /** Labelled form row. The render prop keeps the field free of any one control type. */
 export function FormField({ label, hint, error, required, optional, children }: Readonly<Props>) {
+  const chrome = useText(CHROME);
   const base = useId();
   const hintId = `${base}-hint`;
   const errorId = `${base}-error`;
@@ -40,7 +45,7 @@ export function FormField({ label, hint, error, required, optional, children }: 
         )}
         {optional && (
           <span className="ml-1.5 rounded-tag bg-surface px-1.5 py-px text-[11px] font-medium text-muted">
-            Opsional
+            {chrome.optional}
           </span>
         )}
       </label>

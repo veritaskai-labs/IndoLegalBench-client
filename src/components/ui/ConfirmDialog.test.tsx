@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 
 import { ConfirmDialog } from "./ConfirmDialog";
 
@@ -148,6 +149,29 @@ describe("ConfirmDialog (shared by Arsipkan, Batalkan and Terima apa adanya)", (
 
     expect(dialog.getByRole("button", { name: "Arsipkan" })).toBeDisabled();
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("names Cancel and Close in English when the caller does not override them", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="en">
+        <ConfirmDialog
+          title="Archive the session?"
+          confirmLabel="Archive"
+          busyLabel="Archiving…"
+          errorMessage={() => "Failed. Try again."}
+          onConfirm={vi.fn().mockRejectedValue(new Error("x"))}
+          onDone={vi.fn()}
+          onClose={vi.fn()}
+        >
+          <p>The data stays.</p>
+        </ConfirmDialog>
+      </LocaleProvider>,
+    );
+    const dialog = within(screen.getByRole("dialog", { name: "Archive the session?" }));
+    expect(dialog.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    await user.click(dialog.getByRole("button", { name: "Archive" }));
+    expect(await dialog.findByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 
   // jsdom has no showModal; a real browser opens it as a modal (focus trap, Escape).

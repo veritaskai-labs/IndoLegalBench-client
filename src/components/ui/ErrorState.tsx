@@ -1,4 +1,8 @@
+"use client";
+
 import React from "react";
+import { CHROME } from "@/lib/i18n/chrome";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import { Button } from "./Button";
 
 interface ErrorStateProps {
@@ -11,11 +15,13 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({
-  message = "Terjadi kesalahan saat memuat data.",
+  message,
   onRetry,
   variant = "banner",
   className = "",
 }: ErrorStateProps) {
+  const chrome = useText(CHROME);
+  const body = message ?? chrome.errorMessage;
   if (variant === "card") {
     return (
       <div
@@ -39,11 +45,11 @@ export function ErrorState({
             />
           </svg>
         </div>
-        <h4 className="text-sm font-semibold text-ink mb-1">Gagal Memuat Data</h4>
-        <p className="text-xs text-ink-soft max-w-sm mb-4">{message}</p>
+        <h4 className="text-sm font-semibold text-ink mb-1">{chrome.errorTitle}</h4>
+        <p className="text-xs text-ink-soft max-w-sm mb-4">{body}</p>
         {onRetry && (
           <Button size="sm" onClick={onRetry}>
-            Coba lagi
+            {chrome.retry}
           </Button>
         )}
       </div>
@@ -69,11 +75,11 @@ export function ErrorState({
             clipRule="evenodd"
           />
         </svg>
-        <span>{message}</span>
+        <span>{body}</span>
       </div>
       {onRetry && (
         <Button variant="ghost" size="sm" onClick={onRetry} className="shrink-0">
-          Coba lagi
+          {chrome.retry}
         </Button>
       )}
     </div>
