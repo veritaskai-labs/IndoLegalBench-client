@@ -7,8 +7,9 @@ const WRAPPER_LOOKBACK = 3;
 // Narrow on purpose, so they fit a phone without scrolling. Still checked by hand at 390px.
 const NARROW: Record<string, string> = {
   "src/components/grading/GradeEstimateTable.tsx": "two-column label/value list, values break-words",
-  "src/components/grading/SessionScoreSummary.tsx": "max-w-md, three short numeric columns",
   "src/components/reports/comparison/ProductMappingPanel.tsx": "max-w-md, two short columns",
+  "src/components/rubrics/LevelsEditor.tsx": "two fixed narrow columns (w-14, w-24) and one flexible column",
+  "src/components/suites/SuiteList.tsx": "the data table renders through DataTable; only the loading skeleton table is bare",
 };
 
 // The table component has no wrapper of its own; every caller must provide one.
@@ -17,9 +18,7 @@ const WRAPPED_BY_CALLER: Record<string, string> = {
 };
 
 // Reported bugs. Delete the entry once its fix lands; the last test fails until you do.
-const KNOWN: Record<string, string> = {
-  "src/components/suites/SuiteList.tsx": "SCRUM-?",
-};
+const KNOWN: Record<string, string> = {};
 
 const files = sourceFiles("src");
 const hasWrapperAbove = (index: number, lines: string[]) =>
