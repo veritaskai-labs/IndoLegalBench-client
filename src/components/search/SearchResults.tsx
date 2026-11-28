@@ -69,7 +69,7 @@ function ResultGroup({ group, onChoose, onLinkKeyDown }: Readonly<GroupProps>) {
               href={row.href}
               onClick={onChoose}
               onKeyDown={onLinkKeyDown}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-ink hover:bg-surface focus-visible:bg-surface focus-visible:outline-none"
+              className="flex items-center gap-2 px-4 py-2 text-sm text-ink hover:bg-surface focus-visible:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink"
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium">{row.label}</span>
