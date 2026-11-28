@@ -68,3 +68,26 @@ export function formatRelativeTime(iso: string): string {
 
   return formatWibDate(iso);
 }
+
+/**
+ * Waktu "Terakhir Kali Diubah" di daftar kasus (SCRUM-381): "40 menit lalu", "5 jam lalu", "Kemarin",
+ * "3 hari lalu", dan dari satu minggu ke atas tanggal dengan jam WIB. Dibuat terpisah dari formatRelativeTime
+ * karena SuiteList dan halaman suite memakai kata dan batas yang berbeda. Waktu di depan jam browser
+ * ditampilkan sebagai tanggal dan jam, bukan hitungan mundur. Teks yang bukan tanggal dikembalikan apa adanya.
+ */
+export function formatLastModified(iso: string): string {
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return iso;
+
+  const diffMs = Date.now() - time;
+  if (diffMs < 0) return formatWib(iso);
+  if (diffMs < MINUTE_MS) return "Baru saja";
+  if (diffMs < HOUR_MS) return `${Math.floor(diffMs / MINUTE_MS)} menit lalu`;
+  if (diffMs < DAY_MS) return `${Math.floor(diffMs / HOUR_MS)} jam lalu`;
+
+  const days = Math.floor(diffMs / DAY_MS);
+  if (days === 1) return "Kemarin";
+  if (days < 7) return `${days} hari lalu`;
+
+  return formatWib(iso);
+}
