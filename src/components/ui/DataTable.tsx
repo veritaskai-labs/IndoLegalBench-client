@@ -39,6 +39,12 @@ type Props<T> = {
   rowClassName?: (row: T) => string | undefined;
   /** Sort to start with, e.g. one kept in the address. Read once, like the initial value of useState. */
   initialSort?: SortState | null;
+  /**
+   * Sort held by the page, for rows the server already ordered. When given (null means no sort), the table shows
+   * the rows as they come, marks this sort on the header, and a header press only reports the next sort through
+   * onSortChange. Leave it out and the table sorts the rows itself.
+   */
+  controlledSort?: SortState | null;
   /** Told about every sort the user picks, so a page can keep it (for example in the address). */
   onSortChange?: (sort: SortState) => void;
   /** Reset to page 1 when rows change (default true). Set false to stay on the current page across reloads. */
@@ -85,11 +91,14 @@ export function DataTable<T>({
   summary,
   rowClassName,
   initialSort = null,
+  controlledSort,
   onSortChange,
   resetPageOnDataChange = true,
   onRowClick,
 }: Readonly<Props<T>>) {
-  const [sort, setSort] = useState<SortState | null>(initialSort);
+  const controlled = controlledSort !== undefined;
+  const [ownSort, setOwnSort] = useState<SortState | null>(initialSort);
+  const sort = controlled ? controlledSort : ownSort;
   const [page, setPage] = useState(1);
 
   // Back to page one when the rows really change (filter, refetch), but not on a re-render with the same rows.
@@ -104,6 +113,7 @@ export function DataTable<T>({
   const activeCompare = activeColumn?.compare;
   const activeSortValue = activeColumn?.sortValue;
   const sorted = useMemo(() => {
+    if (controlled) return rows;
     const key = sort?.key ?? "";
     return sortRows(
       rows,
@@ -111,13 +121,15 @@ export function DataTable<T>({
       activeCompare ? { [key]: activeCompare } : {},
       activeSortValue ? { [key]: activeSortValue } : {},
     );
-  }, [rows, sort, activeCompare, activeSortValue]);
+  }, [controlled, rows, sort, activeCompare, activeSortValue]);
   const paged = paginate(sorted, page, pageSize);
 
   function toggleSort(key: string) {
     const next = nextSort(sort, key);
-    setSort(next);
-    setPage(1);
+    if (!controlled) {
+      setOwnSort(next);
+      setPage(1);
+    }
     onSortChange?.(next);
   }
 

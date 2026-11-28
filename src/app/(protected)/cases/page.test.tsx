@@ -10,7 +10,10 @@ const { list, get, duplicate, auth, push, suites } = vi.hoisted(() => ({
   list: vi.fn(), get: vi.fn(), duplicate: vi.fn(), auth: vi.fn(), push: vi.fn(), suites: vi.fn(),
 }));
 
-vi.mock("@/lib/cases/caseDirectory", () => ({ listDirectoryCases: list }));
+vi.mock("@/lib/cases/caseDirectory", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/cases/caseDirectory")>()),
+  listDirectoryCases: list,
+}));
 vi.mock("@/lib/cases/caseApi", () => ({ getCase: get, duplicateCase: duplicate }));
 vi.mock("@/hooks/useAuth", () => ({ useAuth: auth }));
 vi.mock("@/hooks/useSuites", () => ({ useSuites: suites }));
@@ -30,7 +33,8 @@ const old: CaseDirectoryRow = {
   suite_id: archived.id, suite_name: archived.name, suite_archived: true,
 };
 
-const firstPage = { q: "", status: "", suiteId: "", page: 1 };
+const newestFirst = { key: "updated_at", direction: "desc" } as const;
+const firstPage = { q: "", status: "", suiteId: "", page: 1, sort: newestFirst };
 const casePage = (items: CaseDirectoryRow[], page = 1, total = items.length) => ({ items, total, page, size: 20 });
 
 beforeEach(() => {
@@ -69,7 +73,7 @@ describe("Daftar kasus", () => {
     await user.click(screen.getByRole("button", { name: "Draft" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "Cari kasus" }), { target: { value: "  kAs-02 " } });
     expect(await screen.findByText("Tidak ada kasus yang sesuai")).toBeInTheDocument();
-    expect(list).toHaveBeenLastCalledWith({ q: "kAs-02", suiteId: active.id, status: "draft", page: 1 });
+    expect(list).toHaveBeenLastCalledWith({ q: "kAs-02", suiteId: active.id, status: "draft", page: 1, sort: newestFirst });
 
     await user.click(screen.getByRole("button", { name: "Reset filter" }));
     expect(await screen.findByText(old.title)).toBeInTheDocument();
@@ -132,6 +136,180 @@ describe("Daftar kasus", () => {
     await user.click(await screen.findByRole("button", { name: "Berikutnya" }));
     expect(await screen.findByText(old.title)).toBeInTheDocument();
     expect(list.mock.calls).toEqual([[firstPage], [{ ...firstPage, page: 2 }], [firstPage]]);
+  });
+
+  // Positive: SCRUM-381, the table opens newest change first and says so on the header.
+  it("opens sorted by the last-modified column, newest first", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    await screen.findByText(source.title);
+    expect(screen.getByRole("columnheader", { name: /Terakhir Kali Diubah/ })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  // Positive: pressing a header asks the server for that sort and keeps keyword, filters and goes to page one.
+  it("asks the server to sort when a column header is pressed, keeping the filters", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<CasesPage />);
+    await screen.findByText(source.title);
+    await user.selectOptions(screen.getByLabelText("Pilih suite"), active.id);
+    await screen.findByText(source.title);
+
+    // Act
+    await user.click(within(screen.getByRole("columnheader", { name: /^Suite/ })).getByRole("button"));
+
+    // Assert
+    await screen.findByText(source.title);
+    expect(list).toHaveBeenLastCalledWith({
+      q: "", status: "", suiteId: active.id, page: 1, sort: { key: "suite_name", direction: "asc" },
+    });
+    expect(screen.getByRole("columnheader", { name: /^Suite/ })).toHaveAttribute("aria-sort", "ascending");
+  });
+
+  // Positive: a second press on the same header flips the direction.
+  it("flips to descending when the active column is pressed again", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<CasesPage />);
+    await screen.findByText(source.title);
+    await user.click(within(screen.getByRole("columnheader", { name: /^Status/ })).getByRole("button"));
+    await screen.findByText(source.title);
+
+    // Act
+    await user.click(within(screen.getByRole("columnheader", { name: /^Status/ })).getByRole("button"));
+
+    // Assert
+    await screen.findByText(source.title);
+    expect(list).toHaveBeenLastCalledWith({ ...firstPage, sort: { key: "status", direction: "desc" } });
+  });
+
+  // Edge: a new sort goes back to page one, because page 2 of another order is a different set of rows.
+  it("goes back to page one when the sort changes from page two", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    list.mockImplementation(async ({ page }) => casePage(page === 1 ? [source] : [old], page, 21));
+    render(<CasesPage />);
+    await user.click(await screen.findByRole("button", { name: "Berikutnya" }));
+    await screen.findByText("Halaman 2 dari 2");
+
+    // Act
+    await user.click(within(screen.getByRole("columnheader", { name: /ID Kasus/ })).getByRole("button"));
+
+    // Assert
+    expect(await screen.findByText("Halaman 1 dari 2")).toBeInTheDocument();
+    expect(list).toHaveBeenLastCalledWith({ ...firstPage, sort: { key: "case_code", direction: "asc" } });
+  });
+
+  // Edge: the sort is not a filter, so Reset filter leaves the chosen order alone.
+  it("keeps the chosen sort when the filters are reset", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<CasesPage />);
+    await screen.findByText(source.title);
+    await user.click(within(screen.getByRole("columnheader", { name: /^Judul/ })).getByRole("button"));
+    await user.click(screen.getByRole("button", { name: "Draft" }));
+    await screen.findByText(source.title);
+
+    // Act
+    await user.click(screen.getByRole("button", { name: "Reset filter" }));
+
+    // Assert
+    await screen.findByText(old.title);
+    expect(list).toHaveBeenLastCalledWith({ ...firstPage, sort: { key: "title", direction: "asc" } });
+  });
+
+  // Negative: the Aksi column has nothing meaningful to sort by.
+  it("offers sorting on the data columns but not on Aksi", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+    await screen.findByText(source.title);
+
+    // Assert
+    for (const name of [/ID Kasus/, /^Judul/, /^Suite/, /^Tag/, /^Status/, /Terakhir Kali Diubah/]) {
+      expect(within(screen.getByRole("columnheader", { name })).getByRole("button")).toBeInTheDocument();
+    }
+    expect(within(screen.getByRole("columnheader", { name: "Aksi" })).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  // Positive: the rows are shown in the server's order; the table does not re-sort the page itself.
+  it("keeps the order the server sent", async () => {
+    // Arrange
+    list.mockResolvedValue(casePage([old, source]));
+
+    // Act
+    render(<CasesPage />);
+
+    // Assert
+    await screen.findByText(old.title);
+    const titles = within(screen.getByRole("table")).getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[1].textContent);
+    expect(titles).toEqual([old.title, source.title]);
+  });
+
+  // Positive: the new column shows the relative time of the ticket, with the full WIB time as a tooltip.
+  it("shows the last-modified time as relative text with the full time as tooltip", async () => {
+    // Arrange
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-20T00:40:00Z"));
+
+    // Act
+    render(<CasesPage />);
+
+    // Assert
+    const cell = (await screen.findAllByText("40 menit lalu"))[0];
+    expect(cell).toHaveAttribute("title", "20 Nov 2026, 07.00 WIB");
+    vi.useRealTimers();
+  });
+
+  // Positive: SCRUM-381, the case code is plain text now; opening the editor is a separate control.
+  it("shows the case code as plain text, not as a link", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    const row = (await screen.findByText(source.title)).closest("tr") as HTMLElement;
+    const codeCell = within(row).getAllByRole("cell")[0];
+    expect(codeCell).toHaveTextContent("KAS-01");
+    expect(within(codeCell).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  // Positive: every row has Buka editor in the Aksi column, next to Pratinjau and Duplikat, pointing at its editor.
+  it("puts a Buka editor button with a tooltip next to Duplikat in the Aksi column", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    const row = (await screen.findByText(source.title)).closest("tr") as HTMLElement;
+    const actions = within(within(row).getAllByRole("cell").at(-1) as HTMLElement);
+    const open = actions.getByRole("link", { name: "Buka editor KAS-01" });
+    expect(open).toHaveAttribute("href", "/cases/source/edit");
+    expect(open).toHaveAttribute("title", "Buka editor kasus KAS-01");
+    expect(actions.getAllByRole("link").concat(actions.getAllByRole("button")).map((item) => item.textContent).sort())
+      .toEqual(["Buka editor", "Duplikat", "Pratinjau"]);
+  });
+
+  // Edge: a case in an archived suite still opens in the editor (read-only there), only Duplikat is withheld.
+  it("offers Buka editor for a case in an archived suite, without Duplikat", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    const row = (await screen.findByText(old.title)).closest("tr") as HTMLElement;
+    expect(within(row).getByRole("link", { name: "Buka editor KAS-02" })).toHaveAttribute("href", "/cases/old/edit");
+    expect(within(row).queryByRole("button", { name: "Duplikat KAS-02" })).not.toBeInTheDocument();
+  });
+
+  // Edge: the id is encoded in the address, like caseEditPath does everywhere else.
+  it("encodes the case id in the editor address", async () => {
+    // Arrange
+    list.mockResolvedValue(casePage([{ ...source, id: "a/b c" }]));
+
+    // Act
+    render(<CasesPage />);
+
+    // Assert
+    expect(await screen.findByRole("link", { name: "Buka editor KAS-01" })).toHaveAttribute("href", "/cases/a%2Fb%20c/edit");
   });
 
   it("shows the full read-only case and restores focus and filters on Escape", async () => {

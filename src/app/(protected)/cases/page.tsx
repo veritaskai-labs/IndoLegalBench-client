@@ -13,14 +13,25 @@ import { Pager } from "@/components/ui/Pager";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { useAuth } from "@/hooks/useAuth";
 import { useSuites } from "@/hooks/useSuites";
-import { listDirectoryCases, type CaseDirectoryQuery, type CaseDirectoryRow } from "@/lib/cases/caseDirectory";
+import {
+  DEFAULT_CASE_SORT,
+  listDirectoryCases,
+  type CaseDirectoryQuery,
+  type CaseDirectoryRow,
+  type CaseDirectorySort,
+  type CaseSortColumn,
+} from "@/lib/cases/caseDirectory";
 import { caseEditPath } from "@/lib/cases/casePaths";
 import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
 import { canCreateCase } from "@/lib/cases/permissions";
-import { formatRelativeTime, formatWib } from "@/lib/datetime/formatWib";
+import { formatLastModified, formatWib } from "@/lib/datetime/formatWib";
+import type { SortState } from "@/lib/ui/tableModel";
 import type { CaseStatus } from "@/types/case";
 
-const FIRST_PAGE: CaseDirectoryQuery = { q: "", status: "", suiteId: "", page: 1 };
+/** The page always asks with a sort, so unlike the API query it is never left out here. */
+type CaseListRequest = CaseDirectoryQuery & { sort: CaseDirectorySort };
+
+const FIRST_PAGE: CaseListRequest = { q: "", status: "", suiteId: "", page: 1, sort: DEFAULT_CASE_SORT };
 
 export default function CasesPage() {
   const auth = useAuth();
@@ -50,6 +61,10 @@ function CaseDirectory() {
   const refreshSuites = () => { active.reload(); archived.reload(); };
   const changePage = useCallback((page: number) => {
     setRequest((current) => ({ ...current, page }));
+  }, []);
+  // The server sorts, so a new sort asks for page one of the new order; keyword and filters stay.
+  const changeSort = useCallback((next: SortState) => {
+    setRequest((current) => ({ ...current, sort: { key: next.key as CaseSortColumn, direction: next.direction }, page: 1 }));
   }, []);
 
   useEffect(() => {
@@ -190,7 +205,8 @@ function CaseDirectory() {
             size="sm"
             onClick={() => {
               setQuery("");
-              setRequest(FIRST_PAGE);
+              // The order is not a filter, so it stays.
+              setRequest((current) => ({ ...FIRST_PAGE, sort: current.sort }));
             }}
             disabled={!canReset}
           >
@@ -203,6 +219,7 @@ function CaseDirectory() {
         request={request}
         revision={listRevision}
         onPageChange={changePage}
+        onSortChange={changeSort}
         onPreview={setPreview}
         onDuplicate={setCopy}
       />
@@ -240,20 +257,12 @@ function buildCaseColumns(
       key: "case_code",
       header: "ID Kasus",
       sortable: true,
-      cell: (row) => (
-        <Link
-          href={caseEditPath(row.id)}
-          className="font-mono text-xs font-semibold text-ink hover:underline"
-        >
-          {row.case_code}
-        </Link>
-      ),
+      cell: (row) => <span className="font-mono text-xs font-semibold text-ink">{row.case_code}</span>,
     },
     {
       key: "title",
       header: "Judul Pertanyaan",
       sortable: true,
-      sortValue: (row) => row.title || "Kasus tanpa judul",
       cell: (row) => (
         <span className="font-medium text-ink">
           {row.title || "Kasus tanpa judul"}
@@ -274,21 +283,22 @@ function buildCaseColumns(
     {
       key: "split_tag",
       header: "Tag",
+      sortable: true,
       cell: (row) => <SplitTagBadge tag={row.split_tag} />,
     },
     {
       key: "status",
       header: "Status",
+      sortable: true,
       cell: (row) => <CaseStatusBadge status={row.status} />,
     },
     {
       key: "updated_at",
-      header: "Terakhir Diubah",
+      header: "Terakhir Kali Diubah",
       sortable: true,
-      sortValue: (row) => row.updated_at,
       cell: (row) => (
         <span title={formatWib(row.updated_at)} className="text-ink-soft">
-          {formatRelativeTime(row.updated_at)}
+          {formatLastModified(row.updated_at)}
         </span>
       ),
     },
@@ -305,6 +315,14 @@ function buildCaseColumns(
           >
             Pratinjau
           </button>
+          <Link
+            href={caseEditPath(row.id)}
+            aria-label={`Buka editor ${row.case_code}`}
+            title={`Buka editor kasus ${row.case_code}`}
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
+          >
+            Buka editor
+          </Link>
           {!row.suite_archived && (
             <button
               type="button"
@@ -321,15 +339,16 @@ function buildCaseColumns(
   ];
 }
 
-function CaseResults({ request, revision, onPageChange, onPreview, onDuplicate }: Readonly<{
-  request: CaseDirectoryQuery;
+function CaseResults({ request, revision, onPageChange, onSortChange, onPreview, onDuplicate }: Readonly<{
+  request: CaseListRequest;
   revision: number;
   onPageChange: (page: number) => void;
+  onSortChange: (sort: SortState) => void;
   onPreview: (row: CaseDirectoryRow) => void;
   onDuplicate: (row: CaseDirectoryRow) => void;
 }>) {
   const resource = useAsyncResource(
-    JSON.stringify([revision, request.q, request.status, request.suiteId, request.page]),
+    JSON.stringify([revision, request.q, request.status, request.suiteId, request.page, request.sort]),
     () => listDirectoryCases(request),
     () => "Gagal memuat daftar kasus.",
   );
@@ -367,7 +386,8 @@ function CaseResults({ request, revision, onPageChange, onPreview, onDuplicate }
             rowKey={(row) => row.id}
             pageSize={20}
             caption="Daftar kasus"
-            initialSort={{ key: "updated_at", direction: "desc" }}
+            controlledSort={request.sort}
+            onSortChange={onSortChange}
           />
         </div>
       )}

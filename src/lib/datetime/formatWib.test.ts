@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatRelativeTime, formatWib, formatWibClock, formatWibDate } from "./formatWib";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatLastModified, formatRelativeTime, formatWib, formatWibClock, formatWibDate } from "./formatWib";
 
 
 describe("formatWib", () => {
@@ -201,5 +201,79 @@ describe("formatRelativeTime", () => {
 
   it("returns non-date strings unchanged", () => {
     expect(formatRelativeTime("bukan tanggal")).toBe("bukan tanggal");
+  });
+});
+
+describe("formatLastModified (SCRUM-381, kolom Terakhir Kali Diubah)", () => {
+  // Fixed clock: 28 Nov 2026 12:00 UTC is 19.00 WIB.
+  const NOW = "2026-11-28T12:00:00Z";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Positive: the ticket's own examples and the boundaries between each band.
+  it.each([
+    ["2026-11-28T11:59:40Z", "Baru saja"],
+    ["2026-11-28T11:20:00Z", "40 menit lalu"],
+    ["2026-11-28T11:01:00Z", "59 menit lalu"],
+    ["2026-11-28T11:00:00Z", "1 jam lalu"],
+    ["2026-11-28T07:00:00Z", "5 jam lalu"],
+    ["2026-11-27T12:01:00Z", "23 jam lalu"],
+    ["2026-11-27T12:00:00Z", "Kemarin"],
+    ["2026-11-26T12:01:00Z", "Kemarin"],
+    ["2026-11-26T12:00:00Z", "2 hari lalu"],
+    ["2026-11-25T12:00:00Z", "3 hari lalu"],
+    ["2026-11-21T12:01:00Z", "6 hari lalu"],
+  ])("shows %s as %s", (iso, expected) => {
+    // Arrange / Act
+    const text = formatLastModified(iso);
+
+    // Assert
+    expect(text).toBe(expected);
+  });
+
+  // Positive: from one week on, the date and the WIB time, so a reader can tell two edits on the same day apart.
+  it.each([
+    ["2026-11-21T12:00:00Z", "21 Nov 2026, 19.00 WIB"],
+    ["2026-10-03T07:05:00Z", "03 Okt 2026, 14.05 WIB"],
+  ])("shows %s as the WIB date and time after a week", (iso, expected) => {
+    // Arrange / Act
+    const text = formatLastModified(iso);
+
+    // Assert
+    expect(text).toBe(expected);
+  });
+
+  // Edge: a timestamp slightly ahead of this browser's clock must not read as "dalam X menit" or crash.
+  it("shows a time in the future as the WIB date and time", () => {
+    // Arrange / Act
+    const text = formatLastModified("2026-11-28T12:05:00Z");
+
+    // Assert
+    expect(text).toBe("28 Nov 2026, 19.05 WIB");
+  });
+
+  // Negative: text that is not a date is shown as it came.
+  it("returns non-date strings unchanged", () => {
+    // Arrange / Act
+    const text = formatLastModified("bukan tanggal");
+
+    // Assert
+    expect(text).toBe("bukan tanggal");
+  });
+
+  // Edge: the existing formatRelativeTime (SuiteList, suite page) keeps its own wording.
+  it("leaves formatRelativeTime unchanged", () => {
+    // Arrange / Act
+    const text = formatRelativeTime("2026-11-28T11:20:00Z");
+
+    // Assert
+    expect(text).toBe("40 menit yang lalu");
   });
 });
