@@ -154,19 +154,12 @@ export function SplitTagSection({
                 className="mt-1 cursor-pointer accent-accent"
               />
               <div className="min-w-0 flex-1">
-                <label
-                  htmlFor={id}
-                  className="block w-full cursor-pointer text-sm font-medium text-ink"
-                >
-                  {value}
+                <label htmlFor={id} className="block w-full cursor-pointer">
+                  <span className="block text-sm font-medium text-ink">{value}</span>
+                  <span id={hintId} className="block text-xs text-muted">
+                    {hint}
+                  </span>
                 </label>
-                <p
-                  id={hintId}
-                  onClick={() => document.getElementById(id)?.click()}
-                  className="cursor-pointer text-xs text-muted"
-                >
-                  {hint}
-                </p>
               </div>
             </div>
           );
