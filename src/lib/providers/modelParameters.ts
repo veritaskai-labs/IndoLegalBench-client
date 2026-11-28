@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { ModelParams } from "@/types/provider";
 
 /**
@@ -9,10 +10,20 @@ import type { ModelParams } from "@/types/provider";
  */
 export const MODEL_PARAMS_EXAMPLE = '{\n  "effort": "high",\n  "thinking": true\n}';
 
-export const MODEL_PARAMS_INVALID_JSON =
-  'Parameter model harus JSON yang valid, misalnya {"effort": "high"}.';
-export const MODEL_PARAMS_NOT_OBJECT =
-  'Parameter model harus berupa object dengan nama parameter, misalnya {"effort": "high"}.';
+const MODEL_PARAMS_ERRORS = messages({
+  id: {
+    invalidJson: 'Parameter model harus JSON yang valid, misalnya {"effort": "high"}.',
+    notObject: 'Parameter model harus berupa object dengan nama parameter, misalnya {"effort": "high"}.',
+  },
+  en: {
+    invalidJson: 'Model parameters must be valid JSON, for example {"effort": "high"}.',
+    notObject: 'Model parameters must be an object with parameter names, for example {"effort": "high"}.',
+  },
+});
+
+/** Pesan Indonesia. Uji yang sudah ada membandingkan dengan konstanta ini. */
+export const MODEL_PARAMS_INVALID_JSON = MODEL_PARAMS_ERRORS.id.invalidJson;
+export const MODEL_PARAMS_NOT_OBJECT = MODEL_PARAMS_ERRORS.id.notObject;
 
 export type ParsedModelParams = Readonly<{
   params: ModelParams | null;
@@ -24,16 +35,17 @@ function isObject(value: unknown): value is ModelParams {
 }
 
 /** Teks kosong dan {} berarti default penyedia, jadi dikirim sebagai null. */
-export function parseModelParams(text: string): ParsedModelParams {
-  if (text.trim() === "") return { params: null, error: null };
+export function parseModelParams(input: string, locale: Locale = DEFAULT_LOCALE): ParsedModelParams {
+  if (input.trim() === "") return { params: null, error: null };
 
+  const errors = text(MODEL_PARAMS_ERRORS, locale);
   let value: unknown;
   try {
-    value = JSON.parse(text);
+    value = JSON.parse(input);
   } catch {
-    return { params: null, error: MODEL_PARAMS_INVALID_JSON };
+    return { params: null, error: errors.invalidJson };
   }
-  if (!isObject(value)) return { params: null, error: MODEL_PARAMS_NOT_OBJECT };
+  if (!isObject(value)) return { params: null, error: errors.notObject };
   return { params: Object.keys(value).length > 0 ? value : null, error: null };
 }
 

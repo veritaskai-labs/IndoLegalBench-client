@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { Role } from "@/types";
 import type { JudgeProviderOption } from "@/types/provider";
 import { JudgeProviderSelect } from "./JudgeProviderSelect";
@@ -221,6 +222,18 @@ describe("JudgeProviderSelect", () => {
 
     // Assert
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("names the picker in English and leaves the judge name unchanged", async () => {
+    api.listJudgeOptions.mockResolvedValue([DEEPSEEK]);
+    render(
+      <LocaleProvider locale="en">
+        <JudgeProviderSelect value="" onChange={onChange} api={api as unknown as JudgeOptionsApi} />
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("combobox", { name: "LLM judge" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "DeepSeek V4-Flash" })).toBeInTheDocument();
   });
 });
 

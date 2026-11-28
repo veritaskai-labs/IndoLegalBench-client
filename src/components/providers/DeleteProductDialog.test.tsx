@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { deleteProduct } from "@/lib/providers/providerApi";
 import type { AiProduct } from "@/types/provider";
 import { DeleteProductDialog } from "./DeleteProductDialog";
@@ -103,5 +104,15 @@ describe("DeleteProductDialog (SCRUM-134 #2)", () => {
     const dialog = screen.getByRole("dialog", { name: "Hapus produk AI" });
     expect(dialog).toHaveTextContent(`Hapus ${name}?`);
     expect(dialog.querySelector("img")).toBeNull();
+  });
+
+  it("asks in English and keeps the product name", () => {
+    render(
+      <LocaleProvider locale="en">
+        <DeleteProductDialog product={product} onClose={vi.fn()} onDone={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Delete DeepSeek?" })).toBeInTheDocument();
   });
 });

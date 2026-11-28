@@ -6,6 +6,7 @@ import {
   formatRupiah,
   formatRupiahDown,
   formatRupiahInput,
+  measurementTypeLabel,
   parseRupiahInput,
 } from "./format";
 
@@ -69,6 +70,12 @@ describe("parseRupiahInput and formatRupiahInput", () => {
   it("puts thousand dots in a typed budget and keeps an empty field empty", () => {
     expect(formatRupiahInput("1500000")).toBe("1.500.000");
     expect(formatRupiahInput("")).toBe("");
+  });
+});
+
+describe("measurementTypeLabel", () => {
+  it("names an automatic product in English", () => {
+    expect(measurementTypeLabel("automatic", "en")).toBe("Automatic");
   });
 });
 

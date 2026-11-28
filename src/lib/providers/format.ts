@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { MeasurementType, ProviderType } from "@/types/provider";
 
 export const PROVIDER_TYPE_LABEL: Record<ProviderType, string> = {
@@ -6,10 +7,26 @@ export const PROVIDER_TYPE_LABEL: Record<ProviderType, string> = {
   anthropic_messages: "Anthropic Messages",
 };
 
+const MEASUREMENT_TYPE_COPY = messages({
+  id: {
+    automatic: "Otomatis",
+    manual: "Manual",
+  },
+  en: {
+    automatic: "Automatic",
+    manual: "Manual",
+  },
+});
+
+/** Label Indonesia. Pencarian dan uji kontrak membaca rekaman ini. */
 export const MEASUREMENT_TYPE_LABEL: Record<MeasurementType, string> = {
-  automatic: "Otomatis",
-  manual: "Manual",
+  automatic: MEASUREMENT_TYPE_COPY.id.automatic,
+  manual: MEASUREMENT_TYPE_COPY.id.manual,
 };
+
+export function measurementTypeLabel(type: MeasurementType, locale: Locale = DEFAULT_LOCALE): string {
+  return text(MEASUREMENT_TYPE_COPY, locale)[type];
+}
 
 const RUPIAH = new Intl.NumberFormat("id-ID", {
   style: "currency",

@@ -48,6 +48,12 @@ describe("parseModelParams", () => {
   it("parses the example it shows", () => {
     expect(parseModelParams(MODEL_PARAMS_EXAMPLE).error).toBeNull();
   });
+
+  it("explains invalid JSON in English and keeps the example key", () => {
+    expect(parseModelParams('{"effort": "high",}', "en").error).toBe(
+      'Model parameters must be valid JSON, for example {"effort": "high"}.',
+    );
+  });
 });
 
 describe("formatModelParams", () => {

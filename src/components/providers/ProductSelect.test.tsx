@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import type { ProductOptionsApi } from "@/hooks/useProductOptions";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { Role } from "@/types";
 import type { AiProductOption, ProductPurpose } from "@/types/provider";
 import { ProductSelect } from "./ProductSelect";
@@ -78,6 +79,23 @@ describe("ProductSelect, choosing a product", () => {
 
     const select = await screen.findByRole("combobox", { name: "Produk yang diukur" });
     expect(select).toHaveValue("m1");
+  });
+
+  it("labels the picker in English and leaves the product name unchanged", async () => {
+    api.listProductOptions.mockResolvedValue([JUSTISIO]);
+    render(
+      <LocaleProvider locale="en">
+        <ProductSelect
+          purpose="manual_entry"
+          value=""
+          onChange={onChange}
+          api={api as unknown as ProductOptionsApi}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("combobox", { name: "AI product" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Justisio" })).toBeInTheDocument();
   });
 });
 
