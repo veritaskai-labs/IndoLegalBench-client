@@ -11,8 +11,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     // vmThreads gives each test file a fresh VM context inside a reused worker instead of a new
-    // process with a new jsdom. Measured on 3695 tests, 4 workers, with coverage: 235 s -> 78 s,
-    // identical coverage. Before, building jsdom was 55% of the run (Vitest's own timing report).
+    // process with a new jsdom, so files still start clean but jsdom setup is not repeated per
+    // file. Measurements and trade-offs: #123.
     pool: "vmThreads",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
