@@ -7,7 +7,7 @@ const SAMPLE = {
 };
 
 describe("locale lookup", () => {
-  // PBI-26 AC1 names exactly two languages. SCRUM-356 owns the switch; this only names them.
+  // Same two codes as GET /me language and PATCH /me/language (SCRUM-354). No third code, no "EN".
   it("offers Indonesian and English, and no other language", () => {
     expect(LOCALES).toEqual(["id", "en"]);
   });

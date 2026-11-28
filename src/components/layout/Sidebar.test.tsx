@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { Me, Role } from "@/types";
 import { MobileNavProvider, useMobileNav } from "./MobileNav";
 import { PEEK_AFTER_MS, Sidebar } from "./Sidebar";
@@ -34,6 +35,21 @@ describe("Sidebar", () => {
     const { container } = render(<Sidebar />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("names the four modules in English and leaves the other menus in Indonesian", () => {
+    signedInAs("admin");
+
+    render(
+      <LocaleProvider locale="en">
+        <Sidebar />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: "AI products" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Suites and cases" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Laporan" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Produk AI" })).not.toBeInTheDocument();
   });
 
   it("shows only the links for the role", () => {

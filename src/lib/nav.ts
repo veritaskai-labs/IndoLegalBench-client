@@ -1,4 +1,5 @@
 import type { IconName } from "@/lib/icons";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { Role } from "@/types";
 
 export type NavItem = { label: string; href: string; icon: IconName; roles: Role[] };
@@ -51,11 +52,46 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export function navForRole(role: Role): NavGroup[] {
-  return NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => item.roles.includes(role)),
-  })).filter((group) => group.items.length > 0);
+/** Menus for the four modules in SCRUM-357. Other items stay Indonesian until SCRUM-358. */
+const MENU_LABEL = messages({
+  id: {
+    "/suites": "Suite dan kasus",
+    "/reviews": "Antrean tinjauan",
+    "/admin/reviews": "Review kasus",
+    "/admin/providers": "Produk AI",
+    "/runs": "Pengukuran otomatis",
+    "/manual-runs": "Pengukuran manual",
+    measurement: "Pengukuran",
+  },
+  en: {
+    "/suites": "Suites and cases",
+    "/reviews": "Review queue",
+    "/admin/reviews": "Case review",
+    "/admin/providers": "AI products",
+    "/runs": "Automatic measurement",
+    "/manual-runs": "Manual measurement",
+    measurement: "Measurement",
+  },
+});
+
+function localize(groups: readonly NavGroup[], locale: Locale): NavGroup[] {
+  const label = text(MENU_LABEL, locale);
+  return groups.map((group) => ({
+    heading: group.heading === "Pengukuran" ? label.measurement : group.heading,
+    items: group.items.map((item) => {
+      const translated = label[item.href as keyof typeof label];
+      return translated === undefined ? item : { ...item, label: translated };
+    }),
+  }));
+}
+
+export function navForRole(role: Role, locale: Locale = DEFAULT_LOCALE): NavGroup[] {
+  return localize(NAV_GROUPS, locale)
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.roles.includes(role)),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 const isAtOrBelow = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);

@@ -1,9 +1,14 @@
 /**
  * Locale lookup for the case, review, product and measurement screens (SCRUM-357).
  *
- * SCRUM-356 owns the language switch, the saved preference, and PBI-26 AC1's
- * English default. Until that lands, the active language stays Indonesian so
- * the screens keep the copy they already show. Both languages are in the catalogs.
+ * The codes are the account field from SCRUM-354: GET /me `language` and
+ * PATCH /me/language accept only "en" and "id". SCRUM-356 will read that
+ * field on load, pass it to LocaleProvider, and write a change with the PATCH.
+ * This module does not call either endpoint and does not render a switch.
+ *
+ * The server default is "en". The screen stays Indonesian until that provider
+ * is mounted, so the copy already on screen does not flip, and the generated
+ * MeResponse type is left alone until server PR #177 is merged.
  */
 
 export const LOCALES = ["id", "en"] as const;

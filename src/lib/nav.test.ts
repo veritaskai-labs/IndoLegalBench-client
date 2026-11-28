@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { Locale } from "@/lib/i18n/locale";
 import type { Role } from "@/types";
 import { isNavItemActive, navForRole } from "./nav";
 
-function labels(role: Role) {
-  return navForRole(role).flatMap((group) =>
+function labels(role: Role, locale?: Locale) {
+  return navForRole(role, locale).flatMap((group) =>
     group.items.map((item) => item.label),
   );
 }
@@ -55,6 +56,28 @@ describe("navForRole", () => {
       "",
       "Persiapan",
       "Pengukuran",
+    ]);
+  });
+
+  // SCRUM-357: menus for cases, review, products and measurement. The other
+  // items stay Indonesian until SCRUM-358. Rubrik penilaian is penilaian.
+  it("translates only the case, review, product and measurement menus", () => {
+    expect(labels("admin", "en")).toEqual([
+      "Beranda",
+      "Suites and cases",
+      "Case review",
+      "Rubrik penilaian",
+      "AI products",
+      "Automatic measurement",
+      "Manual measurement",
+      "Laporan",
+      "Pengguna",
+      "Riwayat aktivitas",
+    ]);
+    expect(navForRole("contributor", "en").map((group) => group.heading)).toEqual([
+      "",
+      "Persiapan",
+      "Measurement",
     ]);
   });
 
