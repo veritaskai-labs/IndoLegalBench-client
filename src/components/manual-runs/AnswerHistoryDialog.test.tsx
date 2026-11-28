@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -170,5 +171,24 @@ describe("AnswerHistoryDialog (AC5)", () => {
 
     // Assert
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AnswerHistoryDialog English", () => {
+  it("names the history in English and leaves the old answer unchanged", async () => {
+    render(
+      <LocaleProvider locale="en">
+        <AnswerHistoryDialog
+          gateway={{ getHistory: vi.fn().mockResolvedValue([entry()]) } as unknown as ManualAnswerGateway}
+          sessionId="sesi-1"
+          snapshotItemId="snap-1"
+          attemptNo={2}
+          currentUserId="u-2"
+          onClose={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(await screen.findByRole("dialog", { name: "History for attempt 2" })).toBeInTheDocument();
+    expect(screen.getByText("Jawaban lama")).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -398,5 +399,24 @@ describe("EvidencePanel delete and read-only", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Bukti tidak ditemukan. Mungkin sudah dihapus.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText("https://contoh.id/e-1")).toBeInTheDocument();
+  });
+});
+
+describe("EvidencePanel English", () => {
+  it("says to save the answer first, in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <EvidencePanel
+          gateway={fake([]) as unknown as ManualAnswerGateway}
+          sessionId="sesi-1"
+          snapshotItemId="snap-1"
+          attemptNo={1}
+          evidenceCount={0}
+          slotFilled={false}
+          canEdit
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Save the answer first before adding evidence.")).toBeInTheDocument();
   });
 });

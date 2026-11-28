@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -989,5 +990,18 @@ describe("SessionDetailPage live answers (PBI-11 AC9, SCRUM-262)", () => {
 
     expect(screen.getAllByText("Isi kasus test disembunyikan untuk Developer AI.").length).toBeGreaterThan(0);
     expect(screen.queryByText("Jawaban mentah percobaan 1")).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionDetailPage English", () => {
+  it("names the session summary in English and leaves the session label unchanged", async () => {
+    get.mockResolvedValue(session());
+    render(
+      <LocaleProvider locale="en">
+        <SessionDetailPage />
+      </LocaleProvider>,
+    );
+    expect(await screen.findByRole("heading", { level: 1, name: "Uji Coba Gemini" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Session summary" })).toBeInTheDocument();
   });
 });

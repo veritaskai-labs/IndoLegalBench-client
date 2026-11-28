@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { AnswerDraft } from "@/lib/runs/manualAnswerRules";
@@ -216,5 +217,17 @@ describe("AnswerFields time (AC7)", () => {
 
     // Assert
     expect(field).toBeDisabled();
+  });
+});
+
+describe("AnswerFields English", () => {
+  it("names Preview in English and leaves the typed answer unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <AnswerFields attemptNo={2} draft={draft({ answerMd: "Jawaban **tebal**" })} errors={{}} disabled={false} onChange={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Preview" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Answer for attempt 2" })).toHaveValue("Jawaban **tebal**");
   });
 });

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ManualRunsPage from "./page";
 import type { Role } from "@/types";
@@ -131,5 +132,19 @@ describe("ManualRunsPage (PBI-22 AC8, AC11)", () => {
     render(<ManualRunsPage />);
 
     expect(screen.getByText("Gagal memuat daftar sesi.")).toBeInTheDocument();
+  });
+});
+
+describe("ManualRunsPage English", () => {
+  it("names the page in English and leaves the session label unchanged", async () => {
+    signedInAs("admin");
+    useManualSessionsMock.mockReturnValue({ status: "ready", data: MOCK_SESSIONS, reload: vi.fn() });
+    render(
+      <LocaleProvider locale="en">
+        <ManualRunsPage />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Manual measurement" })).toBeInTheDocument();
+    expect(await screen.findByText("Sesi LegalHero Batch 1")).toBeInTheDocument();
   });
 });

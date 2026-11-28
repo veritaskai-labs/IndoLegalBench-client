@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -373,5 +374,20 @@ describe("SessionControls: Coba ulang yang gagal (PBI-12 AC3)", () => {
     renderControls(session({ ...withFailures, ...ACCEPTED }));
 
     expect(screen.queryByRole("button", { name: "Coba ulang yang gagal" })).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionControls English", () => {
+  it("names Accept as-is in English and keeps the session label in the dialog", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <SessionControls session={session()} role="admin" viewerId="u-1" onChanged={vi.fn()} />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Accept as-is" }));
+    expect(screen.getByRole("dialog", { name: "Accept the session as-is?" })).toHaveTextContent("Run November");
   });
 });

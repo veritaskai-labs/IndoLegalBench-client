@@ -65,11 +65,13 @@ const ATTEMPT_SUMMARY = messages({
     none: "Belum ada percobaan",
     base: "{succeeded} dari {total} berhasil",
     failed: "{base} · {failed} gagal teknis",
+    failedOne: "{base} · {failed} gagal teknis",
   },
   en: {
     none: "No attempts yet",
     base: "{succeeded} of {total} succeeded",
     failed: "{base} · {failed} technical failures",
+    failedOne: "{base} · {failed} technical failure",
   },
 });
 
@@ -102,7 +104,7 @@ export function attemptSummary(attempts: readonly AttemptResult[], locale: Local
   const succeeded = attempts.filter((a) => a.status === "succeeded").length;
   const failed = attempts.filter((a) => a.status === "technical_failure").length;
   const base = fill(copy.base, { succeeded, total: attempts.length });
-  return failed > 0 ? fill(copy.failed, { base, failed }) : base;
+  return failed > 0 ? fill(failed === 1 ? copy.failedOne : copy.failed, { base, failed }) : base;
 }
 
 /** Hanya masked yang menentukan teks pengganti; Developer AI dan Admin membaca jawaban dev dengan cara yang sama. */

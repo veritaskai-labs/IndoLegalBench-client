@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,5 +75,21 @@ describe("CancelSessionDialog (PBI-12 AC7)", () => {
     await user.click(dialog.getByRole("button", { name: "Batalkan sesi" }));
 
     expect(await dialog.findByRole("alert")).toHaveTextContent("Status sesi sudah berubah. Muat ulang halaman.");
+  });
+});
+
+describe("CancelSessionDialog English", () => {
+  it("offers Back instead of a word that matches the cancel action", () => {
+    render(
+      <LocaleProvider locale="en">
+        <CancelSessionDialog
+          session={{ id: "s-1", label: "Run November", progress: { completed: 1, total: 2, completed_cases: 1, total_cases: 2, percent_cases_complete: 50 } }}
+          onCancelled={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Cancel the session?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
   });
 });

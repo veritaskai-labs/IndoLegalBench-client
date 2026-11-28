@@ -1,4 +1,5 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateManualSessionForm } from "./CreateManualSessionForm";
@@ -380,5 +381,20 @@ describe("CreateManualSessionForm (PBI-22 AC1)", () => {
     }
 
     expect(mockCreateManualSession).not.toHaveBeenCalled();
+  });
+});
+
+describe("CreateManualSessionForm English", () => {
+  it("names the submit button in English and leaves the suite name unchanged", () => {
+    useSuitesMock.mockReturnValue({ status: "ready", suites: MOCK_SUITES, reload: vi.fn() });
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <CreateManualSessionForm />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Create measurement session" })).toBeDisabled();
+    expect(screen.getByText("Suite Hukum Pidana")).toBeInTheDocument();
   });
 });

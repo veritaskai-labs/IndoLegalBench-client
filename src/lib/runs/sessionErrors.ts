@@ -6,10 +6,12 @@ const COUNT = new Intl.NumberFormat("id-ID");
 const SUMMARY = messages({
   id: {
     none: "Tidak ada panggilan yang gagal",
+    one: "{count} panggilan gagal karena masalah teknis",
     some: "{count} panggilan gagal karena masalah teknis",
   },
   en: {
     none: "No calls failed",
+    one: "{count} call failed because of a technical problem",
     some: "{count} calls failed because of a technical problem",
   },
 });
@@ -63,7 +65,7 @@ export function failedAttempts(cases: readonly SessionCaseResult[]): FailedAttem
 export function errorSummaryText(count: number, locale: Locale = DEFAULT_LOCALE): string {
   const copy = text(SUMMARY, locale);
   if (count === 0) return copy.none;
-  return fill(copy.some, { count: COUNT.format(count) });
+  return fill(count === 1 ? copy.one : copy.some, { count: COUNT.format(count) });
 }
 
 /** model_version null: produk menjawab tanpa menyebut versinya, atau gagal sebelum sempat. */

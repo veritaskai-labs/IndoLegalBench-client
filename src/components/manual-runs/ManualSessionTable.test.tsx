@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { describe, expect, it } from "vitest";
 import { ManualSessionTable } from "./ManualSessionTable";
 import type { SessionListItem } from "@/types/measurement";
@@ -110,5 +111,17 @@ describe("ManualSessionTable (PBI-22 AC8, AC10, AC11)", () => {
   it("renders loading skeletons when loading is true", () => {
     const { container } = render(<ManualSessionTable sessions={[]} loading={true} />);
     expect(container.querySelectorAll(".animate-pulse")).not.toHaveLength(0);
+  });
+});
+
+describe("ManualSessionTable English", () => {
+  it("names the fill-in action in English and leaves the session label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ManualSessionTable sessions={[createMockSession()]} loading={false} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("link", { name: "Fill in answers" })).toBeInTheDocument();
+    expect(screen.getByText("Uji Manual Justisio")).toBeInTheDocument();
   });
 });

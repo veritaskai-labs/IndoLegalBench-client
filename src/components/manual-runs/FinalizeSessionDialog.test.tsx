@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FinalizeSessionDialog } from "./FinalizeSessionDialog";
@@ -100,5 +101,18 @@ describe("FinalizeSessionDialog (PBI-22 AC8)", () => {
     await waitFor(() => {
       expect(screen.getByText("Gagal menandai sesi selesai. Coba lagi.")).toBeInTheDocument();
     });
+  });
+});
+
+describe("FinalizeSessionDialog English", () => {
+  it("names the dialog in English and leaves the session label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <FinalizeSessionDialog sessionId="session-123" sessionLabel="LegalHero Test" onFinalized={vi.fn()} onClose={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Mark the manual measurement finished" })).toBeInTheDocument();
+    expect(screen.getByText(/LegalHero Test/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 });

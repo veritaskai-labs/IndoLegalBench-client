@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import NewManualMeasurementPage from "./page";
@@ -70,5 +71,17 @@ describe("NewManualMeasurementPage (PBI-22 AC1)", () => {
     const breadcrumbLink = screen.getByRole("button", { name: "Pengukuran Manual" });
     await user.click(breadcrumbLink);
     expect(pushMock).toHaveBeenCalledWith("/manual-runs");
+  });
+});
+
+describe("NewManualMeasurementPage English", () => {
+  it("names the page in English", () => {
+    signedInAs("admin");
+    render(
+      <LocaleProvider locale="en">
+        <NewManualMeasurementPage />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Create a manual measurement" })).toBeInTheDocument();
   });
 });

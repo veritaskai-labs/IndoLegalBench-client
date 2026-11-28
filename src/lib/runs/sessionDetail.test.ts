@@ -194,7 +194,7 @@ describe("session detail words English", () => {
   it("summarizes attempts in English", () => {
     expect(attemptSummary([], "en")).toBe("No attempts yet");
     expect(attemptSummary([attempt(), attempt({ repetition_no: 2, status: "technical_failure", answer_text: null })], "en")).toBe(
-      "1 of 2 succeeded · 1 technical failures",
+      "1 of 2 succeeded · 1 technical failure",
     );
   });
 

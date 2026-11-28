@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ManualSessionDetailPage from "./page";
@@ -397,5 +398,19 @@ describe("ManualSessionDetailPage (PBI-22 AC8, AC11)", () => {
 
     // Assert
     expect(screen.getByText("Semua kasus pada sesi ini telah selesai diisi.")).toBeInTheDocument();
+  });
+});
+
+describe("ManualSessionDetailPage English", () => {
+  it("names the case list in English and leaves the case title unchanged", () => {
+    signedInAs("admin");
+    useManualSessionDetailMock.mockReturnValue({ status: "ready", data: mockSession(), reload: vi.fn() });
+    render(
+      <LocaleProvider locale="en">
+        <ManualSessionDetailPage />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Case list (2)")).toBeInTheDocument();
+    expect(screen.getByText("Kasus Pencurian Biasa")).toBeInTheDocument();
   });
 });

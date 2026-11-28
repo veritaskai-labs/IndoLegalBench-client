@@ -5,6 +5,7 @@
  * Label tes: Positif = diagram tampil, Negatif = kode tidak bisa digambar, Edge = urutan dan pergantian kode.
  */
 import { render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MermaidRenderer } from "@/lib/markdown/mermaidRenderer";
@@ -137,5 +138,16 @@ describe("MermaidDiagram (K-12, SCRUM-295)", () => {
 
     // Assert
     expect(renderer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("MermaidDiagram English", () => {
+  it("says the diagram is loading, in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <MermaidDiagram code={FLOW} render={() => new Promise(() => undefined)} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Loading diagram...")).toBeInTheDocument();
   });
 });

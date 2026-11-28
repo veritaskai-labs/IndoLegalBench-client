@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -66,5 +67,17 @@ describe("ConfirmResumeDialog (PBI-12 AC8)", () => {
 
     expect(resume).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("ConfirmResumeDialog English", () => {
+  it("names the dialog in English and leaves the session label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ConfirmResumeDialog session={{ id: "s-1", label: "Run November" }} onResumed={vi.fn()} onClose={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Resume without a verified model version?" })).toBeInTheDocument();
+    expect(screen.getByText(/Run November/)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -138,5 +139,16 @@ describe("ScoreDownloadButton (SCRUM-329)", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Permintaan gagal. Coba lagi.");
     expect(screen.queryByText("Jawaban mentah bocor")).not.toBeInTheDocument();
+  });
+});
+
+describe("ScoreDownloadButton English", () => {
+  it("names the button in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ScoreDownloadButton session={session({ status: "finalized", session_type: "manual" })} grading="graded" download={() => Promise.resolve(file())} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Download score" })).toBeEnabled();
   });
 });

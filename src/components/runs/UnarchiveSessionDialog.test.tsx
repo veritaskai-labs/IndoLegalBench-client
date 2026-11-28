@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -99,5 +100,17 @@ describe("UnarchiveSessionDialog (PBI-11 AC10)", () => {
     // Assert
     expect(onUnarchived).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("UnarchiveSessionDialog English", () => {
+  it("names the dialog in English and leaves the session label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <UnarchiveSessionDialog session={{ id: "s-1", label: "Run November" }} onUnarchived={vi.fn()} onClose={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Restore session?" })).toBeInTheDocument();
+    expect(screen.getByText(/Run November/)).toBeInTheDocument();
   });
 });

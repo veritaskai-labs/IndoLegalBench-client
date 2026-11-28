@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -668,5 +669,20 @@ describe("RunsPage Arsip tab (AC10)", () => {
 
     // Assert
     expect(screen.getByRole("table").parentElement).toHaveClass("overflow-x-auto", "relative");
+  });
+});
+
+describe("RunsPage English", () => {
+  it("names the new-measurement link in English and leaves the session label unchanged", async () => {
+    list.mockResolvedValue([session()]);
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <RunsPage />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("link", { name: "New measurement" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Uji Coba DeepSeek" })).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { describe, expect, it } from "vitest";
 
 import type { MeasurementProgress } from "@/types/measurement";
@@ -112,5 +113,17 @@ describe("MeasurementProgressPanel (PBI-12 AC5)", () => {
     render(<MeasurementProgressPanel progress={progress({ started_at: null })} />);
 
     expect(screen.getByText("Belum mulai")).toBeInTheDocument();
+  });
+});
+
+describe("MeasurementProgressPanel English", () => {
+  it("names finished cases in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <MeasurementProgressPanel progress={progress()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Cases finished")).toBeInTheDocument();
+    expect(screen.getByText("7 of 20 (35%)")).toBeInTheDocument();
   });
 });

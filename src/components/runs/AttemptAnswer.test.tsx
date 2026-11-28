@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -345,5 +346,17 @@ describe("AttemptAnswer collapsing (SCRUM-292)", () => {
     // Assert
     expect(screen.getByRole("listitem", { name: "Percobaan 2" })).toHaveTextContent(/^Percobaan 2Berhasil/);
     expect(document.querySelector(".font-mono")).toBeNull();
+  });
+});
+
+describe("AttemptAnswer English", () => {
+  it("names the attempt in English and leaves the answer heading unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <AttemptAnswer attempt={attempt()} context={CONTEXT} attemptCount={1} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("listitem", { name: "Attempt 2" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Kesimpulan" })).toBeInTheDocument();
   });
 });
