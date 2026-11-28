@@ -380,7 +380,7 @@ describe("ReportBuilderForm: title and Create", () => {
       score_scope: "dev_test",
       measurement_filter: "all",
       product_label_mode: "code",
-      language: "en",
+      language: "id",
     });
   });
 
@@ -1022,5 +1022,78 @@ describe("ReportBuilderForm: message levels", () => {
     await user.click(box(/Sesi C1/));
 
     await waitFor(() => expect(screen.queryByText(trial.message)).not.toBeInTheDocument());
+  });
+});
+
+// SCRUM-346 A4 (finding N10, PO approved 25 Nov): a long session list no longer grows the page without end. Five
+// sessions per page with the shared Pager; every session is still reachable (AC1) and picks survive paging.
+describe("ReportBuilderForm: paged session list and trial note (SCRUM-346 A4)", () => {
+  const many = Array.from({ length: 7 }, (_, index) =>
+    eligibleSession({
+      session_id: `m-${index + 1}`,
+      label: `Sesi M${index + 1}`,
+      product_id: `p-${index + 1}`,
+      product_name: `Produk ${index + 1}`,
+    }),
+  );
+  const renderMany = async (sessions = many) => {
+    const user = userEvent.setup();
+    render(<ReportBuilderForm gateway={gatewayWith({ eligibleSessions: vi.fn().mockResolvedValue(sessions) })} />);
+    await screen.findByRole("checkbox", { name: /Sesi M1/ });
+    return user;
+  };
+  const panel = () => screen.getByRole("tabpanel");
+
+  it("shows five sessions per page and keeps a pick while paging", async () => {
+    const user = await renderMany();
+    expect(within(panel()).getAllByRole("checkbox")).toHaveLength(5);
+    expect(within(panel()).getByText("Halaman 1 dari 2")).toBeInTheDocument();
+
+    await user.click(box(/Sesi M1/));
+    await user.click(within(panel()).getByRole("button", { name: "Berikutnya" }));
+
+    expect(within(panel()).getAllByRole("checkbox")).toHaveLength(2);
+    expect(within(panel()).getByRole("checkbox", { name: /Sesi M7/ })).toBeInTheDocument();
+    expect(within(panel()).queryByRole("checkbox", { name: /Sesi M1/ })).toBeNull();
+    expect(pickedRow("Sesi M1")).toBeInTheDocument();
+  });
+
+  // Edge: a new search shows its results from the first page, not an empty second page.
+  it("goes back to the first page when the search changes", async () => {
+    const user = await renderMany();
+    await user.click(within(panel()).getByRole("button", { name: "Berikutnya" }));
+    await user.type(screen.getByRole("searchbox", { name: "Cari sesi" }), "Produk");
+
+    expect(within(panel()).getByText("Halaman 1 dari 2")).toBeInTheDocument();
+    expect(box(/Sesi M1/)).toBeInTheDocument();
+  });
+
+  // Negative: four sessions fit on one page, so there is no pager.
+  it("has no pager for a short list", async () => {
+    await renderReady();
+    expect(within(panel()).queryByText(/Halaman/)).toBeNull();
+  });
+
+  // H8 (N10): when every listed session is a trial, the mark is said once above the list instead of on every row.
+  // A mixed list keeps the badge on each trial row (PRD PBI-15: trial sessions must be marked clearly).
+  it("says once that every listed session is a trial", async () => {
+    await renderMany(many.map((session) => ({ ...session, purpose: "trial" as const })));
+    expect(within(panel()).getByRole("note")).toHaveTextContent("Uji CobaSemua sesi di daftar ini sesi uji coba.");
+    expect(within(panel()).getAllByText("Uji Coba")).toHaveLength(1);
+  });
+
+  it("keeps the trial badge on each trial row of a mixed list", async () => {
+    await renderReady();
+    expect(within(panel()).queryByRole("note")).toBeNull();
+    expect(within(box(/Sesi B1/).closest("li") as HTMLElement).getByText("Uji Coba")).toBeInTheDocument();
+  });
+
+  // A4 (AC5): the Create button sits in a bar that stays at the bottom of a phone screen and says why it is off.
+  it("says why Create is off until the form is complete", async () => {
+    const { user } = await renderReady();
+    expect(screen.getByText("Lengkapi pilihan di atas untuk membuat laporan.")).toBeInTheDocument();
+
+    await fillValidForm(user);
+    expect(screen.queryByText("Lengkapi pilihan di atas untuk membuat laporan.")).toBeNull();
   });
 });

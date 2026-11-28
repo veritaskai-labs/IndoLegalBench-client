@@ -65,8 +65,8 @@ describe("Daftar kasus", () => {
     expect(list).toHaveBeenCalledExactlyOnceWith(firstPage);
     expect(screen.getByText("2 kasus").tagName).toBe("OUTPUT");
     expect(screen.getByText(old.title)).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText("Suite"), active.id);
-    await user.selectOptions(screen.getByLabelText("Status"), "draft");
+    await user.selectOptions(screen.getByLabelText("Pilih suite"), active.id);
+    await user.click(screen.getByRole("button", { name: "Draft" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "Cari kasus" }), { target: { value: "  kAs-02 " } });
     expect(await screen.findByText("Tidak ada kasus yang sesuai")).toBeInTheDocument();
     expect(list).toHaveBeenLastCalledWith({ q: "kAs-02", suiteId: active.id, status: "draft", page: 1 });
@@ -84,7 +84,7 @@ describe("Daftar kasus", () => {
     render(<CasesPage />);
     expect(screen.getByRole("status")).toHaveTextContent("Memuat kasus");
 
-    await user.selectOptions(screen.getByLabelText("Suite"), archived.id);
+    await user.selectOptions(screen.getByLabelText("Pilih suite"), archived.id);
     expect(await screen.findByText(old.title)).toBeInTheDocument();
     await act(async () => pending.resolve(casePage([source])));
     expect(screen.queryByText(source.title)).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("Daftar kasus", () => {
 
     expect(await screen.findByText(source.title)).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Gagal memuat daftar suite.");
-    expect(screen.getByLabelText("Suite")).toBeDisabled();
+    expect(screen.getByLabelText("Pilih suite")).toBeDisabled();
   });
 
   it("returns to the last available page if the result set shrinks", async () => {
@@ -137,7 +137,7 @@ describe("Daftar kasus", () => {
   it("shows the full read-only case and restores focus and filters on Escape", async () => {
     const user = userEvent.setup();
     render(<CasesPage />);
-    await user.selectOptions(screen.getByLabelText("Suite"), active.id);
+    await user.selectOptions(screen.getByLabelText("Pilih suite"), active.id);
     const trigger = await screen.findByRole("button", { name: `Pratinjau ${source.case_code}` });
     await user.click(trigger);
 
@@ -151,7 +151,7 @@ describe("Daftar kasus", () => {
     fireEvent(preview, new Event("cancel", { cancelable: true }));
     expect(preview).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
-    expect(screen.getByLabelText("Suite")).toHaveValue(active.id);
+    expect(screen.getByLabelText("Pilih suite")).toHaveValue(active.id);
   });
 
   it("duplicates once per confirmation and opens the server's new draft", async () => {

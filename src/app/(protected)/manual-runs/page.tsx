@@ -38,7 +38,7 @@ export default function ManualRunsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Pengukuran Manual</h1>
+          <h1 className="text-xl font-bold text-slate-900">Pengukuran manual</h1>
           <p className="text-sm text-slate-500">
             Pencatatan dan pemantauan jawaban AI tanpa akses API (Justisio, LegalHero) oleh tim legal.
           </p>
@@ -46,9 +46,10 @@ export default function ManualRunsPage() {
         {role === "admin" && (
           <Link
             href="/manual-runs/new"
-            className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-control bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink-hover transition-colors"
           >
-            Pengukuran Manual Baru
+            <span aria-hidden="true">+</span>
+            <span>Pengukuran manual baru</span>
           </Link>
         )}
       </header>

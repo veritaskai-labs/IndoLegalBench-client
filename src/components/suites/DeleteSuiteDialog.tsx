@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import type { Suite } from "@/types/suite";
 
@@ -10,7 +11,7 @@ type Props = {
   onDone: () => void;
 };
 
-export function DeleteSuiteDialog({ suite, onClose, onDone }: Props) {
+export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
   const [hasApprovedCases, setHasApprovedCases] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,22 +49,24 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div
-        role="dialog"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
+      <dialog
+        open
         aria-modal="true"
         aria-label="Hapus suite"
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+        className="static m-0 w-full max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog"
       >
-        <h2 className="text-base font-semibold text-slate-900">Hapus suite</h2>
+        <h2 className="font-serif text-[22px] font-medium leading-7 text-ink">
+          Hapus suite
+        </h2>
 
         {hasApprovedCases ? (
-          <p className="mt-3 text-sm text-slate-600">
+          <p className="mt-3 text-sm text-ink-soft">
             Suite {suite.name} berisi kasus yang sudah disetujui, jadi tidak bisa
             dihapus. Arsipkan saja supaya tidak lagi dipakai untuk pengukuran.
           </p>
         ) : (
-          <p className="mt-3 text-sm text-slate-600">
+          <p className="mt-3 text-sm text-ink-soft">
             Hapus suite {suite.name}? Tindakan ini tidak bisa dibatalkan.
           </p>
         )}
@@ -71,41 +74,27 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Props) {
         {error && (
           <div
             role="alert"
-            className="mt-4 rounded-md bg-red-50 px-3 py-2 text-xs text-red-800"
+            className="mt-4 rounded-control bg-danger-wash px-3 py-2 text-xs text-danger"
           >
             {error}
           </div>
         )}
 
         <div className="mt-6 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Batal
-          </button>
+          </Button>
           {hasApprovedCases ? (
-            <button
-              type="button"
-              onClick={handleArchive}
-              disabled={busy}
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-            >
+            <Button variant="primary" onClick={handleArchive} disabled={busy}>
               Arsipkan saja
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={busy}
-              className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            >
+            <Button variant="danger" onClick={handleDelete} disabled={busy}>
               Hapus
-            </button>
+            </Button>
           )}
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

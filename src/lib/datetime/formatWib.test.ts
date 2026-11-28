@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { formatWib, formatWibClock, formatWibDate } from "./formatWib";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatRelativeTime, formatWib, formatWibClock, formatWibDate } from "./formatWib";
 
 
 describe("formatWib", () => {
@@ -178,5 +178,28 @@ describe("formatWibDate", () => {
 
     // Assert
     expect(text).toBe("bukan tanggal");
+  });
+});
+
+describe("formatRelativeTime", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("formats minutes, hours, days, and falls back to WIB date after 7 days", () => {
+    vi.useFakeTimers();
+    const now = new Date("2026-11-28T12:00:00Z");
+    vi.setSystemTime(now);
+
+    expect(formatRelativeTime("2026-11-28T11:59:40Z")).toBe("Baru saja");
+    expect(formatRelativeTime("2026-11-28T11:45:00Z")).toBe("15 menit yang lalu");
+    expect(formatRelativeTime("2026-11-28T09:00:00Z")).toBe("3 jam yang lalu");
+    expect(formatRelativeTime("2026-11-27T12:00:00Z")).toBe("Kemarin");
+    expect(formatRelativeTime("2026-11-25T12:00:00Z")).toBe("3 hari yang lalu");
+    expect(formatRelativeTime("2026-11-20T00:00:00Z")).toBe("20 Nov 2026");
+  });
+
+  it("returns non-date strings unchanged", () => {
+    expect(formatRelativeTime("bukan tanggal")).toBe("bukan tanggal");
   });
 });

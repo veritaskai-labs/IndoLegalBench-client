@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState } from "react";
 
 import { MarkdownAnswer } from "@/components/runs/MarkdownAnswer";
@@ -7,7 +8,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
-import { useResultCase } from "@/hooks/useReportDrilldown";
+import { useDrilldownReport, useResultCase } from "@/hooks/useReportDrilldown";
 import { formatWibDate } from "@/lib/datetime/formatWib";
 import { ATTEMPT_SOURCE_LABEL, reasonLabel } from "@/lib/grading/gradingView";
 import { formatScore } from "@/lib/grading/scoreFormat";
@@ -17,12 +18,16 @@ import {
   canOpenEvidence,
   canRetryDrilldown,
   NOT_GRADED,
+  reportTrail,
   resultCasesHref,
 } from "@/lib/reports/drilldownRules";
 import { measurementKindLabel, REPORT_LABELS } from "@/lib/reports/reportLabels";
+import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
+import type { SortState } from "@/lib/ui/tableModel";
 import type { MeasurementKind, ReportAttemptRead, ReportCaseDetailRead, ReportOtherProductRead } from "@/types/reports";
 
 import { AttemptEvidence } from "./AttemptEvidence";
+import { CaseNavigation } from "./CaseNavigation";
 
 // Bagian aplikasi berbahasa Indonesia (Fase 0 K3); jawaban asli tampil apa adanya.
 const LABELS = REPORT_LABELS.id;
@@ -256,11 +261,17 @@ function CaseBody({
   data,
   evidence,
   canCompare,
-}: Readonly<{ data: ReportCaseDetailRead; evidence: EvidenceTarget; canCompare: boolean }>) {
+  listHref,
+}: Readonly<{ data: ReportCaseDetailRead; evidence: EvidenceTarget; canCompare: boolean; listHref: string }>) {
   return (
     <div className="space-y-5">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-slate-900">
+        {/* SCRUM-346 A2 (AC3): a visible way back next to the title, not only the small breadcrumb. */}
+        <Link href={listHref} className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink hover:underline">
+          <span aria-hidden="true">‹</span> Kembali ke daftar kasus
+        </Link>
+        {/* Kode kasus boleh sampai 64 karakter tanpa spasi; tanpa ini judul melebar keluar layar ponsel (review #135). */}
+        <h1 className="text-xl font-semibold text-slate-900 [overflow-wrap:anywhere]">
           {data.case_code} v{data.case_version_no}: {data.title}
         </h1>
         <p className="text-sm text-slate-600">
@@ -286,15 +297,30 @@ function CaseBody({
 /**
  * Satu kasus di balik angka laporan, sampai jawaban asli tiap percobaan (PBI-16 AC2, D6 langkah 4–7). Peran yang
  * tidak boleh melihat isinya mendapat pesan server dengan email untuk meminta isi kasus (AC3), tanpa Coba lagi.
- * Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4).
+ * Bukti jawaban manual hanya untuk Admin dan Kontributor (AC4). Laporannya dimuat sebagai konteks untuk judul di
+ * breadcrumb (SCRUM-346 A2); bila gagal, breadcrumb memakai "Detail laporan".
+ *
+ * SCRUM-378: "Kasus sebelumnya" dan "Kasus berikutnya" di bawah breadcrumb, dalam urutan daftar asalnya (sort dari
+ * alamat). Navigasinya tetap ada walau kasus ini gagal dimuat, jadi pengguna bisa lanjut ke kasus berikutnya.
  */
 export function ResultCaseDetail({
   reportId,
   resultId,
   caseId,
+  sort = null,
   gateway = httpDrilldownGateway,
-}: Readonly<{ reportId: string; resultId: string; caseId: string; gateway?: DrilldownGateway }>) {
+  reportsGateway = httpReportsGateway,
+}: Readonly<{
+  reportId: string;
+  resultId: string;
+  caseId: string;
+  sort?: SortState | null;
+  gateway?: DrilldownGateway;
+  reportsGateway?: ReportsGateway;
+}>) {
   const detail = useResultCase(reportId, resultId, caseId, gateway);
+  const report = useDrilldownReport(reportId, reportsGateway);
+  const listHref = resultCasesHref(reportId, resultId, sort);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
   const evidence = canOpenEvidence(role) ? { reportId, resultId, caseId, gateway } : null;
@@ -303,13 +329,12 @@ export function ResultCaseDetail({
     <div className="space-y-5">
       <Breadcrumb
         items={[
-          { label: "Laporan", href: "/reports" },
-          { label: "Laporan perbandingan", href: "/reports/comparisons" },
-          { label: "Detail laporan", href: `/reports/comparisons/${encodeURIComponent(reportId)}` },
-          { label: "Kasus di balik angka", href: resultCasesHref(reportId, resultId) },
+          ...reportTrail(reportId, report.status === "ready" ? report.data.title : null),
+          { label: "Kasus di balik angka", href: listHref },
           { label: detail.status === "ready" ? detail.data.case_code : "Kasus" },
         ]}
       />
+      <CaseNavigation reportId={reportId} resultId={resultId} caseId={caseId} sort={sort} gateway={gateway} />
       {detail.status === "loading" && <LoadingState label="Memuat kasus…" />}
       {detail.status === "error" && (
         <ErrorState
@@ -319,7 +344,7 @@ export function ResultCaseDetail({
         />
       )}
       {detail.status === "ready" && (
-        <CaseBody data={detail.data} evidence={evidence} canCompare={canCompareProducts(role)} />
+        <CaseBody data={detail.data} evidence={evidence} canCompare={canCompareProducts(role)} listHref={listHref} />
       )}
     </div>
   );

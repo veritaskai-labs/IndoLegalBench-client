@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ImportGuide } from "@/components/cases/import/ImportGuide";
+import { JsonFieldsCallout } from "@/components/cases/import/JsonFieldsCallout";
 import { SuiteCaseNav } from "@/components/cases/SuiteCaseNav";
 import { ImportSummaryView } from "@/components/cases/import/ImportSummaryView";
 import { ImportUploadForm } from "@/components/cases/import/ImportUploadForm";
@@ -12,6 +13,7 @@ import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { useAuth } from "@/hooks/useAuth";
 import { importGateway } from "@/lib/cases/importApi";
 import { importErrorMessage } from "@/lib/cases/importErrors";
+import { jsonListColumns } from "@/lib/cases/importGuide";
 import { canImportCases } from "@/lib/cases/permissions";
 import type { ImportSummary } from "@/types/caseImport";
 
@@ -39,13 +41,13 @@ function ImportWorkspace() {
 
   function showImported(summary: ImportSummary) {
     setImported(summary);
-    router.replace(`${PAGE_PATH}?batch=${encodeURIComponent(summary.batch_id)}`);
+    router.replace(`${PAGE_PATH}?batch=${encodeURIComponent(summary.batch_id)}`, { scroll: false });
   }
 
   function backToForm() {
     setLeftBatch(batchInAddress);
     setImported(null);
-    router.replace(PAGE_PATH);
+    router.replace(PAGE_PATH, { scroll: false });
   }
 
   const summary = imported ?? (batchToRead !== null && stored.status === "ready" ? stored.data : null);
@@ -110,9 +112,9 @@ export default function CaseImportPage() {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-slate-900">Impor kasus dari CSV</h1>
-        <p className="text-sm text-slate-600">
+      <header>
+        <h1 className="font-serif text-4xl leading-10 text-ink">Impor kasus dari CSV</h1>
+        <p className="mt-2 text-sm text-muted">
           Untuk migrasi awal kasus lama. Maks. 500 baris per berkas. Kasus masuk sebagai draf ke satu suite sementara,
           lalu dilengkapi dan diajukan review.
         </p>
@@ -129,6 +131,8 @@ export default function CaseImportPage() {
         </p>
         <TemplateDownloadButton gateway={importGateway} />
       </section>
+
+      <JsonFieldsCallout columns={jsonListColumns()} />
 
       <ImportGuide />
 

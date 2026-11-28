@@ -1,12 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";import type { Suite } from "@/types/suite";
-
+import { useRouter } from "next/navigation";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  Badge,
+  buttonClasses,
+  type Column,
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Icon,
+  LoadingSkeleton,
+} from "@/components/ui";
+import { formatRelativeTime, formatWib, formatWibDate } from "@/lib/datetime/formatWib";
+import type { Suite } from "@/types/suite";
 
 type Props = {
   status: "loading" | "ready" | "error";
   suites: Suite[];
+  /** Key that resets pagination when the active filter/tab changes (e.g. status + search). */
+  filterKey?: string;
+  isFiltered?: boolean;
+  onResetSearch?: () => void;
   /** Hanya author dan admin yang boleh membuat kasus. */
   canCreateCase?: boolean;
   /** Developer AI hanya membaca suite, jadi kolom Aksi disembunyikan (SCRUM-184). */
@@ -22,9 +39,250 @@ const STATUS_LABEL: Record<string, string> = {
   archived: "Arsip",
 };
 
+const TOOLTIP_DELAY_MS = 1000;
+
+function ActionIconButton({
+  ariaLabel,
+  tooltip,
+  tone = "neutral",
+  onClick,
+  children,
+}: Readonly<{
+  ariaLabel: string;
+  tooltip: string;
+  tone?: "neutral" | "danger";
+  onClick: () => void;
+  children: ReactNode;
+}>) {
+  const [coords, setCoords] = useState<{ top: number; right: number } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearTimer() {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  function scheduleTooltip() {
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (rect) {
+        setCoords({
+          top: rect.top - 6,
+          right: Math.max(8, window.innerWidth - rect.right),
+        });
+      }
+    }, TOOLTIP_DELAY_MS);
+  }
+
+  function hideTooltip() {
+    clearTimer();
+    setCoords(null);
+  }
+
+  useEffect(() => clearTimer, []);
+
+  return (
+    <div className="relative inline-flex">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={ariaLabel}
+        onClick={() => {
+          hideTooltip();
+          onClick();
+        }}
+        onMouseEnter={scheduleTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={scheduleTooltip}
+        onBlur={hideTooltip}
+        className={`inline-flex size-7 cursor-pointer items-center justify-center rounded-control transition-colors ${
+          tone === "danger"
+            ? "text-danger hover:bg-danger-wash"
+            : "text-ink-soft hover:bg-surface hover:text-ink"
+        }`}
+      >
+        {children}
+      </button>
+      {coords !== null &&
+        createPortal(
+          <span
+            role="tooltip"
+            style={{ top: coords.top, right: coords.right }}
+            className="pointer-events-none fixed z-50 -translate-y-full whitespace-nowrap rounded-tag bg-ink px-2 py-1 text-xs font-medium text-paper shadow-menu"
+          >
+            {tooltip}
+          </span>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+function renderStatusBadge(status: string) {
+  if (status === "active") {
+    return (
+      <Badge tone="green" dot>
+        Aktif
+      </Badge>
+    );
+  }
+  if (status === "archived") {
+    return (
+      <Badge tone="gray" dot>
+        Arsip
+      </Badge>
+    );
+  }
+  return <Badge tone="gray">{STATUS_LABEL[status] ?? status}</Badge>;
+}
+
+function buildSuiteColumns({
+  canCreateCase,
+  canManage,
+  onEdit,
+  onArchive,
+  onDelete,
+}: Readonly<{
+  canCreateCase: boolean;
+  canManage: boolean;
+  onEdit: (suite: Suite) => void;
+  onArchive: (suite: Suite) => void;
+  onDelete: (suite: Suite) => void;
+}>): Column<Suite>[] {
+  const base: Column<Suite>[] = [
+    {
+      key: "name",
+      header: "Nama",
+      sortable: true,
+      cell: (suite) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/suites/${encodeURIComponent(suite.id)}`}
+            className="font-semibold text-ink hover:underline"
+          >
+            {suite.name}
+          </Link>
+          {suite.is_empty && <Badge tone="amber">Kosong</Badge>}
+        </div>
+      ),
+    },
+    {
+      key: "description",
+      header: "Deskripsi",
+      cell: (suite) => (
+        <span className="text-ink-soft">{suite.description ?? "—"}</span>
+      ),
+    },
+    {
+      key: "case_count",
+      header: "Jumlah kasus",
+      sortable: true,
+      cell: (suite) => (
+        <span className="tabular-nums text-ink-soft">{suite.case_count}</span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (suite) => renderStatusBadge(suite.status),
+    },
+    {
+      key: "created_at",
+      header: "Tanggal dibuat",
+      sortable: true,
+      sortValue: (suite) => suite.created_at,
+      cell: (suite) => (
+        <span title={formatWib(suite.created_at)} className="text-ink-soft">
+          {formatWibDate(suite.created_at)}
+        </span>
+      ),
+    },
+    {
+      key: "updated_at",
+      header: "Terakhir diubah",
+      sortable: true,
+      sortValue: (suite) => suite.updated_at,
+      cell: (suite) => (
+        <span title={formatWib(suite.updated_at)} className="text-ink-soft">
+          {formatRelativeTime(suite.updated_at)}
+        </span>
+      ),
+    },
+  ];
+
+  if (canManage) {
+    base.push({
+      key: "actions",
+      header: "Aksi",
+      cell: (suite) => {
+        const isZeroCases = suite.case_count === 0;
+        const caseActionText = isZeroCases ? "Buat kasus" : "Tambah kasus";
+        const caseActionLabel = `${caseActionText} di ${suite.name}`;
+
+        return (
+          <div className="flex items-center justify-end gap-2">
+            {canCreateCase && suite.status === "active" && (
+              <Link
+                href={`/suites/${encodeURIComponent(suite.id)}/cases/new`}
+                aria-label={caseActionLabel}
+                className={`${buttonClasses({ variant: "ghost", size: "sm" })} min-w-[110px] justify-center`}
+              >
+                {caseActionText}
+              </Link>
+            )}
+            <div className="flex items-center gap-0.5">
+              <ActionIconButton
+                ariaLabel={`Ubah ${suite.name}`}
+                tooltip="Ubah judul atau deskripsi suite"
+                onClick={() => onEdit(suite)}
+              >
+                <Icon name="manual" />
+              </ActionIconButton>
+              <ActionIconButton
+                ariaLabel={
+                  suite.status === "archived"
+                    ? `Aktifkan ${suite.name}`
+                    : `Arsipkan ${suite.name}`
+                }
+                tooltip={
+                  suite.status === "archived"
+                    ? "Aktifkan suite"
+                    : "Arsipkan suite"
+                }
+                onClick={() => onArchive(suite)}
+              >
+                <Icon name={suite.status === "archived" ? "aktifkan" : "arsipkan"} />
+              </ActionIconButton>
+              {suite.status === "active" && (
+                <ActionIconButton
+                  ariaLabel={`Hapus ${suite.name}`}
+                  tooltip="Hapus suite"
+                  tone="danger"
+                  onClick={() => onDelete(suite)}
+                >
+                  <Icon name="hapus" />
+                </ActionIconButton>
+              )}
+            </div>
+          </div>
+        );
+      },
+    });
+  }
+
+  return base;
+}
+
 export function SuiteList({
   status,
   suites,
+  filterKey,
+  isFiltered = false,
+  onResetSearch,
   canCreateCase = false,
   canManage = true,
   onRetry,
@@ -32,7 +290,19 @@ export function SuiteList({
   onDelete,
   onArchive,
 }: Readonly<Props>) {
-  
+  const router = useRouter();
+  const columns = useMemo<Column<Suite>[]>(
+    () =>
+      buildSuiteColumns({
+        canCreateCase,
+        canManage,
+        onEdit,
+        onArchive,
+        onDelete,
+      }),
+    [canCreateCase, canManage, onArchive, onDelete, onEdit],
+  );
+
   if (status === "loading") {
     return (
       <table className="w-full text-left text-sm">
@@ -54,6 +324,20 @@ export function SuiteList({
   }
 
   if (suites.length === 0) {
+    if (isFiltered) {
+      return (
+        <EmptyState
+          title="Tidak ada suite yang cocok"
+          description="Tidak ada suite yang cocok dengan kata kunci pencarian."
+          action={
+            onResetSearch
+              ? { label: "Reset pencarian", onClick: onResetSearch }
+              : undefined
+          }
+        />
+      );
+    }
+
     return (
       <EmptyState
         title="Belum ada suite"
@@ -63,86 +347,18 @@ export function SuiteList({
   }
 
   return (
-    <table className="w-full text-left text-sm">
-      <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
-        <tr>
-          <th scope="col" className="px-4 py-3 font-medium">Nama</th>
-          <th scope="col" className="px-4 py-3 font-medium">Deskripsi</th>
-          <th scope="col" className="px-4 py-3 font-medium">Jumlah kasus</th>
-          <th scope="col" className="px-4 py-3 font-medium">Status</th>
-          {canManage && <th scope="col" className="px-4 py-3 font-medium">Aksi</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {suites.map((suite) => (
-          <tr key={suite.id} className="border-b border-slate-100">
-            <td className="px-4 py-3">
-              <Link
-                href={`/suites/${encodeURIComponent(suite.id)}`}
-                className="font-medium text-slate-900 hover:underline"
-              >
-                {suite.name}
-              </Link>
-              {suite.is_empty && (
-                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                  Kosong
-                </span>
-              )}
-            </td>
-            <td className="px-4 py-3 text-slate-600">
-              {suite.description ?? "—"}
-            </td>
-            <td className="px-4 py-3 text-slate-600">{suite.case_count}</td>
-            <td className="px-4 py-3 text-slate-600">
-              {STATUS_LABEL[suite.status] ?? suite.status}
-            </td>
-            {canManage && (
-              <td className="px-4 py-3">
-                <div className="flex gap-3">
-                  {canCreateCase && suite.status === "active" && (
-                    <Link
-                      href={`/suites/${encodeURIComponent(suite.id)}/cases/new`}
-                      aria-label={`Buat kasus di ${suite.name}`}
-                      className="text-sm font-medium text-slate-900 hover:underline"
-                    >
-                      Buat kasus
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onEdit(suite)}
-                    aria-label={`Ubah ${suite.name}`}
-                    className="text-sm text-slate-700 hover:underline"
-                  >
-                    Ubah
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onArchive(suite)}
-                    aria-label={
-                      suite.status === "archived"
-                        ? `Aktifkan ${suite.name}`
-                        : `Arsipkan ${suite.name}`
-                    }
-                    className="text-sm text-slate-700 hover:underline"
-                  >
-                    {suite.status === "archived" ? "Aktifkan" : "Arsipkan"}
-                  </button>
-                  {suite.status !== "archived" && (
-                    <button
-                    type="button"
-                    onClick={() => onDelete(suite)}
-                    aria-label={`Hapus ${suite.name}`}
-                    className="text-sm text-red-700 hover:underline">
-                      Hapus
-                      </button>
-                  )}
-                </div>
-              </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="[&_th:first-child]:pl-4 [&_td:first-child]:pl-4 [&_th:nth-child(n+3)]:w-px [&_td:nth-child(n+3)]:w-px [&_td:nth-child(n+3)]:whitespace-nowrap [&_th:last-child]:pr-4 [&_td:last-child]:pr-4">
+      <DataTable
+        key={filterKey}
+        columns={columns}
+        rows={suites}
+        rowKey={(suite) => suite.id}
+        pageSize={20}
+        caption="Daftar suite"
+        initialSort={{ key: "updated_at", direction: "desc" }}
+        resetPageOnDataChange={false}
+        onRowClick={(suite) => router.push(`/suites/${encodeURIComponent(suite.id)}`)}
+      />
+    </div>
   );
 }

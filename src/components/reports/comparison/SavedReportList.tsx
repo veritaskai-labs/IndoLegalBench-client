@@ -34,7 +34,7 @@ function ReportTable({ reports }: Readonly<{ reports: readonly ReportSummary[] }
           <tr>
             <th scope="col" className={CELL}>Judul</th>
             <th scope="col" className={CELL}>Produk</th>
-            <th scope="col" className={CELL}>Nilai</th>
+            <th scope="col" className={CELL}>Jenis kasus</th>
             <th scope="col" className={CELL}>Status</th>
             <th scope="col" className={CELL}>Dibuat</th>
           </tr>

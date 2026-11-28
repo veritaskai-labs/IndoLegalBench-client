@@ -4,15 +4,14 @@ import { GUIDE_COLUMNS } from "@/lib/cases/importGuide";
 import { ImportGuide } from "./ImportGuide";
 
 describe("ImportGuide (AC5)", () => {
-  // Positive: the guide is open by default so a first-time importer reads it.
-  it("starts open under a heading the user can collapse", () => {
+  it("starts closed under a heading the user can expand", () => {
     // Arrange / Act
     const { container } = render(<ImportGuide />);
 
     // Assert
     const details = container.querySelector("details");
     expect(details).not.toBeNull();
-    expect(details).toHaveAttribute("open");
+    expect(details).not.toHaveAttribute("open");
     expect(within(details as HTMLElement).getByText("Panduan menyiapkan CSV di Google Sheets")).toBeInTheDocument();
   });
 
@@ -60,5 +59,23 @@ describe("ImportGuide (AC5)", () => {
 
     // Assert
     expect(screen.getByRole("table", { name: "Kolom template CSV" }).parentElement).toHaveClass("overflow-x-auto");
+  });
+
+  // Positive: the guide table flags the JSON list columns, so the legal team sees them while filling the sheet.
+  it("marks only the JSON list columns with the Format JSON badge", () => {
+    // Arrange / Act
+    render(<ImportGuide />);
+
+    // Assert
+    const table = screen.getByRole("table", { name: "Kolom template CSV" });
+    const rows = within(table).getAllByRole("row").slice(1);
+    GUIDE_COLUMNS.forEach((column, index) => {
+      const nameCell = within(rows[index]).getAllByRole("cell")[0];
+      if (column.jsonList) {
+        expect(within(nameCell).getByText("Format JSON")).toBeInTheDocument();
+      } else {
+        expect(within(nameCell).queryByText("Format JSON")).not.toBeInTheDocument();
+      }
+    });
   });
 });

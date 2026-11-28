@@ -176,7 +176,7 @@ export function RegulationTypeSelect({
           id={listId}
           role="listbox" // NOSONAR
           aria-label={label}
-          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-300 bg-white py-1 text-sm text-slate-900 shadow-lg"
+          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-control border border-line bg-paper py-1 text-sm text-ink shadow-menu"
         >
           {visible.map((type, index) => (
             <li // NOSONAR
@@ -189,19 +189,19 @@ export function RegulationTypeSelect({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(type.code)}
               className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-2 ${
-                index === activeIndex ? "bg-slate-100" : ""
+                index === activeIndex ? "bg-surface" : ""
               } ${type.code === value ? "font-medium" : ""}`}
             >
               <span>{type.label}</span>
               {type.singkatan !== null && (
-                <span className="text-xs text-slate-500">{type.singkatan}</span>
+                <span className="text-xs text-muted">{type.singkatan}</span>
               )}
             </li>
           ))}
         </ul>
       )}
       {message !== undefined && (
-        <output className="mt-1 block text-xs text-slate-500">{message}</output>
+        <output className="mt-1 block text-xs text-muted">{message}</output>
       )}
       {error !== undefined && <ErrorText id={`${id}-error`} message={error} />}
     </div>

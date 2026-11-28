@@ -23,6 +23,25 @@ export const SCORE_PATH_LABEL: Record<keyof ScorePair, string> = {
 
 export type ScorePath = keyof ScorePair;
 
+/** Arti angka 0,00 sampai 1,00 di jalur LLM (jawaban PO pertanyaan 5, judge.py: kriteria terpenuhi / semua). */
+const LLM_RANGE = "Nilainya 0,00 sampai 1,00: bagian kriteria kasus yang terpenuhi.";
+
+/** Record atas jalur kontrak, bukan switch: jalur baru dari server membuat tsc gagal di sini. */
+const SCORE_HELP: Record<ScorePath, (versionLabel: string) => string> = {
+  deterministic: () =>
+    "Skor aturan tetap tanpa model: bagian rujukan peraturan dan pasal di kasus yang disebut dengan benar oleh jawaban. Nilainya 0,00 sampai 1,00.",
+  quality: (version) => `Skor penilai LLM untuk kualitas jawaban, dari prompt penilai kualitas di rubrik ${version}. ${LLM_RANGE}`,
+  format: (version) => `Skor penilai LLM untuk format jawaban, dari prompt penilai format di rubrik ${version}. ${LLM_RANGE}`,
+};
+
+/**
+ * Penjelasan satu kolom skor untuk ikon info di tabel Rata-rata skor (SCRUM-375 C4). Jalur LLM menyebut
+ * prompt di rubrik versi hasil itu, jalur deterministik menyebut aturannya (citation_score.py).
+ */
+export function scoreHelp(path: ScorePath, versionLabel: string): string {
+  return SCORE_HELP[path](versionLabel);
+}
+
 /** Tabel mengulang daftar ini, jadi jalur baru cukup ditambah di SCORE_PATH_LABEL. */
 export const SCORE_PATHS = Object.keys(SCORE_PATH_LABEL) as ScorePath[];
 

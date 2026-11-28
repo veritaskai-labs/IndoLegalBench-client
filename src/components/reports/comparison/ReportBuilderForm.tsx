@@ -7,6 +7,7 @@ import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
+import { Pager } from "@/components/ui/Pager";
 import { tabElementId, tabPanelId, Tabs } from "@/components/ui/Tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useReportBuilder, type ReportBuilder } from "@/hooks/useReportBuilder";
@@ -18,6 +19,7 @@ import type { ScopeOption } from "@/lib/reports/builder/validationView";
 import { LABEL_MODE_TEXT } from "@/lib/reports/labelPreview";
 import { SCORE_SCOPE_LABEL } from "@/lib/reports/reportRules";
 import { httpReportsGateway, type ReportsGateway } from "@/lib/reports/reportsApi";
+import { paginate } from "@/lib/ui/tableModel";
 import type { EligibleSession, MeasurementFilter, ProductLabelMode } from "@/types/reports";
 
 import { ProductLabelPreview } from "./ProductLabelPreview";
@@ -55,6 +57,8 @@ const MISSING_ROW = "Sesi ini sudah tidak tersedia.";
 const sessionName = (s: EligibleSession) => `${s.product_name} · ${s.label}`;
 
 const SESSION_TABS = "report-builder-sessions";
+/** Sesi per halaman di daftar pilihan (SCRUM-346 A4): daftar panjang tidak lagi memanjangkan halaman. */
+const SESSION_PAGE_SIZE = 5;
 const SESSION_TAB_ORDER: readonly SessionTab[] = ["valid", "invalid"];
 const TAB_LABEL: Readonly<Record<SessionTab, string>> = { valid: "Valid", invalid: "Tidak valid" };
 
@@ -219,10 +223,21 @@ function EmptyTab({ builder }: Readonly<{ builder: ReportBuilder }>) {
   );
 }
 
-function SessionRows({ builder, pickedIds }: Readonly<{ builder: ReportBuilder; pickedIds: ReadonlySet<string> }>) {
+function SessionRows({
+  builder,
+  sessions,
+  pickedIds,
+  trialNoted,
+}: Readonly<{
+  builder: ReportBuilder;
+  sessions: readonly EligibleSession[];
+  pickedIds: ReadonlySet<string>;
+  /** Semua sesi di daftar uji coba dan sudah disebut sekali di atas daftar, jadi baris tidak perlu badge lagi. */
+  trialNoted: boolean;
+}>) {
   return (
     <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
-      {builder.visibleSessions.map((session) => (
+      {sessions.map((session) => (
         <li key={session.session_id} className="space-y-1 px-3 py-2">
           <div className="flex flex-wrap items-center gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-900">
@@ -235,7 +250,7 @@ function SessionRows({ builder, pickedIds }: Readonly<{ builder: ReportBuilder; 
               {sessionName(session)}
             </label>
             <Badge tone="slate">{KIND_LABEL[session.session_type]}</Badge>
-            {session.purpose === "trial" && <Badge tone="amber">Uji Coba</Badge>}
+            {session.purpose === "trial" && !trialNoted && <Badge tone="amber">Uji Coba</Badge>}
           </div>
           {session.reasons.map((reason) => (
             <p key={reason.code} className="pl-6 text-sm text-red-700">
@@ -245,6 +260,30 @@ function SessionRows({ builder, pickedIds }: Readonly<{ builder: ReportBuilder; 
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Daftar sesi satu tab, lima per halaman dengan Pager bersama (SCRUM-346 A4, temuan N10). Semua sesi tetap bisa
+ * dicapai (AC1) dan pilihan tidak hilang saat pindah halaman karena tersimpan di builder. Halaman kembali ke 1 saat
+ * daftarnya berganti, lewat key dari SessionPicker. Bila semua sesi di daftar uji coba, tandanya disebut sekali di
+ * atas daftar; daftar campuran tetap memberi badge di setiap baris uji coba (PRD PBI-15).
+ */
+function PagedSessions({ builder, pickedIds }: Readonly<{ builder: ReportBuilder; pickedIds: ReadonlySet<string> }>) {
+  const [page, setPage] = useState(1);
+  const paged = paginate(builder.visibleSessions, page, SESSION_PAGE_SIZE);
+  const allTrial = builder.visibleSessions.every((session) => session.purpose === "trial");
+  return (
+    <div className="space-y-2">
+      {allTrial && (
+        <p role="note" className="flex flex-wrap items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <Badge tone="amber">Uji Coba</Badge>
+          Semua sesi di daftar ini sesi uji coba.
+        </p>
+      )}
+      <SessionRows builder={builder} sessions={paged.items} pickedIds={pickedIds} trialNoted={allTrial} />
+      {paged.lastPage > 1 && <Pager page={paged.page} lastPage={paged.lastPage} onPageChange={setPage} />}
+    </div>
   );
 }
 
@@ -281,7 +320,11 @@ function SessionPicker({ builder }: Readonly<{ builder: ReportBuilder }>) {
         {builder.visibleSessions.length === 0 ? (
           <EmptyTab builder={builder} />
         ) : (
-          <SessionRows builder={builder} pickedIds={pickedIds} />
+          <PagedSessions
+            key={`${builder.tab}|${builder.filter}|${builder.query}|${builder.productIds.join(",")}`}
+            builder={builder}
+            pickedIds={pickedIds}
+          />
         )}
       </div>
     </fieldset>
@@ -482,13 +525,20 @@ function BuilderForm({ builder }: Readonly<{ builder: ReportBuilder }>) {
 
       {builder.outcome && <OutcomeMessage outcome={builder.outcome} onReload={builder.sessions.reload} />}
 
-      <button
-        type="submit"
-        disabled={!builder.canSubmit}
-        className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {builder.submitting ? "Membuat laporan…" : "Buat laporan"}
-      </button>
+      {/* SCRUM-346 A4 (AC5): on a phone the bar stays at the bottom of the screen, so Create and the reason it is
+          off are always in view; from the sm breakpoint it is a normal row at the end of the form. */}
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-paper px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
+        <button
+          type="submit"
+          disabled={!builder.canSubmit}
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {builder.submitting ? "Membuat laporan…" : "Buat laporan"}
+        </button>
+        {!builder.canSubmit && !builder.submitting && (
+          <p className="text-sm text-slate-600">Lengkapi pilihan di atas untuk membuat laporan.</p>
+        )}
+      </div>
     </form>
   );
 }

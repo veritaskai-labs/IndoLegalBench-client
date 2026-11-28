@@ -11,14 +11,14 @@ describe("SuiteCaseNav", () => {
     // Assert
     const nav = screen.getByRole("navigation", { name: "Suite dan kasus" });
     expect(nav).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Suite" })).toHaveAttribute("href", "/suites");
+    expect(screen.getByRole("link", { name: "Daftar suite" })).toHaveAttribute("href", "/suites");
     expect(screen.getByRole("link", { name: "Daftar kasus" })).toHaveAttribute("href", "/cases");
     expect(screen.getByRole("link", { name: "Impor CSV" })).toHaveAttribute("href", "/cases/import");
   });
 
   // Positive / edge: only the current tab is marked.
   it.each([
-    ["/suites", "Suite"],
+    ["/suites", "Daftar suite"],
     ["/cases", "Daftar kasus"],
     ["/cases/import", "Impor CSV"],
   ] as const)("marks %s as the current page", (current, name) => {

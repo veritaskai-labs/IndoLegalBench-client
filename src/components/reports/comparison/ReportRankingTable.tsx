@@ -1,13 +1,23 @@
-import Link from "next/link";
+"use client";
 
+import Link from "next/link";
+import { useId, useState } from "react";
+
+import { Badge } from "@/components/ui/Badge";
+import { Button, buttonClasses } from "@/components/ui/Button";
 import { formatScore } from "@/lib/grading/scoreFormat";
-import { failureRateText, modelVersionText, rankText } from "@/lib/reports/reportCells";
-import { measurementKindLabel, REPORT_LABELS, sessionMarkersText } from "@/lib/reports/reportLabels";
+import { failureRateText, productSubline, rankText } from "@/lib/reports/reportCells";
+import { COLUMN_GUIDE, type GuideKey } from "@/lib/reports/reportGuide";
+import { REPORT_LABELS, sessionMarkerList } from "@/lib/reports/reportLabels";
 import type { ReportRow } from "@/lib/reports/reportSections";
 import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
 
-const CELL = "px-3 py-2 align-top";
+import { InfoTip, type InfoTipAlign } from "./InfoTip";
+
+/** Every body cell carries the row line, so the divider runs across the whole row (review #125). */
+const CELL = "border-t border-line-soft px-3 py-2.5 align-middle";
 const NUMBER = `${CELL} text-right tabular-nums`;
+const HEAD = "h-9 whitespace-nowrap bg-surface px-3 py-2 font-medium text-ink-soft";
 
 /** Membuat tautan penelusuran untuk satu angka (PBI-16 AC1); tanpa ini, misalnya di pratinjau, angka hanya teks. */
 export type ScoreHref = (resultId: string) => string;
@@ -28,7 +38,11 @@ export function ScoreCell({
   if (!href || score === null) return <td className={NUMBER}>{text}</td>;
   return (
     <td className={NUMBER}>
-      <Link href={href} className="text-indigo-700 underline decoration-dotted underline-offset-2 hover:decoration-solid">
+      {/* relative: keeps the sr-only hint inside the scroll box, or it widens the whole page on a phone. */}
+      <Link
+        href={href}
+        className="relative text-accent-ink underline decoration-dotted underline-offset-2 hover:decoration-solid"
+      >
         {text}
         {label && (
           <span className="sr-only" lang="id">
@@ -40,10 +54,45 @@ export function ScoreCell({
   );
 }
 
+/** Kolom header: indeks label di REPORT_LABELS.columns (urutan PDF), penjelasan, dan apakah dilipat. */
+type Column = { index: number; guide?: GuideKey; number?: boolean; extra?: boolean };
+
+const COLUMNS: readonly Column[] = [
+  { index: 3, guide: "deterministic", number: true },
+  { index: 4, guide: "llm", number: true },
+  { index: 5, guide: "graded", number: true },
+  { index: 6, number: true, extra: true },
+  { index: 7, guide: "failureRate", number: true },
+  { index: 8, number: true, extra: true },
+  { index: 10, guide: "markers" },
+];
+
+function HeaderLabel({ label, guide, align }: Readonly<{ label: string; guide?: GuideKey; align?: InfoTipAlign }>) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span data-column-label>{label}</span>
+      {guide && <InfoTip label={COLUMN_GUIDE[guide].term} text={COLUMN_GUIDE[guide].text} align={align} />}
+    </span>
+  );
+}
+
+function MarkerBadges({ row, language }: Readonly<{ row: ReportRow; language: ReportLanguage }>) {
+  return (
+    <span className="flex flex-wrap gap-1">
+      {row.session.is_trial && <Badge tone="amber">{REPORT_LABELS[language].trial}</Badge>}
+      {sessionMarkerList(row.session, language).map((marker) => (
+        <Badge key={marker}>{marker}</Badge>
+      ))}
+    </span>
+  );
+}
+
 /**
- * Tabel peringkat satu bagian laporan, sebelas kolom sama dengan PDF (Fase 0 K6), dalam bahasa laporan.
- * Baris sudah diurutkan reportSections. Di layar sempit tabel digeser di dalam wilayahnya sendiri; kolom
- * peringkat dan produk tetap terlihat. Semua teks dicetak React sebagai teks biasa.
+ * Tabel peringkat satu bagian laporan (SCRUM-346 A1/A6, disetujui PO 25 Nov). Kolom inti yang selalu tampil
+ * menurut PRD PBI-15: kedua skor terpisah, kasus dinilai, tingkat kegagalan, penanda; jenis pengukuran dan versi
+ * model di bawah nama produk. Kasus dasar (juga tertulis di bawah judul) dan Percobaan dilipat di balik "Tampilkan
+ * kolom lengkap". Ikon info di header menjelaskan kolomnya. Baris sudah diurutkan reportSections. Di layar sempit
+ * tabel digeser di dalam wilayahnya sendiri; kolom peringkat dan produk tetap terlihat. PDF tetap sebelas kolom.
  */
 export function ReportRankingTable({
   rows,
@@ -59,63 +108,95 @@ export function ReportRankingTable({
   scoreHref?: ScoreHref;
 }>) {
   const labels = REPORT_LABELS[language];
-  const [rank, product, ...rest] = labels.columns;
+  const tableId = useId();
+  const [full, setFull] = useState(false);
+  const columns = COLUMNS.filter((column) => full || !column.extra);
 
   return (
-    // shortcut: no tabIndex (Sonar S6845); Chrome, Edge and Firefox focus a scroll box by keyboard, Safari does not, add a focusable wrapper if Safari users report it.
-    <section aria-label={caption} className="overflow-x-auto rounded-lg border border-slate-200">
-
-      <table className="w-full min-w-[980px] border-separate border-spacing-0 text-xs text-slate-800">
-        <caption className="sr-only">{caption}</caption>
-        <thead className="bg-slate-50 text-slate-600">
-          <tr>
-            <th scope="col" className={`${CELL} sticky left-0 z-10 w-12 bg-slate-50 text-left font-semibold`}>
-              {rank}
-            </th>
-            <th scope="col" className={`${CELL} sticky left-12 z-10 min-w-24 bg-slate-50 text-left font-semibold`}>
-              {product}
-            </th>
-            {rest.map((column, index) => (
-              <th
-                key={column}
-                scope="col"
-                className={`${CELL} font-semibold ${index >= 1 && index <= 6 ? "text-right" : "text-left"}`}
-              >
-                {column}
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <Button variant="ghost" size="sm" aria-expanded={full} aria-controls={tableId} onClick={() => setFull((current) => !current)}>
+          {full ? "Ringkas kolom" : "Tampilkan kolom lengkap"}
+        </Button>
+      </div>
+      {/* shortcut: no tabIndex (Sonar S6845); Chrome, Edge and Firefox focus a scroll box by keyboard, Safari does not, add a focusable wrapper if Safari users report it. */}
+      <section aria-label={caption} className="relative overflow-x-auto rounded-control border border-line bg-paper">
+        <table id={tableId} className="w-full min-w-[760px] border-separate border-spacing-0 text-[13px] text-ink">
+          <caption className="sr-only">{caption}</caption>
+          <thead>
+            <tr>
+              {/* z-20 above the sticky body cells (z-10), or they paint over the rank tooltip (review #125). */}
+              <th scope="col" className={`${HEAD} sticky left-0 z-20 w-24 text-left`}>
+                <HeaderLabel label={labels.columns[0]} guide="rank" align="start" />
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ session, result }) => (
-            <tr key={result.id} className="border-t border-slate-100">
-              <td className={`${CELL} sticky left-0 z-10 bg-white tabular-nums`}>{rankText(result.rank)}</td>
-              <th scope="row" className={`${CELL} sticky left-12 z-10 bg-white text-left font-semibold`}>
-                {session.product_label}
+              <th scope="col" className={`${HEAD} sticky left-24 z-20 min-w-36 text-left`}>
+                <HeaderLabel label={labels.columns[1]} />
               </th>
-              <td className={CELL}>{measurementKindLabel(session.measurement_kind, language)}</td>
-              <ScoreCell
-                score={result.det_score}
-                language={language}
-                href={scoreHref?.(result.id)}
-                label={`skor deterministik ${session.product_label}`}
-              />
-              <ScoreCell
-                score={result.llm_score}
-                language={language}
-                href={scoreHref?.(result.id)}
-                label={`skor penilai LLM ${session.product_label}`}
-              />
-              <td className={NUMBER}>{result.cases_graded_count}</td>
-              <td className={NUMBER}>{result.cases_basis_count}</td>
-              <td className={NUMBER}>{failureRateText(session.measurement_kind, result.failure_rate, language)}</td>
-              <td className={NUMBER}>{result.repetitions}</td>
-              <td className={CELL}>{modelVersionText(result.product_model_version, labelMode, language)}</td>
-              <td className={CELL}>{sessionMarkersText(session, language)}</td>
+              {columns.map((column) => (
+                <th key={column.index} scope="col" className={`${HEAD} ${column.number ? "text-right" : "text-left"}`}>
+                  <HeaderLabel label={labels.columns[column.index]} guide={column.guide} />
+                </th>
+              ))}
+              {scoreHref && (
+                <th scope="col" className={HEAD}>
+                  <span className="sr-only">Kasus di balik angka</span>
+                </th>
+              )}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const { session, result } = row;
+              const href = scoreHref?.(result.id);
+              return (
+                <tr key={result.id}>
+                  <td className={`${CELL} sticky left-0 z-10 bg-paper tabular-nums`}>
+                    {rankText(result.rank)}
+                  </td>
+                  <th scope="row" className={`${CELL} sticky left-24 z-10 bg-paper text-left`}>
+                    <span data-product className="block font-semibold">
+                      {session.product_label}
+                    </span>
+                    <span className="block text-xs font-normal text-muted">
+                      {productSubline(session.measurement_kind, result.product_model_version, labelMode, language)}
+                    </span>
+                  </th>
+                  <ScoreCell
+                    score={result.det_score}
+                    language={language}
+                    href={href}
+                    label={`skor deterministik ${session.product_label}`}
+                  />
+                  <ScoreCell
+                    score={result.llm_score}
+                    language={language}
+                    href={href}
+                    label={`skor penilai LLM ${session.product_label}`}
+                  />
+                  <td className={NUMBER}>{result.cases_graded_count}</td>
+                  {full && <td className={NUMBER}>{result.cases_basis_count}</td>}
+                  <td className={NUMBER}>{failureRateText(session.measurement_kind, result.failure_rate, language)}</td>
+                  {full && <td className={NUMBER}>{result.repetitions}</td>}
+                  <td className={CELL}>
+                    <MarkerBadges row={row} language={language} />
+                  </td>
+                  {href && (
+                    <td className={`${CELL} text-right`}>
+                      <Link
+                        href={href}
+                        className={`${buttonClasses({ variant: "ghost", size: "sm" })} relative`}
+                      >
+                        Lihat kasus <span className="sr-only">{session.product_label}</span>
+                        <span aria-hidden="true"> ›</span>
+                      </Link>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+    </div>
   );
 }

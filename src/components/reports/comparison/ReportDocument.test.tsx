@@ -10,9 +10,15 @@ import { ReportDocument } from "./ReportDocument";
 // report's language (Fase 0 K3) and says so with a lang attribute for screen readers (WCAG 3.1.2). SCRUM-363 took
 // the language out of the detail, so the body is English like every report the builder makes, unless told.
 describe("ReportDocument", () => {
-  // Positive: English by default, the language of the PDF of every report made from the builder.
-  it("is English when no language is given", () => {
+  // Positive (SCRUM-346 N7, PO 25 Nov): Indonesian by default, the language the builder now gives every new report.
+  it("is Indonesian when no language is given", () => {
     render(<ReportDocument report={firstReport()} />);
+    expect(screen.getByRole("article")).toHaveAttribute("lang", "id");
+  });
+
+  // Edge: an English report (made before the switch, or the preview) still reads fully in English.
+  it("still speaks English when told", () => {
+    render(<ReportDocument report={firstReport()} language="en" />);
     expect(screen.getByRole("article")).toHaveAttribute("lang", "en");
   });
 
@@ -24,7 +30,7 @@ describe("ReportDocument", () => {
 
   // The title is typed by a person, so an English report keeps its Indonesian title (PBI-26 AC3).
   it("shows the logo, the title as typed and the PDF info line", () => {
-    render(<ReportDocument report={firstReport()} />);
+    render(<ReportDocument report={firstReport()} language="en" />);
     const body = screen.getByRole("article");
     // AC8: the official Veritask logo, the same asset the server PDF uses.
     expect(within(body).getByRole("img", { name: "Veritask" })).toHaveAttribute(
@@ -41,12 +47,13 @@ describe("ReportDocument", () => {
 
   it("hides the model versions of a code-mode report", () => {
     render(<ReportDocument report={firstReport({ product_label_mode: "code" })} language="id" />);
-    expect(screen.getAllByText("Disamarkan")).toHaveLength(firstReport().sessions.length);
+    // SCRUM-346 A1: the version sits under the product name, after the kind.
+    expect(screen.getAllByText(/ · Disamarkan$/)).toHaveLength(firstReport().sessions.length);
   });
 
   // AC7 / D9: a test report, as Viewer and Kontributor receive it, has no dev banner and one section.
   it("shows one Test cases section without a dev banner for a test report", () => {
-    render(<ReportDocument report={firstReport()} />);
+    render(<ReportDocument report={firstReport()} language="en" />);
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Test cases"]);
     expect(screen.getByRole("table", { name: "Test cases" })).toBeInTheDocument();
     expect(screen.queryByRole("note")).toBeNull();
@@ -68,13 +75,13 @@ describe("ReportDocument", () => {
   // Edge: like the PDF, a report with no result rows says so instead of drawing empty tables.
   it("says the report has no results when no section has rows", () => {
     render(<ReportDocument report={firstReport({ sessions: [] })} />);
-    expect(screen.getByText("This report has no results.")).toBeInTheDocument();
+    expect(screen.getByText("Tidak ada hasil untuk laporan ini.")).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("lists the case versions behind the numbers, folded by default", () => {
     render(<ReportDocument report={firstReport()} />);
-    const summary = screen.getByText("Case versions (42)");
+    const summary = screen.getByText("Versi kasus (42)");
     const details = summary.closest("details") as HTMLElement;
     expect(details).not.toHaveAttribute("open");
     expect(details).toHaveTextContent("ILB-001 v1, ILB-002 v1, ILB-003 v1, ILB-004 v2");
@@ -82,7 +89,7 @@ describe("ReportDocument", () => {
 
   it("leaves out the case versions when the report lists none", () => {
     render(<ReportDocument report={firstReport({ case_basis: [] })} />);
-    expect(screen.queryByText(/Case versions/)).toBeNull();
+    expect(screen.queryByText(/Versi kasus/)).toBeNull();
   });
 
   // PBI-16 AC3-4: readers who cannot open case contents are told where to ask.
@@ -92,5 +99,31 @@ describe("ReportDocument", () => {
   ] as const)("ends with the contact line in the report's language (%s)", (language, line) => {
     render(<ReportDocument report={devTestReport()} language={language} />);
     expect(screen.getByText(line)).toBeInTheDocument();
+  });
+
+  // SCRUM-346 A5 (PO kept it on 25 Nov): a folded "how to read this report" panel next to the title, with the same
+  // explanations as the column info buttons plus the dev and test rule (PBI-15), which has no column of its own.
+  it("offers a folded guide to reading the report", () => {
+    render(<ReportDocument report={firstReport()} />);
+    const summary = screen.getByText("Cara membaca laporan ini");
+    const details = summary.closest("details") as HTMLElement;
+    expect(details).not.toHaveAttribute("open");
+    expect([...details.querySelectorAll("dt")].map((term) => term.textContent)).toEqual([
+      "Peringkat",
+      "Skor deterministik",
+      "Skor penilai LLM",
+      "Kasus dinilai",
+      "Tingkat kegagalan",
+      "Penanda",
+      "Skor dev dan test",
+    ]);
+  });
+
+  // SCRUM-346 A6: each section opens with its highlight cards and ends with one sorted chart per score.
+  it("puts highlight cards and per-score charts in every section", () => {
+    const { container } = render(<ReportDocument report={devTestReport()} />);
+    expect(screen.getByRole("list", { name: "Sorotan Kasus test" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Sorotan Kasus dev" })).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-chart]")).toHaveLength(6);
   });
 });

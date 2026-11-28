@@ -12,8 +12,8 @@ export function GradeEstimateTable({
 }: Readonly<{ estimate: AsyncResource<EstimateView | null> & { reload: () => void } }>) {
   if (estimate.status === "loading") {
     return (
-      <output className="mt-3 flex items-center gap-2 text-sm text-slate-500">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
+      <output className="mt-3 flex items-center gap-2 text-sm text-muted">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
         <span>Memuat perkiraan biaya…</span>
       </output>
     );
@@ -27,20 +27,20 @@ export function GradeEstimateTable({
   return (
     <div className="mt-3 space-y-2">
       <table aria-label="Perkiraan biaya penilaian" className="w-full text-left text-sm">
-        <tbody className="divide-y divide-slate-200">
+        <tbody className="divide-y divide-line-soft">
           {rows.map((row) => (
             <tr key={row.label}>
-              <th scope="row" className="py-1.5 pr-3 font-medium text-slate-600">
+              <th scope="row" className="py-2 pr-3 font-normal text-muted">
                 {row.label}
               </th>
-              <td className="py-1.5 text-right break-words text-slate-900">{row.value}</td>
+              <td className="py-2 text-right break-words text-ink">{row.value}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {!hasAttempts && <p className="text-sm text-slate-600">{NO_ATTEMPTS_TEXT}</p>}
+      {!hasAttempts && <p className="text-sm text-muted">{NO_ATTEMPTS_TEXT}</p>}
       {!budgetSufficient && (
-        <p role="alert" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p role="alert" className="rounded-control bg-warning-wash px-3 py-2 text-[13px] text-warning-ink">
           {BUDGET_SHORT_TEXT}
         </p>
       )}

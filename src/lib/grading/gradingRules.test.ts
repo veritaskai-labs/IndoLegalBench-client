@@ -188,7 +188,7 @@ describe("runsErrorMessage (GET /measurements/{id}/grading-runs, PBI-14 AC7)", (
 
 describe("estimateErrorMessage (PBI-14 AC6)", () => {
   it.each([
-    [new ApiError(422, "JUDGE_PRICING_MISSING"), "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia."],
+    [new ApiError(422, "JUDGE_PRICING_MISSING"), "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Produk AI."],
     [new ApiError(422, "JUDGE_NOT_CONFIGURED"), "Sesi ini belum punya penilai LLM dan belum ada yang dipilih."],
     [new ApiError(404, "JUDGE_PROVIDER_NOT_FOUND"), "Produk penilai tidak ditemukan atau bukan produk AI otomatis. Muat ulang halaman."],
     // Same codes and words as the grade request, so the estimate and the grading never disagree.
@@ -322,11 +322,11 @@ describe("gradingFailureMessage (K-19, SCRUM-290: alasan run gagal dari error_co
 
   // Positive: every code the server stores in grading_run_progress.error_code has its own sentence.
   it.each([
-    ["judge_not_configured", "LLM judge belum dipilih untuk penilaian ini. Pilih judge lalu coba lagi."],
-    ["judge_unavailable", "LLM judge tidak dapat dihubungi. Periksa produk LLM judge di halaman Penyedia lalu coba lagi."],
-    ["judge_pricing_missing", "Harga token produk LLM judge belum lengkap. Lengkapi harga masuk dan keluar di halaman Penyedia."],
-    ["judge_budget_exhausted", "Anggaran bulanan produk LLM judge habis. Tambah anggarannya di halaman Penyedia atau pilih judge lain."],
-    ["judge_incomplete", "LLM judge tidak memberi penilaian yang lengkap. Coba nilai ulang."],
+    ["judge_not_configured", "Penilai LLM belum dipilih untuk penilaian ini. Pilih penilai LLM lalu coba lagi."],
+    ["judge_unavailable", "Penilai LLM tidak dapat dihubungi. Periksa produknya di halaman Produk AI lalu coba lagi."],
+    ["judge_pricing_missing", "Harga token produk penilai LLM belum lengkap. Lengkapi harga masuk dan keluar di halaman Produk AI."],
+    ["judge_budget_exhausted", "Anggaran bulanan produk penilai LLM habis. Tambah anggarannya di halaman Produk AI atau pilih penilai lain."],
+    ["judge_incomplete", "Penilai LLM tidak memberi penilaian yang lengkap. Coba nilai ulang."],
     ["NO_SCORE", "Tidak ada jawaban yang dapat diberi skor, misalnya karena semua jawaban kosong atau ditolak."],
     ["GRADING_INTERRUPTED", "Penilaian terhenti di tengah jalan karena layanan penilai berhenti."],
     ["SESSION_ARCHIVED", "Sesi diarsipkan saat penilaian berjalan."],

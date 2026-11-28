@@ -65,10 +65,11 @@ describe("SavedReportList", () => {
     const link = await screen.findByRole("link", { name: "Perbandingan 5 produk, Oktober 2026" });
     const cells = within(link.closest("tr") as HTMLElement).getAllByRole("cell").map((cell) => cell.textContent);
     expect(cells).toEqual(["AiYU, DeepSeek", "Dev + Test", "Terbit", "19 Nov 2026"]);
+    // SCRUM-346 N9 (H2): the column holds the case type (Dev, Test, Dev + Test), so it says "Jenis kasus".
     expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
       "Judul",
       "Produk",
-      "Nilai",
+      "Jenis kasus",
       "Status",
       "Dibuat",
     ]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { type MouseEvent, type ReactNode, useMemo, useState } from "react";
 import {
   type Comparator,
   nextSort,
@@ -31,6 +31,20 @@ type Props<T> = {
   pageSize?: number;
   /** Shown in place of the rows when there are none, e.g. an EmptyState message with a next step. */
   empty?: ReactNode;
+  /** Screen-reader name of the table, rendered as an sr-only caption. */
+  caption?: string;
+  /** Footer text for the rows on the current page (1-based, inclusive), e.g. "Menampilkan 1–8 dari 8". Left out when there are no rows. */
+  summary?: (range: Readonly<{ from: number; to: number; total: number }>) => ReactNode;
+  /** Extra classes for one row, e.g. a marker that must follow the row's real height. */
+  rowClassName?: (row: T) => string | undefined;
+  /** Sort to start with, e.g. one kept in the address. Read once, like the initial value of useState. */
+  initialSort?: SortState | null;
+  /** Told about every sort the user picks, so a page can keep it (for example in the address). */
+  onSortChange?: (sort: SortState) => void;
+  /** Reset to page 1 when rows change (default true). Set false to stay on the current page across reloads. */
+  resetPageOnDataChange?: boolean;
+  /** Optional row click handler; clicks originating from interactive controls inside the row are ignored. */
+  onRowClick?: (row: T) => void;
 };
 
 function SortIcon({ direction }: Readonly<{ direction?: SortDirection }>) {
@@ -50,16 +64,39 @@ function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
   return active ? ARIA_SORT[active.direction] : "none";
 }
 
+function forwardRowClick<T>(
+  event: MouseEvent<HTMLTableRowElement>,
+  row: T,
+  onRowClick: (row: T) => void,
+) {
+  if (!(event.target as HTMLElement).closest("a, button, input, select, textarea")) {
+    onRowClick(row);
+  }
+}
+
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
-export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Readonly<Props<T>>) {
-  const [sort, setSort] = useState<SortState | null>(null);
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  pageSize = 10,
+  empty,
+  caption,
+  summary,
+  rowClassName,
+  initialSort = null,
+  onSortChange,
+  resetPageOnDataChange = true,
+  onRowClick,
+}: Readonly<Props<T>>) {
+  const [sort, setSort] = useState<SortState | null>(initialSort);
   const [page, setPage] = useState(1);
 
   // Back to page one when the rows really change (filter, refetch), but not on a re-render with the same rows.
   const [seenRows, setSeenRows] = useState(rows);
   if (seenRows !== rows) {
     setSeenRows(rows);
-    if (!sameRows(seenRows, rows)) setPage(1);
+    if (resetPageOnDataChange && !sameRows(seenRows, rows)) setPage(1);
   }
 
   // Only the active column's sort hooks matter, so inline columns do not invalidate the sorted rows.
@@ -78,14 +115,17 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Re
   const paged = paginate(sorted, page, pageSize);
 
   function toggleSort(key: string) {
-    setSort((current) => nextSort(current, key));
+    const next = nextSort(sort, key);
+    setSort(next);
     setPage(1);
+    onSortChange?.(next);
   }
 
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-control border border-line bg-paper">
         <table className="w-full border-separate border-spacing-0 text-[13px] leading-[19.5px]">
+          {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
             <tr>
               {columns.map((column) => {
@@ -123,7 +163,12 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Re
               </tr>
             ) : (
               paged.items.map((row) => (
-                <tr key={rowKey(row)} className="hover:bg-surface-hover">
+                // Row click convenience; interactive descendants (links/buttons) still handle keyboard navigation.
+                <tr
+                  key={rowKey(row)}
+                  onClick={onRowClick ? (event) => forwardRowClick(event, row, onRowClick) : undefined}
+                  className={`hover:bg-surface-hover ${onRowClick ? "cursor-pointer " : ""}${rowClassName?.(row) ?? ""}`}
+                >
                   {columns.map((column) => (
                     <td key={column.key} className="h-[52px] border-t border-line-soft px-3 py-2.5 align-middle">
                       {column.cell(row)}
@@ -135,6 +180,15 @@ export function DataTable<T>({ columns, rows, rowKey, pageSize = 10, empty }: Re
           </tbody>
         </table>
       </div>
+      {summary && paged.total > 0 && (
+        <p className="text-[13px] text-muted">
+          {summary({
+            from: (paged.page - 1) * pageSize + 1,
+            to: (paged.page - 1) * pageSize + paged.items.length,
+            total: paged.total,
+          })}
+        </p>
+      )}
       {paged.lastPage > 1 && <Pager page={paged.page} lastPage={paged.lastPage} onPageChange={setPage} />}
     </div>
   );

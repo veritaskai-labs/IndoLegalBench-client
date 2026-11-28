@@ -28,7 +28,7 @@ export default function RunsPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Eksekusi</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Pengukuran otomatis</h1>
           <p className="text-sm text-slate-500">
             Sesi pengukuran otomatis, terbaru di atas. Sesi yang diarsipkan pindah ke tab Arsip, datanya tetap tersimpan.
           </p>

@@ -2,7 +2,6 @@ import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { formatRupiah, formatRupiahDown } from "@/lib/providers/format";
 import { versionText } from "@/lib/rubrics/gradingRun";
 import type { GradeEstimate } from "@/types/grading";
-import type { JudgeProviderOption } from "@/types/provider";
 
 /** Satu baris tabel perkiraan, siap tampil tanpa logika di komponen. */
 export interface EstimateRow {
@@ -18,30 +17,25 @@ export interface EstimateView {
 }
 
 export const BUDGET_SHORT_TEXT =
-  "Perkiraan biaya melebihi sisa anggaran bulanan produk judge ini. Penilaian belum bisa dimulai. Tambah anggaran produk ini di halaman Penyedia atau pilih judge lain.";
+  "Perkiraan biaya melebihi sisa anggaran bulanan penilai ini. Penilaian belum bisa dimulai. Tambah anggaran produk ini di halaman Produk AI atau pilih penilai lain.";
 
-export const NO_ATTEMPTS_TEXT = "Tidak ada percobaan yang perlu dikirim ke judge, jadi penilaian ini tidak memakai anggaran.";
-
-const UNKNOWN_JUDGE = "Judge yang dipilih";
-
-/** Nama judge dari id jawaban server; daftar yang gagal dimuat tidak menghalangi perkiraan tampil. */
-function judgeName(id: string, judges: readonly JudgeProviderOption[]): string {
-  return judges.find((judge) => judge.id === id)?.name ?? UNKNOWN_JUDGE;
-}
+export const NO_ATTEMPTS_TEXT = "Tidak ada percobaan yang perlu dikirim ke penilai LLM, jadi penilaian ini tidak memakai anggaran.";
 
 /**
- * Perkiraan biaya penilaian (PBI-14 AC6) sebagai baris tabel. Biaya memakai formatRupiah seperti
- * ringkasan pengukuran (PBI-11); sisa anggaran dibulatkan ke bawah (keputusan PO, 3 Nov) supaya
- * angka yang tampil tidak pernah lebih besar dari sisa sebenarnya.
+ * Perkiraan biaya penilaian (PBI-14 AC6) sebagai baris tabel, urutan SCRUM-375 C1: versi rubrik,
+ * percobaan, biaya, sisa anggaran. Penilainya tidak diulang di sini karena sudah tampil di pilihan
+ * tepat di atas tabel. Biaya memakai formatRupiah seperti ringkasan pengukuran (PBI-11); sisa anggaran
+ * dibulatkan ke bawah (keputusan PO, 3 Nov) supaya angka yang tampil tidak pernah lebih besar dari
+ * sisa sebenarnya. activeVersion hanya true bila server sendiri yang memilih versi aktif (C2).
  */
-export function toEstimateView(estimate: GradeEstimate, judges: readonly JudgeProviderOption[]): EstimateView {
+export function toEstimateView(estimate: GradeEstimate, { activeVersion = false }: Readonly<{ activeVersion?: boolean }> = {}): EstimateView {
+  const version = versionText(estimate.rubric_version);
   return {
     rows: [
+      { label: "Versi rubrik", value: activeVersion ? `${version} · aktif` : version },
       { label: "Jumlah percobaan", value: String(estimate.attempts_to_grade) },
-      { label: "Versi rubrik", value: versionText(estimate.rubric_version) },
-      { label: "LLM judge", value: judgeName(estimate.judge_provider_id, judges) },
       { label: "Perkiraan biaya", value: formatRupiah(estimate.estimated_cost_idr) },
-      { label: "Sisa anggaran bulanan judge", value: formatRupiahDown(estimate.remaining_budget_idr) },
+      { label: "Sisa anggaran bulanan penilai", value: formatRupiahDown(estimate.remaining_budget_idr) },
     ],
     budgetSufficient: estimate.budget_sufficient,
     hasAttempts: estimate.attempts_to_grade > 0,
