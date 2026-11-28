@@ -1,25 +1,40 @@
 import { ApiError, type MissingSection } from "@/lib/apiClient";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 
-/** Kode server yang artinya sudah jelas, dicek sebelum status HTTP. */
-const CODE_MESSAGE: Record<string, string> = {
-  VERSION_NOT_SUBMITTABLE: "Versi ini sedang ditinjau atau sudah disetujui.",
-  SUITE_NOT_ACTIVE: "Suite ini tidak aktif, jadi kasusnya belum bisa diajukan.",
-  CASE_NOT_READY: "Kasus belum lengkap. Lengkapi bagian berikut dulu.",
-  ROUND_NOT_REVISED:
-    "Kasus ini belum bisa diajukan ulang karena belum ada putusan revisi. Hubungi Admin.",
-};
+const SUBMIT_COPY = messages({
+  id: {
+    notSubmittable: "Versi ini sedang ditinjau atau sudah disetujui.",
+    suiteInactive: "Suite ini tidak aktif, jadi kasusnya belum bisa diajukan.",
+    notReady: "Kasus belum lengkap. Lengkapi bagian berikut dulu.",
+    notRevised:
+      "Kasus ini belum bisa diajukan ulang karena belum ada putusan revisi. Hubungi Admin.",
+    forbidden: "Hanya penulis kasus ini yang bisa mengajukannya untuk direview.",
+    notFound: "Kasus tidak ditemukan.",
+    fallback: "Gagal mengajukan kasus. Coba lagi.",
+  },
+  en: {
+    notSubmittable: "This version is in review or already approved.",
+    suiteInactive: "This suite is not active, so its case cannot be submitted yet.",
+    notReady: "The case is not complete. Finish the following parts first.",
+    notRevised:
+      "This case cannot be submitted again because there is no revision decision yet. Contact an admin.",
+    forbidden: "Only the author of this case can submit it for review.",
+    notFound: "The case was not found.",
+    fallback: "Could not submit the case. Try again.",
+  },
+});
 
-const DEFAULT_MESSAGE = "Gagal mengajukan kasus. Coba lagi.";
+export function mapSubmitError(error: unknown, locale: Locale = DEFAULT_LOCALE): string {
+  const copy = text(SUBMIT_COPY, locale);
+  if (!(error instanceof ApiError)) return copy.fallback;
 
-export function mapSubmitError(error: unknown): string {
-  if (!(error instanceof ApiError)) return DEFAULT_MESSAGE;
-
-  const byCode = CODE_MESSAGE[error.code];
-  if (byCode !== undefined) return byCode;
-  if (error.status === 403)
-    return "Hanya penulis kasus ini yang bisa mengajukannya untuk direview.";
-  if (error.status === 404) return "Kasus tidak ditemukan.";
-  return DEFAULT_MESSAGE;
+  if (error.code === "VERSION_NOT_SUBMITTABLE") return copy.notSubmittable;
+  if (error.code === "SUITE_NOT_ACTIVE") return copy.suiteInactive;
+  if (error.code === "CASE_NOT_READY") return copy.notReady;
+  if (error.code === "ROUND_NOT_REVISED") return copy.notRevised;
+  if (error.status === 403) return copy.forbidden;
+  if (error.status === 404) return copy.notFound;
+  return copy.fallback;
 }
 
 /** Bagian yang menghalangi pengajuan, ditampilkan satu per satu (AC1). */

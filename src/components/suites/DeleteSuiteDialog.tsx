@@ -3,7 +3,31 @@
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/apiClient";
+import { CHROME } from "@/lib/i18n/chrome";
+import { fill, messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
+
+const COPY = messages({
+  id: {
+    title: "Hapus suite",
+    deleteFailed: "Gagal menghapus suite. Coba lagi.",
+    archiveFailed: "Gagal mengarsipkan suite. Coba lagi.",
+    blocked: "Suite {name} berisi kasus yang sudah disetujui, jadi tidak bisa dihapus. Arsipkan saja supaya tidak lagi dipakai untuk pengukuran.",
+    confirm: "Hapus suite {name}? Tindakan ini tidak bisa dibatalkan.",
+    archiveInstead: "Arsipkan saja",
+    remove: "Hapus",
+  },
+  en: {
+    title: "Remove suite",
+    deleteFailed: "Could not delete the suite. Try again.",
+    archiveFailed: "Could not archive the suite. Try again.",
+    blocked: "Suite {name} contains cases that are already approved, so it cannot be deleted. Archive it instead so it is no longer used for measurement.",
+    confirm: "Remove suite {name}? This cannot be undone.",
+    archiveInstead: "Archive instead",
+    remove: "Remove",
+  },
+});
 
 type Props = {
   suite: Suite;
@@ -12,6 +36,8 @@ type Props = {
 };
 
 export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
   const [hasApprovedCases, setHasApprovedCases] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,7 +53,7 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
       if (err instanceof ApiError && err.code === "SUITE_HAS_APPROVED_CASES") {
         setHasApprovedCases(true);
       } else {
-        setError("Gagal menghapus suite. Coba lagi.");
+        setError(copy.deleteFailed);
       }
     } finally {
       setBusy(false);
@@ -42,7 +68,7 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
       await apiFetch(`/suites/${suite.id}/archive`, { method: "POST" });
       onDone();
     } catch {
-      setError("Gagal mengarsipkan suite. Coba lagi.");
+      setError(copy.archiveFailed);
     } finally {
       setBusy(false);
     }
@@ -53,22 +79,17 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
       <dialog
         open
         aria-modal="true"
-        aria-label="Hapus suite"
+        aria-label={copy.title}
         className="static m-0 w-full max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog"
       >
         <h2 className="font-serif text-[22px] font-medium leading-7 text-ink">
-          Hapus suite
+          {copy.title}
         </h2>
 
         {hasApprovedCases ? (
-          <p className="mt-3 text-sm text-ink-soft">
-            Suite {suite.name} berisi kasus yang sudah disetujui, jadi tidak bisa
-            dihapus. Arsipkan saja supaya tidak lagi dipakai untuk pengukuran.
-          </p>
+          <p className="mt-3 text-sm text-ink-soft">{fill(copy.blocked, { name: suite.name })}</p>
         ) : (
-          <p className="mt-3 text-sm text-ink-soft">
-            Hapus suite {suite.name}? Tindakan ini tidak bisa dibatalkan.
-          </p>
+          <p className="mt-3 text-sm text-ink-soft">{fill(copy.confirm, { name: suite.name })}</p>
         )}
 
         {error && (
@@ -82,15 +103,15 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
 
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Batal
+            {chrome.cancel}
           </Button>
           {hasApprovedCases ? (
             <Button variant="primary" onClick={handleArchive} disabled={busy}>
-              Arsipkan saja
+              {copy.archiveInstead}
             </Button>
           ) : (
             <Button variant="danger" onClick={handleDelete} disabled={busy}>
-              Hapus
+              {copy.remove}
             </Button>
           )}
         </div>

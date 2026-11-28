@@ -10,7 +10,22 @@ import {
   type Ref,
 } from "react";
 import { searchRegulationTypes } from "@/lib/cases/regulationTypeSearch";
+import { DEFAULT_LOCALE, fill, messages, text, type Locale } from "@/lib/i18n/locale";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import type { RegulationType } from "@/types/regulationType";
+
+const COPY = messages({
+  id: {
+    empty: "Belum ada jenis peraturan yang tersedia.",
+    none: "Jenis peraturan tidak ditemukan.",
+    narrow: "Menampilkan {shown} dari {total} jenis. Ketik untuk mempersempit.",
+  },
+  en: {
+    empty: "No regulation types are available yet.",
+    none: "No regulation type was found.",
+    narrow: "Showing {shown} of {total} types. Type to narrow the list.",
+  },
+});
 import { CONTROL_CLASS, describedBy, ErrorText, FieldLabel, HintText } from "./fields";
 
 /** Daftar resmi lebih dari 260 jenis: tampilkan sebagian dan minta pengguna mempersempit. */
@@ -41,11 +56,16 @@ function stepActive(key: "ArrowDown" | "ArrowUp", current: number, count: number
   return current <= 0 ? count - 1 : current - 1;
 }
 
-function statusMessage(total: number, matches: number): string | undefined {
-  if (total === 0) return "Belum ada jenis peraturan yang tersedia.";
-  if (matches === 0) return "Jenis peraturan tidak ditemukan.";
+export function regulationTypeStatusMessage(
+  total: number,
+  matches: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string | undefined {
+  const copy = text(COPY, locale);
+  if (total === 0) return copy.empty;
+  if (matches === 0) return copy.none;
   if (matches > MAX_VISIBLE_OPTIONS) {
-    return `Menampilkan ${MAX_VISIBLE_OPTIONS} dari ${matches} jenis. Ketik untuk mempersempit.`;
+    return fill(copy.narrow, { shown: MAX_VISIBLE_OPTIONS, total: matches });
   }
   return undefined;
 }
@@ -67,6 +87,7 @@ export function RegulationTypeSelect({
   disabled = false,
   inputRef,
 }: Readonly<Props>) {
+  const locale = useLocale();
   const id = useId();
   const listId = `${id}-list`;
   const optionId = useCallback((code: string) => `${id}-option-${code}`, [id]);
@@ -85,7 +106,7 @@ export function RegulationTypeSelect({
     [selectable, query],
   );
   const visible = matches.slice(0, MAX_VISIBLE_OPTIONS);
-  const message = open ? statusMessage(selectable.length, matches.length) : undefined;
+  const message = open ? regulationTypeStatusMessage(selectable.length, matches.length, locale) : undefined;
   const showList = open && visible.length > 0;
   const activeCode = showList ? visible[activeIndex]?.code : undefined;
 

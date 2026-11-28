@@ -1,49 +1,67 @@
+import { DEFAULT_LOCALE, fill, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { VersionSections } from "@/types/caseVersion";
 
 type SectionKey = keyof VersionSections;
 
 type SectionView = {
-  label: string;
   /** Isi bagian ini sebagai baris teks untuk tampilan berdampingan. Kosong berarti bagian itu tidak terisi. */
-  lines: (sections: VersionSections) => string[];
+  lines: (sections: VersionSections, locale: Locale) => string[];
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /** Kontrak menulis isi bagian ini sebagai unknown, jadi tiap nilai dipersempit dulu sebelum ditampilkan. */
-function text(value: unknown): string {
+function shown(value: unknown): string {
   if (typeof value === "string") return value.trim();
   if (typeof value === "number") return String(value);
   return "";
 }
 
 function textList(value: unknown): string[] {
-  return Array.isArray(value) ? value.map(text).filter((item) => item !== "") : [];
+  return Array.isArray(value) ? value.map(shown).filter((item) => item !== "") : [];
 }
 
 function single(value: unknown): string[] {
-  const shown = text(value);
-  return shown === "" ? [] : [shown];
+  const line = shown(value);
+  return line === "" ? [] : [line];
 }
 
-/** Rujukan bentuk baru yang disimpan tanpa teks dari server: ada, tapi belum bisa dituliskan di sini. */
-const STRUCTURED_WITHOUT_TEXT =
-  "Rujukan terstruktur, teks penulisannya belum tersedia di tampilan ini.";
+const LINE_COPY = messages({
+  id: {
+    structuredMissing: "Rujukan terstruktur, teks penulisannya belum tersedia di tampilan ini.",
+    year: "Tahun",
+    mustContain: "Wajib ada: {phrases}",
+    mustNotContain: "Tidak boleh ada: {phrases}",
+    conclusion: "Kesimpulan: {text}",
+    firstVersion: "Versi pertama",
+    nothingChanged: "Tidak ada bagian yang berubah",
+  },
+  en: {
+    structuredMissing: "Structured reference; the written text is not available in this view.",
+    year: "Year",
+    mustContain: "Must include: {phrases}",
+    mustNotContain: "Must not include: {phrases}",
+    conclusion: "Conclusion: {text}",
+    firstVersion: "First version",
+    nothingChanged: "No section changed",
+  },
+});
 
 /** "UU No. 13 Tahun 2003, Pasal 151 ayat (3) huruf a". Bagian yang kosong dilewati. */
-function legacyRefLine(ref: Record<string, unknown>): string | null {
+function legacyRefLine(ref: Record<string, unknown>, locale: Locale): string | null {
+  const year = text(LINE_COPY, locale).year;
   const regulation = [
-    text(ref.regulation_type),
-    text(ref.regulation_number) && `No. ${text(ref.regulation_number)}`,
-    text(ref.year) && `Tahun ${text(ref.year)}`,
+    shown(ref.regulation_type),
+    shown(ref.regulation_number) && `No. ${shown(ref.regulation_number)}`,
+    shown(ref.year) && `${year} ${shown(ref.year)}`,
   ]
     .filter(Boolean)
     .join(" ");
   const provision = [
-    text(ref.pasal) && `Pasal ${text(ref.pasal)}`,
-    text(ref.ayat) && `ayat (${text(ref.ayat)})`,
-    text(ref.huruf) && `huruf ${text(ref.huruf)}`,
+    shown(ref.pasal) && `Pasal ${shown(ref.pasal)}`,
+    shown(ref.ayat) && `ayat (${shown(ref.ayat)})`,
+    shown(ref.huruf) && `huruf ${shown(ref.huruf)}`,
   ]
     .filter(Boolean)
     .join(" ");
@@ -57,29 +75,30 @@ function legacyRefLine(ref: Record<string, unknown>): string | null {
  * (Sprint 1) ditulis seperti biasa, dan bentuk baru tanpa teks diberi baris pengganti supaya tidak
  * hilang diam-diam dari tampilan.
  */
-function legalRefLine(ref: unknown): string | null {
+function legalRefLine(ref: unknown, locale: Locale): string | null {
   if (!isRecord(ref)) return null;
   const written = typeof ref.display_text === "string" ? ref.display_text.trim() : "";
   if (written !== "") return written;
-  if (ref.kind === "free_text") return text(ref.free_text) || null;
-  if (ref.kind === "structured") return STRUCTURED_WITHOUT_TEXT;
-  return legacyRefLine(ref);
+  if (ref.kind === "free_text") return shown(ref.free_text) || null;
+  if (ref.kind === "structured") return text(LINE_COPY, locale).structuredMissing;
+  return legacyRefLine(ref, locale);
 }
 
-function legalRefLines(value: unknown): string[] {
+function legalRefLines(value: unknown, locale: Locale): string[] {
   if (!Array.isArray(value)) return [];
-  return value.map(legalRefLine).filter((line): line is string => line !== null);
+  return value.map((ref) => legalRefLine(ref, locale)).filter((line): line is string => line !== null);
 }
 
-function answerCriteriaLines(value: unknown): string[] {
+function answerCriteriaLines(value: unknown, locale: Locale): string[] {
   if (!isRecord(value)) return [];
+  const copy = text(LINE_COPY, locale);
   const mustContain = textList(value.must_contain);
   const mustNotContain = textList(value.must_not_contain);
-  const conclusion = text(value.expected_conclusion);
+  const conclusion = shown(value.expected_conclusion);
   return [
-    mustContain.length > 0 ? `Wajib ada: ${mustContain.join("; ")}` : "",
-    mustNotContain.length > 0 ? `Tidak boleh ada: ${mustNotContain.join("; ")}` : "",
-    conclusion !== "" ? `Kesimpulan: ${conclusion}` : "",
+    mustContain.length > 0 ? fill(copy.mustContain, { phrases: mustContain.join("; ") }) : "",
+    mustNotContain.length > 0 ? fill(copy.mustNotContain, { phrases: mustNotContain.join("; ") }) : "",
+    conclusion !== "" ? fill(copy.conclusion, { text: conclusion }) : "",
   ].filter((line) => line !== "");
 }
 
@@ -89,14 +108,35 @@ function answerCriteriaLines(value: unknown): string[] {
  * Record dengan key dari kontrak membuat tsc gagal selama ada bagian yang belum punya entri.
  * Urutan entri adalah urutan baris di tampilan, sama dengan urutan di server.
  */
+const SECTION_LABELS = messages<Record<SectionKey, string>>({
+  id: {
+    "identity.title": "Judul",
+    "identity.question": "Pertanyaan",
+    category: "Kategori",
+    case_code: "ID kasus",
+    split_tag: "Tag dev/test",
+    legal_refs: "Rujukan hukum",
+    answer_criteria: "Kriteria jawaban",
+  },
+  en: {
+    "identity.title": "Title",
+    "identity.question": "Question",
+    category: "Category",
+    case_code: "Case ID",
+    split_tag: "Dev/test tag",
+    legal_refs: "Legal references",
+    answer_criteria: "Answer criteria",
+  },
+});
+
 const SECTION_VIEW: Record<SectionKey, SectionView> = {
-  "identity.title": { label: "Judul", lines: (s) => single(s["identity.title"]) },
-  "identity.question": { label: "Pertanyaan", lines: (s) => single(s["identity.question"]) },
-  category: { label: "Kategori", lines: (s) => single(s.category) },
-  case_code: { label: "ID kasus", lines: (s) => single(s.case_code) },
-  split_tag: { label: "Tag dev/test", lines: (s) => single(s.split_tag) },
-  legal_refs: { label: "Rujukan hukum", lines: (s) => legalRefLines(s.legal_refs) },
-  answer_criteria: { label: "Kriteria jawaban", lines: (s) => answerCriteriaLines(s.answer_criteria) },
+  "identity.title": { lines: (s) => single(s["identity.title"]) },
+  "identity.question": { lines: (s) => single(s["identity.question"]) },
+  category: { lines: (s) => single(s.category) },
+  case_code: { lines: (s) => single(s.case_code) },
+  split_tag: { lines: (s) => single(s.split_tag) },
+  legal_refs: { lines: (s, locale) => legalRefLines(s.legal_refs, locale) },
+  answer_criteria: { lines: (s, locale) => answerCriteriaLines(s.answer_criteria, locale) },
 };
 
 /**
@@ -117,21 +157,31 @@ export function visibleChanged(changed: readonly string[]): string[] {
 export const SECTION_KEYS = Object.keys(SECTION_VIEW) as SectionKey[];
 
 /** Label satu bagian. Nama yang belum dikenal (server lebih baru dari client) tampil apa adanya. */
-export function sectionLabel(name: string): string {
-  return Object.hasOwn(SECTION_VIEW, name) ? SECTION_VIEW[name as SectionKey].label : name;
+export function sectionLabel(name: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = text(SECTION_LABELS, locale);
+  return Object.hasOwn(labels, name) ? labels[name as SectionKey] : name;
 }
 
 /** Isi satu bagian sebagai baris teks. */
-export function sectionLines(name: SectionKey, sections: VersionSections): string[] {
-  return SECTION_VIEW[name].lines(sections);
+export function sectionLines(
+  name: SectionKey,
+  sections: VersionSections,
+  locale: Locale = DEFAULT_LOCALE,
+): string[] {
+  return SECTION_VIEW[name].lines(sections, locale);
 }
 
 /**
  * Teks kolom "Perubahan" di riwayat. Versi 1 selalu punya daftar kosong karena
  * tidak ada versi sebelumnya; versi lain dengan daftar kosong berarti tidak ada bagian yang beda.
  */
-export function describeChanged(versionNo: number, changed: readonly string[]): string {
-  const shown = visibleChanged(changed);
-  if (shown.length > 0) return shown.map(sectionLabel).join(", ");
-  return versionNo === 1 ? "Versi pertama" : "Tidak ada bagian yang berubah";
+export function describeChanged(
+  versionNo: number,
+  changed: readonly string[],
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const names = visibleChanged(changed);
+  if (names.length > 0) return names.map((name) => sectionLabel(name, locale)).join(", ");
+  const copy = text(LINE_COPY, locale);
+  return versionNo === 1 ? copy.firstVersion : copy.nothingChanged;
 }

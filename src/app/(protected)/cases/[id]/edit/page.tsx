@@ -27,7 +27,9 @@ import { useCanStartNewVersion } from "@/hooks/useCanStartNewVersion";
 import { useCanSubmitForReview } from "@/hooks/useCanSubmitForReview";
 import { useCaseDetail } from "@/hooks/useCaseDetail";
 import { useOpenDraft } from "@/hooks/useOpenDraft";
-import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
+import { mapSaveError, type FieldSaveError } from "@/lib/cases/saveError";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import { useStartNewVersion } from "@/hooks/useStartNewVersion";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { updateCase } from "@/lib/cases/caseApi";
@@ -38,7 +40,40 @@ import {
 import { isCaseEditable } from "@/lib/cases/permissions";
 import { canChangeTagAsAdmin, isTagLockedInEditor } from "@/lib/cases/splitTag";
 import type { CaseRead } from "@/types/case";
-import type { FieldSaveError } from "@/lib/cases/saveError";
+const COPY = messages({
+  id: {
+    loading: "Memuat kasus…",
+    notFound: "Kasus tidak ditemukan.",
+    backToSuites: "Kembali ke Suites",
+    loadFailed: "Gagal memuat kasus.",
+    leave: "Ada perubahan yang belum disimpan. Tinggalkan halaman ini?",
+    tagChanged: "Tag kasus diubah",
+    saved: "Perubahan tersimpan",
+    crumb: "Suite dan kasus",
+    back: "Kembali ke suite",
+    unsaved: "Ada perubahan yang belum disimpan",
+    changeTag: "Ubah tag",
+    saveBeforeTag: "Simpan perubahan dulu untuk mengubah tag",
+    versionStarted: "Versi baru dibuat. Perubahan akan ditinjau ulang sebelum berlaku",
+    submitted: "Kasus diajukan untuk direview",
+  },
+  en: {
+    loading: "Loading case…",
+    notFound: "The case was not found.",
+    backToSuites: "Back to suites",
+    loadFailed: "Could not load the case.",
+    leave: "There are unsaved changes. Leave this page?",
+    tagChanged: "Case tag changed",
+    saved: "Changes saved",
+    crumb: "Suites and cases",
+    back: "Back to the suite",
+    unsaved: "There are unsaved changes",
+    changeTag: "Change tag",
+    saveBeforeTag: "Save your changes before changing the tag",
+    versionStarted: "New version started. Changes will be reviewed again before they take effect",
+    submitted: "Case submitted for review",
+  },
+});
 import { caseReadPath } from "@/lib/cases/casePaths";
 import { decodeRouteParam } from "@/lib/routeParams";
 import { Breadcrumb } from "@/components/ui";
@@ -57,14 +92,17 @@ export default function EditCasePage() {
     if (isDeveloperAi) router.replace(caseReadPath(caseId));
   }, [isDeveloperAi, caseId, router]);
 
-  if (isDeveloperAi) return <LoadingState label="Memuat kasus…" />;
+  const copy = useText(COPY);
+  if (isDeveloperAi) return <LoadingState label={copy.loading} />;
   return <CaseEditor caseId={caseId} />;
 }
 
 function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const detail = useCaseDetail(caseId);
   const { showToast } = useToast();
-  const saveError = useSaveErrorBanner();
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [tab, setTab] = useState<CaseTab>("editor");
   const [changingTag, setChangingTag] = useState(false);
@@ -98,9 +136,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
   const startVersion = useStartNewVersion(caseId, (draft: CaseRead) => {
     detail.replace(draft);
     setFormKey((key) => key + 1);
-    showToast(
-      "Versi baru dibuat. Perubahan akan ditinjau ulang sebelum berlaku",
-    );
+    showToast(copy.versionStarted);
   });
   const suiteName = useSuiteName(
     detail.status === "ready" ? detail.saved.suite_id : null,
@@ -109,23 +145,23 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
   useUnsavedChangesWarning(dirty);
 
   if (detail.status === "loading")
-    return <LoadingState label="Memuat kasus…" />;
+    return <LoadingState label={copy.loading} />;
 
   if (detail.status === "error") {
     return detail.notFound ? (
       <div className="space-y-4">
-        <ErrorState variant="card" message="Kasus tidak ditemukan." />
+        <ErrorState variant="card" message={copy.notFound} />
         <Link
           href="/suites"
           className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
         >
-          Kembali ke Suites
+          {copy.backToSuites}
         </Link>
       </div>
     ) : (
       <ErrorState
         variant="card"
-        message="Gagal memuat kasus."
+        message={copy.loadFailed}
         onRetry={detail.reload}
       />
     );
@@ -139,7 +175,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
   function leaveTo(path: string) {
     if (
       dirty &&
-      !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")
+      !confirm(copy.leave)
     ) {
       return;
     }
@@ -152,18 +188,21 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
     // ditampilkan dan hanya tagnya yang diganti, karena server mengubah tag keduanya.
     detail.replace({ ...saved, split_tag: result.split_tag, was_dev: result.was_dev });
     setFormKey((key) => key + 1);
-    showToast("Tag kasus diubah");
+    showToast(copy.tagChanged);
   }
 
   async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
-    saveError.clear();
+    setSaveMessage(null);
     try {
       detail.replace(await updateCase(caseId, payload));
       setFormKey((key) => key + 1);
-      showToast("Perubahan tersimpan");
+      showToast(copy.saved);
       return null;
     } catch (error) {
-      return saveError.handle(error);
+      const mapped = mapSaveError(error, locale);
+      if (mapped.kind === "field") return mapped;
+      setSaveMessage(mapped.message);
+      return null;
     }
   }
 
@@ -172,7 +211,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
       <div className="mb-2">
         <Breadcrumb
           items={[
-            { label: "Suite dan kasus", onClick: () => leaveTo("/suites") },
+            { label: copy.crumb, onClick: () => leaveTo("/suites") },
             { label: suiteName, onClick: () => leaveTo(suitePath) },
             { label: saved.case_code },
           ]}
@@ -182,7 +221,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
       <button
         type="button"
         onClick={() => leaveTo(suitePath)}
-        aria-label="Kembali ke suite"
+        aria-label={copy.back}
         className="sticky top-20 z-10 float-left mr-2.5 mt-1 inline-flex size-8 cursor-pointer items-center justify-center rounded-control border border-line bg-paper/90 text-ink-soft shadow-xs backdrop-blur-xs transition-colors hover:bg-surface hover:text-ink"
       >
         <svg
@@ -208,7 +247,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
             <SplitTagBadge tag={saved.split_tag} wasDev={saved.was_dev} />
           </div>
           {dirty && (
-            <p className="text-xs font-medium text-warning-ink">Ada perubahan yang belum disimpan</p>
+            <p className="text-xs font-medium text-warning-ink">{copy.unsaved}</p>
           )}
         </div>
         {canChangeTag && (
@@ -224,10 +263,10 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
                 <path d="M13.6 2.6a2 2 0 0 1 2.8 2.8l-8.5 8.5-3.6.8.8-3.6 8.5-8.5Z" />
                 <path d="M3 17h14v1.5H3z" />
               </svg>
-              Ubah tag
+              {copy.changeTag}
             </button>
             {dirty && (
-              <p className="text-[11px] text-muted">Simpan perubahan dulu untuk mengubah tag</p>
+              <p className="text-[11px] text-muted">{copy.saveBeforeTag}</p>
             )}
           </div>
         )}
@@ -252,8 +291,8 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
           onRetry={completeness.reload}
         />
 
-        {saveError.message !== null && (
-          <ErrorState message={saveError.message} />
+        {saveMessage !== null && (
+          <ErrorState message={saveMessage} />
         )}
 
         {openDraft.status === "error" && (
@@ -292,7 +331,7 @@ function CaseEditor({ caseId }: Readonly<{ caseId: string }>) {
                   // Status diambil dari balasan server, bukan ditebak.
                   detail.replace({ ...saved, status: result.status });
                   setFormKey((key) => key + 1);
-                  showToast("Kasus diajukan untuk direview");
+                  showToast(copy.submitted);
                 }}
               />
             ) : null

@@ -3,7 +3,33 @@
 import { useState } from "react";
 import { Button, FormField, Input } from "@/components/ui";
 import { ApiError, apiFetch } from "@/lib/apiClient";
+import { CHROME } from "@/lib/i18n/chrome";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
+
+const COPY = messages({
+  id: {
+    edit: "Ubah suite",
+    create: "Buat suite",
+    nameRequired: "Nama wajib diisi.",
+    nameTaken: "Nama suite sudah dipakai. Pilih nama lain.",
+    saveFailed: "Gagal menyimpan suite. Coba lagi.",
+    name: "Nama",
+    description: "Deskripsi",
+    save: "Simpan",
+  },
+  en: {
+    edit: "Edit suite",
+    create: "Create suite",
+    nameRequired: "Name is required.",
+    nameTaken: "That suite name is already used. Choose another.",
+    saveFailed: "Could not save the suite. Try again.",
+    name: "Name",
+    description: "Description",
+    save: "Save",
+  },
+});
 
 type Props = {
   /** Tanpa suite berarti buat baru, dengan suite berarti ubah */
@@ -13,6 +39,8 @@ type Props = {
 };
 
 export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
   const [name, setName] = useState(suite?.name ?? "");
   const [description, setDescription] = useState(suite?.description ?? "");
   const [nameError, setNameError] = useState<string | null>(null);
@@ -23,7 +51,7 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
     const trimmed = name.trim();
 
     if (trimmed === "") {
-      setNameError("Nama wajib diisi.");
+      setNameError(copy.nameRequired);
       return;
     }
 
@@ -45,9 +73,9 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
       onSaved();
     } catch (error) {
       if (error instanceof ApiError && error.code === "SUITE_NAME_TAKEN") {
-        setNameError("Nama suite sudah dipakai. Pilih nama lain.");
+        setNameError(copy.nameTaken);
       } else {
-        setFormError("Gagal menyimpan suite. Coba lagi.");
+        setFormError(copy.saveFailed);
       }
     } finally {
       setSaving(false);
@@ -59,11 +87,11 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
       <dialog
         open
         aria-modal="true"
-        aria-label={suite ? "Ubah suite" : "Buat suite"}
+        aria-label={suite ? copy.edit : copy.create}
         className="static m-0 w-full max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog"
       >
         <h2 className="font-serif text-[22px] font-medium leading-7 text-ink">
-          {suite ? "Ubah suite" : "Buat suite"}
+          {suite ? copy.edit : copy.create}
         </h2>
 
         {formError && (
@@ -76,7 +104,7 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
         )}
 
         <div className="mt-4 space-y-4">
-          <FormField label="Nama" error={nameError ?? undefined}>
+          <FormField label={copy.name} error={nameError ?? undefined}>
             {(control) => (
               <Input
                 {...control}
@@ -86,7 +114,7 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
             )}
           </FormField>
 
-          <FormField label="Deskripsi">
+          <FormField label={copy.description}>
             {(control) => (
               <textarea
                 {...control}
@@ -101,10 +129,10 @@ export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
 
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Batal
+            {chrome.cancel}
           </Button>
           <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-            Simpan
+            {copy.save}
           </Button>
         </div>
       </dialog>

@@ -1,4 +1,7 @@
+"use client";
+
 import { SECTION_KEYS, sectionLabel, sectionLines } from "@/lib/cases/versionSections";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import type { VersionSections } from "@/types/caseVersion";
 
 /** Dua baris bisa sama persis (mis. dua kriteria jawaban sama), jadi kuncinya teks ditambah urutan kemunculan teks itu. */
@@ -21,15 +24,16 @@ export function CaseSectionList({
   sections,
   omit = [],
 }: Readonly<{ sections: VersionSections; omit?: readonly string[] }>) {
+  const locale = useLocale();
   return (
     <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
       {SECTION_KEYS.filter((key) => !omit.includes(key)).map((key) => {
-        const lines = sectionLines(key, sections);
+        const lines = sectionLines(key, sections, locale);
         return (
           // K-08: label kecil berwarna, isi lebih besar dan gelap, supaya tidak menyatu.
           <div key={key} className="px-4 py-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
-              {sectionLabel(key)}
+              {sectionLabel(key, locale)}
             </dt>
             <dd className="mt-2 space-y-1 text-base text-slate-900">
               {lines.length === 0 ? (

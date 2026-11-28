@@ -4,11 +4,27 @@ import { useFieldArray, type Control, type UseFormRegister } from "react-hook-fo
 import type { RegulationTypesResource } from "@/hooks/useRegulationTypes";
 import { emptyLegalRef } from "@/lib/cases/legalRefForm";
 import type { CaseFormValues } from "@/lib/cases/caseFormMapping";
-import { CASE_HELP } from "@/lib/cases/caseHelpText";
+import { caseHelp } from "@/lib/cases/caseHelpText";
 import { previewFieldErrors, type PreviewState } from "@/lib/cases/legalRefPreview";
+import { CHROME } from "@/lib/i18n/chrome";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import { AddRowButton, FormSection } from "./fields";
 import { LegalRefRow } from "./LegalRefRow";
 import type { ErrorLookup } from "./sections";
+
+const COPY = messages({
+  id: {
+    title: "Rujukan hukum",
+    previewFailed: "Pratinjau rujukan belum bisa dimuat. Rujukan tetap bisa disimpan.",
+    add: "+ Tambah rujukan",
+  },
+  en: {
+    title: "Legal references",
+    previewFailed: "The reference preview could not be loaded. The reference can still be saved.",
+    add: "+ Add a reference",
+  },
+});
 
 type Props = {
   register: UseFormRegister<CaseFormValues>;
@@ -33,6 +49,9 @@ export function LegalRefsSection({
   regulationTypes,
   preview = NO_PREVIEW,
 }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
+  const help = caseHelp(useLocale());
   const { fields, append, remove, update } = useFieldArray({ control, name: "legal_refs" });
   // Error form (zod atau simpan) didahulukan; error pratinjau mengisi field yang belum punya error.
   const previewErrors = previewFieldErrors(preview.previews);
@@ -41,8 +60,8 @@ export function LegalRefsSection({
   return (
     <FormSection
       id="section-rujukan-hukum"
-      title="Rujukan hukum"
-      help={CASE_HELP.legalRefs}
+      title={copy.title}
+      help={help.legalRefs}
       error={errorFor("legal_refs")}
     >
       {regulationTypes.status === "error" && (
@@ -53,13 +72,13 @@ export function LegalRefsSection({
             onClick={regulationTypes.reload}
             className="mt-2 cursor-pointer text-xs font-medium text-danger underline"
           >
-            Coba lagi
+            {chrome.retry}
           </button>
         </div>
       )}
       {preview.failed && (
         <output className="block text-xs text-muted">
-          Pratinjau rujukan belum bisa dimuat. Rujukan tetap bisa disimpan.
+          {copy.previewFailed}
         </output>
       )}
       {fields.map((field, index) => (
@@ -76,7 +95,7 @@ export function LegalRefsSection({
           onRemove={() => remove(index)}
         />
       ))}
-      <AddRowButton label="+ Tambah rujukan" onClick={() => append(emptyLegalRef())} />
+      <AddRowButton label={copy.add} onClick={() => append(emptyLegalRef())} />
     </FormSection>
   );
 }

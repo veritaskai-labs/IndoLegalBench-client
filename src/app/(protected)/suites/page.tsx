@@ -12,12 +12,42 @@ import { useSuites } from "@/hooks/useSuites";
 import { apiFetch } from "@/lib/apiClient";
 import { isDeveloperAiSession } from "@/lib/auth";
 import { canCreateCase } from "@/lib/cases/permissions";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import type { Suite, SuiteStatus } from "@/types/suite";
 
-const TABS: { value: SuiteStatus; label: string }[] = [
-  { value: "active", label: "Aktif" },
-  { value: "archived", label: "Arsip" },
-];
+const COPY = messages({
+  id: {
+    heading: "Suite dan kasus",
+    intro: "Kelompok kasus uji hukum. Buka suite untuk melihat, menambah, dan mengelola kasus di dalamnya.",
+    searchLabel: "Cari suite",
+    searchPlaceholder: "Cari suite",
+    create: "Buat Suite",
+    statusTabs: "Status suite",
+    active: "Aktif",
+    archived: "Arsip",
+    archivedToast: "berhasil diarsipkan.",
+    activatedToast: "berhasil diaktifkan.",
+    undo: "Batalkan pengarsipan",
+    archiveFailed: "Gagal mengarsipkan suite. Coba lagi.",
+    activateFailed: "Gagal mengaktifkan suite. Coba lagi.",
+  },
+  en: {
+    heading: "Suites and cases",
+    intro: "Groups of legal test cases. Open a suite to view, add, and manage the cases inside it.",
+    searchLabel: "Search suites",
+    searchPlaceholder: "Search suites",
+    create: "Create suite",
+    statusTabs: "Suite status",
+    active: "Active",
+    archived: "Archived",
+    archivedToast: "was archived.",
+    activatedToast: "was activated.",
+    undo: "Undo archive",
+    archiveFailed: "Could not archive the suite. Try again.",
+    activateFailed: "Could not activate the suite. Try again.",
+  },
+});
 
 type DialogState =
   | { mode: "closed" }
@@ -26,6 +56,7 @@ type DialogState =
   | { mode: "delete"; suite: Suite };
 
 export default function SuitesPage() {
+  const copy = useText(COPY);
   const [status, setStatus] = useState<SuiteStatus>("active");
   const [searchQuery, setSearchQuery] = useState("");
   const suites = useSuites(status);
@@ -59,10 +90,10 @@ export default function SuitesPage() {
       if (action === "archive") {
         showToast(
           <>
-            Suite <strong>{suite.name}</strong> berhasil diarsipkan.
+            Suite <strong>{suite.name}</strong> {copy.archivedToast}
           </>,
           {
-            label: "Batalkan pengarsipan",
+            label: copy.undo,
             onClick: () => {
               void toggleArchive({ ...suite, status: "archived" });
             },
@@ -71,15 +102,13 @@ export default function SuitesPage() {
       } else {
         showToast(
           <>
-            Suite <strong>{suite.name}</strong> berhasil diaktifkan.
+            Suite <strong>{suite.name}</strong> {copy.activatedToast}
           </>,
         );
       }
     } catch {
       setActionError(
-        action === "archive"
-          ? "Gagal mengarsipkan suite. Coba lagi."
-          : "Gagal mengaktifkan suite. Coba lagi.",
+        action === "archive" ? copy.archiveFailed : copy.activateFailed,
       );
     }
   }
@@ -87,21 +116,19 @@ export default function SuitesPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-serif text-4xl leading-10 text-ink">Suite dan kasus</h1>
-        <p className="mt-2 text-sm text-muted">
-          Kelompok kasus uji hukum. Buka suite untuk melihat, menambah, dan mengelola kasus di dalamnya.
-        </p>
+        <h1 className="font-serif text-4xl leading-10 text-ink">{copy.heading}</h1>
+        <p className="mt-2 text-sm text-muted">{copy.intro}</p>
       </header>
 
       {canCreate && <SuiteCaseNav current="/suites" />}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="relative block w-full sm:max-w-sm">
-          <span className="sr-only">Cari suite</span>
+          <span className="sr-only">{copy.searchLabel}</span>
           <Icon name="cari" className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
           <Input
             type="search"
-            placeholder="Cari suite"
+            placeholder={copy.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -115,7 +142,7 @@ export default function SuitesPage() {
             className="w-full sm:w-auto"
           >
             <Icon name="tambah" size={14} />
-            Buat Suite
+            {copy.create}
           </Button>
         )}
       </div>
@@ -123,10 +150,13 @@ export default function SuitesPage() {
       <div>
         <div
           role="tablist"
-          aria-label="Status suite"
+          aria-label={copy.statusTabs}
           className="inline-flex divide-x divide-line overflow-hidden rounded-control border border-line bg-paper"
         >
-          {TABS.map((tab) => {
+          {([
+            { value: "active" as const, label: copy.active },
+            { value: "archived" as const, label: copy.archived },
+          ]).map((tab) => {
             const selected = status === tab.value;
             return (
               <button

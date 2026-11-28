@@ -28,26 +28,106 @@ import {
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { isDeveloperAiSession } from "@/lib/auth";
 import { caseEditPath, caseReadPath } from "@/lib/cases/casePaths";
-import { CASE_STATUS_LABEL } from "@/lib/cases/caseStatus";
+import { caseStatusLabel } from "@/lib/cases/caseStatus";
 import { formatRelativeTime, formatWib } from "@/lib/datetime/formatWib";
+import { fill, messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
+
+const COPY = messages({
+  id: {
+    addCase: "Tambah Kasus",
+    archivedHint: "Suite diarsipkan, kasus baru tidak bisa ditulis.",
+    statusFilter: "Filter Status:",
+    statusGroup: "Filter status kasus",
+    all: "Semua",
+    tag: "Tag:",
+    tagGroup: "Filter tag kasus",
+    bothTags: "Dev & Test",
+    devOnly: "Hanya Dev",
+    testOnly: "Hanya Test",
+    noMatch: "Tidak ada kasus yang sesuai dengan filter",
+    noMatchHint: "Coba ubah atau reset filter status, tag, atau kata kunci pencarian.",
+    reset: "Reset Filter",
+    archivedEmpty: "Suite ini diarsipkan, jadi kasus baru tidak bisa ditulis.",
+    devEmpty: "Belum ada kasus yang disetujui di suite ini.",
+    writeEmpty: "Mulai buat kasus hukum pertama untuk suite ini.",
+    emptyTitle: "Belum ada kasus di suite ini",
+    addNow: "Tambah Kasus Sekarang",
+    suiteGone: "Suite tidak ditemukan atau telah dihapus.",
+    suiteForbidden: "Anda tidak memiliki izin untuk melihat suite ini.",
+    loadFailed: "Gagal memuat data. Silakan coba beberapa saat lagi.",
+    network: "Terjadi kesalahan jaringan atau koneksi server.",
+    back: "Kembali ke Suites",
+    crumb: "Suite dan kasus",
+    backToList: "Kembali ke Suite dan kasus",
+    loadingSuite: "Memuat suite…",
+    active: "Aktif",
+    archived: "Arsip",
+    fallbackDescription: "Kelola dan pantau seluruh test case hukum di dalam suite ini.",
+    searchLabel: "Cari ID atau judul",
+    searchPlaceholder: "Cari ID atau judul",
+    caseId: "ID Kasus",
+    questionTitle: "Judul Pertanyaan",
+    tagHeader: "Tag",
+    status: "Status",
+    completeness: "Kelengkapan",
+    completenessOf: "Kelengkapan {code}",
+    updated: "Terakhir Diubah",
+    caption: "Daftar kasus dalam suite",
+  },
+  en: {
+    addCase: "Add case",
+    archivedHint: "The suite is archived, so a new case cannot be written.",
+    statusFilter: "Status filter:",
+    statusGroup: "Filter cases by status",
+    all: "All",
+    tag: "Tag:",
+    tagGroup: "Filter cases by tag",
+    bothTags: "Dev & test",
+    devOnly: "Dev only",
+    testOnly: "Test only",
+    noMatch: "No cases match the filter",
+    noMatchHint: "Try changing or resetting the status, tag, or search.",
+    reset: "Reset filters",
+    archivedEmpty: "This suite is archived, so a new case cannot be written.",
+    devEmpty: "There are no approved cases in this suite yet.",
+    writeEmpty: "Start by writing the first legal case for this suite.",
+    emptyTitle: "No cases in this suite yet",
+    addNow: "Add a case now",
+    suiteGone: "The suite was not found or has been deleted.",
+    suiteForbidden: "You do not have permission to view this suite.",
+    loadFailed: "Could not load the data. Try again in a moment.",
+    network: "A network or server connection error occurred.",
+    back: "Back to suites",
+    crumb: "Suites and cases",
+    backToList: "Back to suites and cases",
+    loadingSuite: "Loading suite…",
+    active: "Active",
+    archived: "Archived",
+    fallbackDescription: "Manage and follow every legal test case in this suite.",
+    searchLabel: "Search by ID or title",
+    searchPlaceholder: "Search by ID or title",
+    caseId: "Case ID",
+    questionTitle: "Question title",
+    tagHeader: "Tag",
+    status: "Status",
+    completeness: "Completeness",
+    completenessOf: "Completeness {code}",
+    updated: "Last changed",
+    caption: "Cases in this suite",
+  },
+});
+
+type SuiteDetailCopy = (typeof COPY)["id"];
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const ALL_STATUSES: { value: CaseStatus; label: string }[] = [
-  { value: "draft", label: CASE_STATUS_LABEL.draft },
-  { value: "in_review", label: CASE_STATUS_LABEL.in_review },
-  { value: "needs_revision", label: CASE_STATUS_LABEL.needs_revision },
-  { value: "approved", label: CASE_STATUS_LABEL.approved },
-];
+const ALL_STATUSES: readonly CaseStatus[] = ["draft", "in_review", "needs_revision", "approved"];
 
-const TAG_FILTERS: { value: SplitTag | "all"; label: string }[] = [
-  { value: "all", label: "Dev & Test" },
-  { value: "dev", label: "Hanya Dev" },
-  { value: "test", label: "Hanya Test" },
-];
+const TAG_FILTERS: readonly (SplitTag | "all")[] = ["all", "dev", "test"];
 
 /** Tombol Tambah Kasus di header; nonaktif di suite yang diarsipkan. Tidak dipakai untuk Developer AI. */
 function WriteCaseAction({
@@ -55,6 +135,7 @@ function WriteCaseAction({
   canWrite,
   onNewCase,
 }: Readonly<{ loaded: boolean; canWrite: boolean; onNewCase: () => void }>) {
+  const copy = useText(COPY);
   return (
     <div className="flex flex-col items-start gap-1 sm:items-end">
       <Button
@@ -64,12 +145,10 @@ function WriteCaseAction({
         className="w-full sm:w-auto"
       >
         <Icon name="tambah" size={14} />
-        Tambah Kasus
+        {copy.addCase}
       </Button>
       {loaded && !canWrite && (
-        <p className="text-xs text-muted">
-          Suite diarsipkan, kasus baru tidak bisa ditulis.
-        </p>
+        <p className="text-xs text-muted">{copy.archivedHint}</p>
       )}
     </div>
   );
@@ -84,13 +163,15 @@ function StatusFilter({
   onClear: () => void;
   onToggle: (status: CaseStatus) => void;
 }>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const isAll = selected.length === 0;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-ink-soft">Filter Status:</span>
+      <span className="text-xs font-medium text-ink-soft">{copy.statusFilter}</span>
       <fieldset
         className="m-0 flex min-w-0 flex-wrap items-center gap-1.5 border-0 p-0"
-        aria-label="Filter status kasus"
+        aria-label={copy.statusGroup}
       >
         <button
           type="button"
@@ -102,9 +183,10 @@ function StatusFilter({
               : "border-line bg-paper text-ink-soft hover:bg-surface"
           }`}
         >
-          Semua
+          {copy.all}
         </button>
-        {ALL_STATUSES.map(({ value, label }) => {
+        {ALL_STATUSES.map((value) => {
+          const label = caseStatusLabel(value, locale);
           const isSelected = selected.includes(value);
           return (
             <button
@@ -131,20 +213,22 @@ function TagFilter({
   value,
   onChange,
 }: Readonly<{ value: SplitTag | "all"; onChange: (tag: SplitTag | "all") => void }>) {
+  const copy = useText(COPY);
+  const tagLabel = { all: copy.bothTags, dev: copy.devOnly, test: copy.testOnly };
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-ink-soft">Tag:</span>
+      <span className="text-xs font-medium text-ink-soft">{copy.tag}</span>
       <fieldset
         className="m-0 flex min-w-0 flex-wrap items-center gap-1.5 border-0 p-0"
-        aria-label="Filter tag kasus"
+        aria-label={copy.tagGroup}
       >
         {TAG_FILTERS.map((option) => {
-          const selected = value === option.value;
+          const selected = value === option;
           return (
             <button
-              key={option.value}
+              key={option}
               type="button"
-              onClick={() => onChange(option.value)}
+              onClick={() => onChange(option)}
               aria-pressed={selected}
               className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 selected
@@ -152,7 +236,7 @@ function TagFilter({
                   : "border-line bg-paper text-ink-soft hover:bg-surface"
               }`}
             >
-              {option.label}
+              {tagLabel[option]}
             </button>
           );
         })}
@@ -175,50 +259,52 @@ function CaseListEmptyState({
   onReset: () => void;
   onNewCase: () => void;
 }>) {
+  const copy = useText(COPY);
   if (filtered) {
     return (
       <EmptyState
-        title="Tidak ada kasus yang sesuai dengan filter"
-        description="Coba ubah atau reset filter status, tag, atau kata kunci pencarian."
-        action={{ label: "Reset Filter", onClick: onReset }}
+        title={copy.noMatch}
+        description={copy.noMatchHint}
+        action={{ label: copy.reset, onClick: onReset }}
       />
     );
   }
-  let description = "Suite ini diarsipkan, jadi kasus baru tidak bisa ditulis.";
-  if (isDeveloperAi) description = "Belum ada kasus yang disetujui di suite ini.";
-  else if (canWrite) description = "Mulai buat kasus hukum pertama untuk suite ini.";
+  let description = copy.archivedEmpty;
+  if (isDeveloperAi) description = copy.devEmpty;
+  else if (canWrite) description = copy.writeEmpty;
   const canStart = canWrite && !isDeveloperAi;
   return (
     <EmptyState
-      title="Belum ada kasus di suite ini"
+      title={copy.emptyTitle}
       description={description}
-      action={canStart ? { label: "Tambah Kasus Sekarang", onClick: onNewCase } : undefined}
+      action={canStart ? { label: copy.addNow, onClick: onNewCase } : undefined}
     />
   );
 }
 
 type PageError = { message: string; retryable: boolean; scope: "suite" | "cases" };
 
-function toPageError(err: unknown, scope: PageError["scope"]): PageError {
+function toPageError(err: unknown, scope: PageError["scope"], copy: SuiteDetailCopy): PageError {
   if (err instanceof ApiError) {
     if (err.status === 404 || err.status === 422) {
-      return { message: "Suite tidak ditemukan atau telah dihapus.", retryable: false, scope: "suite" };
+      return { message: copy.suiteGone, retryable: false, scope: "suite" };
     }
     if (err.status === 403) {
-      return { message: "Anda tidak memiliki izin untuk melihat suite ini.", retryable: false, scope: "suite" };
+      return { message: copy.suiteForbidden, retryable: false, scope: "suite" };
     }
-    return { message: "Gagal memuat data. Silakan coba beberapa saat lagi.", retryable: true, scope };
+    return { message: copy.loadFailed, retryable: true, scope };
   }
-  return { message: "Terjadi kesalahan jaringan atau koneksi server.", retryable: true, scope };
+  return { message: copy.network, retryable: true, scope };
 }
 
 function buildSuiteCaseColumns(
   casePath: (id: string) => string,
+  copy: SuiteDetailCopy,
 ): Column<CaseSummary>[] {
   return [
     {
       key: "case_code",
-      header: "ID Kasus",
+      header: copy.caseId,
       sortable: true,
       cell: (item) =>
         item.masked ? (
@@ -234,7 +320,7 @@ function buildSuiteCaseColumns(
     },
     {
       key: "title",
-      header: "Judul Pertanyaan",
+      header: copy.questionTitle,
       sortable: true,
       cell: (item) =>
         item.masked ? (
@@ -245,17 +331,17 @@ function buildSuiteCaseColumns(
     },
     {
       key: "split_tag",
-      header: "Tag",
+      header: copy.tagHeader,
       cell: (item) => <SplitTagBadge tag={item.split_tag} />,
     },
     {
       key: "status",
-      header: "Status",
+      header: copy.status,
       cell: (item) => <CaseStatusBadge status={item.status} />,
     },
     {
       key: "completeness_pct",
-      header: "Kelengkapan",
+      header: copy.completeness,
       sortable: true,
       cell: (item) =>
         item.masked ? (
@@ -265,7 +351,7 @@ function buildSuiteCaseColumns(
             <div className="w-20 shrink-0">
               <ProgressBar
                 percent={item.completeness_pct}
-                label={`Kelengkapan ${item.case_code}`}
+                label={fill(copy.completenessOf, { code: item.case_code })}
               />
             </div>
             <span className="font-mono text-xs tabular-nums text-ink-soft">
@@ -276,7 +362,7 @@ function buildSuiteCaseColumns(
     },
     {
       key: "updated_at",
-      header: "Terakhir Diubah",
+      header: copy.updated,
       sortable: true,
       sortValue: (item) => item.updated_at,
       cell: (item) => (
@@ -289,6 +375,7 @@ function buildSuiteCaseColumns(
 }
 
 export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
+  const copy = useText(COPY);
   const { id: suiteId } = use(params);
   const router = useRouter();
   const auth = useAuth();
@@ -327,7 +414,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
         }
       } catch (err) {
         if (!ignore) {
-          setSuiteError(toPageError(err, "suite"));
+          setSuiteError(toPageError(err, "suite", copy));
         }
       }
     };
@@ -336,7 +423,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
     return () => {
       ignore = true;
     };
-  }, [suiteId]);
+  }, [copy, suiteId]);
 
   // Muat data kasus saat dependency berubah
   useEffect(() => {
@@ -354,7 +441,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
         setCasesError(null);
       } catch (err) {
         if (id !== requestId.current) return;
-        setCasesError(toPageError(err, "cases"));
+        setCasesError(toPageError(err, "cases", copy));
       } finally {
         if (id === requestId.current) {
           setLoading(false);
@@ -363,7 +450,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
     };
 
     void loadCases();
-  }, [suiteId, selectedStatuses, splitTagFilter]);
+  }, [copy, suiteId, selectedStatuses, splitTagFilter]);
 
   // Retry handler untuk tombol coba lagi
   const handleRetryCases = useCallback(() => {
@@ -382,14 +469,14 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
       })
       .catch((err) => {
         if (id !== requestId.current) return;
-        setCasesError(toPageError(err, "cases"));
+        setCasesError(toPageError(err, "cases", copy));
       })
       .finally(() => {
         if (id === requestId.current) {
           setLoading(false);
         }
       });
-  }, [suiteId, selectedStatuses, splitTagFilter]);
+  }, [copy, suiteId, selectedStatuses, splitTagFilter]);
 
   const displayedCases = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -406,8 +493,8 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
   }, [cases, selectedStatuses, searchQuery]);
 
   const columns = useMemo<Column<CaseSummary>[]>(
-    () => buildSuiteCaseColumns(casePath),
-    [casePath],
+    () => buildSuiteCaseColumns(casePath, copy),
+    [casePath, copy],
   );
 
   const hasActiveFilters =
@@ -429,7 +516,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
       <div className="space-y-4">
         <ErrorState variant="card" message={pageLevelError.message} />
         <Link href="/suites" className="text-sm font-medium text-accent-ink hover:underline">
-          Kembali ke Suites
+          {copy.back}
         </Link>
       </div>
     );
@@ -445,7 +532,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
       <header className="space-y-2">
         <Breadcrumb
           items={[
-            { label: "Suite dan kasus", href: "/suites" },
+            { label: copy.crumb, href: "/suites" },
             { label: suite?.name ?? null },
           ]}
         />
@@ -454,7 +541,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
             <div className="flex flex-wrap items-center gap-2.5">
               <Link
                 href="/suites"
-                aria-label="Kembali ke Suite dan kasus"
+                aria-label={copy.backToList}
                 className="inline-flex size-8 items-center justify-center rounded-control text-ink-soft transition-colors hover:bg-surface hover:text-ink"
               >
                 <svg
@@ -472,16 +559,16 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
                 </svg>
               </Link>
               <h1 className="font-serif text-4xl leading-10 text-ink">
-                {suite?.name ?? "Memuat suite…"}
+                {suite?.name ?? copy.loadingSuite}
               </h1>
               {suite && (
                 <Badge tone={canWrite ? "green" : "gray"} dot>
-                  {canWrite ? "Aktif" : "Arsip"}
+                  {canWrite ? copy.active : copy.archived}
                 </Badge>
               )}
             </div>
             <p className="mt-2 text-sm text-muted">
-              {suite?.description || "Kelola dan pantau seluruh test case hukum di dalam suite ini."}
+              {suite?.description || copy.fallbackDescription}
             </p>
           </div>
 
@@ -494,14 +581,14 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
       {/* Search & Filter bar */}
       <div className="space-y-3">
         <label className="relative block w-full sm:max-w-sm">
-          <span className="sr-only">Cari ID atau judul</span>
+          <span className="sr-only">{copy.searchLabel}</span>
           <Icon
             name="cari"
             className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted"
           />
           <Input
             type="search"
-            placeholder="Cari ID atau judul"
+            placeholder={copy.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -526,7 +613,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
             onClick={resetFilters}
             disabled={!hasActiveFilters}
           >
-            Reset Filter
+            {copy.reset}
           </Button>
         </div>
       </div>
@@ -568,7 +655,7 @@ export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
             columns={columns}
             rows={displayedCases}
             rowKey={(item) => item.id}
-            caption="Daftar kasus dalam suite"
+            caption={copy.caption}
             rowClassName={(item) => (item.masked ? "bg-surface-hover cursor-default" : undefined)}
             onRowClick={(item) => {
               if (!item.masked) router.push(casePath(item.id));

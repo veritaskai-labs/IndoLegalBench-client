@@ -1,8 +1,9 @@
 import type { FieldPath } from "react-hook-form";
 import { ApiError } from "@/lib/apiClient";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { CaseFormValues } from "./caseFormMapping";
 import type { LegalRefFormValues, LegalRefLinkFormValues } from "./legalRefForm";
-import { VERSION_LOCKED_MESSAGE } from "./versionErrors";
+import { versionLockedMessage } from "./versionErrors";
 
 export type CaseFieldPath = FieldPath<CaseFormValues>;
 
@@ -12,9 +13,29 @@ export type SaveError =
 
 export type FieldSaveError = Extract<SaveError, { kind: "field" }>;
 
-export const GENERIC_SAVE_ERROR = "Gagal menyimpan kasus. Coba lagi.";
-export const SPLIT_TAG_CHANGED_MESSAGE =
-  "Tag kasus ini baru saja diubah Admin. Muat ulang halaman lalu simpan lagi.";
+const SAVE_COPY = messages({
+  id: {
+    generic: "Gagal menyimpan kasus. Coba lagi.",
+    splitTagChanged: "Tag kasus ini baru saja diubah Admin. Muat ulang halaman lalu simpan lagi.",
+    codeTaken: "ID kasus sudah dipakai di suite lain.",
+    codeLocked: "ID kasus tidak bisa diubah setelah kasus pernah disetujui.",
+    suiteArchived: "Suite sudah diarsipkan, jadi kasus tidak bisa disimpan.",
+    notFound: "Suite atau kasus tidak ditemukan.",
+    invalid: "Isian tidak valid.",
+  },
+  en: {
+    generic: "Could not save the case. Try again.",
+    splitTagChanged: "An admin just changed this case's tag. Reload the page, then save again.",
+    codeTaken: "This case ID is already used in another suite.",
+    codeLocked: "The case ID cannot be changed after the case has been approved.",
+    suiteArchived: "The suite is archived, so the case cannot be saved.",
+    notFound: "The suite or case was not found.",
+    invalid: "The value is not valid.",
+  },
+});
+
+export const GENERIC_SAVE_ERROR = SAVE_COPY.id.generic;
+export const SPLIT_TAG_CHANGED_MESSAGE = SAVE_COPY.id.splitTagChanged;
 
 const FIXED_PATHS = new Map<string, CaseFieldPath>([
   ["case_code", "case_code"],
@@ -74,14 +95,15 @@ function toFormPath(field: string): CaseFieldPath | null {
  * Terjemahkan error simpan menjadi error field atau pesan di atas form.
  * Server tetap yang memutuskan valid atau tidak; fungsi ini hanya memilih tempat dan teks.
  */
-export function mapSaveError(error: unknown): SaveError {
-  if (!(error instanceof ApiError)) return { kind: "form", message: GENERIC_SAVE_ERROR };
+export function mapSaveError(error: unknown, locale: Locale = DEFAULT_LOCALE): SaveError {
+  const copy = text(SAVE_COPY, locale);
+  if (!(error instanceof ApiError)) return { kind: "form", message: copy.generic };
 
   if (error.code === "CASE_CODE_TAKEN") {
     return {
       kind: "field",
       path: "case_code",
-      message: error.serverMessage ?? "ID kasus sudah dipakai di suite lain.",
+      message: error.serverMessage ?? copy.codeTaken,
       detail: null,
     };
   }
@@ -89,29 +111,29 @@ export function mapSaveError(error: unknown): SaveError {
     return {
       kind: "field",
       path: "case_code",
-      message: error.serverMessage ?? "ID kasus tidak bisa diubah setelah kasus pernah disetujui.",
+      message: error.serverMessage ?? copy.codeLocked,
       detail: null,
     };
   }
   if (error.code === "SPLIT_TAG_LOCKED") {
     // 409 dari server #53: tag dikunci setelah disetujui dan biasanya baru saja diubah Admin
     // di tab lain. Form tetap di tempat supaya suntingan tidak hilang.
-    return { kind: "form", message: SPLIT_TAG_CHANGED_MESSAGE };
+    return { kind: "form", message: copy.splitTagChanged };
   }
   if (error.code === "VERSION_LOCKED") {
-    return { kind: "form", message: VERSION_LOCKED_MESSAGE };
+    return { kind: "form", message: versionLockedMessage(locale) };
   }
   if (error.code === "SUITE_NOT_ACTIVE") {
     return {
       kind: "form",
-      message: "Suite sudah diarsipkan, jadi kasus tidak bisa disimpan.",
+      message: copy.suiteArchived,
     };
   }
   if (error.status === 404) {
-    return { kind: "form", message: "Suite atau kasus tidak ditemukan." };
+    return { kind: "form", message: copy.notFound };
   }
-  if (error.status !== 422) return { kind: "form", message: GENERIC_SAVE_ERROR };
-  return mapServerFieldError(error.code, error.serverMessage, error.field);
+  if (error.status !== 422) return { kind: "form", message: copy.generic };
+  return mapServerFieldError(error.code, error.serverMessage, error.field, locale);
 }
 
 /**
@@ -122,16 +144,18 @@ export function mapServerFieldError(
   code: string,
   message: string | null,
   field: string | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
 ): SaveError {
+  const copy = text(SAVE_COPY, locale);
   const path = field ? toFormPath(field) : null;
   if (path === null) {
-    return { kind: "form", message: message ?? GENERIC_SAVE_ERROR };
+    return { kind: "form", message: message ?? copy.generic };
   }
-  // Pesan VALIDATION_ERROR berasal dari Pydantic (bahasa Inggris); tampilkan teks Indonesia dulu.
+  // Pesan VALIDATION_ERROR berasal dari Pydantic; kalimat klien diterjemahkan, detail server tetap.
   if (code === "VALIDATION_ERROR") {
-    return { kind: "field", path, message: "Isian tidak valid.", detail: message };
+    return { kind: "field", path, message: copy.invalid, detail: message };
   }
-  return { kind: "field", path, message: message ?? "Isian tidak valid.", detail: null };
+  return { kind: "field", path, message: message ?? copy.invalid, detail: null };
 }
 
 /** Teks yang tampil di bawah field: pesan, lalu detail server dalam kurung bila ada. */

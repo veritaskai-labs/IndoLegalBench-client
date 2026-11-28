@@ -9,6 +9,21 @@ import {
   mapSubmitError,
   submitBlockers,
 } from "@/lib/cases/submitErrors";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+
+const COPY = messages({
+  id: {
+    saveFirst: "Simpan perubahan dulu sebelum mengajukan.",
+    pending: "Mengajukan…",
+    submit: "Ajukan review",
+  },
+  en: {
+    saveFirst: "Save your changes before submitting.",
+    pending: "Submitting…",
+    submit: "Submit for review",
+  },
+});
 
 type Props = {
   caseId: string;
@@ -25,6 +40,8 @@ export function SubmitReviewButton({
   onStale,
   onSubmitted,
 }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const [blockers, setBlockers] = useState<MissingSection[]>([]);
   const hintId = useId();
 
@@ -34,9 +51,9 @@ export function SubmitReviewButton({
     (failure: unknown) => {
       setBlockers(submitBlockers(failure));
       if (isStaleSubmit(failure)) onStale?.();
-      return mapSubmitError(failure);
+      return mapSubmitError(failure, locale);
     },
-    [onStale],
+    [locale, onStale],
   );
 
   const { run, pending, error } = useAsyncAction(action, onSubmitted, toMessage);
@@ -72,7 +89,7 @@ export function SubmitReviewButton({
 
       {dirty && (
         <p id={hintId} className="mb-1 text-right text-xs text-amber-700">
-          Simpan perubahan dulu sebelum mengajukan.
+          {copy.saveFirst}
         </p>
       )}
 
@@ -83,7 +100,7 @@ export function SubmitReviewButton({
         aria-describedby={dirty ? hintId : undefined}
         className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 aria-disabled:cursor-not-allowed aria-disabled:opacity-50 aria-disabled:hover:bg-indigo-600"
       >
-        {pending ? "Mengajukan…" : "Ajukan review"}
+        {pending ? copy.pending : copy.submit}
       </button>
     </div>
   );

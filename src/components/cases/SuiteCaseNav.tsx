@@ -1,15 +1,37 @@
+"use client";
+
 import Link from "next/link";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 
 const LINKS = [
-  { href: "/suites", label: "Daftar suite" },
-  { href: "/cases", label: "Daftar kasus" },
-  { href: "/cases/import", label: "Impor CSV" },
+  { href: "/suites", key: "suites" },
+  { href: "/cases", key: "cases" },
+  { href: "/cases/import", key: "import" },
 ] as const;
 
+const NAV_COPY = messages({
+  id: {
+    label: "Suite dan kasus",
+    suites: "Daftar suite",
+    cases: "Daftar kasus",
+    import: "Impor CSV",
+  },
+  en: {
+    label: "Suites and cases",
+    suites: "Suite list",
+    cases: "Case list",
+    import: "Impor CSV",
+  },
+});
+
 export function SuiteCaseNav({ current }: Readonly<{ current: (typeof LINKS)[number]["href"] }>) {
+  const copy = useText(NAV_COPY);
   return (
-    <nav aria-label="Suite dan kasus" className="flex gap-1 overflow-x-auto border-b border-line-soft">
-      {LINKS.map(({ href, label }) => (
+    <nav aria-label={copy.label} className="flex gap-1 overflow-x-auto border-b border-line-soft">
+      {LINKS.map(({ href, key }) => {
+        const label = copy[key];
+        return (
         <Link
           key={href}
           href={href}
@@ -22,7 +44,8 @@ export function SuiteCaseNav({ current }: Readonly<{ current: (typeof LINKS)[num
         >
           {label}
         </Link>
-      ))}
+        );
+      })}
     </nav>
   );
 }

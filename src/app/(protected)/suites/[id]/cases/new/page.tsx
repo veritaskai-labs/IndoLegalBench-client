@@ -7,41 +7,67 @@ import { CaseStatusBadge } from "@/components/cases/CaseStatusBadge";
 import { Breadcrumb } from "@/components/ui";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useToast } from "@/components/ui/Toast";
-import { useSaveErrorBanner } from "@/hooks/useSaveErrorBanner";
 import { useSuiteName } from "@/hooks/useSuiteName";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { createCase } from "@/lib/cases/caseApi";
 import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import { caseEditPath } from "@/lib/cases/casePaths";
-import type { FieldSaveError } from "@/lib/cases/saveError";
+import { mapSaveError, type FieldSaveError } from "@/lib/cases/saveError";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { decodeRouteParam } from "@/lib/routeParams";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
+
+const COPY = messages({
+  id: {
+    crumb: "Suite dan kasus",
+    heading: "Kasus baru",
+    back: "Kembali ke suite",
+    leave: "Ada perubahan yang belum disimpan. Tinggalkan halaman ini?",
+    saved: "Kasus tersimpan sebagai draf",
+    hint: "Indikator kelengkapan muncul setelah draf pertama disimpan.",
+  },
+  en: {
+    crumb: "Suites and cases",
+    heading: "New case",
+    back: "Back to the suite",
+    leave: "There are unsaved changes. Leave this page?",
+    saved: "Case saved as a draft",
+    hint: "The completeness indicator appears after the first draft is saved.",
+  },
+});
 
 export default function NewCasePage() {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const suiteId = decodeRouteParam(useParams<{ id: string }>().id);
   const router = useRouter();
   const { showToast } = useToast();
-  const saveError = useSaveErrorBanner();
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const suiteName = useSuiteName(suiteId);
   const suitePath = `/suites/${encodeURIComponent(suiteId)}`;
   const [dirty, setDirty] = useState(false);
   useUnsavedChangesWarning(dirty);
 
   function leaveTo(path: string) {
-    if (dirty && !confirm("Ada perubahan yang belum disimpan. Tinggalkan halaman ini?")) {
+    if (dirty && !confirm(copy.leave)) {
       return;
     }
     router.push(path);
   }
 
   async function handleSubmit(payload: CaseWritePayload): Promise<FieldSaveError | null> {
-    saveError.clear();
+    setSaveMessage(null);
     try {
       const created = await createCase(suiteId, payload);
-      showToast("Kasus tersimpan sebagai draf");
+      showToast(copy.saved);
       router.push(caseEditPath(created.id));
       return null;
     } catch (error) {
-      return saveError.handle(error);
+      const mapped = mapSaveError(error, locale);
+      if (mapped.kind === "field") return mapped;
+      setSaveMessage(mapped.message);
+      return null;
     }
   }
 
@@ -50,9 +76,9 @@ export default function NewCasePage() {
       <div className="mb-2">
         <Breadcrumb
           items={[
-            { label: "Suite dan kasus", onClick: () => leaveTo("/suites") },
+            { label: copy.crumb, onClick: () => leaveTo("/suites") },
             { label: suiteName, onClick: () => leaveTo(suitePath) },
-            { label: "Kasus baru" },
+            { label: copy.heading },
           ]}
         />
       </div>
@@ -60,7 +86,7 @@ export default function NewCasePage() {
       <button
         type="button"
         onClick={() => leaveTo(suitePath)}
-        aria-label="Kembali ke suite"
+        aria-label={copy.back}
         className="sticky top-20 z-10 float-left mr-2.5 mt-1 inline-flex size-8 cursor-pointer items-center justify-center rounded-control border border-line bg-paper/90 text-ink-soft shadow-xs backdrop-blur-xs transition-colors hover:bg-surface hover:text-ink"
       >
         <svg
@@ -79,17 +105,17 @@ export default function NewCasePage() {
       </button>
 
       <div className="flex flex-wrap items-center gap-2.5">
-        <h1 className="font-serif text-4xl leading-10 text-ink">Kasus baru</h1>
+        <h1 className="font-serif text-4xl leading-10 text-ink">{copy.heading}</h1>
         {/* Kasus baru selalu disimpan server sebagai draf. */}
         <CaseStatusBadge status="draft" />
       </div>
 
       <p className="clear-left mt-2 text-sm text-muted">
-        Indikator kelengkapan muncul setelah draf pertama disimpan.
+        {copy.hint}
       </p>
 
       <div className="mt-6 space-y-6">
-        {saveError.message !== null && <ErrorState variant="banner" message={saveError.message} />}
+        {saveMessage !== null && <ErrorState variant="banner" message={saveMessage} />}
 
         <CaseEditorForm onSubmit={handleSubmit} onDirtyChange={setDirty} />
       </div>
