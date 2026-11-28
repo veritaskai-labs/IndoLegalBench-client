@@ -9,7 +9,7 @@ type Props = {
  * pernah dikirim server, sisanya disamarkan. Label aksesibelnya tidak
  * membacakan titik-titik.
  */
-export function CredentialHint({ hint, className = "" }: Props) {
+export function CredentialHint({ hint, className = "" }: Readonly<Props>) {
   return (
     <span
       aria-label={`Kredensial berakhiran ${hint}`}

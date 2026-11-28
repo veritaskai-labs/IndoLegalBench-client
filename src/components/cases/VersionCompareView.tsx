@@ -18,12 +18,12 @@ function VersionSelect({
   value,
   versions,
   onChange,
-}: {
+}: Readonly<{
   label: string;
   value: number;
   versions: VersionSummary[];
   onChange: (versionNo: number) => void;
-}) {
+}>) {
   return (
     <label className="block text-sm font-medium text-slate-700">
       {label}
@@ -43,7 +43,7 @@ function VersionSelect({
  * dan perbandingan baru jalan setelah tombol ditekan supaya tidak menembak server di tiap pilihan.
  * versions sudah terurut dari yang terbaru. Dengan kurang dari dua versi tidak ada yang bisa dibandingkan.
  */
-export function VersionCompareView({ caseId, versions }: { caseId: string; versions: VersionSummary[] }) {
+export function VersionCompareView({ caseId, versions }: Readonly<{ caseId: string; versions: VersionSummary[] }>) {
   const [a, setA] = useState(versions[1]?.version_no ?? versions[0]?.version_no ?? 0);
   const [b, setB] = useState(versions[0]?.version_no ?? 0);
   const comparison = useVersionCompare(caseId);

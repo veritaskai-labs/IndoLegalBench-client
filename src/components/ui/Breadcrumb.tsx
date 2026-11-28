@@ -22,7 +22,7 @@ type Props = {
  * Item lain bisa berupa href (navigasi Next.js) atau onClick (halaman yang
  * perlu mengonfirmasi perubahan belum tersimpan sebelum pindah).
  */
-export function Breadcrumb({ items }: Props) {
+export function Breadcrumb({ items }: Readonly<Props>) {
   return (
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-2 text-xs text-slate-500">

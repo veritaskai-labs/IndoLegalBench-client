@@ -15,7 +15,7 @@ type LoginPageProps = {
   searchParams: Promise<{ reason?: string | string[] }>;
 };
 
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function LoginPage({ searchParams }: Readonly<LoginPageProps>) {
   const { reason } = await searchParams;
   const reasonValue = Array.isArray(reason) ? reason[0] : reason;
   const isExpired = reasonValue === "expired";

@@ -35,7 +35,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
  * Satu toast pada satu waktu. Dipasang di layout (protected) agar toast
  * tetap tampil saat halaman berpindah lewat router.push.
  */
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

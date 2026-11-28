@@ -23,7 +23,7 @@ export function EmptyState({
   inTable = false,
   colSpan = 5,
   className = "",
-}: EmptyStateProps) {
+}: Readonly<EmptyStateProps>) {
   const content = (
     <div className={`flex flex-col items-center justify-center py-12 px-4 text-center ${className}`}>
       {/* Ikon folder / data kosong */}

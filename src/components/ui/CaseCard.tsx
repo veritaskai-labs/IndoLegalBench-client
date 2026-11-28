@@ -25,7 +25,7 @@ export function CaseCard({
   updatedAt,
   onOpen,
   className = "",
-}: CaseCardProps) {
+}: Readonly<CaseCardProps>) {
   return (
     <div
       className={`bg-white border border-slate-200 rounded p-4 flex flex-col justify-between text-xs transition-colors hover:border-slate-300 ${className}`}
