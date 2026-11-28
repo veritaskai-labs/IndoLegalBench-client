@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ImportGuide } from "@/components/cases/import/ImportGuide";
+import { JsonFieldsCallout } from "@/components/cases/import/JsonFieldsCallout";
 import { SuiteCaseNav } from "@/components/cases/SuiteCaseNav";
 import { ImportSummaryView } from "@/components/cases/import/ImportSummaryView";
 import { ImportUploadForm } from "@/components/cases/import/ImportUploadForm";
@@ -12,6 +13,7 @@ import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { useAuth } from "@/hooks/useAuth";
 import { importGateway } from "@/lib/cases/importApi";
 import { importErrorMessage } from "@/lib/cases/importErrors";
+import { jsonListColumns } from "@/lib/cases/importGuide";
 import { canImportCases } from "@/lib/cases/permissions";
 import type { ImportSummary } from "@/types/caseImport";
 
@@ -129,6 +131,8 @@ export default function CaseImportPage() {
         </p>
         <TemplateDownloadButton gateway={importGateway} />
       </section>
+
+      <JsonFieldsCallout columns={jsonListColumns()} />
 
       <ImportGuide />
 
