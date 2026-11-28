@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type SubmitEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
+import { resultLinks } from "@/lib/search/resultLinks";
 import type { Role } from "@/types";
 import { SearchResults } from "./SearchResults";
 
@@ -23,6 +24,7 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
   const wrapper = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const magnifier = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const inputId = useId();
   const panelId = useId();
 
@@ -78,7 +80,7 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
       return;
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
-    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>(`[id="${panelId}"] a`));
+    const links = resultLinks(panel.current);
     if (links.length === 0) return;
     event.preventDefault();
     const at = links.indexOf(document.activeElement as HTMLAnchorElement);
@@ -146,6 +148,7 @@ export function GlobalSearch({ role }: Readonly<{ role: Role }>) {
         )}
 
         <div
+          ref={panel}
           id={panelId}
           hidden={!showPanel}
           className="fixed inset-x-0 top-14 bottom-0 overflow-y-auto bg-paper md:absolute md:inset-x-0 md:top-full md:bottom-auto md:mt-2 md:max-h-[70vh] md:rounded-control md:border md:border-line-soft md:shadow-lg"
