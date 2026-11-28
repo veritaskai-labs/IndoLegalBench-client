@@ -7,15 +7,35 @@ import { SessionTable } from "@/components/runs/SessionTable";
 import { EmptyState, ErrorState } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { useSessions } from "@/hooks/useSessions";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { canArchive } from "@/lib/runs/sessionRules";
 import type { Me } from "@/types";
 import type { SessionListItem } from "@/types/measurement";
+
+const COPY = messages({
+  id: {
+    emptyTitle: "Belum ada sesi pengukuran",
+    emptyDescription: "Sesi yang dibuat dari halaman Buat pengukuran muncul di sini.",
+    archive: "Arsipkan",
+    archiveLabel: "Arsipkan {label}",
+    archived: "Sesi “{label}” diarsipkan",
+  },
+  en: {
+    emptyTitle: "No measurement sessions yet",
+    emptyDescription: "Sessions created from the New measurement page appear here.",
+    archive: "Archive",
+    archiveLabel: "Archive {label}",
+    archived: "Session “{label}” archived",
+  },
+});
 
 /**
  * Tab Sesi di halaman Eksekusi (PBI-11 AC10, SCRUM-212): sesi yang belum diarsipkan dan Arsipkan.
  * Panel dipasang baru tiap tab dibuka, jadi sesi yang baru dikembalikan dari tab Arsip sudah ada.
  */
 export function ActiveSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "role"> | null }>) {
+  const copy = useText(COPY);
   const sessions = useSessions();
   const { showToast } = useToast();
   // Sesi yang baru diarsipkan disembunyikan tanpa memuat ulang daftar.
@@ -32,8 +52,8 @@ export function ActiveSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "role
       {isEmpty && (
         <div className="rounded-lg border border-slate-200 bg-white">
           <EmptyState
-            title="Belum ada sesi pengukuran"
-            description="Sesi yang dibuat dari halaman Buat pengukuran muncul di sini."
+            title={copy.emptyTitle}
+            description={copy.emptyDescription}
           />
         </div>
       )}
@@ -47,10 +67,10 @@ export function ActiveSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "role
               <button
                 type="button"
                 onClick={() => setTarget(item)}
-                aria-label={`Arsipkan ${item.label}`}
+                aria-label={fill(copy.archiveLabel, { label: item.label })}
                 className="text-xs font-medium text-slate-900 hover:underline"
               >
-                Arsipkan
+                {copy.archive}
               </button>
             ) : null
           }
@@ -62,7 +82,7 @@ export function ActiveSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "role
           session={target}
           onArchived={() => {
             setArchived((ids) => new Set(ids).add(target.id));
-            showToast(`Sesi “${target.label}” diarsipkan`);
+            showToast(fill(copy.archived, { label: target.label }));
             setTarget(null);
           }}
           onClose={(afterError) => {

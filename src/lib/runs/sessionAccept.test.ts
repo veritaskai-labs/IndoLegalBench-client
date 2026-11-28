@@ -95,3 +95,11 @@ describe("acceptErrorMessage", () => {
     expect(acceptErrorMessage(error)).toBe("Permintaan gagal. Coba lagi.");
   });
 });
+
+describe("acceptErrorMessage English", () => {
+  it("explains a missing reason in English", () => {
+    expect(acceptErrorMessage(new ApiError(422, "REASON_REQUIRED"), "en")).toBe(
+      "Write a reason for accepting this session.",
+    );
+  });
+});

@@ -2,7 +2,22 @@
 
 import { useEffect, useId, useState } from "react";
 
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
 import { renderMermaid, type MermaidRenderer } from "@/lib/markdown/mermaidRenderer";
+
+const COPY = messages({
+  id: {
+    loading: "Memuat diagram...",
+    failed: "Diagram tidak dapat ditampilkan. Periksa penulisan kode Mermaid di bawah ini.",
+    label: "Diagram Mermaid",
+  },
+  en: {
+    loading: "Loading diagram...",
+    failed: "The diagram cannot be shown. Check the Mermaid code below.",
+    label: "Mermaid diagram",
+  },
+});
 
 /** Hasil menggambar satu kode. `svg` null berarti kodenya tidak bisa digambar. */
 type Outcome = Readonly<{ code: string; svg: string | null }>;
@@ -21,6 +36,7 @@ export function MermaidDiagram({
   code,
   render = renderMermaid,
 }: Readonly<{ code: string; render?: MermaidRenderer }>) {
+  const copy = useText(COPY);
   const id = svgId(useId());
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
@@ -44,13 +60,13 @@ export function MermaidDiagram({
   const current = outcome?.code === code ? outcome : null;
 
   if (current === null) {
-    return <p className="mt-2 text-xs text-slate-500">Memuat diagram...</p>;
+    return <p className="mt-2 text-xs text-slate-500">{copy.loading}</p>;
   }
 
   if (current.svg === null) {
     return (
       <div className="mt-2 space-y-1">
-        <p className="text-xs text-amber-700">Diagram tidak dapat ditampilkan. Periksa penulisan kode Mermaid di bawah ini.</p>
+        <p className="text-xs text-amber-700">{copy.failed}</p>
         <pre className="overflow-x-auto rounded-md bg-slate-100 p-3 font-mono text-xs whitespace-pre">
           <code>{code}</code>
         </pre>
@@ -62,7 +78,7 @@ export function MermaidDiagram({
   // gambar bernama, dan isi diagramnya (teks label di dalam SVG) masih bisa dibaca.
   return (
     <figure
-      aria-label="Diagram Mermaid"
+      aria-label={copy.label}
       className="mt-2 overflow-x-auto rounded-md border border-slate-200 bg-white p-3 [&>svg]:mx-auto [&>svg]:h-auto [&>svg]:max-w-full"
       // SVG ini buatan mermaid dengan securityLevel "strict" (sudah disaring DOMPurify), bukan teks
       // mentah dari jawaban. Ini satu-satunya tempat HTML disisipkan langsung di tampilan jawaban.

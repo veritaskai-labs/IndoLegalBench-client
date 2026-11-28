@@ -1,3 +1,6 @@
+"use client";
+
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { sessionStatusLabel } from "@/lib/runs/sessionRules";
 import type { SessionStatus, StopReason } from "@/types/measurement";
 
@@ -27,9 +30,10 @@ export function SessionStatusBadge({
   status,
   stopReason,
 }: Readonly<{ status: SessionStatus; stopReason?: StopReason | null }>) {
+  const locale = useLocale();
   return (
     <span className={`rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap ${STATUS_BADGE[status]}`}>
-      {sessionStatusLabel(status, stopReason)}
+      {sessionStatusLabel(status, stopReason, locale)}
     </span>
   );
 }

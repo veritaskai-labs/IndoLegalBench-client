@@ -12,25 +12,100 @@ import { useGradingProgress } from "@/hooks/useGradingProgress";
 import { useSessionResults } from "@/hooks/useSessionResults";
 import { formatWib } from "@/lib/datetime/formatWib";
 import { httpGradingGateway, type GradingGateway } from "@/lib/grading/gradingApi";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { unknownName } from "@/lib/runs/sessionRules";
-import {
-  AUTOMATIC_SESSION_STANDARD_REPETITIONS,
-  CASE_FILTER_LABEL,
-  MEASUREMENT_PURPOSE_LABEL,
-} from "@/types/measurement";
+import { caseFilterLabel, measurementPurposeLabel } from "@/lib/runs/sessionDetail";
+import { AUTOMATIC_SESSION_STANDARD_REPETITIONS } from "@/types/measurement";
 import type { Role } from "@/types";
 import type { ManualSessionDetail } from "@/types/measurement";
 
-/** Penjelasan tombol "Kirim untuk Dinilai": kenapa mati, atau apa yang dilakukannya. */
-function missingAnswersReason(remainingAnswers: number): string {
-  if (remainingAnswers <= 0) return "Sesi ini tidak memiliki jawaban untuk diisi.";
-  return `Isi ${remainingAnswers} jawaban lagi untuk mengaktifkan tombol ini.`;
+const COPY = messages({
+  id: {
+    noAnswers: "Sesi ini tidak memiliki jawaban untuk diisi.",
+    remaining: "Isi {count} jawaban lagi untuk mengaktifkan tombol ini.",
+    gradeNeedsAnswers: "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai.",
+    gradingBackground: "Penilaian sesi ini sedang berjalan di latar belakang.",
+    sendToGrade: "Kirim sesi ini untuk dinilai.",
+    gradedToast: "Sesi “{label}” selesai dinilai.",
+    viewReport: "Lihat laporan →",
+    dateWarningTitle: "Peringatan Rentang Tanggal Jawaban",
+    dateWarning: "Rentang tanggal pengambilan jawaban dalam sesi ini melebihi batas hari yang ditentukan. Karakteristik atau versi platform AI dapat berubah dari hari ke hari.",
+    info: "Informasi sesi manual",
+    manual: "Manual",
+    created: "Dibuat pada {when}",
+    product: "Produk AI",
+    site: "Situs Platform",
+    openSite: "Buka situs {name} ↗",
+    params: "Parameter / Paket",
+    purpose: "Tujuan",
+    filter: "Filter Kasus",
+    perCase: "Percobaan per Kasus",
+    times: "{count} kali",
+    differentTitle: "Jumlah percobaan berbeda dari standar pengukuran otomatis ({count}x)",
+    different: "Jumlah percobaan berbeda",
+    finished: "Selesai",
+    actions: "Progres dan tindakan sesi",
+    progressTitle: "Progres Pengisian",
+    between: " dari ",
+    answers: " jawaban terisi ({percent}%)",
+    unfilled: "Hanya yang belum terisi",
+    finishNeedsAnswers: "Semua jawaban harus terisi sebelum dapat ditandai selesai.",
+    finishReady: "Tandai sesi ini selesai secara final.",
+    finish: "Tandai Selesai",
+    gradingWait: "Penilaian sesi ini sedang berjalan. Tunggu sampai selesai.",
+    grade: "Kirim untuk Dinilai",
+    gradingToast: "Penilaian sesi “{label}” berjalan di latar belakang.",
+  },
+  en: {
+    noAnswers: "This session has no answers to fill in.",
+    remaining: "Fill in {count} more answers to enable this button.",
+    gradeNeedsAnswers: "Every answer must be filled in before the session can be sent for grading.",
+    gradingBackground: "Grading for this session is running in the background.",
+    sendToGrade: "Send this session for grading.",
+    gradedToast: "Session “{label}” finished grading.",
+    viewReport: "View report →",
+    dateWarningTitle: "Answer date-range warning",
+    dateWarning: "The range of dates when answers were collected in this session exceeds the set number of days. The AI platform's behavior or version can change from day to day.",
+    info: "Manual session information",
+    manual: "Manual",
+    created: "Created on {when}",
+    product: "AI product",
+    site: "Platform site",
+    openSite: "Open the {name} site ↗",
+    params: "Parameters / plan",
+    purpose: "Purpose",
+    filter: "Case filter",
+    perCase: "Attempts per case",
+    times: "{count} times",
+    differentTitle: "The number of attempts differs from the automatic measurement standard ({count}x)",
+    different: "Attempt count differs",
+    finished: "Finished",
+    actions: "Session progress and actions",
+    progressTitle: "Filling progress",
+    between: " of ",
+    answers: " answers filled in ({percent}%)",
+    unfilled: "Unfilled only",
+    finishNeedsAnswers: "Every answer must be filled in before the session can be marked finished.",
+    finishReady: "Mark this session finished for good.",
+    finish: "Mark finished",
+    gradingWait: "Grading for this session is running. Wait until it finishes.",
+    grade: "Send for grading",
+    gradingToast: "Grading for session “{label}” is running in the background.",
+  },
+});
+
+type HeaderCopy = (typeof COPY)["id"];
+
+function missingAnswersReason(remainingAnswers: number, copy: HeaderCopy): string {
+  if (remainingAnswers <= 0) return copy.noAnswers;
+  return fill(copy.remaining, { count: remainingAnswers });
 }
 
-function gradeButtonTitle(isAllFilled: boolean, gradingActive: boolean): string {
-  if (!isAllFilled) return "Semua jawaban harus terisi sebelum dapat dikirim untuk dinilai.";
-  if (gradingActive) return "Penilaian sesi ini sedang berjalan di latar belakang.";
-  return "Kirim sesi ini untuk dinilai.";
+function gradeButtonTitle(isAllFilled: boolean, gradingActive: boolean, copy: HeaderCopy): string {
+  if (!isAllFilled) return copy.gradeNeedsAnswers;
+  if (gradingActive) return copy.gradingBackground;
+  return copy.sendToGrade;
 }
 
 export function ManualSessionHeader({
@@ -48,6 +123,8 @@ export function ManualSessionHeader({
   onSessionUpdated: () => void;
   gradingGateway?: GradingGateway;
 }>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const [isFinalizeOpen, setIsFinalizeOpen] = useState(false);
   const [gradeDialog, setGradeDialog] = useState<"grade" | "retry" | null>(null);
   const { showToast } = useToast();
@@ -63,7 +140,7 @@ export function ManualSessionHeader({
       results.reload();
       onSessionUpdated();
       if (run.status === "finished") {
-        showToast(`Sesi “${session.label}” selesai dinilai.`, { label: "Lihat laporan →", href: reportHref });
+        showToast(fill(copy.gradedToast, { label: session.label }), { label: copy.viewReport, href: reportHref });
       }
     },
   });
@@ -81,9 +158,8 @@ export function ManualSessionHeader({
       ? Math.round((session.filled_answers / session.total_answers) * 100)
       : 0;
   const remainingAnswers = session.total_answers - session.filled_answers;
-  const actionsBlockedReason = isAdmin && !isAllFilled ? missingAnswersReason(remainingAnswers) : null;
-  const gradeBlockedReason =
-    actionsBlockedReason ?? (isAdmin && grading.active ? "Penilaian sesi ini sedang berjalan. Tunggu sampai selesai." : null);
+  const actionsBlockedReason = isAdmin && !isAllFilled ? missingAnswersReason(remainingAnswers, copy) : null;
+  const gradeBlockedReason = actionsBlockedReason ?? (isAdmin && grading.active ? copy.gradingWait : null);
   const actionsReasonId = useId();
 
   function handleFinalized() {
@@ -114,11 +190,8 @@ export function ManualSessionHeader({
               />
             </svg>
             <div>
-              <p className="font-semibold">Peringatan Rentang Tanggal Jawaban</p>
-              <p className="mt-0.5 text-amber-800">
-                Rentang tanggal pengambilan jawaban dalam sesi ini melebihi batas hari yang ditentukan.
-                Karakteristik atau versi platform AI dapat berubah dari hari ke hari.
-              </p>
+              <p className="font-semibold">{copy.dateWarningTitle}</p>
+              <p className="mt-0.5 text-amber-800">{copy.dateWarning}</p>
             </div>
           </div>
         </div>
@@ -126,7 +199,7 @@ export function ManualSessionHeader({
 
       {/* Ringkasan Metadata Sesi */}
       <section
-        aria-label="Informasi sesi manual"
+        aria-label={copy.info}
         className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-100 pb-4">
@@ -134,11 +207,11 @@ export function ManualSessionHeader({
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-slate-900">{session.label}</h1>
               <span className="rounded bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-                Manual
+                {copy.manual}
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Dibuat pada {formatWib(session.created_at)}
+              {fill(copy.created, { when: formatWib(session.created_at) })}
             </p>
           </div>
 
@@ -159,9 +232,9 @@ export function ManualSessionHeader({
 
         <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-4">
           <div>
-            <dt className="text-xs font-medium text-slate-500 uppercase">Produk AI</dt>
+            <dt className="text-xs font-medium text-slate-500 uppercase">{copy.product}</dt>
             <dd className="mt-0.5 font-medium text-slate-900">
-              {unknownName(session.product_name)}
+              {unknownName(session.product_name, locale)}
               {session.vendor_name && (
                 <span className="block text-xs font-normal text-slate-500">
                   {session.vendor_name}
@@ -172,7 +245,7 @@ export function ManualSessionHeader({
 
           {session.site_url && (
             <div>
-              <dt className="text-xs font-medium text-slate-500 uppercase">Situs Platform</dt>
+              <dt className="text-xs font-medium text-slate-500 uppercase">{copy.site}</dt>
               <dd className="mt-0.5">
                 <a
                   href={session.site_url}
@@ -180,7 +253,7 @@ export function ManualSessionHeader({
                   rel="noopener noreferrer"
                   className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
                 >
-                  {`Buka situs ${session.product_name} ↗`}
+                  {fill(copy.openSite, { name: session.product_name ?? "" })}
                 </a>
               </dd>
             </div>
@@ -188,36 +261,36 @@ export function ManualSessionHeader({
 
           {session.manual_params && (
             <div>
-              <dt className="text-xs font-medium text-slate-500 uppercase">Parameter / Paket</dt>
+              <dt className="text-xs font-medium text-slate-500 uppercase">{copy.params}</dt>
               <dd className="mt-0.5 text-slate-800 text-xs">{session.manual_params}</dd>
             </div>
           )}
 
           <div>
-            <dt className="text-xs font-medium text-slate-500 uppercase">Tujuan</dt>
+            <dt className="text-xs font-medium text-slate-500 uppercase">{copy.purpose}</dt>
             <dd className="mt-0.5 text-slate-900">
-              {MEASUREMENT_PURPOSE_LABEL[session.purpose]}
+              {measurementPurposeLabel(session.purpose, locale)}
             </dd>
           </div>
 
           <div>
-            <dt className="text-xs font-medium text-slate-500 uppercase">Filter Kasus</dt>
+            <dt className="text-xs font-medium text-slate-500 uppercase">{copy.filter}</dt>
             <dd className="mt-0.5 text-slate-900">
-              {CASE_FILTER_LABEL[session.case_filter]}
+              {caseFilterLabel(session.case_filter, locale)}
             </dd>
           </div>
 
           <div>
-            <dt className="text-xs font-medium text-slate-500 uppercase">Percobaan per Kasus</dt>
+            <dt className="text-xs font-medium text-slate-500 uppercase">{copy.perCase}</dt>
             <dd className="mt-0.5 text-slate-900 flex items-center gap-2">
-              <span>{session.repetitions} kali</span>
+              <span>{fill(copy.times, { count: session.repetitions })}</span>
               {/* AC12: Penanda bila pengulangan berbeda dari standar sesi otomatis */}
               {hasDifferentRepetitions && (
                 <span
-                  title={`Jumlah percobaan berbeda dari standar pengukuran otomatis (${AUTOMATIC_SESSION_STANDARD_REPETITIONS}x)`}
+                  title={fill(copy.differentTitle, { count: AUTOMATIC_SESSION_STANDARD_REPETITIONS })}
                   className="rounded bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-800 border border-sky-200"
                 >
-                  Jumlah percobaan berbeda
+                  {copy.different}
                 </span>
               )}
             </dd>
@@ -225,7 +298,7 @@ export function ManualSessionHeader({
 
           {session.finalized_at && (
             <div>
-              <dt className="text-xs font-medium text-slate-500 uppercase">Selesai</dt>
+              <dt className="text-xs font-medium text-slate-500 uppercase">{copy.finished}</dt>
               <dd className="mt-0.5 text-slate-900">
                 {formatWib(session.finalized_at)}
               </dd>
@@ -236,15 +309,17 @@ export function ManualSessionHeader({
 
       {/* AC8: Progres "X dari N jawaban terisi" & Aksi Sesi */}
       <section
-        aria-label="Progres dan tindakan sesi"
+        aria-label={copy.actions}
         className="rounded-lg border border-slate-200 bg-white p-5 shadow-xs space-y-4"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-sm font-semibold text-slate-900">Progres Pengisian</h2>
+            <h2 className="text-sm font-semibold text-slate-900">{copy.progressTitle}</h2>
             <p className="text-sm font-medium text-slate-700">
-              <span className="text-indigo-600 font-bold">{session.filled_answers}</span> dari{" "}
-              <span className="font-bold">{session.total_answers}</span> jawaban terisi ({percent}%)
+              <span className="text-indigo-600 font-bold">{session.filled_answers}</span>
+              {copy.between}
+              <span className="font-bold">{session.total_answers}</span>
+              {fill(copy.answers, { percent })}
             </p>
           </div>
 
@@ -257,7 +332,7 @@ export function ManualSessionHeader({
                 onChange={(e) => onToggleUnfilled(e.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
               />
-              <span>Hanya yang belum terisi</span>
+              <span>{copy.unfilled}</span>
             </label>
 
             {/* Tombol Tandai Selesai (AC8) */}
@@ -267,14 +342,10 @@ export function ManualSessionHeader({
                 disabled={actionsBlockedReason !== null}
                 onClick={() => setIsFinalizeOpen(true)}
                 aria-describedby={actionsBlockedReason ? actionsReasonId : undefined}
-                title={
-                  !isAllFilled
-                    ? "Semua jawaban harus terisi sebelum dapat ditandai selesai."
-                    : "Tandai sesi ini selesai secara final."
-                }
+                title={!isAllFilled ? copy.finishNeedsAnswers : copy.finishReady}
                 className="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Tandai Selesai
+                {copy.finish}
               </button>
             )}
 
@@ -285,10 +356,10 @@ export function ManualSessionHeader({
                 disabled={gradeBlockedReason !== null}
                 onClick={() => setGradeDialog("grade")}
                 aria-describedby={gradeBlockedReason ? actionsReasonId : undefined}
-                title={gradeButtonTitle(isAllFilled, grading.active)}
+                title={gradeButtonTitle(isAllFilled, grading.active, copy)}
                 className="rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Kirim untuk Dinilai
+                {copy.grade}
               </button>
             )}
           </div>
@@ -330,7 +401,7 @@ export function ManualSessionHeader({
           onQueued={(queued) => {
             setGradeDialog(null);
             grading.started(queued);
-            showToast(`Penilaian sesi “${session.label}” berjalan di latar belakang.`);
+            showToast(fill(copy.gradingToast, { label: session.label }));
           }}
           onClose={(afterError) => {
             setGradeDialog(null);

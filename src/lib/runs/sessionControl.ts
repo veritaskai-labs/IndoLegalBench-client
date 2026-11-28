@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/apiClient";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { Me, Role } from "@/types";
 import type { RetrySelection } from "@/lib/runs/sessionControlApi";
 import type { AttemptStatus, SessionCaseResult, SessionDetail, SessionStatus } from "@/types/measurement";
@@ -88,26 +89,51 @@ export function retrySelection(chosen: ReadonlySet<string>, failed: ReadonlyArra
   return { attemptIds: picked.flatMap((item) => item.attemptIds) };
 }
 
-const CONTROL_ERRORS: Record<string, string> = {
-  INVALID_TRANSITION: "Status sesi sudah berubah. Muat ulang halaman.",
-  SESSION_NOT_RESUMABLE: "Sesi ini tidak sedang dijeda atau dibatalkan. Muat ulang halaman.",
-  SESSION_ARCHIVED: "Sesi yang sudah diarsipkan tidak bisa dikontrol.",
-  SESSION_ACCEPTED: "Sesi ini sudah diterima apa adanya. Hapus tandanya dulu.",
-  SESSION_NOT_AUTOMATIC: "Hanya sesi otomatis yang bisa dijeda, dibatalkan, atau dilanjutkan.",
-  MODEL_VERSION_CHANGED: "Versi model produk sudah berbeda dari saat sesi dimulai. Buat sesi baru untuk mengukur lagi.",
-  ANOTHER_SESSION_RUNNING: "Masih ada sesi otomatis lain yang berjalan. Lanjutkan setelah sesi itu selesai.",
-  ATTEMPT_RECOVERY_REQUIRED: "Ada percobaan yang hasilnya belum pasti. Coba lagi setelah pemulihan selesai.",
-  MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang halaman.",
-  NOT_YOUR_SESSION: "Anda hanya bisa mengontrol sesi yang Anda buat.",
-  // Aksi kontrol memakai silentForbidden, jadi 403 (peran berubah saat halaman terbuka) sampai di sini.
-  FORBIDDEN: "Peran Anda tidak bisa mengontrol sesi ini. Muat ulang halaman.",
-  ADMIN_CONFIRMATION_REQUIRED: "Melanjutkan tanpa versi model terverifikasi perlu konfirmasi Admin.",
-  SESSION_NOT_RETRYABLE: "Hanya sesi yang selesai dengan kegagalan yang bisa dicoba ulang.",
-  ATTEMPT_NOT_RETRYABLE: "Sebagian percobaan yang dipilih sudah tidak gagal. Muat ulang halaman.",
-  NO_FAILED_ATTEMPTS: "Tidak ada percobaan yang gagal untuk dicoba ulang. Muat ulang halaman.",
-};
+const CONTROL_ERRORS = messages({
+  id: {
+    INVALID_TRANSITION: "Status sesi sudah berubah. Muat ulang halaman.",
+    SESSION_NOT_RESUMABLE: "Sesi ini tidak sedang dijeda atau dibatalkan. Muat ulang halaman.",
+    SESSION_ARCHIVED: "Sesi yang sudah diarsipkan tidak bisa dikontrol.",
+    SESSION_ACCEPTED: "Sesi ini sudah diterima apa adanya. Hapus tandanya dulu.",
+    SESSION_NOT_AUTOMATIC: "Hanya sesi otomatis yang bisa dijeda, dibatalkan, atau dilanjutkan.",
+    MODEL_VERSION_CHANGED: "Versi model produk sudah berbeda dari saat sesi dimulai. Buat sesi baru untuk mengukur lagi.",
+    ANOTHER_SESSION_RUNNING: "Masih ada sesi otomatis lain yang berjalan. Lanjutkan setelah sesi itu selesai.",
+    ATTEMPT_RECOVERY_REQUIRED: "Ada percobaan yang hasilnya belum pasti. Coba lagi setelah pemulihan selesai.",
+    MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang halaman.",
+    NOT_YOUR_SESSION: "Anda hanya bisa mengontrol sesi yang Anda buat.",
+    // Aksi kontrol memakai silentForbidden, jadi 403 (peran berubah saat halaman terbuka) sampai di sini.
+    FORBIDDEN: "Peran Anda tidak bisa mengontrol sesi ini. Muat ulang halaman.",
+    ADMIN_CONFIRMATION_REQUIRED: "Melanjutkan tanpa versi model terverifikasi perlu konfirmasi Admin.",
+    SESSION_NOT_RETRYABLE: "Hanya sesi yang selesai dengan kegagalan yang bisa dicoba ulang.",
+    ATTEMPT_NOT_RETRYABLE: "Sebagian percobaan yang dipilih sudah tidak gagal. Muat ulang halaman.",
+    NO_FAILED_ATTEMPTS: "Tidak ada percobaan yang gagal untuk dicoba ulang. Muat ulang halaman.",
+    fallback: "Permintaan gagal. Coba lagi.",
+  },
+  en: {
+    INVALID_TRANSITION: "The session status has changed. Reload the page.",
+    SESSION_NOT_RESUMABLE: "This session is not paused or cancelled. Reload the page.",
+    SESSION_ARCHIVED: "An archived session cannot be controlled.",
+    SESSION_ACCEPTED: "This session is already accepted as-is. Remove that mark first.",
+    SESSION_NOT_AUTOMATIC: "Only an automatic session can be paused, cancelled, or resumed.",
+    MODEL_VERSION_CHANGED: "The product's model version is different from when the session started. Create a new session to measure again.",
+    ANOTHER_SESSION_RUNNING: "Another automatic session is still running. Resume after that session finishes.",
+    ATTEMPT_RECOVERY_REQUIRED: "An attempt still has an uncertain result. Try again after recovery finishes.",
+    MEASUREMENT_NOT_FOUND: "Session not found. Reload the page.",
+    NOT_YOUR_SESSION: "You can only control a session you created.",
+    FORBIDDEN: "Your role cannot control this session. Reload the page.",
+    ADMIN_CONFIRMATION_REQUIRED: "Resuming without a verified model version needs an Admin to confirm.",
+    SESSION_NOT_RETRYABLE: "Only a session that finished with failures can be retried.",
+    ATTEMPT_NOT_RETRYABLE: "Some selected attempts are no longer failed. Reload the page.",
+    NO_FAILED_ATTEMPTS: "There are no failed attempts to retry. Reload the page.",
+    fallback: "The request failed. Try again.",
+  },
+});
 
-export function controlErrorMessage(error: unknown): string {
-  const known = error instanceof ApiError ? CONTROL_ERRORS[error.code] : undefined;
-  return known ?? "Permintaan gagal. Coba lagi.";
+export function controlErrorMessage(error: unknown, locale: Locale = DEFAULT_LOCALE): string {
+  const copy = text(CONTROL_ERRORS, locale);
+  const known =
+    error instanceof ApiError && error.code !== "fallback" && Object.hasOwn(copy, error.code)
+      ? copy[error.code as keyof typeof copy]
+      : undefined;
+  return known ?? copy.fallback;
 }

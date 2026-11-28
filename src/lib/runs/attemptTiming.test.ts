@@ -133,3 +133,13 @@ describe("describeAttemptTiming (PBI-11 AC8, timestamp per percobaan)", () => {
     expect(timing.duration).toBeNull();
   });
 });
+
+describe("attempt timing words English", () => {
+  it("says an attempt has not started, in English", () => {
+    expect(describeAttemptTiming(stamps({}), "en")).toEqual({
+      started: "Not started",
+      finished: "Not finished",
+      duration: null,
+    });
+  });
+});

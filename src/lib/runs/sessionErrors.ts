@@ -1,6 +1,23 @@
+import { DEFAULT_LOCALE, fill, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { SessionCaseResult, AttemptResult } from "@/types/measurement";
 
 const COUNT = new Intl.NumberFormat("id-ID");
+
+const SUMMARY = messages({
+  id: {
+    none: "Tidak ada panggilan yang gagal",
+    some: "{count} panggilan gagal karena masalah teknis",
+  },
+  en: {
+    none: "No calls failed",
+    some: "{count} calls failed because of a technical problem",
+  },
+});
+
+const VERSION_MISSING = messages({
+  id: "Tidak tercatat",
+  en: "Not recorded",
+});
 
 /** Satu panggilan yang gagal teknis, sudah dirangkai dengan kasus asalnya. */
 export type FailedAttempt = {
@@ -43,12 +60,13 @@ export function failedAttempts(cases: readonly SessionCaseResult[]): FailedAttem
 }
 
 /** Ringkasan sederhana di atas tombol detail teknis. */
-export function errorSummaryText(count: number): string {
-  if (count === 0) return "Tidak ada panggilan yang gagal";
-  return `${COUNT.format(count)} panggilan gagal karena masalah teknis`;
+export function errorSummaryText(count: number, locale: Locale = DEFAULT_LOCALE): string {
+  const copy = text(SUMMARY, locale);
+  if (count === 0) return copy.none;
+  return fill(copy.some, { count: COUNT.format(count) });
 }
 
 /** model_version null: produk menjawab tanpa menyebut versinya, atau gagal sebelum sempat. */
-export function modelVersionText(modelVersion: string | null): string {
-  return modelVersion ?? "Tidak tercatat";
+export function modelVersionText(modelVersion: string | null, locale: Locale = DEFAULT_LOCALE): string {
+  return modelVersion ?? text(VERSION_MISSING, locale);
 }

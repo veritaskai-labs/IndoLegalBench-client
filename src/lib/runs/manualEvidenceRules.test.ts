@@ -274,3 +274,10 @@ describe("formatFileSize", () => {
     expect(text).toBe("");
   });
 });
+
+describe("validateEvidence English", () => {
+  it("rejects an empty file in English", () => {
+    const input = { kind: "file", file: file("kosong.png", "image/png", "") } as const;
+    expect(validateEvidence(input, 0, "en")).toBe("The file is empty. Choose the correct screenshot.");
+  });
+});

@@ -144,3 +144,12 @@ describe("toHistoryVersions", () => {
     expect(versions).toEqual([]);
   });
 });
+
+describe("history words English", () => {
+  it("names the current user You and keeps the stored answer unchanged", () => {
+    expect(actorLabel("u-1", "u-1", "en")).toBe("You");
+    const [version] = toHistoryVersions([entry()], "u-2", "en");
+    expect(version.title).toBe("Version 1");
+    expect(version.answerMd).toBe("Jawaban lama");
+  });
+});

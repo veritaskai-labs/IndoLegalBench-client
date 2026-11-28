@@ -6,8 +6,62 @@
  */
 
 import { formatWib } from "@/lib/datetime/formatWib";
+import { DEFAULT_LOCALE, fill, messages, text, type Locale } from "@/lib/i18n/locale";
 
 const COUNT = new Intl.NumberFormat("id-ID");
+
+const OF_TOTAL = messages({
+  id: "{completed} dari {total}",
+  en: "{completed} of {total}",
+});
+
+const CALLS_NONE = messages({
+  id: "Belum ada panggilan",
+  en: "No calls yet",
+});
+
+const FAILURES_NONE = messages({
+  id: "Tidak ada kegagalan",
+  en: "No failures",
+});
+
+const CASES_NONE = messages({
+  id: "Belum ada kasus",
+  en: "No cases yet",
+});
+
+const CASES_SUMMARY = messages({
+  id: "{count} kasus · {percent}",
+  en: "{count} cases · {percent}",
+});
+
+const REMAINING = messages({
+  id: {
+    unknown: "Belum bisa diperkirakan",
+    done: "Selesai",
+    underMinute: "kurang dari 1 menit",
+    minute: "sekitar {minutes} menit",
+    minutes: "sekitar {minutes} menit",
+    hour: "sekitar {hours} jam",
+    hours: "sekitar {hours} jam",
+    hoursMinutes: "sekitar {hours} jam {rest} menit",
+  },
+  en: {
+    unknown: "Cannot estimate yet",
+    done: "Done",
+    underMinute: "less than 1 minute",
+    minute: "about {minutes} minute",
+    minutes: "about {minutes} minutes",
+    hour: "about {hours} hour",
+    hours: "about {hours} hours",
+    hoursMinutes: "about {hours} hours {rest} minutes",
+  },
+});
+
+const NOT_STARTED = messages({
+  id: "Belum mulai",
+  en: "Not started",
+});
 
 /** Satu desimal, sama dengan yang dibulatkan server (progress._percent). */
 const PERCENT = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -16,17 +70,17 @@ const PERCENT = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 1, maxim
  * "240 dari 300" (AC5). Total 0 di panel berarti snapshot belum ada. Daftar sesi
  * sengaja berbeda di kasus ini: lihat formatProgress di sessionRules.
  */
-export function callCountText(completed: number, total: number): string {
-  if (total === 0) return "Belum ada panggilan";
-  return countOfTotal(completed, total);
+export function callCountText(completed: number, total: number, locale: Locale = DEFAULT_LOCALE): string {
+  if (total === 0) return text(CALLS_NONE, locale);
+  return countOfTotal(completed, total, locale);
 }
 
 /**
  * "1.200 dari 1.500". Satu-satunya tempat angka ini diformat, dipakai panel progres
  * dan daftar sesi, supaya satu sesi terbaca sama di kedua halaman.
  */
-export function countOfTotal(completed: number, total: number): string {
-  return `${COUNT.format(completed)} dari ${COUNT.format(total)}`;
+export function countOfTotal(completed: number, total: number, locale: Locale = DEFAULT_LOCALE): string {
+  return fill(text(OF_TOTAL, locale), { completed: COUNT.format(completed), total: COUNT.format(total) });
 }
 
 /** "80,0%". Bukan angka berarti agregasinya rusak, jadi tanda hubung, bukan "NaN%". */
@@ -41,9 +95,14 @@ export function percentText(value: string | number): string {
  * yang sudah selesai, karena persen dari server (percent_failed) juga dihitung atas itu; memakai
  * total panggilan akan membuat jumlah dan persennya tidak cocok. Gagal tetap per panggilan (AC4).
  */
-export function failedText(failed: number, completedCalls: number, percentFailed: string | number): string {
-  if (failed === 0) return "Tidak ada kegagalan";
-  return `${countOfTotal(failed, completedCalls)} (${percentText(percentFailed)})`;
+export function failedText(
+  failed: number,
+  completedCalls: number,
+  percentFailed: string | number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  if (failed === 0) return text(FAILURES_NONE, locale);
+  return `${countOfTotal(failed, completedCalls, locale)} (${percentText(percentFailed)})`;
 }
 
 /**
@@ -51,23 +110,25 @@ export function failedText(failed: number, completedCalls: number, percentFailed
  * jadi kecepatannya belum diketahui. Menit dibulatkan ke atas dengan alasan yang
  * sama seperti di server: lebih baik terlalu lama daripada menjanjikan terlalu cepat.
  */
-export function remainingTimeText(seconds: number | null): string {
-  if (seconds === null) return "Belum bisa diperkirakan";
-  if (seconds <= 0) return "Selesai";
-  if (seconds < 60) return "kurang dari 1 menit";
+export function remainingTimeText(seconds: number | null, locale: Locale = DEFAULT_LOCALE): string {
+  const copy = text(REMAINING, locale);
+  if (seconds === null) return copy.unknown;
+  if (seconds <= 0) return copy.done;
+  if (seconds < 60) return copy.underMinute;
   const minutes = Math.ceil(seconds / 60);
-  if (minutes < 60) return `sekitar ${minutes} menit`;
+  if (minutes < 60) return fill(minutes === 1 ? copy.minute : copy.minutes, { minutes });
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  return rest === 0 ? `sekitar ${hours} jam` : `sekitar ${hours} jam ${rest} menit`;
+  if (rest === 0) return fill(hours === 1 ? copy.hour : copy.hours, { hours });
+  return fill(copy.hoursMinutes, { hours, rest });
 }
 
 /**
  * Waktu mulai sesi (AC5). null berarti sesi masih antre dan belum berjalan:
  * kolomnya nullable di kontrak (server SCRUM-215), mengikuti measurement_sessions.
  */
-export function startedAtText(iso: string | null): string {
-  return iso === null ? "Belum mulai" : formatWib(iso);
+export function startedAtText(iso: string | null, locale: Locale = DEFAULT_LOCALE): string {
+  return iso === null ? text(NOT_STARTED, locale) : formatWib(iso);
 }
 
 /**
@@ -83,9 +144,9 @@ export function budgetExhausted(remainingBudgetIdr: string): boolean {
  * "7 dari 20 (35%)" di bawah label Kasus selesai (SCRUM-266 K3). Kasus dihitung selesai oleh server
  * (SCRUM-265): semua pengulangannya sudah diproses. Total 0 berarti snapshot belum ada.
  */
-export function casesDoneText(completed: number, total: number, percent: number): string {
-  if (total === 0) return "Belum ada kasus";
-  return `${countOfTotal(completed, total)} (${wholePercentText(percent)})`;
+export function casesDoneText(completed: number, total: number, percent: number, locale: Locale = DEFAULT_LOCALE): string {
+  if (total === 0) return text(CASES_NONE, locale);
+  return `${countOfTotal(completed, total, locale)} (${wholePercentText(percent)})`;
 }
 
 /**
@@ -107,6 +168,9 @@ export function wholePercentText(value: number): string {
  * Kolom Progres daftar sesi (SCRUM-266): "7 dari 20 kasus · 35%". Tanpa teks "Belum ada"
  * supaya setiap baris punya bentuk yang sama; sesi antre ditangani formatProgress.
  */
-export function casesDoneSummary(completed: number, total: number, percent: number): string {
-  return `${countOfTotal(completed, total)} kasus · ${wholePercentText(percent)}`;
+export function casesDoneSummary(completed: number, total: number, percent: number, locale: Locale = DEFAULT_LOCALE): string {
+  return fill(text(CASES_SUMMARY, locale), {
+    count: countOfTotal(completed, total, locale),
+    percent: wholePercentText(percent),
+  });
 }

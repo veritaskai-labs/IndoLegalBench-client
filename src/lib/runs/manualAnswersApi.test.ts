@@ -270,3 +270,14 @@ describe("answerErrorMessage", () => {
     expect(message).toBe("Gagal menyimpan.");
   });
 });
+
+describe("answerErrorMessage English", () => {
+  it("explains a missing manual answer in English and leaves a server sentence unchanged", () => {
+    expect(answerErrorMessage(new ApiError(404, "MANUAL_ANSWER_NOT_FOUND"), undefined, "en")).toBe(
+      "Manual answer not found.",
+    );
+    expect(answerErrorMessage(new ApiError(422, "EVIDENCE_TYPE_MISMATCH", "Isi berkas tidak sesuai ekstensinya."), undefined, "en")).toBe(
+      "Isi berkas tidak sesuai ekstensinya.",
+    );
+  });
+});

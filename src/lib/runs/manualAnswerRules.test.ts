@@ -399,3 +399,11 @@ describe("canEditAnswers (who may fill, AC8)", () => {
     expect(allowed).toBe(true);
   });
 });
+
+describe("validateDraft English", () => {
+  it("explains an empty answer in English", () => {
+    expect(validateDraft(draft({ answerMd: "" }), "en").answer).toBe(
+      'The answer cannot be empty. Paste the platform answer, or choose "Platform refused to answer".',
+    );
+  });
+});

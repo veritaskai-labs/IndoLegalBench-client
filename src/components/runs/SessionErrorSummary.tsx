@@ -4,10 +4,14 @@
 import { useState } from "react";
 
 import { useAttemptCalls } from "@/hooks/useAttemptCalls";
+import { CHROME } from "@/lib/i18n/chrome";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import {
   callErrorText,
   callResultText,
   durationText,
+  emptyCallsText,
   maskedNotice,
   rawResponseText,
   tryLabel,
@@ -18,6 +22,35 @@ import {
   type FailedAttempt,
 } from "@/lib/runs/sessionErrors";
 import type { AttemptCalls } from "@/types/measurement";
+
+const COPY = messages({
+  id: {
+    region: "Ringkasan kegagalan",
+    hide: "Sembunyikan detail teknis",
+    show: "Lihat detail teknis",
+    repetition: "Pengulangan ke-{n}",
+    model: "Model {version}",
+    hideProvider: "Tutup respons penyedia",
+    showProvider: "Lihat respons penyedia",
+    missingApi: "Pesan asli dari penyedia belum dikirim oleh API, jadi yang tampil baru panggilan mana yang gagal.",
+    provider: "Respons penyedia",
+    heading: "{code} · Pengulangan ke-{n}",
+    loading: "Memuat detail teknis…",
+  },
+  en: {
+    region: "Failure summary",
+    hide: "Hide technical detail",
+    show: "View technical detail",
+    repetition: "Repetition {n}",
+    model: "Model {version}",
+    hideProvider: "Close provider response",
+    showProvider: "View provider response",
+    missingApi: "The API has not sent the provider's original message yet, so only which call failed is shown.",
+    provider: "Provider response",
+    heading: "{code} · Repetition {n}",
+    loading: "Loading technical detail…",
+  },
+});
 
 /**
  * Ringkasan kegagalan satu sesi dengan tombol detail teknis (PBI-12 AC4).
@@ -30,6 +63,9 @@ export function SessionErrorSummary({
   sessionId: string;
   failures: readonly FailedAttempt[];
 }>) {
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [selectedFailure, setSelectedFailure] =
     useState<FailedAttempt | null>(null);
@@ -47,12 +83,12 @@ export function SessionErrorSummary({
 
   return (
     <section
-      aria-label="Ringkasan kegagalan"
+      aria-label={copy.region}
       className="space-y-3 rounded-lg border border-rose-200 bg-rose-50 p-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-medium text-rose-900">
-          {errorSummaryText(failures.length)}
+          {errorSummaryText(failures.length, locale)}
         </p>
 
         <button
@@ -64,7 +100,7 @@ export function SessionErrorSummary({
           aria-expanded={open}
           className="rounded-md border border-rose-300 bg-white px-3 py-1.5 text-sm font-medium text-rose-900 hover:bg-rose-100"
         >
-          {open ? "Sembunyikan detail teknis" : "Lihat detail teknis"}
+          {open ? copy.hide : copy.show}
         </button>
       </div>
 
@@ -85,11 +121,11 @@ export function SessionErrorSummary({
                 </span>
 
                 <span className="text-xs text-slate-600">
-                  Pengulangan ke-{failure.repetitionNo}
+                  {fill(copy.repetition, { n: failure.repetitionNo })}
                 </span>
 
                 <span className="text-xs text-slate-600">
-                  Model {modelVersionText(failure.modelVersion)}
+                  {fill(copy.model, { version: modelVersionText(failure.modelVersion, locale) })}
                 </span>
 
                 {failure.attemptId !== null && (
@@ -106,8 +142,8 @@ export function SessionErrorSummary({
                     className="ml-auto rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
                     {selectedFailure?.key === failure.key
-                      ? "Tutup respons penyedia"
-                      : "Lihat respons penyedia"}
+                      ? copy.hideProvider
+                      : copy.showProvider}
                   </button>
                 )}
               </li>
@@ -116,24 +152,22 @@ export function SessionErrorSummary({
 
           {!hasAttemptId && (
             <p className="text-xs text-rose-900">
-              Pesan asli dari penyedia belum dikirim oleh API, jadi
-              yang tampil baru panggilan mana yang gagal.
+              {copy.missingApi}
             </p>
           )}
 
           {selectedFailure !== null && (
             <section
-              aria-label="Respons penyedia"
+              aria-label={copy.provider}
               className="space-y-2 rounded-md border border-slate-200 bg-white p-3"
             >
               <p className="text-xs font-semibold text-slate-700">
-                {selectedFailure.caseCode} · Pengulangan ke-
-                {selectedFailure.repetitionNo}
+                {fill(copy.heading, { code: selectedFailure.caseCode, n: selectedFailure.repetitionNo })}
               </p>
 
               {detail.status === "loading" && (
                 <p className="text-xs text-slate-500">
-                  Memuat detail teknis…
+                  {copy.loading}
                 </p>
               )}
 
@@ -148,14 +182,14 @@ export function SessionErrorSummary({
                     onClick={detail.reload}
                     className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    Coba lagi
+                    {chrome.retry}
                   </button>
                 </div>
               )}
 
               {detail.status === "ready" &&
                 detail.data !== null && (
-                  <CallList calls={detail.data} />
+                  <CallList calls={detail.data} locale={locale} />
                 )}
             </section>
           )}
@@ -171,8 +205,9 @@ export function SessionErrorSummary({
  */
 function CallList({
   calls,
-}: Readonly<{ calls: AttemptCalls }>) {
-  const notice = calls.masked ? maskedNotice() : null;
+  locale,
+}: Readonly<{ calls: AttemptCalls; locale: ReturnType<typeof useLocale> }>) {
+  const notice = calls.masked ? maskedNotice(locale) : null;
 
   return (
     <div className="space-y-3">
@@ -184,7 +219,7 @@ function CallList({
 
       {calls.calls.length === 0 ? (
         <p className="text-xs text-slate-500">
-          Belum ada upaya panggilan yang tercatat.
+          {emptyCallsText(locale)}
         </p>
       ) : (
         <ol className="space-y-3">
@@ -201,15 +236,15 @@ function CallList({
               >
                 <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
                   <span className="font-medium text-slate-900">
-                    {tryLabel(call)}
+                    {tryLabel(call, locale)}
                   </span>
 
                   <span>
-                    {callResultText(call)}
+                    {callResultText(call, locale)}
                   </span>
 
                   <span>
-                    {durationText(call.duration_ms)}
+                    {durationText(call.duration_ms, locale)}
                   </span>
 
                   <span className="font-mono">
