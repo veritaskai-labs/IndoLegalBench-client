@@ -51,3 +51,16 @@ export const GUIDE_COLUMNS: readonly GuideColumn[] = [
     jsonList: false,
   },
 ];
+
+/**
+ * Alasan di dekat sorotan "Format JSON" (SCRUM-380). Server membaca kolom ini dengan json.loads; nilai yang
+ * bukan list JSON membuat barisnya gagal dan alasannya muncul per baris di ringkasan hasil.
+ */
+export const JSON_FORMAT_REASON =
+  "Kolom ini dibaca sebagai list JSON. Penulisan yang tidak valid membuat barisnya gagal diimpor " +
+  "dan dilaporkan beserta alasannya di ringkasan hasil.";
+
+/** Kolom yang harus ditulis sebagai list JSON, urutan sama dengan template. Sumbernya GUIDE_COLUMNS. */
+export function jsonListColumns(): GuideColumn[] {
+  return GUIDE_COLUMNS.filter((column) => column.jsonList);
+}
