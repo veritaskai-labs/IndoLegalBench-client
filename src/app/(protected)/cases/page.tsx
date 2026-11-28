@@ -145,27 +145,43 @@ function CaseDirectory() {
               <label htmlFor="case-directory-suite" className="text-xs font-medium text-ink-soft">
                 Pilih suite
               </label>
-              <select
-                id="case-directory-suite"
-                value={request.suiteId}
-                onChange={(event) => {
-                  const suiteId = event.target.value;
-                  setRequest((current) => ({ ...current, suiteId, page: 1 }));
-                }}
-                disabled={!suitesReady}
-                className="h-8 min-w-0 rounded-control border border-line bg-paper px-3 text-xs text-ink disabled:cursor-not-allowed disabled:bg-disabled-bg disabled:text-disabled-ink"
-              >
-                <option value="">Semua suite</option>
-                {request.suiteId && !suites.some(({ id }) => id === request.suiteId) && (
-                  <option value={request.suiteId}>Suite tidak tersedia</option>
-                )}
-                {suites.map((suite) => (
-                  <option key={suite.id} value={suite.id}>
-                    {suite.name}
-                    {suite.status === "archived" ? " (Arsip)" : ""}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  id="case-directory-suite"
+                  value={request.suiteId}
+                  onChange={(event) => {
+                    const suiteId = event.target.value;
+                    setRequest((current) => ({ ...current, suiteId, page: 1 }));
+                  }}
+                  disabled={!suitesReady}
+                  className="h-8 min-w-0 appearance-none rounded-control border border-line bg-paper pl-3 pr-9 text-xs text-ink disabled:cursor-not-allowed disabled:bg-disabled-bg disabled:text-disabled-ink"
+                >
+                  <option value="">Semua suite</option>
+                  {request.suiteId && !suites.some(({ id }) => id === request.suiteId) && (
+                    <option value={request.suiteId}>Suite tidak tersedia</option>
+                  )}
+                  {suites.map((suite) => (
+                    <option key={suite.id} value={suite.id}>
+                      {suite.name}
+                      {suite.status === "archived" ? " (Arsip)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  aria-hidden="true"
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </div>
             </div>
           </div>
 
