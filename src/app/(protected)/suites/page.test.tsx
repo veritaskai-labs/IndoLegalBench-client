@@ -1,6 +1,7 @@
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useSuites } from "@/hooks/useSuites";
 import SuitesPage from "./page";
@@ -73,6 +74,16 @@ describe("SuitesPage", () => {
     render(<SuitesPage />);
 
     expect(useSuites).toHaveBeenCalledWith("active");
+  });
+
+  it("names the page in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SuitesPage />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Suites and cases" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create suite" })).toBeInTheDocument();
   });
     it("opens the create dialog from the button", async () => {
     const user = userEvent.setup();

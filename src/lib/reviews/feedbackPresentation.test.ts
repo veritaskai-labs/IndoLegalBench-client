@@ -33,3 +33,23 @@ describe("feedbackPresentation", () => {
     expect(view).toEqual({ commentInDrawer: false, launcherLabel: "Buka diskusi komentar", readOnlyNotice: null });
   });
 });
+
+describe("feedbackPresentation in English", () => {
+  it("names the launcher and the read-only notice in English", () => {
+    expect(feedbackPresentation("approved", "en")).toEqual({
+      commentInDrawer: true,
+      launcherLabel: "View comment",
+      readOnlyNotice: "The case is approved. Comments and the thread are read-only.",
+    });
+    expect(feedbackPresentation("needs_revision", "en")).toEqual({
+      commentInDrawer: false,
+      launcherLabel: "Reply to comment",
+      readOnlyNotice: null,
+    });
+    expect(feedbackPresentation(null, "en")).toEqual({
+      commentInDrawer: false,
+      launcherLabel: "Open comment discussion",
+      readOnlyNotice: null,
+    });
+  });
+});

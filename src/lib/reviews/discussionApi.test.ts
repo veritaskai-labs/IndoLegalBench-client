@@ -37,3 +37,16 @@ describe('discussion API', () => {
     expect(discussionError(new Error('offline'))).toContain('Coba lagi');
   });
 });
+
+describe('discussionError in English', () => {
+  it.each([
+    [403, 'ANY', 'You do not have permission to open or reply to this discussion.'],
+    [404, 'ANY', 'The reviewer comment was not found or is not available yet.'],
+    [409, 'THREAD_READ_ONLY', 'The case is approved, so this discussion is read-only.'],
+    [409, 'ASSIGNMENT_NOT_ACTIVE', 'The assignment has changed. Reload the discussion before replying.'],
+    [422, 'ANY', 'A reply is required, with a maximum of 5,000 characters.'],
+    [500, 'ANY', 'The discussion could not be loaded, or the reply was not sent. Try again.'],
+  ] as const)('maps HTTP %s %s without the server message', (status, code, expected) => {
+    expect(discussionError(new ApiError(status, code, '<script>'), 'en')).toBe(expected);
+  });
+});

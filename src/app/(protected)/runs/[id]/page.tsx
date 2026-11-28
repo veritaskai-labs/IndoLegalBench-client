@@ -16,8 +16,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLiveSession } from "@/hooks/useLiveSession";
 import { useSessionDetail } from "@/hooks/useSessionDetail";
 import { formatWib } from "@/lib/datetime/formatWib";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
 import { decodeRouteParam } from "@/lib/routeParams";
-import { awaitingFirstAnswer, CASE_FILTER_LABEL, MEASUREMENT_PURPOSE_LABEL } from "@/lib/runs/sessionDetail";
+import { awaitingFirstAnswer, caseFilterLabel, measurementPurposeLabel } from "@/lib/runs/sessionDetail";
 import { formatProgress, isSettled, unknownName } from "@/lib/runs/sessionRules";
 import type { Role } from "@/types";
 import type { SessionDetail } from "@/types/measurement";
@@ -27,8 +29,60 @@ import { useMeasurementProgress } from "@/hooks/useMeasurementProgress";
 import { useSessionResults } from "@/hooks/useSessionResults";
 import { failedAttempts } from "@/lib/runs/sessionErrors";
 
+const COPY = messages({
+  id: {
+    back: "Kembali ke Pengukuran otomatis",
+    list: "Pengukuran otomatis",
+    status: "Status sesi",
+    settings: "Pengaturan",
+    product: "Produk",
+    purpose: "Tujuan",
+    filter: "Filter kasus",
+    repetitions: "Pengulangan",
+    progress: "Progres",
+    snapshot: "Snapshot kasus",
+    snapshotPending: "Dibuat saat sesi mulai",
+    times: "Waktu",
+    created: "Dibuat",
+    started: "Mulai berjalan",
+    finished: "Berakhir",
+    summary: "Ringkasan sesi",
+    archived: "Sesi ini sudah diarsipkan dan tidak tampil di daftar. Datanya tetap tersimpan.",
+    stale: "Pembaruan otomatis gagal. Menampilkan data terakhir yang berhasil dimuat.",
+    progressTitle: "Progres",
+    casesTitle: "Kasus dan jawaban mentah",
+    waiting: "Belum ada jawaban. Jawaban kasus dev tampil di sini begitu tiap percobaan selesai, halaman diperbarui otomatis.",
+    noCases: "Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.",
+  },
+  en: {
+    back: "Back to Automatic measurement",
+    list: "Automatic measurement",
+    status: "Session status",
+    settings: "Settings",
+    product: "Product",
+    purpose: "Purpose",
+    filter: "Case filter",
+    repetitions: "Repetitions",
+    progress: "Progress",
+    snapshot: "Case snapshot",
+    snapshotPending: "Created when the session starts",
+    times: "Time",
+    created: "Created",
+    started: "Started running",
+    finished: "Ended",
+    summary: "Session summary",
+    archived: "This session is archived and does not appear in the list. Its data is still stored.",
+    stale: "Automatic refresh failed. Showing the last data that loaded successfully.",
+    progressTitle: "Progress",
+    casesTitle: "Cases and raw answers",
+    waiting: "No answers yet. Dev-case answers appear here as each attempt finishes, and the page refreshes automatically.",
+    noCases: "No cases yet. The case snapshot is created when the session starts running.",
+  },
+});
+
 /** Detail satu sesi pengukuran: snapshot kasus dan jawaban mentah (PBI-11 AC6–AC8, SCRUM-212). */
 export default function SessionDetailPage() {
+  const copy = useText(COPY);
   const sessionId = decodeRouteParam(useParams<{ id: string }>().id);
   const auth = useAuth();
   const role = auth.status === "authenticated" ? auth.user.role : null;
@@ -42,7 +96,7 @@ export default function SessionDetailPage() {
       <div className="space-y-4">
         <ErrorState variant="card" message={detail.message} onRetry={detail.reload} />
         <Link href="/runs" className="text-sm font-medium text-slate-900 hover:underline">
-          Kembali ke Pengukuran otomatis
+          {copy.back}
         </Link>
       </div>
     );
@@ -56,6 +110,8 @@ function SessionDetailView({
   role,
   viewerId,
 }: Readonly<{ session: SessionDetail; role: Role | null; viewerId: string | null }>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const { session, stale, reload: reloadSession } = useLiveSession(initialSession);
   const results = useSessionResults(session.id);
   // Sesi yang tidak berubah sendiri tidak perlu polling (berakhir atau dibatalkan).
@@ -64,36 +120,36 @@ function SessionDetailView({
 
   const factGroups: { title: string; facts: { label: string; value: React.ReactNode }[] }[] = [
     {
-      title: "Pengaturan",
+      title: copy.settings,
       facts: [
-        { label: "Produk", value: unknownName(session.product_name) },
-        { label: "Tujuan", value: MEASUREMENT_PURPOSE_LABEL[session.purpose] },
-        { label: "Filter kasus", value: CASE_FILTER_LABEL[session.split_filter] },
-        { label: "Pengulangan", value: session.repetitions },
-        { label: "Progres", value: formatProgress(session) },
+        { label: copy.product, value: unknownName(session.product_name, locale) },
+        { label: copy.purpose, value: measurementPurposeLabel(session.purpose, locale) },
+        { label: copy.filter, value: caseFilterLabel(session.split_filter, locale) },
+        { label: copy.repetitions, value: session.repetitions },
+        { label: copy.progress, value: formatProgress(session, locale) },
         {
-          label: "Snapshot kasus",
-          value: session.snapshot_created_at ? formatWib(session.snapshot_created_at) : "Dibuat saat sesi mulai",
+          label: copy.snapshot,
+          value: session.snapshot_created_at ? formatWib(session.snapshot_created_at) : copy.snapshotPending,
         },
       ],
     },
     {
-      title: "Waktu",
+      title: copy.times,
       facts: [
-        { label: "Dibuat", value: `${formatWib(session.created_at)} · ${unknownName(session.created_by_name)}` },
-        { label: "Mulai berjalan", value: session.started_at ? formatWib(session.started_at) : "—" },
-        { label: "Berakhir", value: session.finished_at ? formatWib(session.finished_at) : "—" },
+        { label: copy.created, value: `${formatWib(session.created_at)} · ${unknownName(session.created_by_name, locale)}` },
+        { label: copy.started, value: session.started_at ? formatWib(session.started_at) : "—" },
+        { label: copy.finished, value: session.finished_at ? formatWib(session.finished_at) : "—" },
       ],
     },
   ];
 
   return (
     <div className="space-y-6">
-      <Breadcrumb items={[{ label: "Pengukuran otomatis", href: "/runs" }, { label: session.label }]} />
+      <Breadcrumb items={[{ label: copy.list, href: "/runs" }, { label: session.label }]} />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-slate-900">{session.label}</h1>
-          <output aria-label="Status sesi">
+          <output aria-label={copy.status}>
             <SessionStatusBadge status={session.status} stopReason={session.stop_reason} />
           </output>
         </div>
@@ -102,11 +158,11 @@ function SessionDetailView({
 
       {session.archived_at && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Sesi ini sudah diarsipkan dan tidak tampil di daftar. Datanya tetap tersimpan.
+          {copy.archived}
         </p>
       )}
 
-      <section aria-label="Ringkasan sesi" className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+      <section aria-label={copy.summary} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
         {factGroups.map((group) => (
           <fieldset key={group.title} className="m-0 min-w-0 space-y-2 border-0 p-0">
             <legend className="p-0 text-xs font-semibold text-muted">{group.title}</legend>
@@ -124,14 +180,14 @@ function SessionDetailView({
 
       {stale && !ended && (
         <output className="block rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Pembaruan otomatis gagal. Menampilkan data terakhir yang berhasil dimuat.
+          {copy.stale}
         </output>
       )}
 
       <SessionControls session={session} role={role} viewerId={viewerId} onChanged={reloadSession} />
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-slate-900">Progres</h2>
+        <h2 className="text-base font-semibold text-slate-900">{copy.progressTitle}</h2>
         {progress.status === "loading" && <LoadingState />}
         {progress.status === "error" && (
           <ErrorState variant="card" message={progress.message} onRetry={progress.reload} />
@@ -147,14 +203,14 @@ function SessionDetailView({
       <SessionGradingSection session={session} role={role} results={results} />
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-slate-900">Kasus dan jawaban mentah</h2>
+        <h2 className="text-base font-semibold text-slate-900">{copy.casesTitle}</h2>
         {!ended && awaitingFirstAnswer(session.cases) && (
           <p className="text-sm text-slate-500">
-            Belum ada jawaban. Jawaban kasus dev tampil di sini begitu tiap percobaan selesai, halaman diperbarui otomatis.
+            {copy.waiting}
           </p>
         )}
         {session.cases.length === 0 ? (
-          <p className="text-sm text-slate-500">Belum ada kasus. Snapshot kasus dibuat saat sesi mulai berjalan.</p>
+          <p className="text-sm text-slate-500">{copy.noCases}</p>
         ) : (
           session.cases.map((item) => <SessionCaseCard key={item.snapshot_item_id} item={item} sessionLabel={session.label} />)
         )}

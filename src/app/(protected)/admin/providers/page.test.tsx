@@ -2,6 +2,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/ui/Toast";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import {
   createProduct,
@@ -969,5 +970,32 @@ describe("ProvidersPage measurement type lock (AC4)", () => {
     await screen.findByRole("dialog", { name: "Ubah produk AI" });
     expect(screen.getByRole("radio", { name: /Manual/ })).toBeEnabled();
     expect(screen.queryByText(/Jenis terkunci/)).not.toBeInTheDocument();
+  });
+});
+
+describe("ProvidersPage in English", () => {
+  it("translates the screen and leaves the product name and the provider's own message", async () => {
+    list.mockResolvedValue([
+      listItem({
+        last_test_status: "failed",
+        last_test_error_category: "timeout",
+        last_test_message: "provider returned HTTP 401",
+        last_test_at: "2026-09-29T02:00:00Z",
+      }),
+    ]);
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <ProvidersPage />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("heading", { name: "AI products" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "DeepSeek" })).toBeInTheDocument();
+    expect(screen.getByText("OpenAI-compatible")).toBeInTheDocument();
+    expect(screen.getByText("Failed: Timed out. The provider did not respond within 15 seconds.")).toBeInTheDocument();
+    expect(screen.getByText("See details")).toBeInTheDocument();
+    expect(screen.getByText("provider returned HTTP 401")).toBeInTheDocument();
   });
 });

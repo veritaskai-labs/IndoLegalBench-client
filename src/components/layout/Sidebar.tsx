@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { MOBILE_NAV_ID, SIDEBAR_ID, useMobileNav } from "@/components/layout/MobileNav";
 import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { isNavItemActive, navForRole, type NavGroup } from "@/lib/nav";
 import { ROLE_LABEL } from "@/types";
 
@@ -38,6 +39,7 @@ export function replaySidebarIntro() {
 
 export function Sidebar() {
   const auth = useAuth();
+  const locale = useLocale();
   const pathname = usePathname();
   const menu = useMobileNav();
   const [onIcon, setOnIcon] = useState(false);
@@ -63,7 +65,7 @@ export function Sidebar() {
   }, [intro, signedIn]);
 
   if (!signedIn) return null;
-  const groups = navForRole(auth.user.role);
+  const groups = navForRole(auth.user.role, locale);
   const opening = peeking || intro;
   const expanded = !menu.collapsed || opening;
 

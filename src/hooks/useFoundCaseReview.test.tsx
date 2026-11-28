@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { findCaseReview } from "@/lib/reviews/reviewApi";
 import { CASE_ID, makeCaseReview } from "@/test/reviewFixtures";
 import { useFoundCaseReview } from "./useFoundCaseReview";
@@ -11,6 +12,10 @@ const findMock = vi.mocked(findCaseReview);
 
 beforeEach(() => {
   findMock.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useFoundCaseReview", () => {
@@ -56,6 +61,18 @@ describe("useFoundCaseReview", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Gagal memuat penilaian kasus. Coba lagi.",
+    });
+  });
+
+  it("maps a failure in English when the language mock is English", async () => {
+    setMockLocale("en");
+    findMock.mockRejectedValue(new ApiError(500, "INTERNAL"));
+
+    const { result } = renderHook(() => useFoundCaseReview(CASE_ID));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({
+      message: "Could not load the case review. Try again.",
     });
   });
 });

@@ -274,3 +274,21 @@ describe("shouldPollSessions (SCRUM-266, list progress column)", () => {
     expect(shouldPollSessions([])).toBe(false);
   });
 });
+
+describe("session labels English", () => {
+  it("names a paused session the system stopped as Stopped", () => {
+    expect(sessionStatusLabel("paused", "budget", "en")).toBe("Stopped");
+    expect(sessionStatusLabel("paused", "user", "en")).toBe("Paused");
+  });
+
+  it("says a queued session is waiting in the queue", () => {
+    expect(formatProgress(session({ status: "queued", progress: { completed: 0, total: 0, completed_cases: 0, total_cases: 0, percent_cases_complete: 0 } }), "en")).toBe(
+      "Waiting in the queue",
+    );
+  });
+
+  it("names a missing account in English and leaves a real name unchanged", () => {
+    expect(unknownName(null, "en")).toBe("Unknown");
+    expect(unknownName("DeepSeek", "en")).toBe("DeepSeek");
+  });
+});

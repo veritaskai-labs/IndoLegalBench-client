@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 
 describe("CaseStatusBadge", () => {
@@ -22,5 +23,14 @@ describe("CaseStatusBadge", () => {
   it("shows an approved case in emerald", () => {
     render(<CaseStatusBadge status="approved" />);
     expect(screen.getByText("Disetujui")).toHaveClass("bg-emerald-50");
+  });
+
+  it("names the status in English when that language is on screen", () => {
+    render(
+      <LocaleProvider locale="en">
+        <CaseStatusBadge status="in_review" />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("In review")).toHaveClass("bg-amber-50");
   });
 });

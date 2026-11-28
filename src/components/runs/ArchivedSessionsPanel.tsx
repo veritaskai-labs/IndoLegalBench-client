@@ -7,9 +7,28 @@ import { UnarchiveSessionDialog } from "@/components/runs/UnarchiveSessionDialog
 import { EmptyState, ErrorState } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
 import { useSessions } from "@/hooks/useSessions";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { canUnarchive } from "@/lib/runs/sessionRules";
 import type { Me } from "@/types";
 import type { SessionListItem } from "@/types/measurement";
+
+const COPY = messages({
+  id: {
+    emptyTitle: "Belum ada sesi terarsip",
+    emptyDescription: "Sesi yang diarsipkan dari tab Sesi muncul di sini dan bisa dikembalikan.",
+    restore: "Kembalikan",
+    restoreLabel: "Kembalikan {label}",
+    restored: "Sesi “{label}” dikembalikan",
+  },
+  en: {
+    emptyTitle: "No archived sessions yet",
+    emptyDescription: "Sessions archived from the Sessions tab appear here and can be restored.",
+    restore: "Restore",
+    restoreLabel: "Restore {label}",
+    restored: "Session “{label}” restored",
+  },
+});
 
 /**
  * Tab Arsip di halaman Eksekusi (PBI-11 AC10): sesi terarsip dengan kolom yang sama, dan Kembalikan
@@ -17,6 +36,7 @@ import type { SessionListItem } from "@/types/measurement";
  * dan daftar utama dimuat ulang sendiri saat tab Sesi dibuka lagi, tanpa memuat ulang halaman.
  */
 export function ArchivedSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "role"> | null }>) {
+  const copy = useText(COPY);
   const sessions = useSessions(true);
   const { showToast } = useToast();
   // Sesi yang baru dikembalikan disembunyikan tanpa memuat ulang daftar arsip.
@@ -33,8 +53,8 @@ export function ArchivedSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "ro
       {isEmpty && (
         <div className="rounded-lg border border-slate-200 bg-white">
           <EmptyState
-            title="Belum ada sesi terarsip"
-            description="Sesi yang diarsipkan dari tab Sesi muncul di sini dan bisa dikembalikan."
+            title={copy.emptyTitle}
+            description={copy.emptyDescription}
           />
         </div>
       )}
@@ -48,10 +68,10 @@ export function ArchivedSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "ro
               <button
                 type="button"
                 onClick={() => setTarget(item)}
-                aria-label={`Kembalikan ${item.label}`}
+                aria-label={fill(copy.restoreLabel, { label: item.label })}
                 className="text-xs font-medium text-slate-900 hover:underline"
               >
-                Kembalikan
+                {copy.restore}
               </button>
             ) : null
           }
@@ -63,7 +83,7 @@ export function ArchivedSessionsPanel({ me }: Readonly<{ me: Pick<Me, "id" | "ro
           session={target}
           onUnarchived={() => {
             setRestored((ids) => new Set(ids).add(target.id));
-            showToast(`Sesi “${target.label}” dikembalikan`);
+            showToast(fill(copy.restored, { label: target.label }));
             setTarget(null);
           }}
           onClose={(afterError) => {

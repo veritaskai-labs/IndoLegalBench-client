@@ -11,6 +11,8 @@ import { useNeedsReassignment } from "@/hooks/useNeedsReassignment";
 import { useReplaceReviewer } from "@/hooks/useReplaceReviewer";
 import { listCaseVersions } from "@/lib/cases/versionApi";
 import { isCaseCreator } from "@/lib/cases/versionCreator";
+import { fill, messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import { activeAssignments, reviewerName } from "@/lib/reviews/reviewQueue";
 import { candidatesExcept } from "@/lib/reviews/reviewerCandidates";
 import { listActiveUsers } from "@/lib/userApi";
@@ -31,6 +33,43 @@ type AuthorLookup = {
 
 const feedbackClass = "block rounded-control bg-surface p-3 text-sm";
 
+const COPY = messages({
+  id: {
+    title: "Review kasus",
+    intro: "Pantau kasus yang sedang direview dan tangani kasus yang kehilangan reviewer.",
+    tabsLabel: "Tampilan pemantauan",
+    queueTab: "Perlu penugasan ulang",
+    decisionsTab: "Dalam review",
+    loadingQueue: "Memuat penugasan…",
+    emptyQueueTitle: "Tidak ada kasus yang perlu penugasan ulang",
+    emptyQueueDescription: "Semua ronde review yang berjalan masih punya reviewer aktif.",
+    emptyReviewTitle: "Tidak ada kasus yang sedang direview",
+    emptyReviewDescription: "Kasus akan muncul di sini setelah Kontributor mengajukannya untuk review.",
+    usersFailed: "Daftar reviewer gagal dimuat, jadi pilihannya bisa kosong. Muat ulang halaman.",
+    authorFailed:
+      "Penulis kasus tidak bisa dicek, jadi ia mungkin ikut terdaftar. Server tetap menolak bila penulis yang dipilih.",
+    replaced: "Reviewer untuk {code} berhasil diganti dengan {name}.",
+  },
+  en: {
+    title: "Case review",
+    intro: "Monitor cases under review and handle cases that have lost a reviewer.",
+    tabsLabel: "Monitoring view",
+    queueTab: "Needs reassignment",
+    decisionsTab: "In review",
+    loadingQueue: "Loading assignments…",
+    emptyQueueTitle: "No cases need reassignment",
+    emptyQueueDescription: "Every open review round still has an active reviewer.",
+    emptyReviewTitle: "No cases are in review",
+    emptyReviewDescription: "Cases appear here after a Contributor submits them for review.",
+    usersFailed: "The reviewer list failed to load, so the choices may be empty. Reload the page.",
+    authorFailed:
+      "The case author could not be checked, so they may still be listed. The server still rejects the author if they are selected.",
+    replaced: "The reviewer for {code} was replaced with {name}.",
+  },
+});
+
+type AdminCopy = (typeof COPY)["id"];
+
 /**
  * Penugasan yang sedang diganti, dalam bentuk yang tidak terikat pada tabel asalnya:
  * antrean dan tab "Dalam review" memberi data yang sama lewat dua jalan berbeda (AC7, AC8).
@@ -46,24 +85,15 @@ type Target = {
   takenReviewerIds: string[];
 };
 
-const TAB_LABEL: Record<Tab, string> = {
-  queue: "Perlu penugasan ulang",
-  decisions: "Dalam review",
-};
-
 const TABS: Tab[] = ["queue", "decisions"];
 
 /**
  * Dua panggilan latar menyiapkan isi dialog. Kalau salah satunya gagal, admin harus tahu,
  * karena akibatnya terlihat sebagai daftar kosong atau penulis yang ikut muncul.
  */
-function dialogNotice(usersFailed: boolean, authorFailed: boolean): string | null {
-  if (usersFailed) {
-    return "Daftar reviewer gagal dimuat, jadi pilihannya bisa kosong. Muat ulang halaman.";
-  }
-  if (authorFailed) {
-    return "Penulis kasus tidak bisa dicek, jadi ia mungkin ikut terdaftar. Server tetap menolak bila penulis yang dipilih.";
-  }
+function dialogNotice(usersFailed: boolean, authorFailed: boolean, copy: AdminCopy): string | null {
+  if (usersFailed) return copy.usersFailed;
+  if (authorFailed) return copy.authorFailed;
   return null;
 }
 
@@ -75,6 +105,7 @@ function ReassignmentPanel({
   queue: ReturnType<typeof useNeedsReassignment>;
   onReplace: (assignment: ReassignmentAssignment, row: ReassignmentRow) => void;
 }>) {
+  const copy = useText(COPY);
   if (queue.status === "error") {
     return (
       <ErrorState variant="card" message={queue.message} onRetry={queue.reload} />
@@ -82,14 +113,14 @@ function ReassignmentPanel({
   }
 
   if (queue.status === "loading") {
-    return <LoadingState label="Memuat penugasan…" />;
+    return <LoadingState label={copy.loadingQueue} />;
   }
 
   if (queue.data.length === 0) {
     return (
       <EmptyState
-        title="Tidak ada kasus yang perlu penugasan ulang"
-        description="Semua ronde review yang berjalan masih punya reviewer aktif."
+        title={copy.emptyQueueTitle}
+        description={copy.emptyQueueDescription}
       />
     );
   }
@@ -105,6 +136,7 @@ function InReviewPanel({
   inReview: ReturnType<typeof useInReviewCases>;
   onReplace: (slot: ReviewerSlot, row: InReviewRow) => void;
 }>) {
+  const copy = useText(COPY);
   if (inReview.status === "error") {
     return (
       <ErrorState
@@ -122,8 +154,8 @@ function InReviewPanel({
   if (inReview.data.length === 0) {
     return (
       <EmptyState
-        title="Tidak ada kasus yang sedang direview"
-        description="Kasus akan muncul di sini setelah Kontributor mengajukannya untuk review."
+        title={copy.emptyReviewTitle}
+        description={copy.emptyReviewDescription}
       />
     );
   }
@@ -132,6 +164,8 @@ function InReviewPanel({
 }
 
 export default function AdminReviewsPage() {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const [tab, setTab] = useState<Tab>("queue");
   const [target, setTarget] = useState<Target | null>(null);
   const [users, setUsers] = useState<User[] | null>(null);
@@ -163,9 +197,9 @@ export default function AdminReviewsPage() {
   }, [reloadBoth]);
   const afterReplace = useCallback((body: ReplaceReviewerBody) => {
     const name = users?.find(user => user.id === body.new_reviewer_id)?.name;
-    setSuccess(`Reviewer untuk ${target?.caseCode} berhasil diganti dengan ${name}.`);
+    setSuccess(fill(copy.replaced, { code: `${target?.caseCode}`, name: `${name}` }));
     reloadBoth();
-  }, [target, users, reloadBoth]);
+  }, [target, users, reloadBoth, copy]);
   const replacement = useReplaceReviewer(afterReplace, closeAndRefresh);
   const { reset } = replacement;
 
@@ -263,13 +297,13 @@ export default function AdminReviewsPage() {
         caseTitle: row.case_title,
         roundNo: row.round_no,
         reviewerId: assignment.reviewer_id,
-        reviewerName: reviewerName(assignment),
+        reviewerName: reviewerName(assignment, locale),
         takenReviewerIds: activeAssignments(row).map(
           (item) => item.reviewer_id,
         ),
       });
     },
-    [openDialog],
+    [openDialog, locale],
   );
 
   /** Dari tab "Dalam review" (AC7): penugasan aktif kasus mana pun, bukan hanya yang di antrean. */
@@ -304,17 +338,16 @@ export default function AdminReviewsPage() {
     <div className="mx-auto w-full min-w-0 max-w-screen-2xl space-y-4">
       <header>
         <h1 className="font-serif text-3xl leading-tight text-ink sm:text-4xl">
-          Review kasus
+          {copy.title}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Pantau kasus yang sedang direview dan tangani kasus yang kehilangan
-          reviewer.
+          {copy.intro}
         </p>
       </header>
 
       <div
         role="tablist"
-        aria-label="Tampilan pemantauan"
+        aria-label={copy.tabsLabel}
         className="flex gap-2 border-b border-line-soft"
       >
         {TABS.map((name) => (
@@ -334,7 +367,7 @@ export default function AdminReviewsPage() {
                 : "px-3 py-2 text-sm text-muted hover:text-slate-700"
             }
           >
-            {TAB_LABEL[name]}
+            {name === "queue" ? copy.queueTab : copy.decisionsTab}
           </button>
         ))}
       </div>
@@ -373,7 +406,7 @@ export default function AdminReviewsPage() {
           currentReviewerId={target.reviewerId}
           currentReviewerName={target.reviewerName}
           candidates={candidatesExcept(users ?? [], target.takenReviewerIds, authorId)}
-          notice={dialogNotice(usersFailed, authorFailed)}
+          notice={dialogNotice(usersFailed, authorFailed, copy)}
           pending={replacement.pending}
           error={replacement.error}
           onConfirm={(body) =>

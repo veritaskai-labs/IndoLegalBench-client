@@ -1,4 +1,5 @@
 import { ApiError } from "@/lib/apiClient";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { Me } from "@/types";
 import type { SessionListItem, SessionStatus, StopReason } from "@/types/measurement";
 import { casesDoneSummary } from "@/lib/runs/sessionProgress";
@@ -8,31 +9,69 @@ import { casesDoneSummary } from "@/lib/runs/sessionProgress";
  * status baru dari server (mis. SCRUM-240) membuat tsc gagal di sini setelah gen:api,
  * jadi tidak pernah tampil diam-diam dengan label cadangan.
  */
-export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = {
-  queued: "Menunggu",
-  running: "Berjalan",
-  // server#97: paused mencakup Jeda dan berhenti oleh sistem; sessionStatusLabel membedakannya.
-  paused: "Dijeda",
-  cancelled: "Dibatalkan",
-  finished: "Selesai",
-  finished_with_failures: "Selesai dengan kegagalan",
-  failed: "Gagal",
-  // server#116 (PBI-22): status sesi manual, dengan label yang sama dengan server (runs/models.py).
-  not_filled: "Belum terisi",
-  partially_filled: "Terisi sebagian",
-  complete: "Lengkap",
-  graded: "Dinilai",
-  finalized: "Selesai",
-};
+const STATUS_TEXT = messages<Record<SessionStatus, string>>({
+  id: {
+    queued: "Menunggu",
+    running: "Berjalan",
+    // server#97: paused mencakup Jeda dan berhenti oleh sistem; sessionStatusLabel membedakannya.
+    paused: "Dijeda",
+    cancelled: "Dibatalkan",
+    finished: "Selesai",
+    finished_with_failures: "Selesai dengan kegagalan",
+    failed: "Gagal",
+    // server#116 (PBI-22): status sesi manual, dengan label yang sama dengan server (runs/models.py).
+    not_filled: "Belum terisi",
+    partially_filled: "Terisi sebagian",
+    complete: "Lengkap",
+    graded: "Dinilai",
+    finalized: "Selesai",
+  },
+  en: {
+    queued: "Waiting",
+    running: "Running",
+    paused: "Paused",
+    cancelled: "Cancelled",
+    finished: "Finished",
+    finished_with_failures: "Finished with failures",
+    failed: "Failed",
+    not_filled: "Not filled in",
+    partially_filled: "Partially filled",
+    complete: "Complete",
+    graded: "Graded",
+    finalized: "Finished",
+  },
+});
+
+/** Indonesian names. Existing callers read this until they pass a locale. */
+export const SESSION_STATUS_LABEL: Record<SessionStatus, string> = STATUS_TEXT.id;
+
+const STOPPED_LABEL = messages({
+  id: "Dihentikan",
+  en: "Stopped",
+});
+
+const QUEUE_WAITING = messages({
+  id: "Menunggu antrean",
+  en: "Waiting in the queue",
+});
+
+const UNKNOWN_NAME = messages({
+  id: "Tidak diketahui",
+  en: "Unknown",
+});
 
 /**
  * Label status dengan penyebab berhenti (PBI-12 AC9). paused karena anggaran habis atau server
  * dimulai ulang dibaca "Dihentikan"; Jeda dari pengguna, atau baris tanpa stop_reason (daftar
  * sesi, sesi lama), tetap "Dijeda".
  */
-export function sessionStatusLabel(status: SessionStatus, stopReason?: StopReason | null): string {
-  if (status === "paused" && stopReason != null && stopReason !== "user") return "Dihentikan";
-  return SESSION_STATUS_LABEL[status];
+export function sessionStatusLabel(
+  status: SessionStatus,
+  stopReason?: StopReason | null,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  if (status === "paused" && stopReason != null && stopReason !== "user") return text(STOPPED_LABEL, locale);
+  return text(STATUS_TEXT, locale)[status];
 }
 
 /** Sesi manual per D8: Belum terisi, Terisi sebagian, Lengkap, Dinilai, Selesai (PBI-22). */
@@ -94,10 +133,13 @@ export function shouldPollSessions(sessions: readonly Pick<SessionListItem, "sta
  * Angka kasus dan persennya dihitung server (SCRUM-265). Sesi antre belum punya snapshot,
  * jadi belum ada kasus untuk dihitung.
  */
-export function formatProgress(session: Pick<SessionListItem, "status" | "progress">): string {
+export function formatProgress(
+  session: Pick<SessionListItem, "status" | "progress">,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
   const { completed_cases, total_cases, percent_cases_complete } = session.progress;
-  if (session.status === "queued" && total_cases === 0) return "Menunggu antrean";
-  return casesDoneSummary(completed_cases, total_cases, percent_cases_complete);
+  if (session.status === "queued" && total_cases === 0) return text(QUEUE_WAITING, locale);
+  return casesDoneSummary(completed_cases, total_cases, percent_cases_complete, locale);
 }
 
 /** Admin mengelola sesi siapa pun, Developer AI hanya sesi yang ia buat (D10). */
@@ -117,18 +159,33 @@ export function canArchive(
   return hasEnded(session.status) && isAdminOrCreator(session, me);
 }
 
-const ARCHIVE_ERRORS: Record<string, string> = {
-  SESSION_NOT_ARCHIVABLE: "Sesi yang masih antre atau berjalan belum bisa diarsipkan.",
-  SESSION_ALREADY_ARCHIVED: "Sesi ini sudah diarsipkan.",
-  NOT_YOUR_SESSION: "Developer AI hanya bisa mengarsipkan sesi yang ia buat.",
-  MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang daftar.",
-  // archiveSession memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
-  FORBIDDEN: "Peran Anda tidak lagi boleh mengarsipkan sesi. Muat ulang halaman.",
-};
+const ARCHIVE_ERRORS = messages({
+  id: {
+    SESSION_NOT_ARCHIVABLE: "Sesi yang masih antre atau berjalan belum bisa diarsipkan.",
+    SESSION_ALREADY_ARCHIVED: "Sesi ini sudah diarsipkan.",
+    NOT_YOUR_SESSION: "Developer AI hanya bisa mengarsipkan sesi yang ia buat.",
+    MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang daftar.",
+    // archiveSession memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
+    FORBIDDEN: "Peran Anda tidak lagi boleh mengarsipkan sesi. Muat ulang halaman.",
+    fallback: "Sesi gagal diarsipkan. Coba lagi.",
+  },
+  en: {
+    SESSION_NOT_ARCHIVABLE: "A session that is still queued or running cannot be archived yet.",
+    SESSION_ALREADY_ARCHIVED: "This session is already archived.",
+    NOT_YOUR_SESSION: "A Developer AI can only archive a session they created.",
+    MEASUREMENT_NOT_FOUND: "Session not found. Reload the list.",
+    FORBIDDEN: "Your role can no longer archive sessions. Reload the page.",
+    fallback: "The session could not be archived. Try again.",
+  },
+});
 
-export function archiveErrorMessage(error: unknown): string {
-  const known = error instanceof ApiError ? ARCHIVE_ERRORS[error.code] : undefined;
-  return known ?? "Sesi gagal diarsipkan. Coba lagi.";
+export function archiveErrorMessage(error: unknown, locale: Locale = DEFAULT_LOCALE): string {
+  const copy = text(ARCHIVE_ERRORS, locale);
+  const known =
+    error instanceof ApiError && error.code !== "fallback" && Object.hasOwn(copy, error.code)
+      ? copy[error.code as keyof typeof copy]
+      : undefined;
+  return known ?? copy.fallback;
 }
 
 /**
@@ -139,17 +196,31 @@ export function canUnarchive(session: Pick<SessionListItem, "created_by">, me: P
   return isAdminOrCreator(session, me);
 }
 
-const UNARCHIVE_ERRORS: Record<string, string> = {
-  SESSION_NOT_ARCHIVED: "Sesi ini sudah dikembalikan. Muat ulang daftar.",
-  NOT_YOUR_SESSION: "Developer AI hanya bisa mengembalikan sesi yang ia buat.",
-  MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang daftar.",
-  // unarchiveSession memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
-  FORBIDDEN: "Peran Anda tidak lagi boleh mengembalikan sesi. Muat ulang halaman.",
-};
+const UNARCHIVE_ERRORS = messages({
+  id: {
+    SESSION_NOT_ARCHIVED: "Sesi ini sudah dikembalikan. Muat ulang daftar.",
+    NOT_YOUR_SESSION: "Developer AI hanya bisa mengembalikan sesi yang ia buat.",
+    MEASUREMENT_NOT_FOUND: "Sesi tidak ditemukan. Muat ulang daftar.",
+    // unarchiveSession memakai silentForbidden, jadi 403 biasa (peran berubah saat halaman terbuka) sampai di sini.
+    FORBIDDEN: "Peran Anda tidak lagi boleh mengembalikan sesi. Muat ulang halaman.",
+    fallback: "Sesi gagal dikembalikan. Coba lagi.",
+  },
+  en: {
+    SESSION_NOT_ARCHIVED: "This session has already been restored. Reload the list.",
+    NOT_YOUR_SESSION: "A Developer AI can only restore a session they created.",
+    MEASUREMENT_NOT_FOUND: "Session not found. Reload the list.",
+    FORBIDDEN: "Your role can no longer restore sessions. Reload the page.",
+    fallback: "The session could not be restored. Try again.",
+  },
+});
 
-export function unarchiveErrorMessage(error: unknown): string {
-  const known = error instanceof ApiError ? UNARCHIVE_ERRORS[error.code] : undefined;
-  return known ?? "Sesi gagal dikembalikan. Coba lagi.";
+export function unarchiveErrorMessage(error: unknown, locale: Locale = DEFAULT_LOCALE): string {
+  const copy = text(UNARCHIVE_ERRORS, locale);
+  const known =
+    error instanceof ApiError && error.code !== "fallback" && Object.hasOwn(copy, error.code)
+      ? copy[error.code as keyof typeof copy]
+      : undefined;
+  return known ?? copy.fallback;
 }
 
 /** case_count null selama sesi antre: snapshot baru dibuat saat sesi mulai. */
@@ -158,6 +229,6 @@ export function caseCountText(count: number | null): string {
 }
 
 /** Akun atau produk yang sudah tidak ada dikirim server sebagai null; nama kosong diperlakukan sama. */
-export function unknownName(name: string | null): string {
-  return name === null || name === "" ? "Tidak diketahui" : name;
+export function unknownName(name: string | null, locale: Locale = DEFAULT_LOCALE): string {
+  return name === null || name === "" ? text(UNKNOWN_NAME, locale) : name;
 }

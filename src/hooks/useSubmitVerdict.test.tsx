@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { submitVerdict } from "@/lib/reviews/reviewApi";
 import { ASSIGNMENT_ID, makeVerdictResult } from "@/test/reviewFixtures";
 import { useSubmitVerdict } from "./useSubmitVerdict";
@@ -14,6 +15,10 @@ const REVISE = { decision: "revise", comment: "Pasal salah" } as const;
 
 beforeEach(() => {
   submitMock.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useSubmitVerdict", () => {
@@ -76,6 +81,15 @@ describe("useSubmitVerdict", () => {
     expect(submitMock).not.toHaveBeenCalled();
     expect(onSubmitted).not.toHaveBeenCalled();
     expect(result.current.error).toBe("Gagal mengirim penilaian. Coba lagi.");
+  });
+
+  it("maps a missing verdict in English when the language mock is English", async () => {
+    setMockLocale("en");
+    const { result } = renderHook(() => useSubmitVerdict(ASSIGNMENT_ID, null, vi.fn()));
+
+    await act(async () => result.current.submit());
+
+    expect(result.current.error).toBe("Could not submit the verdict. Try again.");
   });
 
   // Edge: a second click while the first is in flight must not post twice.

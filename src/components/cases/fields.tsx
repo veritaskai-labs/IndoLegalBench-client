@@ -1,5 +1,15 @@
+"use client";
+
 import { useId, type ReactNode } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
+import { CHROME } from "@/lib/i18n/chrome";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
+
+const FIELD_COPY = messages({
+  id: { remove: "Hapus", fixRow: "Baris ini perlu diperbaiki." },
+  en: { remove: "Remove", fixRow: "This row needs to be fixed." },
+});
 
 export const CONTROL_CLASS =
   "mt-2 w-full rounded-control border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-subtle aria-[invalid=true]:border-danger";
@@ -28,6 +38,7 @@ export function FieldLabel({
   optional?: boolean;
   children: ReactNode;
 }>) {
+  const chrome = useText(CHROME);
   return (
     <div className="flex items-center gap-1.5">
       <label htmlFor={htmlFor} className="block text-sm font-medium text-ink">
@@ -40,7 +51,7 @@ export function FieldLabel({
       )}
       {optional && (
         <span className="rounded-tag bg-surface px-1.5 py-px text-[11px] font-medium text-muted">
-          Opsional
+          {chrome.optional}
         </span>
       )}
     </div>
@@ -235,6 +246,7 @@ export function RowGroup({
   invalid?: boolean;
   children: ReactNode;
 }>) {
+  const copy = useText(FIELD_COPY);
   return (
     <fieldset
       aria-invalid={invalid || undefined}
@@ -251,7 +263,7 @@ export function RowGroup({
         {title}
       </h3>
       {invalid && (
-        <p className="mb-2 text-xs font-medium text-danger">Baris ini perlu diperbaiki.</p>
+        <p className="mb-2 text-xs font-medium text-danger">{copy.fixRow}</p>
       )}
       <div className="space-y-3">{children}</div>
       <button
@@ -260,7 +272,7 @@ export function RowGroup({
         aria-label={removeLabel}
         className="mt-3 cursor-pointer text-xs font-medium text-danger hover:underline"
       >
-        Hapus
+        {copy.remove}
       </button>
     </fieldset>
   );

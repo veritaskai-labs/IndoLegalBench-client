@@ -16,6 +16,29 @@ import { useSuiteName } from "@/hooks/useSuiteName";
 import { fromCaseRead } from "@/lib/cases/caseFormMapping";
 import { caseEditPath } from "@/lib/cases/casePaths";
 import { decodeRouteParam } from "@/lib/routeParams";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
+
+const COPY = messages({
+  id: {
+    loading: "Memuat kasus…",
+    hidden: "Kasus ini termasuk test set, jadi isinya tidak dapat dibuka.",
+    notFound: "Kasus tidak ditemukan.",
+    failed: "Gagal memuat kasus.",
+    backToSuites: "Kembali ke Suites",
+    suite: "Suite",
+    backToSuite: "Kembali ke suite",
+  },
+  en: {
+    loading: "Loading case…",
+    hidden: "This case is in the test set, so its contents cannot be opened.",
+    notFound: "The case was not found.",
+    failed: "Could not load the case.",
+    backToSuites: "Back to suites",
+    suite: "Suites",
+    backToSuite: "Back to the suite",
+  },
+});
 
 /**
  * Halaman baca kasus untuk Developer AI (SCRUM-184). Server hanya memberi versi approved
@@ -34,27 +57,32 @@ export default function CaseReadPage() {
     }
   }, [auth.status, isDeveloperAi, caseId, router]);
 
-  if (!isDeveloperAi) return <LoadingState label="Memuat kasus…" />;
+  const copy = useText(COPY);
+  if (!isDeveloperAi) return <LoadingState label={copy.loading} />;
   return <CaseReadView caseId={caseId} />;
 }
 
 /** Pesan tetap untuk kasus yang memang tidak bisa dibuka; null berarti boleh dicoba lagi. */
-function errorMessage(error: Readonly<{ hidden: boolean; notFound: boolean }>): string | null {
-  if (error.hidden) return "Kasus ini termasuk test set, jadi isinya tidak dapat dibuka.";
-  if (error.notFound) return "Kasus tidak ditemukan.";
+function errorMessage(
+  error: Readonly<{ hidden: boolean; notFound: boolean }>,
+  copy: (typeof COPY)["id"],
+): string | null {
+  if (error.hidden) return copy.hidden;
+  if (error.notFound) return copy.notFound;
   return null;
 }
 
 function CaseReadView({ caseId }: Readonly<{ caseId: string }>) {
+  const copy = useText(COPY);
   const detail = useCaseDetail(caseId);
   const suiteName = useSuiteName(
     detail.status === "ready" ? detail.saved.suite_id : null,
   );
 
-  if (detail.status === "loading") return <LoadingState label="Memuat kasus…" />;
+  if (detail.status === "loading") return <LoadingState label={copy.loading} />;
 
   if (detail.status === "error") {
-    const message = errorMessage(detail);
+    const message = errorMessage(detail, copy);
     return message !== null ? (
       <div className="space-y-4">
         <ErrorState variant="card" message={message} />
@@ -62,11 +90,11 @@ function CaseReadView({ caseId }: Readonly<{ caseId: string }>) {
           href="/suites"
           className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
         >
-          Kembali ke Suites
+          {copy.backToSuites}
         </Link>
       </div>
     ) : (
-      <ErrorState variant="card" message="Gagal memuat kasus." onRetry={detail.reload} />
+      <ErrorState variant="card" message={copy.failed} onRetry={detail.reload} />
     );
   }
 
@@ -77,7 +105,7 @@ function CaseReadView({ caseId }: Readonly<{ caseId: string }>) {
     <div className="mx-auto max-w-3xl space-y-6">
       <Breadcrumb
         items={[
-          { label: "Suite", href: "/suites" },
+          { label: copy.suite, href: "/suites" },
           { label: suiteName, href: suitePath },
           { label: saved.case_code },
         ]}
@@ -93,7 +121,7 @@ function CaseReadView({ caseId }: Readonly<{ caseId: string }>) {
         href={suitePath}
         className="inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800"
       >
-        Kembali ke suite
+        {copy.backToSuite}
       </Link>
 
       <CaseEditorForm

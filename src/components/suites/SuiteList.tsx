@@ -15,7 +15,74 @@ import {
   LoadingSkeleton,
 } from "@/components/ui";
 import { formatRelativeTime, formatWib, formatWibDate } from "@/lib/datetime/formatWib";
+import { fill, messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
+
+const COPY = messages({
+  id: {
+    active: "Aktif",
+    archived: "Arsip",
+    empty: "Kosong",
+    name: "Nama",
+    description: "Deskripsi",
+    caseCount: "Jumlah kasus",
+    status: "Status",
+    created: "Tanggal dibuat",
+    updated: "Terakhir diubah",
+    actions: "Aksi",
+    createCase: "Buat kasus",
+    addCase: "Tambah kasus",
+    caseInSuite: "{action} di {name}",
+    editLabel: "Ubah {name}",
+    editTip: "Ubah judul atau deskripsi suite",
+    activateLabel: "Aktifkan {name}",
+    archiveLabel: "Arsipkan {name}",
+    activateTip: "Aktifkan suite",
+    archiveTip: "Arsipkan suite",
+    removeLabel: "Hapus {name}",
+    removeTip: "Hapus suite",
+    loadFailed: "Gagal memuat daftar suite.",
+    noMatchTitle: "Tidak ada suite yang cocok",
+    noMatchDescription: "Tidak ada suite yang cocok dengan kata kunci pencarian.",
+    resetSearch: "Reset pencarian",
+    emptyTitle: "Belum ada suite",
+    emptyDescription: "Buat suite untuk mulai mengelompokkan kasus.",
+    caption: "Daftar suite",
+  },
+  en: {
+    active: "Active",
+    archived: "Archived",
+    empty: "Empty",
+    name: "Name",
+    description: "Description",
+    caseCount: "Case count",
+    status: "Status",
+    created: "Created",
+    updated: "Last changed",
+    actions: "Actions",
+    createCase: "Create case",
+    addCase: "Add case",
+    caseInSuite: "{action} in {name}",
+    editLabel: "Edit {name}",
+    editTip: "Edit the suite title or description",
+    activateLabel: "Activate {name}",
+    archiveLabel: "Archive {name}",
+    activateTip: "Activate suite",
+    archiveTip: "Archive suite",
+    removeLabel: "Remove {name}",
+    removeTip: "Remove suite",
+    loadFailed: "Could not load the suite list.",
+    noMatchTitle: "No matching suites",
+    noMatchDescription: "No suite matches the search.",
+    resetSearch: "Reset search",
+    emptyTitle: "No suites yet",
+    emptyDescription: "Create a suite to start grouping cases.",
+    caption: "Suite list",
+  },
+});
+
+type SuiteCopy = (typeof COPY)["id"];
 
 type Props = {
   status: "loading" | "ready" | "error";
@@ -32,11 +99,6 @@ type Props = {
   onEdit: (suite: Suite) => void;
   onDelete: (suite: Suite) => void;
   onArchive: (suite: Suite) => void;
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  active: "Aktif",
-  archived: "Arsip",
 };
 
 const TOOLTIP_DELAY_MS = 1000;
@@ -122,31 +184,33 @@ function ActionIconButton({
   );
 }
 
-function renderStatusBadge(status: string) {
+function renderStatusBadge(status: string, copy: SuiteCopy) {
   if (status === "active") {
     return (
       <Badge tone="green" dot>
-        Aktif
+        {copy.active}
       </Badge>
     );
   }
   if (status === "archived") {
     return (
       <Badge tone="gray" dot>
-        Arsip
+        {copy.archived}
       </Badge>
     );
   }
-  return <Badge tone="gray">{STATUS_LABEL[status] ?? status}</Badge>;
+  return <Badge tone="gray">{status}</Badge>;
 }
 
 function buildSuiteColumns({
+  copy,
   canCreateCase,
   canManage,
   onEdit,
   onArchive,
   onDelete,
 }: Readonly<{
+  copy: SuiteCopy;
   canCreateCase: boolean;
   canManage: boolean;
   onEdit: (suite: Suite) => void;
@@ -156,7 +220,7 @@ function buildSuiteColumns({
   const base: Column<Suite>[] = [
     {
       key: "name",
-      header: "Nama",
+      header: copy.name,
       sortable: true,
       cell: (suite) => (
         <div className="flex flex-wrap items-center gap-2">
@@ -166,20 +230,20 @@ function buildSuiteColumns({
           >
             {suite.name}
           </Link>
-          {suite.is_empty && <Badge tone="amber">Kosong</Badge>}
+          {suite.is_empty && <Badge tone="amber">{copy.empty}</Badge>}
         </div>
       ),
     },
     {
       key: "description",
-      header: "Deskripsi",
+      header: copy.description,
       cell: (suite) => (
         <span className="text-ink-soft">{suite.description ?? "—"}</span>
       ),
     },
     {
       key: "case_count",
-      header: "Jumlah kasus",
+      header: copy.caseCount,
       sortable: true,
       cell: (suite) => (
         <span className="tabular-nums text-ink-soft">{suite.case_count}</span>
@@ -187,12 +251,12 @@ function buildSuiteColumns({
     },
     {
       key: "status",
-      header: "Status",
-      cell: (suite) => renderStatusBadge(suite.status),
+      header: copy.status,
+      cell: (suite) => renderStatusBadge(suite.status, copy),
     },
     {
       key: "created_at",
-      header: "Tanggal dibuat",
+      header: copy.created,
       sortable: true,
       sortValue: (suite) => suite.created_at,
       cell: (suite) => (
@@ -203,7 +267,7 @@ function buildSuiteColumns({
     },
     {
       key: "updated_at",
-      header: "Terakhir diubah",
+      header: copy.updated,
       sortable: true,
       sortValue: (suite) => suite.updated_at,
       cell: (suite) => (
@@ -217,11 +281,11 @@ function buildSuiteColumns({
   if (canManage) {
     base.push({
       key: "actions",
-      header: "Aksi",
+      header: copy.actions,
       cell: (suite) => {
         const isZeroCases = suite.case_count === 0;
-        const caseActionText = isZeroCases ? "Buat kasus" : "Tambah kasus";
-        const caseActionLabel = `${caseActionText} di ${suite.name}`;
+        const caseActionText = isZeroCases ? copy.createCase : copy.addCase;
+        const caseActionLabel = fill(copy.caseInSuite, { action: caseActionText, name: suite.name });
 
         return (
           <div className="flex items-center justify-end gap-2">
@@ -236,8 +300,8 @@ function buildSuiteColumns({
             )}
             <div className="flex items-center gap-0.5">
               <ActionIconButton
-                ariaLabel={`Ubah ${suite.name}`}
-                tooltip="Ubah judul atau deskripsi suite"
+                ariaLabel={fill(copy.editLabel, { name: suite.name })}
+                tooltip={copy.editTip}
                 onClick={() => onEdit(suite)}
               >
                 <Icon name="manual" />
@@ -245,22 +309,18 @@ function buildSuiteColumns({
               <ActionIconButton
                 ariaLabel={
                   suite.status === "archived"
-                    ? `Aktifkan ${suite.name}`
-                    : `Arsipkan ${suite.name}`
+                    ? fill(copy.activateLabel, { name: suite.name })
+                    : fill(copy.archiveLabel, { name: suite.name })
                 }
-                tooltip={
-                  suite.status === "archived"
-                    ? "Aktifkan suite"
-                    : "Arsipkan suite"
-                }
+                tooltip={suite.status === "archived" ? copy.activateTip : copy.archiveTip}
                 onClick={() => onArchive(suite)}
               >
                 <Icon name={suite.status === "archived" ? "aktifkan" : "arsipkan"} />
               </ActionIconButton>
               {suite.status === "active" && (
                 <ActionIconButton
-                  ariaLabel={`Hapus ${suite.name}`}
-                  tooltip="Hapus suite"
+                  ariaLabel={fill(copy.removeLabel, { name: suite.name })}
+                  tooltip={copy.removeTip}
                   tone="danger"
                   onClick={() => onDelete(suite)}
                 >
@@ -290,17 +350,19 @@ export function SuiteList({
   onDelete,
   onArchive,
 }: Readonly<Props>) {
+  const copy = useText(COPY);
   const router = useRouter();
   const columns = useMemo<Column<Suite>[]>(
     () =>
       buildSuiteColumns({
+        copy,
         canCreateCase,
         canManage,
         onEdit,
         onArchive,
         onDelete,
       }),
-    [canCreateCase, canManage, onArchive, onDelete, onEdit],
+    [canCreateCase, canManage, copy, onArchive, onDelete, onEdit],
   );
 
   if (status === "loading") {
@@ -317,7 +379,7 @@ export function SuiteList({
     return (
       <ErrorState
         variant="card"
-        message="Gagal memuat daftar suite."
+        message={copy.loadFailed}
         onRetry={onRetry}
       />
     );
@@ -327,11 +389,11 @@ export function SuiteList({
     if (isFiltered) {
       return (
         <EmptyState
-          title="Tidak ada suite yang cocok"
-          description="Tidak ada suite yang cocok dengan kata kunci pencarian."
+          title={copy.noMatchTitle}
+          description={copy.noMatchDescription}
           action={
             onResetSearch
-              ? { label: "Reset pencarian", onClick: onResetSearch }
+              ? { label: copy.resetSearch, onClick: onResetSearch }
               : undefined
           }
         />
@@ -340,8 +402,8 @@ export function SuiteList({
 
     return (
       <EmptyState
-        title="Belum ada suite"
-        description="Buat suite untuk mulai mengelompokkan kasus."
+        title={copy.emptyTitle}
+        description={copy.emptyDescription}
       />
     );
   }
@@ -354,7 +416,7 @@ export function SuiteList({
         rows={suites}
         rowKey={(suite) => suite.id}
         pageSize={20}
-        caption="Daftar suite"
+        caption={copy.caption}
         initialSort={{ key: "updated_at", direction: "desc" }}
         resetPageOnDataChange={false}
         onRowClick={(suite) => router.push(`/suites/${encodeURIComponent(suite.id)}`)}

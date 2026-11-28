@@ -48,6 +48,12 @@ describe("validateCaseForm", () => {
     ]);
   });
 
+  it("names an empty case ID in English", () => {
+    expect(validateCaseForm({ ...draft, case_code: "" }, "en")).toEqual([
+      { path: "case_code", message: "Case ID is required." },
+    ]);
+  });
+
   it("treats a title of only spaces as empty, like the server does", () => {
     const issues = validateCaseForm({ ...draft, identity: { ...draft.identity, title: "   " } });
 

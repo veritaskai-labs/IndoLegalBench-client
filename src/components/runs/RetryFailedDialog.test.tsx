@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -110,5 +111,22 @@ describe("RetryFailedDialog (PBI-12 AC3: per case or all)", () => {
 
     expect(retry).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("RetryFailedDialog English", () => {
+  it("names the dialog in English and leaves the case label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <RetryFailedDialog
+          session={{ id: "s-1", label: "Run November" }}
+          failed={[{ key: "1", label: "QA-1 · Kasus sintetis 1", attemptIds: ["1-a2"] }]}
+          onRetried={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Retry the failed calls?" })).toBeInTheDocument();
+    expect(screen.getByText(/QA-1 · Kasus sintetis 1/)).toBeInTheDocument();
   });
 });

@@ -137,3 +137,14 @@ describe("mapCallDetailError", () => {
     ).toBe("Gagal memuat detail teknis. Coba lagi.");
   });
 });
+
+describe("call detail words English", () => {
+  it("names a retry attempt in English", () => {
+    expect(tryLabel(call({ try_no: 2, is_manual_retry: true }), "en")).toBe("Attempt 2 (retry)");
+  });
+
+  it("says a successful call succeeded, and leaves a provider failure kind unchanged", () => {
+    expect(callResultText(call(), "en")).toBe("Succeeded");
+    expect(callResultText(call({ result: "error", failure_kind: "timeout" }), "en")).toBe("timeout");
+  });
+});

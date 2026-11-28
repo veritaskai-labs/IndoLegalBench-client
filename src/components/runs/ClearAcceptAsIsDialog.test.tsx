@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -66,5 +67,17 @@ describe("ClearAcceptAsIsDialog (PBI-12 AC9)", () => {
 
     expect(clear).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("ClearAcceptAsIsDialog English", () => {
+  it("names the dialog in English and leaves the session label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ClearAcceptAsIsDialog session={{ id: "s-1", label: "Run November" }} onCleared={vi.fn()} onClose={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Remove the accepted-as-is mark?" })).toBeInTheDocument();
+    expect(screen.getByText(/Run November/)).toBeInTheDocument();
   });
 });

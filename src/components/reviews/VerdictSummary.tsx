@@ -1,6 +1,15 @@
+"use client";
+
 import { formatWib } from "@/lib/datetime/formatWib";
-import { VERDICT_LABEL } from "@/lib/reviews/reviewLabels";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { verdictFormLabel } from "@/lib/reviews/reviewLabels";
 import type { VerdictView } from "@/types/review";
+
+const COPY = messages({
+  id: { noComment: "Tanpa komentar" },
+  en: { noComment: "No comment" },
+});
 
 /** Satu penilaian yang sudah dikirim: keputusan, waktu (WIB), dan komentar. Dipakai untuk penilaian sendiri dan peninjau lain.
  * commentInDrawer: teks komentar dibuka lewat tombol diskusi, tidak ditulis di sini. */
@@ -8,16 +17,18 @@ export function VerdictSummary({
   verdict,
   commentInDrawer = false,
 }: Readonly<{ verdict: VerdictView; commentInDrawer?: boolean }>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   return (
     <div className="space-y-2">
       <div className="space-y-1">
-        <p className="text-sm font-medium text-slate-900">{VERDICT_LABEL[verdict.decision]}</p>
+        <p className="text-sm font-medium text-slate-900">{verdictFormLabel(verdict.decision, locale)}</p>
         {verdict.submitted_at !== null && (
           <p className="text-xs text-slate-500">{formatWib(verdict.submitted_at)}</p>
         )}
       </div>
 
-      {verdict.comment === null && <p className="text-sm text-slate-500">Tanpa komentar</p>}
+      {verdict.comment === null && <p className="text-sm text-slate-500">{copy.noComment}</p>}
       {verdict.comment !== null && !commentInDrawer && (
         <p className="whitespace-pre-wrap text-sm text-slate-800">{verdict.comment}</p>
       )}

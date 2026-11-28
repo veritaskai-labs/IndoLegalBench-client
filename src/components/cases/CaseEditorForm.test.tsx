@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import type { CaseFormValues, CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import type { FieldSaveError } from "@/lib/cases/saveError";
@@ -113,6 +114,16 @@ describe("CaseEditorForm", () => {
     expect(screen.queryByDisplayValue("Sisa jebakan")).not.toBeInTheDocument();
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty("traps");
+  });
+
+  it("names the identity section in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <CaseEditorForm onSubmit={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("group", { name: "Identity" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeInTheDocument();
   });
 
   it("starts blank with one legal reference row and no tag chosen", () => {

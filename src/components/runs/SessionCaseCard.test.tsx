@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { describe, expect, it } from "vitest";
 
 import type { AttemptResult, SessionCaseResult } from "@/types/measurement";
@@ -91,5 +92,17 @@ describe("SessionCaseCard attempts (SCRUM-292)", () => {
     // Assert
     expect(screen.getAllByText("Berhasil")).toHaveLength(2);
     expect(screen.queryByText("Isi kasus test disembunyikan untuk Developer AI.")).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionCaseCard English", () => {
+  it("names the raw answers in English and leaves the case title unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SessionCaseCard item={caseResult([attempt()])} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Raw answers")).toBeInTheDocument();
+    expect(screen.getByText("Judul kasus sintetis")).toBeInTheDocument();
   });
 });

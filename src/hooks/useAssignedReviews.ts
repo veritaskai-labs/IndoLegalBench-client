@@ -1,10 +1,9 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { listAssignedReviews } from "@/lib/reviews/reviewApi";
 import { mapReviewError } from "@/lib/reviews/reviewErrors";
 import { useAsyncResource } from "./useAsyncResource";
-
-const listMessage = (error: unknown) => mapReviewError(error, "list");
 
 /**
  * Antrean tinjauan reviewer yang login. Daftar kosong tetap status ready. Server menjawab 403 untuk
@@ -12,10 +11,11 @@ const listMessage = (error: unknown) => mapReviewError(error, "list");
  * false tidak ada permintaan sama sekali.
  */
 export function useAssignedReviews(enabled: boolean) {
+  const locale = useLocale();
   const { reload, ...resource } = useAsyncResource(
     String(enabled),
     () => (enabled ? listAssignedReviews() : Promise.resolve([])),
-    listMessage,
+    (error) => mapReviewError(error, "list", locale),
   );
 
   if (resource.status === "ready") return { status: "ready" as const, reviews: resource.data, reload };

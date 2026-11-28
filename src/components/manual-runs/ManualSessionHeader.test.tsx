@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManualSessionHeader } from "./ManualSessionHeader";
@@ -741,5 +742,25 @@ describe("ManualSessionHeader (PBI-22 AC8, AC9, AC10, AC12, AC13)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("ManualSessionHeader English", () => {
+  it("names the filling progress in English and leaves the product and plan unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ManualSessionHeader
+          session={createMockDetail()}
+          role="contributor"
+          unfilledOnly={false}
+          onToggleUnfilled={vi.fn()}
+          onSessionUpdated={vi.fn()}
+          gradingGateway={fakeGradingGateway()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Filling progress")).toBeInTheDocument();
+    expect(screen.getByText("LegalHero")).toBeInTheDocument();
+    expect(screen.getByText("Paket Premium 299k")).toBeInTheDocument();
   });
 });

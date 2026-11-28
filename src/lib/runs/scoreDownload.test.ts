@@ -199,3 +199,12 @@ describe("scoreDownloadDecision (SCRUM-83 AC6, SCRUM-329)", () => {
     expect(decision({ status, session_type: "manual" }, grading)).toEqual({ eligible: false, reason });
   });
 });
+
+describe("scoreDownloadDecision English", () => {
+  it("explains an unfinished session in English", () => {
+    expect(scoreDownloadDecision(session({ status: "running" }), "graded", "en")).toEqual({
+      eligible: false,
+      reason: "This session is not finished, so its score file cannot be downloaded yet. Wait until the session finishes.",
+    });
+  });
+});

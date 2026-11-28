@@ -10,6 +10,7 @@ import {
   emptyLink,
   LINK_FORM_OPTIONS,
   REF_MODE_OPTIONS,
+  refModeOptions,
   refMode,
   visibleLinkFields,
   type LegalRefFormValues,
@@ -81,6 +82,15 @@ describe("form options", () => {
 
     // Assert
     expect(values).toEqual(["name_only", "pasal", "pasal_angka"]);
+  });
+
+  it("names free text in English and keeps Pasal", () => {
+    expect(refModeOptions("en").map((option) => option.label)).toEqual([
+      "Regulation name only",
+      "Pasal",
+      "Pasal + Angka",
+      "Free text",
+    ]);
   });
 });
 

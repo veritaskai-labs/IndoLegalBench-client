@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { replaceReviewer } from "@/lib/reviews/reviewApi";
 import { isStaleReplace, mapReplaceError } from "@/lib/reviews/replaceErrors";
 import type { ReplaceReviewerBody } from "@/types/reviewAdmin";
@@ -13,6 +14,7 @@ import type { ReplaceReviewerBody } from "@/types/reviewAdmin";
  * onStale untuk galat 409, yang artinya daftar di layar sudah ketinggalan.
  */
 export function useReplaceReviewer(onDone: (body: ReplaceReviewerBody) => void, onStale?: () => void) {
+  const locale = useLocale();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Ref, bukan state: klik kedua bisa masuk sebelum render ulang menonaktifkan tombol.
@@ -30,7 +32,7 @@ export function useReplaceReviewer(onDone: (body: ReplaceReviewerBody) => void, 
       try {
         await replaceReviewer(assignmentId, body);
       } catch (failure) {
-        failureMessage = mapReplaceError(failure);
+        failureMessage = mapReplaceError(failure, locale);
         setError(failureMessage);
         stale = isStaleReplace(failure);
       } finally {
@@ -44,7 +46,7 @@ export function useReplaceReviewer(onDone: (body: ReplaceReviewerBody) => void, 
       if (stale) onStale?.();
       return failureMessage;
     },
-    [onDone, onStale],
+    [locale, onDone, onStale],
   );
 
   const reset = useCallback(() => setError(null), []);

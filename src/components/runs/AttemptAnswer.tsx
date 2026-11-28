@@ -5,10 +5,39 @@ import { useState } from "react";
 import { MarkdownAnswer } from "@/components/runs/MarkdownAnswer";
 import { AttemptDisclosure } from "@/components/runs/AttemptDisclosure";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { isExpandedByDefault } from "@/lib/runs/attemptDisclosure";
 import { describeAttemptTiming } from "@/lib/runs/attemptTiming";
-import { ATTEMPT_STATUS_LABEL, answerPlaceholder, type AnswerContext } from "@/lib/runs/sessionDetail";
+import { answerPlaceholder, attemptStatusLabel, emptyAnswerText, type AnswerContext } from "@/lib/runs/sessionDetail";
 import type { AttemptResult } from "@/types/measurement";
+
+const COPY = messages({
+  id: {
+    attempt: "Percobaan {n}",
+    toggle: "Jawaban percobaan {n}",
+    started: "Mulai",
+    finished: "Selesai",
+    duration: "Durasi",
+    formatted: "Tampilan",
+    raw: "Teks mentah",
+    copy: "Salin",
+    copied: "Tersalin",
+    copyFailed: "Gagal menyalin, pilih teksnya lalu salin manual.",
+  },
+  en: {
+    attempt: "Attempt {n}",
+    toggle: "Answer for attempt {n}",
+    started: "Started",
+    finished: "Finished",
+    duration: "Duration",
+    formatted: "Formatted",
+    raw: "Raw text",
+    copy: "Copy",
+    copied: "Copied",
+    copyFailed: "Could not copy. Select the text and copy it manually.",
+  },
+});
 
 type View = "formatted" | "raw";
 
@@ -27,32 +56,35 @@ export function AttemptAnswer({
   attemptCount,
   label,
 }: Readonly<{ attempt: AttemptResult; context: AnswerContext; attemptCount: number; label?: string }>) {
-  const timing = describeAttemptTiming(attempt);
-  const placeholder = answerPlaceholder(attempt, context);
+  const copy = useText(COPY);
+  const locale = useLocale();
+  const timing = describeAttemptTiming(attempt, locale);
+  const placeholder = answerPlaceholder(attempt, context, locale);
+  const attemptName = fill(copy.attempt, { n: attempt.repetition_no });
 
   return (
-    <li aria-label={`Percobaan ${attempt.repetition_no}`} className="rounded-md border border-slate-200">
+    <li aria-label={attemptName} className="rounded-md border border-slate-200">
       <AttemptDisclosure
-        toggleLabel={`Jawaban percobaan ${attempt.repetition_no}`}
+        toggleLabel={fill(copy.toggle, { n: attempt.repetition_no })}
         defaultExpanded={isExpandedByDefault(attemptCount)}
         header={
           <>
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span className="font-medium text-slate-900">Percobaan {attempt.repetition_no}</span>
-              <span>{ATTEMPT_STATUS_LABEL[attempt.status]}</span>
+              <span className="font-medium text-slate-900">{attemptName}</span>
+              <span>{attemptStatusLabel(attempt.status, locale)}</span>
               {label && <span className="font-mono">{label}</span>}
               {attempt.model_version && <span className="font-mono">{attempt.model_version}</span>}
             </p>
             <dl className="flex flex-wrap gap-x-4 gap-y-1">
-              <TimingItem label="Mulai" value={timing.started} />
-              <TimingItem label="Selesai" value={timing.finished} />
-              {timing.duration && <TimingItem label="Durasi" value={timing.duration} />}
+              <TimingItem label={copy.started} value={timing.started} />
+              <TimingItem label={copy.finished} value={timing.finished} />
+              {timing.duration && <TimingItem label={copy.duration} value={timing.duration} />}
             </dl>
           </>
         }
       >
         {placeholder === null ? (
-          <AnswerBody answer={attempt.answer_text ?? ""} />
+          <AnswerBody answer={attempt.answer_text ?? ""} copy={copy} empty={emptyAnswerText(locale)} />
         ) : (
           <p className="px-3 py-2 text-sm text-slate-500">{placeholder}</p>
         )}
@@ -70,27 +102,31 @@ function TimingItem({ label, value }: Readonly<{ label: string; value: string }>
   );
 }
 
-function AnswerBody({ answer }: Readonly<{ answer: string }>) {
+function AnswerBody({
+  answer,
+  copy,
+  empty,
+}: Readonly<{ answer: string; copy: (typeof COPY)["id"]; empty: string }>) {
   const [view, setView] = useState<View>("formatted");
-  const { status, copy } = useCopyToClipboard();
+  const { status, copy: copyText } = useCopyToClipboard();
 
-  if (answer === "") return <p className="px-3 py-2 text-sm text-slate-500">Produk mengirim jawaban kosong.</p>;
+  if (answer === "") return <p className="px-3 py-2 text-sm text-slate-500">{empty}</p>;
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 px-3 pt-2">
         <button type="button" aria-pressed={view === "formatted"} className={view === "formatted" ? TOGGLE_ON : TOGGLE_OFF} onClick={() => setView("formatted")}>
-          Tampilan
+          {copy.formatted}
         </button>
         <button type="button" aria-pressed={view === "raw"} className={view === "raw" ? TOGGLE_ON : TOGGLE_OFF} onClick={() => setView("raw")}>
-          Teks mentah
+          {copy.raw}
         </button>
-        <button type="button" className={TOGGLE_OFF} onClick={() => void copy(answer)}>
-          {status === "copied" ? "Tersalin" : "Salin"}
+        <button type="button" className={TOGGLE_OFF} onClick={() => void copyText(answer)}>
+          {status === "copied" ? copy.copied : copy.copy}
         </button>
         {status === "failed" && (
           <output className="text-xs text-red-700">
-            Gagal menyalin, pilih teksnya lalu salin manual.
+            {copy.copyFailed}
           </output>
         )}
       </div>

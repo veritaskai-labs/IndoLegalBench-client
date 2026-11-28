@@ -3,32 +3,15 @@
 import { useId, useState, type ReactNode } from "react";
 import { RequiredMark, SecretInput } from "@/components/ui/SecretInput";
 import { ApiError } from "@/lib/apiClient";
-import {
-  createProduct,
-  testConnection,
-  updateProduct,
-} from "@/lib/providers/providerApi";
-import {
-  formatRupiahInput,
-  parseRupiahInput,
-  PROVIDER_TYPE_LABEL,
-} from "@/lib/providers/format";
-import {
-  formatModelParams,
-  MODEL_PARAMS_EXAMPLE,
-  parseModelParams,
-} from "@/lib/providers/modelParameters";
-import type {
-  AiProduct,
-  AiProductCreate,
-  AiProductUpdate,
-  ProviderType,
-} from "@/types/provider";
+import { CHROME } from "@/lib/i18n/chrome";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
+import { createProduct, testConnection, updateProduct } from "@/lib/providers/providerApi";
+import { formatRupiahInput, parseRupiahInput, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
+import { formatModelParams, MODEL_PARAMS_EXAMPLE, parseModelParams } from "@/lib/providers/modelParameters";
+import type { AiProduct, AiProductCreate, AiProductUpdate, ProviderType } from "@/types/provider";
 
-import {
-  MeasurementTypeField,
-  type MeasurementType,
-} from "@/components/providers/MeasurementTypeField";
+import { MeasurementTypeField, type MeasurementType } from "@/components/providers/MeasurementTypeField";
 import { SaveTypeWarningDialog } from "@/components/providers/SaveTypeWarningDialog";
 
 type Props = {
@@ -57,15 +40,114 @@ type Errors = Partial<Record<Field, string>>;
 
 const MIN_CREDENTIAL = 4;
 const PROVIDER_TYPES = Object.keys(PROVIDER_TYPE_LABEL) as ProviderType[];
-const URL_ERROR = "Isi URL lengkap yang diawali http:// atau https://.";
-const IMMUTABLE_ERROR =
-  "Jenis pengukuran tidak bisa diubah karena produk sudah punya riwayat pengukuran. Nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.";
-const NEW_CREDENTIAL_HINT =
-  "Disimpan terenkripsi dan tidak pernah ditampilkan lagi.";
-const SAVE_REJECTED =
-  "Isian ditolak server. Periksa kembali URL, kredensial, limit, dan budget.";
-const FIELD_REJECTED = "Isian ini ditolak server.";
-const RETRY_ERROR = "Gagal menyimpan produk AI. Coba lagi.";
+
+const COPY = messages({
+  id: {
+    editTitle: "Ubah produk AI",
+    createTitle: "Daftarkan produk AI",
+    requiredBefore: "Isian bertanda ",
+    requiredAfter: " wajib diisi.",
+    name: "Nama",
+    nameRequired: "Nama wajib diisi.",
+    nameTaken: "Nama produk sudah dipakai. Pilih nama lain.",
+    separateProducts: '"HO Pro" dan "HO Premium" adalah produk terpisah.',
+    apiType: "Jenis API",
+    apiTypeRequired: "Pilih jenis API.",
+    apiTypePlaceholder: "Pilih jenis API",
+    endpoint: "URL endpoint",
+    urlError: "Isi URL lengkap yang diawali http:// atau https://.",
+    model: "Model",
+    modelRequired: "Nama model wajib diisi.",
+    credential: "Kredensial",
+    credentialRequired: "Kredensial wajib diisi.",
+    credentialMin: "Kredensial minimal {min} karakter.",
+    newCredentialHint: "Disimpan terenkripsi dan tidak pernah ditampilkan lagi.",
+    storedCredentialWithHint: "Kredensial tersimpan (…{hint}), isi untuk mengganti. Kosongkan bila tidak diganti.",
+    storedCredential: "Kredensial tersimpan, isi untuk mengganti. Kosongkan bila tidak diganti.",
+    rateLimit: "Limit panggilan per menit",
+    rateLimitRequired: "Limit wajib diisi, bilangan bulat lebih dari 0.",
+    budget: "Budget per bulan (Rp)",
+    budgetRequired: "Budget wajib diisi dan lebih dari Rp 0.",
+    testConnection: "Uji koneksi",
+    testing: "Menguji…",
+    testAfterSave: "Uji koneksi tersedia setelah produk tersimpan.",
+    testAfterType: "Simpan dulu jenis barunya, lalu uji koneksi.",
+    testOk: "Koneksi berhasil.",
+    testFailed: "Koneksi gagal. Periksa URL, model, dan kredensial.",
+    testError: "Uji koneksi tidak bisa dijalankan saat ini. Coba lagi sebentar.",
+    modelParams: "Parameter model",
+    modelParamsHelp:
+      "JSON yang dikirim apa adanya ke API model. Tulis nama parameter sesuai dokumentasi model, misalnya temperature 0.3 yang disarankan klien. Kosongkan untuk memakai bawaan penyedia. Variasi parameter didaftarkan sebagai produk terpisah, misalnya deepseek1 dan deepseek2.",
+    modelParamsSecret: "Jangan isi API key, token, atau kata sandi di sini.",
+    vendorName: "Nama penyedia",
+    vendorRequired: "Nama penyedia wajib diisi.",
+    site: "Alamat situs",
+    accessNote: "Catatan akses",
+    accessNoteHelp: "Cara tim legal mengakses platform ini. Jangan isi kata sandi di sini.",
+    params: "Parameter",
+    paramsHelp:
+      'Teks bebas. Versi atau paket berbeda didaftarkan sebagai produk terpisah, misalnya "HO Pro" dan "HO Premium".',
+    immutable:
+      "Jenis pengukuran tidak bisa diubah karena produk sudah punya riwayat pengukuran. Nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.",
+    fieldRejected: "Isian ini ditolak server.",
+    saveRejected: "Isian ditolak server. Periksa kembali URL, kredensial, limit, dan budget.",
+    retry: "Gagal menyimpan produk AI. Coba lagi.",
+    saving: "Menyimpan…",
+    save: "Simpan",
+  },
+  en: {
+    editTitle: "Edit AI product",
+    createTitle: "Register AI product",
+    requiredBefore: "Fields marked ",
+    requiredAfter: " are required.",
+    name: "Name",
+    nameRequired: "Name is required.",
+    nameTaken: "That product name is already in use. Choose another.",
+    separateProducts: '"HO Pro" and "HO Premium" are separate products.',
+    apiType: "API type",
+    apiTypeRequired: "Choose an API type.",
+    apiTypePlaceholder: "Choose an API type",
+    endpoint: "Endpoint URL",
+    urlError: "Enter a full URL starting with http:// or https://.",
+    model: "Model",
+    modelRequired: "Model name is required.",
+    credential: "Credential",
+    credentialRequired: "Credential is required.",
+    credentialMin: "Credential must be at least {min} characters.",
+    newCredentialHint: "Stored encrypted and never shown again.",
+    storedCredentialWithHint: "Stored credential (…{hint}). Type a new one to replace it. Leave it blank to keep it.",
+    storedCredential: "Credential is stored. Type a new one to replace it. Leave it blank to keep it.",
+    rateLimit: "Calls per minute",
+    rateLimitRequired: "Limit is required and must be a whole number greater than 0.",
+    budget: "Monthly budget (Rp)",
+    budgetRequired: "Budget is required and must be more than Rp 0.",
+    testConnection: "Test connection",
+    testing: "Testing…",
+    testAfterSave: "The connection test is available after the product is saved.",
+    testAfterType: "Save the new type first, then test the connection.",
+    testOk: "Connection succeeded.",
+    testFailed: "Connection failed. Check the URL, model, and credential.",
+    testError: "The connection test cannot run right now. Try again in a moment.",
+    modelParams: "Model parameters",
+    modelParamsHelp:
+      "JSON sent to the model API as written. Use parameter names from the model documentation, for example the client-recommended temperature 0.3. Leave this empty to use the provider default. Register a parameter variation as its own product, for example deepseek1 and deepseek2.",
+    modelParamsSecret: "Do not put an API key, token, or password here.",
+    vendorName: "Provider name",
+    vendorRequired: "Provider name is required.",
+    site: "Site address",
+    accessNote: "Access note",
+    accessNoteHelp: "How the legal team reaches this platform. Do not put a password here.",
+    params: "Parameters",
+    paramsHelp: 'Free text. Register a different version or plan as its own product, for example "HO Pro" and "HO Premium".',
+    immutable:
+      "The measurement type cannot be changed because this product already has measurement history. Deactivate this product and register a new one under a different name.",
+    fieldRejected: "The server rejected this field.",
+    saveRejected: "The server rejected the form. Check the URL, credential, limit, and budget.",
+    retry: "Could not save the AI product. Try again.",
+    saving: "Saving…",
+    save: "Save",
+  },
+});
 
 /** Nama field dari server (openapi) ke kunci error di form. */
 const FIELD_OF: Partial<Record<string, Field>> = {
@@ -82,12 +164,7 @@ const FIELD_OF: Partial<Record<string, Field>> = {
   access_note: "access_note",
   manual_params: "manual_params",
 };
-const MANUAL_FIELDS: readonly Field[] = [
-  "vendor_name",
-  "site_url",
-  "access_note",
-  "manual_params",
-];
+const MANUAL_FIELDS: readonly Field[] = ["vendor_name", "site_url", "access_note", "manual_params"];
 const AUTOMATIC_FIELDS: readonly Field[] = [
   "provider_type",
   "base_url",
@@ -98,9 +175,9 @@ const AUTOMATIC_FIELDS: readonly Field[] = [
   "model_params",
 ];
 
-function isHttpUrl(text: string): boolean {
+function isHttpUrl(value: string): boolean {
   try {
-    const url = new URL(text);
+    const url = new URL(value);
     return (url.protocol === "http:" || url.protocol === "https:") && url.hostname !== "";
   } catch {
     return false;
@@ -118,6 +195,9 @@ export function ProviderFormDialog({
   onSaved,
 }: Readonly<Props>) {
   const editing = product !== undefined;
+  const locale = useLocale();
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
   const ids = {
     name: useId(),
     type: useId(),
@@ -132,9 +212,7 @@ export function ProviderFormDialog({
     modelParams: useId(),
   };
   const [name, setName] = useState(product?.name ?? "");
-  const [measurementType, setMeasurementType] = useState<MeasurementType>(
-    product?.measurement_type ?? "automatic",
-  );
+  const [measurementType, setMeasurementType] = useState<MeasurementType>(product?.measurement_type ?? "automatic");
   const [vendorName, setVendorName] = useState(product?.vendor_name ?? "");
   const [siteUrl, setSiteUrl] = useState(product?.site_url ?? "");
   const [accessNote, setAccessNote] = useState(product?.access_note ?? "");
@@ -147,9 +225,7 @@ export function ProviderFormDialog({
     product?.rate_limit_per_minute != null ? String(product.rate_limit_per_minute) : "",
   );
   const [budget, setBudget] = useState(
-    product?.monthly_budget_idr != null
-      ? formatRupiahInput(product.monthly_budget_idr.split(".")[0])
-      : "",
+    product?.monthly_budget_idr != null ? formatRupiahInput(product.monthly_budget_idr.split(".")[0]) : "",
   );
   const [modelParams, setModelParams] = useState(() => formatModelParams(product?.model_params));
   const [confirming, setConfirming] = useState(false);
@@ -161,31 +237,30 @@ export function ProviderFormDialog({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "failed" | "error" | null>(null);
 
-  const switchingType =
-    editing && measurementType !== (product?.measurement_type ?? "automatic");
+  const switchingType = editing && measurementType !== (product?.measurement_type ?? "automatic");
   /** AC4: jenis baru berarti isian baru, jadi kredensial produk otomatis wajib. */
   const credentialRequired = !editing || switchingType;
   const storedCredentialHint =
     product?.credential_hint != null
-      ? `Kredensial tersimpan (…${product.credential_hint}), isi untuk mengganti. Kosongkan bila tidak diganti.`
-      : "Kredensial tersimpan, isi untuk mengganti. Kosongkan bila tidak diganti.";
+      ? fill(copy.storedCredentialWithHint, { hint: product.credential_hint })
+      : copy.storedCredential;
 
   function automaticErrors(): Errors {
     const found: Errors = {};
-    if (providerType === "") found.provider_type = "Pilih jenis API.";
-    if (!isHttpUrl(baseUrl.trim())) found.base_url = URL_ERROR;
-    if (modelName.trim() === "") found.model_name = "Nama model wajib diisi.";
-    if (credentialRequired && credential === "") found.credential = "Kredensial wajib diisi.";
+    if (providerType === "") found.provider_type = copy.apiTypeRequired;
+    if (!isHttpUrl(baseUrl.trim())) found.base_url = copy.urlError;
+    if (modelName.trim() === "") found.model_name = copy.modelRequired;
+    if (credentialRequired && credential === "") found.credential = copy.credentialRequired;
     else if (credential !== "" && credential.length < MIN_CREDENTIAL) {
-      found.credential = `Kredensial minimal ${MIN_CREDENTIAL} karakter.`;
+      found.credential = fill(copy.credentialMin, { min: MIN_CREDENTIAL });
     }
     const limit = Number(rateLimit);
     if (rateLimit.trim() === "" || !Number.isInteger(limit) || limit <= 0) {
-      found.rate_limit = "Limit wajib diisi, bilangan bulat lebih dari 0.";
+      found.rate_limit = copy.rateLimitRequired;
     }
     const amount = parseRupiahInput(budget);
-    if (amount === null || amount <= 0) found.budget = "Budget wajib diisi dan lebih dari Rp 0.";
-    const paramsError = parseModelParams(modelParams).error;
+    if (amount === null || amount <= 0) found.budget = copy.budgetRequired;
+    const paramsError = parseModelParams(modelParams, locale).error;
     if (paramsError !== null) found.model_params = paramsError;
     return found;
   }
@@ -193,13 +268,13 @@ export function ProviderFormDialog({
   /** AC3: produk manual wajib punya penyedia dan alamat situs yang bisa dibuka. */
   function manualErrors(): Errors {
     const found: Errors = {};
-    if (vendorName.trim() === "") found.vendor_name = "Nama penyedia wajib diisi.";
-    if (!isHttpUrl(siteUrl.trim())) found.site_url = URL_ERROR;
+    if (vendorName.trim() === "") found.vendor_name = copy.vendorRequired;
+    if (!isHttpUrl(siteUrl.trim())) found.site_url = copy.urlError;
     return found;
   }
 
   function validate(): Errors {
-    const found: Errors = name.trim() === "" ? { name: "Nama wajib diisi." } : {};
+    const found: Errors = name.trim() === "" ? { name: copy.nameRequired } : {};
     return {
       ...found,
       ...(measurementType === "manual" ? manualErrors() : automaticErrors()),
@@ -215,14 +290,8 @@ export function ProviderFormDialog({
     setProviderType(saved.provider_type ?? "");
     setBaseUrl(saved.base_url ?? "");
     setModelName(saved.model_name ?? "");
-    setRateLimit(
-      saved.rate_limit_per_minute != null ? String(saved.rate_limit_per_minute) : "",
-    );
-    setBudget(
-      saved.monthly_budget_idr != null
-        ? formatRupiahInput(saved.monthly_budget_idr.split(".")[0])
-        : "",
-    );
+    setRateLimit(saved.rate_limit_per_minute != null ? String(saved.rate_limit_per_minute) : "");
+    setBudget(saved.monthly_budget_idr != null ? formatRupiahInput(saved.monthly_budget_idr.split(".")[0]) : "");
     setModelParams(formatModelParams(saved.model_params));
   }
 
@@ -286,7 +355,7 @@ export function ProviderFormDialog({
       model_name: modelName.trim(),
       rate_limit_per_minute: Number(rateLimit),
       monthly_budget_idr: String(parseRupiahInput(budget)),
-      model_params: parseModelParams(modelParams).params,
+      model_params: parseModelParams(modelParams, locale).params,
     };
   }
 
@@ -307,7 +376,7 @@ export function ProviderFormDialog({
     setMeasurementType(saved.measurement_type ?? "automatic");
     fillFromProduct(saved);
     setErrors({});
-    setFormError(IMMUTABLE_ERROR);
+    setFormError(copy.immutable);
   }
 
   /** Field server hanya dipetakan bila isiannya memang tampil untuk jenis ini. */
@@ -325,29 +394,27 @@ export function ProviderFormDialog({
     const key = formFieldOf(error.field);
     if (key !== null) {
       const found: Errors = {};
-      found[key] = error.serverMessage ?? FIELD_REJECTED;
+      found[key] = error.serverMessage ?? copy.fieldRejected;
       setFormError(null);
       setErrors(found);
       return;
     }
-    setFormError(error.status === 422 ? error.serverMessage ?? SAVE_REJECTED : RETRY_ERROR);
+    setFormError(error.status === 422 ? error.serverMessage ?? copy.saveRejected : copy.retry);
   }
 
   async function save() {
     setConfirming(false);
     setSaving(true);
     try {
-      const saved = editing
-        ? await updateProduct(product.id, updatePayload())
-        : await createProduct(createPayload());
+      const saved = editing ? await updateProduct(product.id, updatePayload()) : await createProduct(createPayload());
       onSaved(saved);
     } catch (error) {
       if (!(error instanceof ApiError)) {
-        setFormError(RETRY_ERROR);
+        setFormError(copy.retry);
       } else if (error.code === "MEASUREMENT_TYPE_IMMUTABLE" && product !== undefined) {
         lockTypeAfterRefusal(product);
       } else if (error.code === "AI_PRODUCT_NAME_TAKEN") {
-        setErrors({ name: "Nama produk sudah dipakai. Pilih nama lain." });
+        setErrors({ name: copy.nameTaken });
       } else {
         showServerRefusal(error);
       }
@@ -371,7 +438,7 @@ export function ProviderFormDialog({
     }
   }
 
-  const title = editing ? "Ubah produk AI" : "Daftarkan produk AI";
+  const title = editing ? copy.editTitle : copy.createTitle;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
@@ -390,29 +457,28 @@ export function ProviderFormDialog({
         )}
 
         <p className="mt-2 text-xs text-slate-500">
-          Isian bertanda <span className="text-red-700">*</span> wajib diisi.
+          {copy.requiredBefore}
+          <span className="text-red-700">*</span>
+          {copy.requiredAfter}
         </p>
         <div className="mt-4 space-y-4">
-          <MeasurementTypeField
-            value={measurementType}
-            onChange={changeMeasurementType}
-            readOnly={typeLocked}
-          />
+          <MeasurementTypeField value={measurementType} onChange={changeMeasurementType} readOnly={typeLocked} />
 
-          <Labeled id={ids.name} label="Nama" required error={errors.name}>
-            <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} {...invalid(ids.name, errors.name)} className={INPUT} />
+          <Labeled id={ids.name} label={copy.name} required error={errors.name}>
+            <input
+              id={ids.name}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              {...invalid(ids.name, errors.name)}
+              className={INPUT}
+            />
           </Labeled>
 
-          {measurementType === "manual" && (
-            <p className="-mt-2 text-xs text-slate-500">
-              &quot;HO Pro&quot; dan &quot;HO Premium&quot; adalah produk
-              terpisah.
-            </p>
-          )}
+          {measurementType === "manual" && <p className="-mt-2 text-xs text-slate-500">{copy.separateProducts}</p>}
 
           {measurementType === "automatic" ? (
             <>
-              <Labeled id={ids.type} label="Jenis API" required error={errors.provider_type}>
+              <Labeled id={ids.type} label={copy.apiType} required error={errors.provider_type}>
                 <select
                   id={ids.type}
                   value={providerType}
@@ -420,7 +486,7 @@ export function ProviderFormDialog({
                   {...invalid(ids.type, errors.provider_type)}
                   className={INPUT}
                 >
-                  <option value="">Pilih jenis API</option>
+                  <option value="">{copy.apiTypePlaceholder}</option>
                   {PROVIDER_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {PROVIDER_TYPE_LABEL[type]}
@@ -429,30 +495,62 @@ export function ProviderFormDialog({
                 </select>
               </Labeled>
 
-              <Labeled id={ids.url} label="URL endpoint" required error={errors.base_url}>
-                <input id={ids.url} type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.contoh.com/v1/chat/completions" {...invalid(ids.url, errors.base_url)} className={INPUT} />
+              <Labeled id={ids.url} label={copy.endpoint} required error={errors.base_url}>
+                <input
+                  id={ids.url}
+                  type="url"
+                  value={baseUrl}
+                  onChange={(e) => setBaseUrl(e.target.value)}
+                  placeholder="https://api.contoh.com/v1/chat/completions"
+                  {...invalid(ids.url, errors.base_url)}
+                  className={INPUT}
+                />
               </Labeled>
 
-              <Labeled id={ids.model} label="Model" required error={errors.model_name}>
-                <input id={ids.model} value={modelName} onChange={(e) => setModelName(e.target.value)} {...invalid(ids.model, errors.model_name)} className={INPUT} />
+              <Labeled id={ids.model} label={copy.model} required error={errors.model_name}>
+                <input
+                  id={ids.model}
+                  value={modelName}
+                  onChange={(e) => setModelName(e.target.value)}
+                  {...invalid(ids.model, errors.model_name)}
+                  className={INPUT}
+                />
               </Labeled>
 
               <SecretInput
-                label="Kredensial"
+                label={copy.credential}
                 required={credentialRequired}
                 value={credential}
                 onChange={setCredential}
                 error={errors.credential}
-                hint={credentialRequired ? NEW_CREDENTIAL_HINT : storedCredentialHint}
+                hint={credentialRequired ? copy.newCredentialHint : storedCredentialHint}
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <Labeled id={ids.limit} label="Limit panggilan per menit" required error={errors.rate_limit}>
-                  <input id={ids.limit} type="number" min={1} step={1} inputMode="numeric" value={rateLimit} onChange={(e) => setRateLimit(e.target.value)} {...invalid(ids.limit, errors.rate_limit)} className={INPUT} />
+                <Labeled id={ids.limit} label={copy.rateLimit} required error={errors.rate_limit}>
+                  <input
+                    id={ids.limit}
+                    type="number"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
+                    value={rateLimit}
+                    onChange={(e) => setRateLimit(e.target.value)}
+                    {...invalid(ids.limit, errors.rate_limit)}
+                    className={INPUT}
+                  />
                 </Labeled>
 
-                <Labeled id={ids.budget} label="Budget per bulan (Rp)" required error={errors.budget}>
-                  <input id={ids.budget} inputMode="numeric" value={budget} onChange={(e) => setBudget(formatRupiahInput(e.target.value))} placeholder="1.500.000" {...invalid(ids.budget, errors.budget)} className={INPUT} />
+                <Labeled id={ids.budget} label={copy.budget} required error={errors.budget}>
+                  <input
+                    id={ids.budget}
+                    inputMode="numeric"
+                    value={budget}
+                    onChange={(e) => setBudget(formatRupiahInput(e.target.value))}
+                    placeholder="1.500.000"
+                    {...invalid(ids.budget, errors.budget)}
+                    className={INPUT}
+                  />
                 </Labeled>
               </div>
 
@@ -463,74 +561,96 @@ export function ProviderFormDialog({
                   disabled={!editing || switchingType || testing}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  {testing ? "Menguji…" : "Uji koneksi"}
+                  {testing ? copy.testing : copy.testConnection}
                 </button>
-                {!editing && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Uji koneksi tersedia setelah produk tersimpan.
-                  </p>
-                )}
-                {editing && switchingType && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Simpan dulu jenis barunya, lalu uji koneksi.
-                  </p>
-                )}
-                {testResult === "ok" && (
-                  <p className="mt-1 text-xs text-emerald-700">Koneksi berhasil.</p>
-                )}
-                {testResult === "failed" && (
-                  <p className="mt-1 text-xs text-red-700">
-                    Koneksi gagal. Periksa URL, model, dan kredensial.
-                  </p>
-                )}
-                {testResult === "error" && (
-                  <p className="mt-1 text-xs text-red-700">
-                    Uji koneksi tidak bisa dijalankan saat ini. Coba lagi sebentar.
-                  </p>
-                )}
+                {!editing && <p className="mt-1 text-xs text-slate-500">{copy.testAfterSave}</p>}
+                {editing && switchingType && <p className="mt-1 text-xs text-slate-500">{copy.testAfterType}</p>}
+                {testResult === "ok" && <p className="mt-1 text-xs text-emerald-700">{copy.testOk}</p>}
+                {testResult === "failed" && <p className="mt-1 text-xs text-red-700">{copy.testFailed}</p>}
+                {testResult === "error" && <p className="mt-1 text-xs text-red-700">{copy.testError}</p>}
               </div>
 
-              <Labeled id={ids.modelParams} label="Parameter model" error={errors.model_params}>
-                <textarea id={ids.modelParams} rows={5} value={modelParams} onChange={(e) => setModelParams(e.target.value)} {...invalid(ids.modelParams, errors.model_params, false)} placeholder={MODEL_PARAMS_EXAMPLE} spellCheck={false} className={`${INPUT} font-mono`} />
-                <p className="mt-1 text-xs text-slate-500">
-                  JSON yang dikirim apa adanya ke API model. Tulis nama parameter sesuai dokumentasi model, misalnya temperature 0.3 yang disarankan klien. Kosongkan untuk memakai bawaan penyedia. Variasi parameter didaftarkan sebagai produk terpisah, misalnya deepseek1 dan deepseek2.
-                </p>
-                <p className="mt-1 text-xs text-slate-500">Jangan isi API key, token, atau kata sandi di sini.</p>
+              <Labeled id={ids.modelParams} label={copy.modelParams} error={errors.model_params}>
+                <textarea
+                  id={ids.modelParams}
+                  rows={5}
+                  value={modelParams}
+                  onChange={(e) => setModelParams(e.target.value)}
+                  {...invalid(ids.modelParams, errors.model_params, false)}
+                  placeholder={MODEL_PARAMS_EXAMPLE}
+                  spellCheck={false}
+                  className={`${INPUT} font-mono`}
+                />
+                <p className="mt-1 text-xs text-slate-500">{copy.modelParamsHelp}</p>
+                <p className="mt-1 text-xs text-slate-500">{copy.modelParamsSecret}</p>
               </Labeled>
             </>
           ) : (
             <>
-              <Labeled id={ids.vendorName} label="Nama penyedia" required error={errors.vendor_name}>
-                <input id={ids.vendorName} value={vendorName} onChange={(e) => setVendorName(e.target.value)} {...invalid(ids.vendorName, errors.vendor_name)} className={INPUT} />
+              <Labeled id={ids.vendorName} label={copy.vendorName} required error={errors.vendor_name}>
+                <input
+                  id={ids.vendorName}
+                  value={vendorName}
+                  onChange={(e) => setVendorName(e.target.value)}
+                  {...invalid(ids.vendorName, errors.vendor_name)}
+                  className={INPUT}
+                />
               </Labeled>
 
-              <Labeled id={ids.site} label="Alamat situs" required error={errors.site_url}>
-                <input id={ids.site} type="url" value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} {...invalid(ids.site, errors.site_url)} placeholder="https://contoh.ai" className={INPUT} />
+              <Labeled id={ids.site} label={copy.site} required error={errors.site_url}>
+                <input
+                  id={ids.site}
+                  type="url"
+                  value={siteUrl}
+                  onChange={(e) => setSiteUrl(e.target.value)}
+                  {...invalid(ids.site, errors.site_url)}
+                  placeholder="https://contoh.ai"
+                  className={INPUT}
+                />
               </Labeled>
 
-              <Labeled id={ids.note} label="Catatan akses" error={errors.access_note}>
-                <textarea id={ids.note} rows={3} value={accessNote} onChange={(e) => setAccessNote(e.target.value)} {...invalid(ids.note, errors.access_note, false)} className={INPUT} />
-                <p className="mt-1 text-xs text-slate-500">
-                  Cara tim legal mengakses platform ini. Jangan isi kata sandi di sini.
-                </p>
+              <Labeled id={ids.note} label={copy.accessNote} error={errors.access_note}>
+                <textarea
+                  id={ids.note}
+                  rows={3}
+                  value={accessNote}
+                  onChange={(e) => setAccessNote(e.target.value)}
+                  {...invalid(ids.note, errors.access_note, false)}
+                  className={INPUT}
+                />
+                <p className="mt-1 text-xs text-slate-500">{copy.accessNoteHelp}</p>
               </Labeled>
 
-              <Labeled id={ids.params} label="Parameter" error={errors.manual_params}>
-                <textarea id={ids.params} rows={2} value={manualParams} onChange={(e) => setManualParams(e.target.value)} {...invalid(ids.params, errors.manual_params, false)} className={INPUT} />
-                <p className="mt-1 text-xs text-slate-500">
-                  Teks bebas. Versi atau paket berbeda didaftarkan sebagai produk terpisah, misalnya &quot;HO Pro&quot; dan &quot;HO Premium&quot;.
-                </p>
+              <Labeled id={ids.params} label={copy.params} error={errors.manual_params}>
+                <textarea
+                  id={ids.params}
+                  rows={2}
+                  value={manualParams}
+                  onChange={(e) => setManualParams(e.target.value)}
+                  {...invalid(ids.params, errors.manual_params, false)}
+                  className={INPUT}
+                />
+                <p className="mt-1 text-xs text-slate-500">{copy.paramsHelp}</p>
               </Labeled>
             </>
           )}
         </div>
 
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-            Batal
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            {chrome.cancel}
           </button>
-          <button type="button" onClick={requestSave} disabled={saving} className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50">
-            {saving ? "Menyimpan…" : "Simpan"}
+          <button
+            type="button"
+            onClick={requestSave}
+            disabled={saving}
+            className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          >
+            {saving ? copy.saving : copy.save}
           </button>
         </div>
       </div>
@@ -564,13 +684,13 @@ function Labeled({
   error,
   required = false,
   children,
-}: {
+}: Readonly<{
   id: string;
   label: string;
   error?: string;
   required?: boolean;
   children: ReactNode;
-}) {
+}>) {
   return (
     <div>
       <div className="flex gap-1 text-sm font-medium text-slate-700">

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import NewMeasurementPage from "./page";
@@ -108,5 +109,22 @@ describe("NewMeasurementPage", () => {
     await user.click(breadcrumbLink);
 
     expect(pushMock).toHaveBeenCalledWith("/runs");
+  });
+});
+
+describe("NewMeasurementPage English", () => {
+  it("names the page in English", () => {
+    useAuthMock.mockReturnValue({
+      status: "authenticated",
+      user: { id: "user-1", name: "User Test", email: "user@veritask.ai", role: "admin" },
+    });
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <NewMeasurementPage />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Create an automatic measurement" })).toBeInTheDocument();
   });
 });

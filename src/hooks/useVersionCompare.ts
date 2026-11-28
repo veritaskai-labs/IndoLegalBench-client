@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { compareCaseVersions } from "@/lib/cases/versionApi";
 import { mapVersionError } from "@/lib/cases/versionErrors";
 import type { VersionCompare } from "@/types/caseVersion";
@@ -16,6 +17,7 @@ type CompareState =
  * Bandingkan lagi sebelum balasan pertama tiba, hanya balasan permintaan terakhir yang dipakai.
  */
 export function useVersionCompare(caseId: string) {
+  const locale = useLocale();
   const [state, setState] = useState<CompareState>({ status: "idle" });
   const latest = useRef(0);
 
@@ -35,11 +37,11 @@ export function useVersionCompare(caseId: string) {
         if (request === latest.current) setState({ status: "ready", result });
       } catch (error) {
         if (request === latest.current) {
-          setState({ status: "error", message: mapVersionError(error, "compare") });
+          setState({ status: "error", message: mapVersionError(error, "compare", locale) });
         }
       }
     },
-    [caseId],
+    [caseId, locale],
   );
 
   return { ...state, compare };

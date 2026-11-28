@@ -9,6 +9,7 @@ import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/hooks/useAuth";
 import { LOGOUT_URL } from "@/lib/auth";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { navForRole } from "@/lib/nav";
 import { canSearch } from "@/lib/search/searchResults";
 import { ROLE_LABEL } from "@/types";
@@ -33,12 +34,13 @@ const SMOOTH = "duration-200 ease-out motion-reduce:transition-none";
 
 export function TopBar() {
   const auth = useAuth();
+  const locale = useLocale();
   const menu = useMobileNav();
   // SCRUM-347: at the very top the bar is full height; once the page scrolls it stays on top, compact.
   const scrolled = useSyncExternalStore(subscribeToScroll, isScrolled, atTopOnServer);
   const user = auth.status === "authenticated" ? auth.user : null;
   // The brand leads to the role's first page, because Developer AI has no Beranda.
-  const home = user === null ? undefined : navForRole(user.role)[0]?.items[0];
+  const home = user === null ? undefined : navForRole(user.role, locale)[0]?.items[0];
   const brand = `font-serif font-bold leading-7 text-ink transition-[font-size] ${SMOOTH} ${scrolled ? "text-lg" : "text-lg sm:text-[22px]"}`;
 
   // The bar is fixed over a spacer that keeps the full height, so shrinking it never shortens the page:

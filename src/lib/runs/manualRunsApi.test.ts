@@ -171,3 +171,14 @@ describe("manualRunsApi", () => {
     });
   });
 });
+
+describe("manualErrorMessage English", () => {
+  it("explains a non-manual product in English and leaves a server sentence unchanged", () => {
+    expect(manualErrorMessage(new ApiError(422, "PRODUCT_NOT_MANUAL"), undefined, "en")).toBe(
+      "The selected product is not a manual AI product.",
+    );
+    expect(manualErrorMessage(new ApiError(422, "ERR", "Pesan khusus dari server"), undefined, "en")).toBe(
+      "Pesan khusus dari server",
+    );
+  });
+});

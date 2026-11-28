@@ -14,6 +14,12 @@ describe("regulationTypeErrorMessage", () => {
     expect(message).toBe("Anda tidak memiliki izin untuk melihat daftar jenis peraturan.");
   });
 
+  it("says a forbidden list in English", () => {
+    expect(regulationTypeErrorMessage(new ApiError(403, "FORBIDDEN"), "en")).toBe(
+      "You do not have permission to view the list of regulation types.",
+    );
+  });
+
   // Negative
   it.each([
     [401, "UNAUTHENTICATED"],

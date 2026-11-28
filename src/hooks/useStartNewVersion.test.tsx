@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { startCaseVersion } from "@/lib/cases/versionApi";
 import type { CaseRead } from "@/types/case";
 import { useStartNewVersion } from "./useStartNewVersion";
@@ -30,6 +31,10 @@ function draftCase(): CaseRead {
 
 beforeEach(() => {
   startMock.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useStartNewVersion", () => {
@@ -92,6 +97,16 @@ describe("useStartNewVersion", () => {
 
     // Assert
     expect(result.current.error).toBe("Gagal membuat versi baru. Coba lagi.");
+  });
+
+  it("uses the English message when the language mock is English", async () => {
+    setMockLocale("en");
+    startMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    const { result } = renderHook(() => useStartNewVersion("case-1", vi.fn()));
+
+    await act(async () => result.current.start());
+
+    expect(result.current.error).toBe("Could not start a new version. Try again.");
   });
 
   // Edge: a second click before the first request returns must not create a second version.

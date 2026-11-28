@@ -1,9 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import type { ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import type { ManualAnswerResponse, ManualAttemptSlot } from "@/types/measurement";
 import { useManualAnswerDraft } from "./useManualAnswerDraft";
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 const NOW = new Date("2026-11-08T03:30:00Z");
 const RESPONSE = { attempt_id: "att-1", session_status: "partially_filled" } as ManualAnswerResponse;
@@ -192,6 +197,17 @@ describe("save on an unfilled slot (AC4, AC6)", () => {
 
     // Assert
     expect(result.current.saveError).toBe("Gagal menyimpan jawaban. Coba lagi.");
+  });
+
+  it("uses the English fallback when the language mock is English", async () => {
+    setMockLocale("en");
+    const save = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    const { result } = setup(slot(), fakeGateway(save));
+    act(() => result.current.setField("answerMd", "Jawaban"));
+
+    await act(async () => result.current.save());
+
+    expect(result.current.saveError).toBe("Could not save the answer. Try again.");
   });
 
   // Edge: a second click while the first is in flight is ignored.

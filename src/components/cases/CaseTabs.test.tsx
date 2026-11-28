@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { CaseTabs } from "./CaseTabs";
 
 describe("CaseTabs", () => {
@@ -48,5 +49,14 @@ describe("CaseTabs", () => {
 
     // Assert
     expect(onChange).toHaveBeenCalledWith("editor");
+  });
+
+  it("names the history tab in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <CaseTabs active="editor" onChange={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("tab", { name: "Version history" })).toBeInTheDocument();
   });
 });

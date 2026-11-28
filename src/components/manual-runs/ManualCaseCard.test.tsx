@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
@@ -157,6 +158,28 @@ describe("ManualCaseCard (PBI-22 AC3, AC4, AC8)", () => {
 
     // Assert
     expect(screen.queryByRole("group", { name: /^Percobaan/ })).not.toBeInTheDocument();
+    expect(screen.getByText(QUESTION)).toBeInTheDocument();
+  });
+});
+
+describe("ManualCaseCard English", () => {
+  it("names the question in English and leaves the case title and question unchanged", () => {
+    const item = createMockCase();
+    render(
+      <LocaleProvider locale="en">
+        <ManualCaseCard
+          caseItem={item}
+          sessionId="sesi-1"
+          gateway={{ saveAnswer: vi.fn(), getHistory: vi.fn(), listEvidence: vi.fn() } as unknown as ManualAnswerGateway}
+          canEdit={false}
+          currentUserId="u-1"
+          onSaved={vi.fn()}
+          onDirtyChange={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Case question")).toBeInTheDocument();
+    expect(screen.getByText("Sengketa Kontrak Kerja")).toBeInTheDocument();
     expect(screen.getByText(QUESTION)).toBeInTheDocument();
   });
 });

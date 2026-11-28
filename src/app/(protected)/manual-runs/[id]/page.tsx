@@ -16,7 +16,30 @@ import { useRetainedResource } from "@/hooks/useRetainedResource";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { canEditAnswers } from "@/lib/runs/manualAnswerRules";
 import { manualAnswerGateway } from "@/lib/runs/manualAnswersApi";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { decodeRouteParam } from "@/lib/routeParams";
+
+const COPY = messages({
+  id: {
+    back: "Kembali ke Pengukuran Manual",
+    list: "Pengukuran Manual",
+    cases: "Daftar Kasus ({count})",
+    unfilledBadge: "Menampilkan kasus belum terisi saja",
+    region: "Daftar kasus snapshot",
+    allFilled: "Semua kasus pada sesi ini telah selesai diisi.",
+    none: "Belum ada kasus pada sesi ini.",
+  },
+  en: {
+    back: "Back to Manual measurement",
+    list: "Manual measurement",
+    cases: "Case list ({count})",
+    unfilledBadge: "Showing unfilled cases only",
+    region: "Snapshot case list",
+    allFilled: "Every case in this session has been filled in.",
+    none: "This session has no cases yet.",
+  },
+});
 
 import type { ManualSessionDetail } from "@/types/measurement";
 
@@ -25,6 +48,7 @@ import type { ManualSessionDetail } from "@/types/measurement";
  * Menampilkan ringkasan status, progres pengisian, serta kartu kasus.
  */
 export default function ManualSessionDetailPage() {
+  const copy = useText(COPY);
   const params = useParams<{ id: string }>();
   const sessionId = decodeRouteParam(params?.id ?? "");
   const auth = useAuth();
@@ -69,7 +93,7 @@ export default function ManualSessionDetailPage() {
           href="/manual-runs"
           className="text-sm font-medium text-slate-900 hover:underline"
         >
-          Kembali ke Pengukuran Manual
+          {copy.back}
         </Link>
       </div>
     );
@@ -83,7 +107,7 @@ export default function ManualSessionDetailPage() {
     <div className="space-y-6">
       <Breadcrumb
         items={[
-          { label: "Pengukuran Manual", onClick: () => router.push("/manual-runs") },
+          { label: copy.list, onClick: () => router.push("/manual-runs") },
           { label: session.label },
         ]}
       />
@@ -98,14 +122,14 @@ export default function ManualSessionDetailPage() {
 
       <CopyGuide />
 
-      <section aria-label="Daftar kasus snapshot" className="space-y-4">
+      <section aria-label={copy.region} className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900">
-            Daftar Kasus ({session.cases.length})
+            {fill(copy.cases, { count: session.cases.length })}
           </h2>
           {unfilledOnly && (
             <span className="text-xs text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-              Menampilkan kasus belum terisi saja
+              {copy.unfilledBadge}
             </span>
           )}
         </div>
@@ -121,6 +145,8 @@ export default function ManualSessionDetailPage() {
           currentUserId={auth.user.id}
           onSaved={detail.reload}
           onDirtyChange={dirty.report}
+          emptyAllFilled={copy.allFilled}
+          emptyNone={copy.none}
         />
       </section>
     </div>
@@ -138,6 +164,8 @@ function CasesContent({
   currentUserId,
   onSaved,
   onDirtyChange,
+  emptyAllFilled,
+  emptyNone,
 }: Readonly<{
   detailStatus: "loading" | "error" | "ready";
   detailMessage?: string;
@@ -149,6 +177,8 @@ function CasesContent({
   currentUserId: string;
   onSaved: () => void;
   onDirtyChange: (attemptId: string, dirty: boolean) => void;
+  emptyAllFilled: string;
+  emptyNone: string;
 }>) {
   if (detailStatus === "loading") {
     return (
@@ -169,9 +199,7 @@ function CasesContent({
   }
 
   if (cases.length === 0) {
-    const emptyText = unfilledOnly
-      ? "Semua kasus pada sesi ini telah selesai diisi."
-      : "Belum ada kasus pada sesi ini.";
+    const emptyText = unfilledOnly ? emptyAllFilled : emptyNone;
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
         {emptyText}

@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import type { CaseDirectoryQuery, CaseDirectoryRow } from "@/lib/cases/caseDirectory";
 import type { Suite } from "@/types/suite";
@@ -205,5 +206,15 @@ describe("Daftar kasus", () => {
     expect(suites).not.toHaveBeenCalled();
     expect(list).not.toHaveBeenCalled();
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it("names the directory in English and keeps a case title", async () => {
+    render(
+      <LocaleProvider locale="en">
+        <CasesPage />
+      </LocaleProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "Suites and cases" })).toBeInTheDocument();
+    expect(screen.getByText("Sengketa sewa")).toBeInTheDocument();
   });
 });

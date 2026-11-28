@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LocaleProvider } from '@/lib/i18n/LocaleProvider';
 import { session } from '@/test/authMock';
 import DiscussionPage from './page';
 
@@ -24,5 +25,15 @@ describe('discussion route access', () => {
     session.role = role;
     render(<DiscussionPage />);
     expect(screen.getByText('Discussion a/b')).toBeInTheDocument();
+  });
+
+  it('says the discussion is unavailable in English', () => {
+    session.role = 'viewer';
+    render(
+      <LocaleProvider locale="en">
+        <DiscussionPage />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText('Discussion is not available for your role.')).toBeInTheDocument();
   });
 });

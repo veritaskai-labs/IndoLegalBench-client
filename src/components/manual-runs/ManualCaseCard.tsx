@@ -1,9 +1,28 @@
 "use client";
 
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import type { ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import type { ManualAnswerResponse, ManualCaseProgress } from "@/types/measurement";
 import { ManualAnswerBox } from "./ManualAnswerBox";
 import { QuestionCopyButton } from "./QuestionCopyButton";
+
+const COPY = messages({
+  id: {
+    caseLabel: "Kasus {code}",
+    filled: "Sudah terisi",
+    empty: "Belum terisi",
+    question: "Pertanyaan Kasus",
+    attempts: "Jawaban per percobaan ({count})",
+  },
+  en: {
+    caseLabel: "Case {code}",
+    filled: "Filled in",
+    empty: "Not filled in",
+    question: "Case question",
+    attempts: "Answers per attempt ({count})",
+  },
+});
 
 /**
  * Satu kartu per kasus pada sesi manual (PBI-22 AC3, AC4, AC8): identitas dan status kasus,
@@ -27,9 +46,10 @@ export function ManualCaseCard({
   onSaved: (response: ManualAnswerResponse) => void;
   onDirtyChange: (attemptId: string, dirty: boolean) => void;
 }>) {
+  const copy = useText(COPY);
   return (
     <article
-      aria-label={`Kasus ${caseItem.case_code}`}
+      aria-label={fill(copy.caseLabel, { code: caseItem.case_code })}
       className="rounded-lg border border-slate-200 bg-white p-4 shadow-xs space-y-3"
     >
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
@@ -46,11 +66,11 @@ export function ManualCaseCard({
         <div>
           {caseItem.filled ? (
             <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-              Sudah terisi
+              {copy.filled}
             </span>
           ) : (
             <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-              Belum terisi
+              {copy.empty}
             </span>
           )}
         </div>
@@ -59,7 +79,7 @@ export function ManualCaseCard({
       <div className="space-y-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-            Pertanyaan Kasus
+            {copy.question}
           </h4>
           <QuestionCopyButton question={caseItem.question} caseCode={caseItem.case_code} />
         </div>
@@ -70,7 +90,7 @@ export function ManualCaseCard({
 
       <div className="space-y-3 border-t border-slate-100 pt-3">
         <h4 className="text-xs font-medium uppercase tracking-wide text-slate-500">
-          Jawaban per percobaan ({caseItem.attempts.length})
+          {fill(copy.attempts, { count: caseItem.attempts.length })}
         </h4>
         {caseItem.attempts.map((slot) => (
           <ManualAnswerBox

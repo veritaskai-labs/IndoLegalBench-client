@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -316,5 +317,19 @@ describe("SessionErrorSummary provider response", () => {
         name: "Respons penyedia",
       })
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("SessionErrorSummary English", () => {
+  it("summarizes the failure in English and leaves the case title unchanged", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="en">
+        <SessionErrorSummary sessionId={SESSION_ID} failures={[failure()]} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("1 call failed because of a technical problem")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "View technical detail" }));
+    expect(screen.getByText("Pajak penghasilan karyawan")).toBeInTheDocument();
   });
 });

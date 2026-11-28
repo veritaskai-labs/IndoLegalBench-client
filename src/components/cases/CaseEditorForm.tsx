@@ -10,7 +10,9 @@ import {
   type CaseFormValues,
   type CaseWritePayload,
 } from "@/lib/cases/caseFormMapping";
-import { caseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
+import { createCaseFormResolver, flattenErrors } from "@/lib/cases/caseValidation";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import { fieldErrorText, type FieldSaveError } from "@/lib/cases/saveError";
 import type { SplitTag } from "@/types/case";
 import { EditorActionBar } from "./EditorActionBar";
@@ -56,11 +58,28 @@ function chosenTag(values: CaseFormValues | undefined): SplitTag | null {
 export const VALIDATE_DELAY_MS = 300;
 
 const FORM_SECTIONS = [
-  { id: "section-identitas", label: "Identitas" },
-  { id: "section-rujukan-hukum", label: "Rujukan hukum" },
-  { id: "section-kriteria-jawaban", label: "Kriteria jawaban" },
-  { id: "section-tag-dev-test", label: "Tag dev/test" },
+  { id: "section-identitas", key: "identity" },
+  { id: "section-rujukan-hukum", key: "refs" },
+  { id: "section-kriteria-jawaban", key: "criteria" },
+  { id: "section-tag-dev-test", key: "tag" },
 ] as const;
+
+const COPY = messages({
+  id: {
+    nav: "Navigasi bagian kasus",
+    identity: "Identitas",
+    refs: "Rujukan hukum",
+    criteria: "Kriteria jawaban",
+    tag: "Tag dev/test",
+  },
+  en: {
+    nav: "Case section navigation",
+    identity: "Identity",
+    refs: "Legal references",
+    criteria: "Answer criteria",
+    tag: "Dev/test tag",
+  },
+});
 
 type SectionId = (typeof FORM_SECTIONS)[number]["id"];
 
@@ -75,6 +94,8 @@ export function CaseEditorForm({
   actions,
   tagLocked = false,
 }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const {
     register,
     control,
@@ -89,7 +110,7 @@ export function CaseEditorForm({
   } = useForm<CaseFormValues>({
     defaultValues: defaultValues ?? emptyCaseFormValues(),
     // Aturan dari contract (gen:zod). Kriteria jawaban tidak wajib, jadi draf tetap bisa disimpan.
-    resolver: caseFormResolver,
+    resolver: createCaseFormResolver(locale),
     mode: "onBlur",
     reValidateMode: "onBlur",
   });
@@ -200,10 +221,11 @@ export function CaseEditorForm({
       </form>
 
       <nav
-        aria-label="Navigasi bagian kasus"
+        aria-label={copy.nav}
         className="sticky top-20 hidden space-y-1 lg:block"
       >
-        {FORM_SECTIONS.map(({ id, label }) => {
+        {FORM_SECTIONS.map(({ id, key }) => {
+          const label = copy[key];
           const isActive = activeSection === id;
           return (
             <button

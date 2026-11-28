@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { emptyCaseFormValues, type CaseFormValues } from "@/lib/cases/caseFormMapping";
 import type { CitationPreview, PreviewState } from "@/lib/cases/legalRefPreview";
 import type { CaseFieldPath } from "@/lib/cases/saveError";
@@ -725,5 +726,15 @@ describe("LegalRefsSection live preview (SCRUM-162)", () => {
     // Assert
     expect(screen.getByRole("status", { name: "Pratinjau rujukan 1" })).toBeEmptyDOMElement();
     expect(screen.queryByText(/belum bisa dimuat/)).not.toBeInTheDocument();
+  });
+
+  it("names the legal references section in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <Host />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("group", { name: "Legal references" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Add a reference" })).toBeInTheDocument();
   });
 });

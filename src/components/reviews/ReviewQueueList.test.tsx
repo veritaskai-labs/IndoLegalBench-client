@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import {
   ASSIGNMENT_ID,
   makeAssigned,
@@ -117,5 +118,25 @@ describe("ReviewQueueList", () => {
     // Assert
     expect(screen.getByRole("list", { name: "Antrean tinjauan" })).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("uses English chrome and leaves the case title unchanged", () => {
+    const reviews = [
+      makeAssigned({
+        case: makeReviewCopy({
+          identity: { title: "Kewajiban pemberitahuan tertulis sebelum PHK", question: "Q?", category: null },
+        }),
+      }),
+    ];
+
+    render(
+      <LocaleProvider locale="en">
+        <ReviewQueueList reviews={reviews} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("list", { name: "Review queue" })).toBeInTheDocument();
+    expect(screen.getByText("Waiting for your verdict")).toBeInTheDocument();
+    expect(screen.getByText("Kewajiban pemberitahuan tertulis sebelum PHK")).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QuestionCopyButton } from "./QuestionCopyButton";
@@ -66,5 +67,20 @@ describe("QuestionCopyButton (AC3)", () => {
     expect(buttons).toHaveLength(1);
     expect(buttons[0]).toHaveTextContent("Salin pertanyaan");
     expect(screen.queryByText(/salin semua|salin dan lanjut/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("QuestionCopyButton English", () => {
+  it("names the button in English and copies the question unchanged", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+    const question = "Apakah PHK sepihak sah?";
+    render(
+      <LocaleProvider locale="en">
+        <QuestionCopyButton question={question} caseCode="KASUS-001" />
+      </LocaleProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Copy question KASUS-001" }));
+    expect(writeText).toHaveBeenCalledWith(question);
   });
 });

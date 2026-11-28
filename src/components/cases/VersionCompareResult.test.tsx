@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { makeCompare, makeSections, makeSide } from "@/test/versionFixtures";
 import type { VersionCompare } from "@/types/caseVersion";
 import { VersionCompareResult } from "./VersionCompareResult";
@@ -225,5 +226,15 @@ describe("VersionCompareResult", () => {
     expect(area.tagName).toBe("SECTION");
     expect(area).toHaveClass("overflow-x-auto");
     expect(within(area).getByRole("table")).toBeInTheDocument();
+  });
+
+  it("summarises the change in English and keeps the category value", () => {
+    render(
+      <LocaleProvider locale="en">
+        <VersionCompareResult result={comparison()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("1 section changed: Category.");
+    expect(screen.getByText("Perburuhan")).toBeInTheDocument();
   });
 });

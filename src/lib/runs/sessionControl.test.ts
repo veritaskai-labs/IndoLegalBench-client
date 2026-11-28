@@ -223,3 +223,11 @@ describe("retrySelection (PBI-12 AC3: per case or all)", () => {
     expect(retrySelection(new Set(), failed)).toBeNull();
   });
 });
+
+describe("controlErrorMessage English", () => {
+  it("explains a changed status in English", () => {
+    expect(controlErrorMessage(new ApiError(409, "INVALID_TRANSITION"), "en")).toBe(
+      "The session status has changed. Reload the page.",
+    );
+  });
+});

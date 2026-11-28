@@ -1,6 +1,8 @@
 "use client";
 
 import { type ReactNode, useId, useRef, useState } from "react";
+import { CHROME } from "@/lib/i18n/chrome";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import { Button } from "./Button";
 
 /**
@@ -27,7 +29,7 @@ export function ConfirmDialog<T>({
   children,
   confirmLabel,
   busyLabel,
-  dismissLabel = "Batal",
+  dismissLabel,
   confirmDisabled = false,
   destructive = false,
   onConfirm,
@@ -50,7 +52,9 @@ export function ConfirmDialog<T>({
   onDone: (result: T) => void;
   onClose: (afterError: boolean) => void;
 }>) {
+  const chrome = useText(CHROME);
   const titleId = useId();
+  const dismiss = dismissLabel ?? chrome.cancel;
   const confirming = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +99,7 @@ export function ConfirmDialog<T>({
       )}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="ghost" onClick={close} disabled={busy}>
-          {error ? "Tutup" : dismissLabel}
+          {error ? chrome.close : dismiss}
         </Button>
         <Button
           variant={destructive ? "danger" : "primary"}

@@ -1,8 +1,15 @@
 "use client";
 
 import { usePolledResource } from "@/hooks/usePolledResource";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
 import { listSessions } from "@/lib/runs/runsApi";
 import { isManualStatus, shouldPollSessions } from "@/lib/runs/sessionRules";
+
+const COPY = messages({
+  id: "Gagal memuat sesi pengukuran. Coba lagi.",
+  en: "Could not load the measurement sessions. Try again.",
+});
 
 /** AC6: kolom progres daftar diperbarui kira-kira tiap 5 detik, sama dengan panel progres. */
 export const SESSIONS_POLL_MS = 5000;
@@ -17,6 +24,7 @@ export const SESSIONS_POLL_MS = 5000;
  * tanpa berkedip ke skeleton. Daftar arsip tidak di-poll: semua sesinya sudah berakhir.
  */
 export function useSessions(archived = false) {
+  const message = useText(COPY);
   return usePolledResource({
     requestKey: archived ? "measurement-sessions-archived" : "measurement-sessions",
     load: async (passive) => {
@@ -25,7 +33,7 @@ export function useSessions(archived = false) {
         : listSessions(archived));
       return items.filter((item) => !isManualStatus(item.status));
     },
-    toMessage: () => "Gagal memuat sesi pengukuran. Coba lagi.",
+    toMessage: () => message,
     shouldPoll: (sessions) => !archived && sessions !== null && shouldPollSessions(sessions),
     intervalMs: SESSIONS_POLL_MS,
   });

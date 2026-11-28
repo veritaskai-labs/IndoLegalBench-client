@@ -7,9 +7,11 @@ import { ToggleActiveDialog } from "@/components/providers/ToggleActiveDialog";
 import { CredentialHint } from "@/components/ui/CredentialHint";
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/ui";
 import { useToast } from "@/components/ui/Toast";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { describeConnectionFailure } from "@/lib/providers/connectionMessage";
 import { listProducts, testConnection } from "@/lib/providers/providerApi";
-import { formatDate, formatDateTime, formatRupiah, formatRupiahDown, MEASUREMENT_TYPE_LABEL, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
+import { formatDate, formatDateTime, formatRupiah, formatRupiahDown, measurementTypeLabel, PROVIDER_TYPE_LABEL } from "@/lib/providers/format";
 import { isMeasurementTypeLocked, mergeSavedProduct } from "@/lib/providers/productUsage";
 import type { AiProduct, AiProductListItem, MeasurementType } from "@/types/provider";
 
@@ -35,21 +37,132 @@ const COLUMNS = 13;
 /** Filter jenis pengukuran (PBI-23 AC6); "all" berarti tanpa filter. */
 type TypeFilter = MeasurementType | "all";
 
-const TYPE_FILTERS: readonly { value: TypeFilter; label: string }[] = [
-  { value: "all", label: "Semua" },
-  { value: "automatic", label: MEASUREMENT_TYPE_LABEL.automatic },
-  { value: "manual", label: MEASUREMENT_TYPE_LABEL.manual },
-];
+const COPY = messages({
+  id: {
+    title: "Produk AI",
+    intro: "Produk yang diukur beserta batas pemakaiannya. Kredensial tidak pernah ditampilkan lagi.",
+    register: "Daftarkan produk",
+    statusTabs: "Status produk",
+    active: "Aktif",
+    inactive: "Nonaktif",
+    typePrefix: "Jenis:",
+    typeFilter: "Jenis pengukuran",
+    filterAll: "Semua",
+    loadFailed: "Gagal memuat produk AI.",
+    emptyActive: "Belum ada produk AI aktif",
+    emptyInactive: "Tidak ada produk AI nonaktif",
+    emptyActiveAutomatic: "Belum ada produk AI otomatis yang aktif",
+    emptyActiveManual: "Belum ada produk AI manual yang aktif",
+    emptyInactiveAutomatic: "Tidak ada produk AI otomatis yang nonaktif",
+    emptyInactiveManual: "Tidak ada produk AI manual yang nonaktif",
+    emptyActiveDescription: "Daftarkan produk pertama yang akan diukur.",
+    emptyInactiveDescription: "Produk yang dinonaktifkan muncul di sini.",
+    colName: "Nama",
+    colType: "Jenis",
+    colProvider: "Penyedia / jenis API",
+    colModel: "Model",
+    colCredential: "Kredensial",
+    colLimit: "Limit/menit",
+    colBudget: "Budget/bulan",
+    colRemaining: "Sisa anggaran bulan ini",
+    colSessions: "Jumlah sesi",
+    colStatus: "Status",
+    colLastTest: "Uji terakhir",
+    colRegistered: "Didaftarkan",
+    colActions: "Aksi",
+    notApplicable: "Tidak berlaku",
+    testingConnection: "Menguji koneksi, bisa sampai 15 detik…",
+    testRequestFailed: "Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.",
+    neverTested: "Belum pernah diuji",
+    succeeded: "Berhasil",
+    latency: " · {ms} ms",
+    failed: "Gagal: {reason}",
+    seeDetails: "Lihat detail",
+    test: "Uji koneksi",
+    testing: "Menguji…",
+    testAria: "Uji koneksi {name}",
+    edit: "Ubah",
+    editAria: "Ubah {name}",
+    deactivate: "Nonaktifkan",
+    deactivateAria: "Nonaktifkan {name}",
+    activate: "Aktifkan",
+    activateAria: "Aktifkan {name}",
+    delete: "Hapus",
+    deleteAria: "Hapus {name}",
+    savedToast: "Produk AI tersimpan",
+    registeredToast: "Produk AI terdaftar",
+    activatedToast: "Produk AI diaktifkan",
+    deactivatedToast: "Produk AI dinonaktifkan",
+    deletedToast: "{name} dihapus",
+  },
+  en: {
+    title: "AI products",
+    intro: "The products being measured, and their usage limits. Credentials are never shown again.",
+    register: "Register product",
+    statusTabs: "Product status",
+    active: "Active",
+    inactive: "Inactive",
+    typePrefix: "Type:",
+    typeFilter: "Measurement type",
+    filterAll: "All",
+    loadFailed: "Could not load AI products.",
+    emptyActive: "No active AI products yet",
+    emptyInactive: "No inactive AI products",
+    emptyActiveAutomatic: "No active automatic AI products yet",
+    emptyActiveManual: "No active manual AI products yet",
+    emptyInactiveAutomatic: "No inactive automatic AI products",
+    emptyInactiveManual: "No inactive manual AI products",
+    emptyActiveDescription: "Register the first product to measure.",
+    emptyInactiveDescription: "Deactivated products show up here.",
+    colName: "Name",
+    colType: "Type",
+    colProvider: "Provider / API type",
+    colModel: "Model",
+    colCredential: "Credential",
+    colLimit: "Limit/minute",
+    colBudget: "Budget/month",
+    colRemaining: "Remaining budget this month",
+    colSessions: "Session count",
+    colStatus: "Status",
+    colLastTest: "Last test",
+    colRegistered: "Registered",
+    colActions: "Actions",
+    notApplicable: "Not applicable",
+    testingConnection: "Testing the connection. This can take up to 15 seconds…",
+    testRequestFailed: "The connection test cannot run right now. Wait a moment, then try again.",
+    neverTested: "Not tested yet",
+    succeeded: "Succeeded",
+    latency: " · {ms} ms",
+    failed: "Failed: {reason}",
+    seeDetails: "See details",
+    test: "Test connection",
+    testing: "Testing…",
+    testAria: "Test connection {name}",
+    edit: "Edit",
+    editAria: "Edit {name}",
+    deactivate: "Deactivate",
+    deactivateAria: "Deactivate {name}",
+    activate: "Activate",
+    activateAria: "Activate {name}",
+    delete: "Delete",
+    deleteAria: "Delete {name}",
+    savedToast: "AI product saved",
+    registeredToast: "AI product registered",
+    activatedToast: "AI product activated",
+    deactivatedToast: "AI product deactivated",
+    deletedToast: "{name} deleted",
+  },
+});
 
 const TYPE_BADGE: Record<MeasurementType, string> = {
   automatic: "bg-indigo-50 text-indigo-800",
   manual: "bg-amber-50 text-amber-800",
 };
 
-function emptyTitle(active: boolean, type: TypeFilter): string {
-  if (type === "all") return active ? "Belum ada produk AI aktif" : "Tidak ada produk AI nonaktif";
-  const kind = MEASUREMENT_TYPE_LABEL[type].toLowerCase();
-  return active ? `Belum ada produk AI ${kind} yang aktif` : `Tidak ada produk AI ${kind} yang nonaktif`;
+function emptyTitle(active: boolean, type: TypeFilter, copy: (typeof COPY)["id"]): string {
+  if (type === "all") return active ? copy.emptyActive : copy.emptyInactive;
+  if (type === "automatic") return active ? copy.emptyActiveAutomatic : copy.emptyInactiveAutomatic;
+  return active ? copy.emptyActiveManual : copy.emptyInactiveManual;
 }
 
 /**
@@ -57,6 +170,8 @@ function emptyTitle(active: boolean, type: TypeFilter): string {
  * dan tautan sidebar; tiket menulis /admin/ai-products.
  */
 export default function ProvidersPage() {
+  const locale = useLocale();
+  const copy = useText(COPY);
   const { showToast } = useToast();
   const [active, setActive] = useState(true);
   const [type, setType] = useState<TypeFilter>("all");
@@ -65,6 +180,11 @@ export default function ProvidersPage() {
   const [dialog, setDialog] = useState<Dialog>({ mode: "closed" });
   const [testing, setTesting] = useState<ReadonlySet<string>>(new Set());
   const [results, setResults] = useState<Record<string, LiveResult>>({});
+  const typeFilters: readonly { value: TypeFilter; label: string }[] = [
+    { value: "all", label: copy.filterAll },
+    { value: "automatic", label: measurementTypeLabel("automatic", locale) },
+    { value: "manual", label: measurementTypeLabel("manual", locale) },
+  ];
 
   const reload = useCallback(() => {
     setList({ status: "loading" });
@@ -129,17 +249,14 @@ export default function ProvidersPage() {
     try {
       const result = await testConnection(product.id);
       const live: LiveResult =
-        result.status === "ok"
-          ? { status: "ok", latencyMs: result.latency_ms ?? 0 }
-          : { status: "failed" };
+        result.status === "ok" ? { status: "ok", latencyMs: result.latency_ms ?? 0 } : { status: "failed" };
       setResults((all) => ({ ...all, [product.id]: live }));
       replaceRow({
         ...product,
         last_test_at: new Date().toISOString(),
         last_test_status: result.status,
         last_test_message: result.status === "ok" ? null : (result.message ?? null),
-        last_test_error_category:
-          result.status === "ok" ? null : (result.error_category ?? null),
+        last_test_error_category: result.status === "ok" ? null : (result.error_category ?? null),
       });
     } catch {
       setResults((all) => ({
@@ -163,25 +280,23 @@ export default function ProvidersPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Produk AI</h1>
-          <p className="text-sm text-slate-500">
-            Produk yang diukur beserta batas pemakaiannya. Kredensial tidak pernah ditampilkan lagi.
-          </p>
+          <h1 className="text-xl font-semibold text-slate-900">{copy.title}</h1>
+          <p className="text-sm text-slate-500">{copy.intro}</p>
         </div>
         <button
           type="button"
           onClick={() => setDialog({ mode: "create" })}
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
         >
-          Daftarkan produk
+          {copy.register}
         </button>
       </header>
 
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200">
-        <div role="tablist" aria-label="Status produk" className="flex gap-2">
+        <div role="tablist" aria-label={copy.statusTabs} className="flex gap-2">
           {[
-            { value: true, label: "Aktif" },
-            { value: false, label: "Nonaktif" },
+            { value: true, label: copy.active },
+            { value: false, label: copy.inactive },
           ].map((tab) => (
             <button
               key={tab.label}
@@ -198,9 +313,9 @@ export default function ProvidersPage() {
           ))}
         </div>
         <div className="mb-2 flex items-center gap-2 text-sm text-slate-600">
-          <span aria-hidden="true">Jenis:</span>
-          <fieldset aria-label="Jenis pengukuran" className="m-0 inline-flex min-w-0 rounded-md border border-slate-300 p-0.5">
-            {TYPE_FILTERS.map((filter) => (
+          <span aria-hidden="true">{copy.typePrefix}</span>
+          <fieldset aria-label={copy.typeFilter} className="m-0 inline-flex min-w-0 rounded-md border border-slate-300 p-0.5">
+            {typeFilters.map((filter) => (
               <button
                 key={filter.value}
                 type="button"
@@ -217,18 +332,16 @@ export default function ProvidersPage() {
         </div>
       </div>
 
-      {list.status === "error" && (
-        <ErrorState variant="card" message="Gagal memuat produk AI." onRetry={reload} />
-      )}
+      {list.status === "error" && <ErrorState variant="card" message={copy.loadFailed} onRetry={reload} />}
 
       {/* Outside the table: inside a cell the message is centred across the table's full
           width, off a phone screen (SCRUM-204 E2E F5). */}
       {isEmpty && (
         <div className="rounded-lg border border-slate-200 bg-white">
           <EmptyState
-            title={emptyTitle(active, type)}
-            description={active ? "Daftarkan produk pertama yang akan diukur." : "Produk yang dinonaktifkan muncul di sini."}
-            action={active ? { label: "Daftarkan produk", onClick: () => setDialog({ mode: "create" }) } : undefined}
+            title={emptyTitle(active, type, copy)}
+            description={active ? copy.emptyActiveDescription : copy.emptyInactiveDescription}
+            action={active ? { label: copy.register, onClick: () => setDialog({ mode: "create" }) } : undefined}
           />
         </div>
       )}
@@ -240,20 +353,20 @@ export default function ProvidersPage() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
               <tr>
-                <th scope="col" className="px-3 py-2.5">Nama</th>
-                <th scope="col" className="px-3 py-2.5">Jenis</th>
-                <th scope="col" className="px-3 py-2.5">Penyedia / jenis API</th>
-                <th scope="col" className="px-3 py-2.5">Model</th>
-                <th scope="col" className="px-3 py-2.5">Kredensial</th>
-                <th scope="col" className="px-3 py-2.5">Limit/menit</th>
-                <th scope="col" className="px-3 py-2.5">Budget/bulan</th>
-                <th scope="col" className="px-3 py-2.5">Sisa anggaran bulan ini</th>
-                <th scope="col" className="px-3 py-2.5">Jumlah sesi</th>
-                <th scope="col" className="px-3 py-2.5">Status</th>
-                <th scope="col" className="px-3 py-2.5">Uji terakhir</th>
-                <th scope="col" className="px-3 py-2.5">Didaftarkan</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colName}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colType}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colProvider}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colModel}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colCredential}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colLimit}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colBudget}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colRemaining}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colSessions}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colStatus}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colLastTest}</th>
+                <th scope="col" className="px-3 py-2.5">{copy.colRegistered}</th>
                 <th scope="col" className="px-3 py-2.5">
-                  <span className="sr-only">Aksi</span>
+                  <span className="sr-only">{copy.colActions}</span>
                 </th>
               </tr>
             </thead>
@@ -283,7 +396,7 @@ export default function ProvidersPage() {
           onClose={() => setDialog({ mode: "closed" })}
           onSaved={(saved) => {
             setDialog({ mode: "closed" });
-            showToast(dialog.mode === "edit" ? "Produk AI tersimpan" : "Produk AI terdaftar");
+            showToast(dialog.mode === "edit" ? copy.savedToast : copy.registeredToast);
             if (dialog.mode === "edit") applySaved(dialog.product, saved);
             else reload();
           }}
@@ -296,7 +409,7 @@ export default function ProvidersPage() {
           onClose={() => setDialog({ mode: "closed" })}
           onDone={(saved) => {
             setDialog({ mode: "closed" });
-            showToast(saved.is_active ? "Produk AI diaktifkan" : "Produk AI dinonaktifkan");
+            showToast(saved.is_active ? copy.activatedToast : copy.deactivatedToast);
             applySaved(dialog.product, saved);
           }}
         />
@@ -308,7 +421,7 @@ export default function ProvidersPage() {
           onClose={() => setDialog({ mode: "closed" })}
           onDone={() => {
             setDialog({ mode: "closed" });
-            showToast(`${dialog.product.name} dihapus`);
+            showToast(fill(copy.deletedToast, { name: dialog.product.name }));
             removeRow(dialog.product.id);
           }}
         />
@@ -334,6 +447,8 @@ function ProductRow({
   onToggle: () => void;
   onDelete: () => void;
 }>) {
+  const locale = useLocale();
+  const copy = useText(COPY);
   // Produk manual: kolom API dan uji koneksi tidak berlaku.
   const manual = product.measurement_type === "manual";
   return (
@@ -341,7 +456,7 @@ function ProductRow({
       <td className="px-3 py-2.5 font-medium text-slate-900">{product.name}</td>
       <td className="px-3 py-2.5">
         <span className={`rounded px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[product.measurement_type]}`}>
-          {MEASUREMENT_TYPE_LABEL[product.measurement_type]}
+          {measurementTypeLabel(product.measurement_type, locale)}
         </span>
       </td>
       <td className="px-3 py-2.5 text-slate-600">
@@ -366,7 +481,7 @@ function ProductRow({
             product.is_active ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-700"
           }`}
         >
-          {product.is_active ? "Aktif" : "Nonaktif"}
+          {product.is_active ? copy.active : copy.inactive}
         </span>
       </td>
       <td className="max-w-xs px-3 py-2.5 text-xs" aria-live="polite">
@@ -380,25 +495,35 @@ function ProductRow({
               type="button"
               onClick={onTest}
               disabled={testing}
-              aria-label={`Uji koneksi ${product.name}`}
+              aria-label={fill(copy.testAria, { name: product.name })}
               className="text-slate-900 hover:underline disabled:opacity-50"
             >
-              {testing ? "Menguji…" : "Uji koneksi"}
+              {testing ? copy.testing : copy.test}
             </button>
           )}
-          <button type="button" onClick={onEdit} aria-label={`Ubah ${product.name}`} className="text-slate-900 hover:underline">
-            Ubah
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={fill(copy.editAria, { name: product.name })}
+            className="text-slate-900 hover:underline"
+          >
+            {copy.edit}
           </button>
           <button
             type="button"
             onClick={onToggle}
-            aria-label={`${product.is_active ? "Nonaktifkan" : "Aktifkan"} ${product.name}`}
+            aria-label={fill(product.is_active ? copy.deactivateAria : copy.activateAria, { name: product.name })}
             className={product.is_active ? "text-red-700 hover:underline" : "text-slate-900 hover:underline"}
           >
-            {product.is_active ? "Nonaktifkan" : "Aktifkan"}
+            {product.is_active ? copy.deactivate : copy.activate}
           </button>
-          <button type="button" onClick={onDelete} aria-label={`Hapus ${product.name}`} className="text-red-700 hover:underline">
-            Hapus
+          <button
+            type="button"
+            onClick={onDelete}
+            aria-label={fill(copy.deleteAria, { name: product.name })}
+            className="text-red-700 hover:underline"
+          >
+            {copy.delete}
           </button>
         </div>
       </td>
@@ -407,39 +532,47 @@ function ProductRow({
 }
 
 function NotApplicable() {
+  const copy = useText(COPY);
   return (
     <span className="font-sans text-sm text-slate-400">
       <span aria-hidden="true">—</span>
-      <span className="sr-only">Tidak berlaku</span>
+      <span className="sr-only">{copy.notApplicable}</span>
     </span>
   );
 }
 
-function LastTest({ product, testing, live }: { product: AiProduct; testing: boolean; live: LiveResult | undefined }) {
-  if (testing) return <span className="text-slate-500">Menguji koneksi, bisa sampai 15 detik…</span>;
+function LastTest({
+  product,
+  testing,
+  live,
+}: Readonly<{ product: AiProduct; testing: boolean; live: LiveResult | undefined }>) {
+  const locale = useLocale();
+  const copy = useText(COPY);
+  if (testing) return <span className="text-slate-500">{copy.testingConnection}</span>;
   if (live?.status === "error") {
-    return <span className="text-red-700">Uji koneksi tidak bisa dijalankan saat ini. Tunggu sebentar, lalu coba lagi.</span>;
+    return <span className="text-red-700">{copy.testRequestFailed}</span>;
   }
   if (product.last_test_status == null || product.last_test_at == null) {
-    return <span className="text-slate-400">Belum pernah diuji</span>;
+    return <span className="text-slate-400">{copy.neverTested}</span>;
   }
   const when = formatDateTime(product.last_test_at);
   if (product.last_test_status === "ok") {
     return (
       <span className="text-emerald-700">
-        Berhasil{live?.status === "ok" ? ` · ${live.latencyMs} ms` : ""}
+        {copy.succeeded}
+        {live?.status === "ok" ? fill(copy.latency, { ms: live.latencyMs }) : ""}
         <span className="block text-slate-400">{when}</span>
       </span>
     );
   }
-  const failure = describeConnectionFailure(product.last_test_error_category);
+  const failure = describeConnectionFailure(product.last_test_error_category, locale);
   return (
     <div className="space-y-1">
-      <p className="text-red-700">Gagal: {failure.title}</p>
+      <p className="text-red-700">{fill(copy.failed, { reason: failure.title })}</p>
       {failure.hint && <p className="text-slate-600">{failure.hint}</p>}
       {product.last_test_message && (
         <details className="text-slate-500">
-          <summary className="cursor-pointer hover:text-slate-700">Lihat detail</summary>
+          <summary className="cursor-pointer hover:text-slate-700">{copy.seeDetails}</summary>
           <p className="mt-1 font-mono break-words">{product.last_test_message}</p>
         </details>
       )}

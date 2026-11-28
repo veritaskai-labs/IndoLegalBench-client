@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { getCaseReview } from "@/lib/reviews/reviewApi";
 import { CASE_ID, makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
 import { useCaseReview } from "./useCaseReview";
@@ -11,6 +12,10 @@ const reviewMock = vi.mocked(getCaseReview);
 
 beforeEach(() => {
   reviewMock.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useCaseReview", () => {
@@ -90,6 +95,18 @@ describe("useCaseReview", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Kasus ini belum pernah diajukan untuk ditinjau.",
+    });
+  });
+
+  it("names a missing round in English when the language mock is English", async () => {
+    setMockLocale("en");
+    reviewMock.mockRejectedValue(new ApiError(404, "NO_REVIEW_ROUND"));
+
+    const { result } = renderHook(() => useCaseReview(CASE_ID, true));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({
+      message: "This case has never been submitted for review.",
     });
   });
 

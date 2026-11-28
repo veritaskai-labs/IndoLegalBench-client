@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { submitForReview } from "@/lib/cases/submitApi";
 import { SubmitReviewButton } from "./SubmitReviewButton";
 
@@ -191,4 +192,12 @@ describe("SubmitReviewButton", () => {
     expect(onStale).not.toHaveBeenCalled();
   });
 
+  it("offers to submit for review in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SubmitReviewButton caseId="c1" ready onSubmitted={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Submit for review" })).toBeInTheDocument();
+  });
 });

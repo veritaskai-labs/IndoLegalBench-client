@@ -74,4 +74,11 @@ describe("describeConnectionFailure", () => {
       "unreachable",
     ]);
   });
+
+  it("describes a timeout in English when asked", () => {
+    expect(describeConnectionFailure("timeout", "en")).toEqual({
+      title: "Timed out. The provider did not respond within 15 seconds.",
+      hint: "Try again. Check the endpoint URL.",
+    });
+  });
 });

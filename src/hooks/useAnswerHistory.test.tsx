@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import type { ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import type { ManualAnswerHistoryEntry } from "@/types/measurement";
 import { useAnswerHistory } from "./useAnswerHistory";
@@ -8,6 +9,10 @@ import { useAnswerHistory } from "./useAnswerHistory";
 function gatewayWith(getHistory: ManualAnswerGateway["getHistory"]) {
   return { getHistory } as unknown as ManualAnswerGateway;
 }
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 describe("useAnswerHistory (AC5)", () => {
   // Positive: loading first, then the entries of the right slot.
@@ -64,6 +69,16 @@ describe("useAnswerHistory (AC5)", () => {
 
     // Assert
     expect(result.current).toMatchObject({ message: "Gagal memuat riwayat jawaban. Coba lagi." });
+  });
+
+  it("uses the English fallback when the language mock is English", async () => {
+    setMockLocale("en");
+    const getHistory = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const { result } = renderHook(() => useAnswerHistory(gatewayWith(getHistory), "sesi-1", "snap-1", 1));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({ message: "Could not load the answer history. Try again." });
   });
 
   // Edge: reload asks the server again.

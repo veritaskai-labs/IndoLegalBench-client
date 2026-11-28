@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 
 import { SwapReviewerDialog } from "./SwapReviewerDialog";
 
@@ -153,5 +154,17 @@ describe("SwapReviewerDialog", () => {
     );
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses English chrome and leaves the case title unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SwapReviewerDialog {...props()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Replace reviewer" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
+    expect(screen.getByText("Sengketa tanah warisan")).toBeInTheDocument();
   });
 });

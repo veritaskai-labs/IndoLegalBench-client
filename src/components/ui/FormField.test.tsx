@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { describe, expect, it } from "vitest";
 import { FormField } from "./FormField";
 import { Input } from "./Input";
@@ -29,6 +30,18 @@ describe("FormField", () => {
     renderField({ optional: true });
 
     expect(screen.getByText("Opsional")).toBeInTheDocument();
+  });
+
+  it("tags an optional field as Optional in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <FormField label="Suite name" optional>
+          {(control) => <input {...control} />}
+        </FormField>
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Optional")).toBeInTheDocument();
   });
 
   it("describes the control with its hint", () => {

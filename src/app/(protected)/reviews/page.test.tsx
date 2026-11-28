@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import { listAssignedReviews, listAwaitingRevision } from "@/lib/reviews/reviewApi";
 import { session } from "@/test/authMock";
@@ -238,5 +239,21 @@ describe("ReviewsPage awaiting-revision tab", () => {
     expect(await screen.findByText("Antrean tinjauan hanya untuk peninjau")).toBeInTheDocument();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
     expect(awaitingMock).not.toHaveBeenCalled();
+  });
+
+  it("uses English chrome when the locale is English", async () => {
+    listMock.mockResolvedValue([
+      makeAssigned({ case: makeReviewCopy({ identity: { title: "Judul kasus", question: "Q?", category: null } }) }),
+    ]);
+
+    render(
+      <LocaleProvider locale="en">
+        <ReviewsPage />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Review queue" })).toBeInTheDocument();
+    expect(await screen.findByText("Judul kasus")).toBeInTheDocument();
+    expect(screen.getByText("Waiting for your verdict")).toBeInTheDocument();
   });
 });

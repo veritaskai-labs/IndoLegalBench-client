@@ -5,7 +5,15 @@ import {
   ROUND_DECISION_LABEL,
   ROUND_STATUS_LABEL,
   VERDICT_DECISION_LABEL,
+  assignmentStatusLabel,
+  blockerMessage,
   newVersionLabel,
+  roundDecisionLabel,
+  roundOutcomeLabel,
+  roundStatusLabel,
+  verdictDecisionLabel,
+  verdictFormLabel,
+  verdictHint,
   verdictLabel,
 } from "./reviewLabels";
 
@@ -99,5 +107,43 @@ describe("newVersionLabel", () => {
   // Negatif: kasus yang baru pertama kali direview tidak diberi penanda.
   it("gives no label to a case in its first review", () => {
     expect(newVersionLabel(null)).toBeNull();
+  });
+});
+
+describe("review labels in English", () => {
+  it("names verdicts, statuses, and blockers in English", () => {
+    expect(verdictFormLabel("approve", "en")).toBe("Defensible as written");
+    expect(verdictFormLabel("revise", "en")).toBe("Needs revision");
+    expect(verdictHint("approve", "en")).toBe("I am willing to defend this reference before other advocates.");
+    expect(verdictHint("revise", "en")).toBe("Sends the case back to the author with your comment.");
+    expect(roundOutcomeLabel("approved", "en")).toBe("Case approved");
+    expect(roundOutcomeLabel("revise", "en")).toBe("Case returned to the author for revision");
+    expect(blockerMessage("not_reviewer", "en")).toBe("This page is for the assigned reviewer");
+    expect(blockerMessage("is_author", "en")).toBe("You cannot review a case you wrote.");
+    expect(roundStatusLabel("awaiting_assignment", "en")).toBe("Awaiting assignment");
+    expect(roundStatusLabel("open", "en")).toBe("Under review");
+    expect(roundStatusLabel("decided", "en")).toBe("Decided");
+    expect(assignmentStatusLabel("active", "en")).toBe("Active");
+    expect(assignmentStatusLabel("replaced", "en")).toBe("Replaced");
+    expect(assignmentStatusLabel("void", "en")).toBe("Voided");
+    expect(verdictDecisionLabel("approve", "en")).toBe("Approve");
+    expect(verdictDecisionLabel("revise", "en")).toBe("Request revision");
+    expect(roundDecisionLabel("approved", "en")).toBe("Approved");
+    expect(roundDecisionLabel("revise", "en")).toBe("Needs revision");
+  });
+
+  it("says a missing verdict has not been reviewed yet", () => {
+    expect(verdictLabel(null, "en")).toBe("Not yet reviewed");
+    expect(
+      verdictLabel(
+        { decision: "approve", comment: null, submitted_at: "2026-10-16T03:00:00Z" },
+        "en",
+      ),
+    ).toBe("Approve");
+  });
+
+  it("names a new version while the approved one still applies", () => {
+    expect(newVersionLabel(2, "en")).toBe("Version 2 · the approved version still applies");
+    expect(newVersionLabel(null, "en")).toBeNull();
   });
 });

@@ -153,3 +153,45 @@ describe("mapReviewError for the awaiting-revision queue", () => {
     expect(message).toBe("Gagal memuat kasus yang menunggu revisi. Coba lagi.");
   });
 });
+
+describe("mapReviewError in English", () => {
+  it.each([
+    [422, "COMMENT_REQUIRED", "A comment is required when requesting revision."],
+    [409, "ASSIGNMENT_NOT_ACTIVE", "This assignment was replaced or voided, so the verdict cannot be submitted."],
+    [409, "ROUND_NOT_OPEN", "This review round is not accepting verdicts."],
+    [409, "VERDICT_ALREADY_SUBMITTED", "A verdict for this assignment has already been submitted."],
+    [403, "REVIEWER_IS_AUTHOR", "You cannot review a case you wrote."],
+    [403, "NOT_YOUR_ASSIGNMENT", "This assignment belongs to another reviewer."],
+    [404, "NO_REVIEW_ROUND", "This case has never been submitted for review."],
+  ] as const)("maps %s %s to its English message", (status, code, expected) => {
+    expect(mapReviewError(new ApiError(status, code), "caseReview", "en")).toBe(expected);
+  });
+
+  it.each([
+    ["list", "You do not have permission to view the review queue."],
+    ["awaitingRevision", "You do not have permission to view cases awaiting revision."],
+    ["submit", "You do not have permission to review this case."],
+    ["caseReview", "You do not have permission to view this case's review."],
+  ] as const)("explains a plain 403 for %s in English", (action, expected) => {
+    expect(mapReviewError(new ApiError(403, "FORBIDDEN"), action, "en")).toBe(expected);
+  });
+
+  it("uses the English not-found and fallback text", () => {
+    expect(mapReviewError(new ApiError(404, "NOT_FOUND"), "submit", "en")).toBe(
+      "Assignment not found or already finished.",
+    );
+    expect(mapReviewError(new ApiError(404, "CASE_NOT_FOUND"), "caseReview", "en")).toBe("Case not found.");
+    expect(mapReviewError(new ApiError(500, "INTERNAL"), "list", "en")).toBe(
+      "Could not load the review queue. Try again.",
+    );
+    expect(mapReviewError(new Error("offline"), "awaitingRevision", "en")).toBe(
+      "Could not load cases awaiting revision. Try again.",
+    );
+    expect(mapReviewError(new ApiError(500, "INTERNAL"), "submit", "en")).toBe(
+      "Could not submit the verdict. Try again.",
+    );
+    expect(mapReviewError(new ApiError(500, "INTERNAL"), "caseReview", "en")).toBe(
+      "Could not load the case review. Try again.",
+    );
+  });
+});

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 
 vi.mock("@/lib/reviews/inReviewApi", () => ({ listInReviewCases: vi.fn() }));
 
@@ -37,6 +38,10 @@ describe("useInReviewCases", () => {
     listMock.mockReset();
   });
 
+  afterEach(() => {
+    resetMockLocale();
+  });
+
   // Positif
   it("waits, then hands the list back", async () => {
     listMock.mockResolvedValue([ROW]);
@@ -57,6 +62,18 @@ describe("useInReviewCases", () => {
     await waitFor(() => expect(result.current.status).toBe("error"));
     expect(result.current).toMatchObject({
       message: "Hanya Admin yang boleh membuka pemantauan review.",
+    });
+  });
+
+  it("says the page is admin only in English when the language mock is English", async () => {
+    setMockLocale("en");
+    listMock.mockReturnValue(rejectedWith(new ApiError(403, "FORBIDDEN")));
+
+    const { result } = renderHook(() => useInReviewCases());
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current).toMatchObject({
+      message: "Only an Admin can open review monitoring.",
     });
   });
 

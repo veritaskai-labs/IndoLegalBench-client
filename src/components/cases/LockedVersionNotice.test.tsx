@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { LockedVersionNotice } from "./LockedVersionNotice";
 
 const idle = { approved: true, canStart: true, pending: false, error: null, onStart: vi.fn() };
@@ -68,5 +69,17 @@ describe("LockedVersionNotice", () => {
     // Assert
     expect(screen.getByRole("region", { name: "Versi terkunci" })).toHaveTextContent("sedang ditinjau");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("explains a locked approved case in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <LockedVersionNotice {...idle} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("region", { name: "Locked version" })).toHaveTextContent(
+      "reviewed again",
+    );
+    expect(screen.getByRole("button", { name: "Edit (start a new version)" })).toBeEnabled();
   });
 });

@@ -9,24 +9,66 @@ import {
 } from "react-hook-form";
 import type { RegulationTypesResource } from "@/hooks/useRegulationTypes";
 import type { CaseFormValues } from "@/lib/cases/caseFormMapping";
-import { CASE_HELP, CASE_PLACEHOLDER } from "@/lib/cases/caseHelpText";
+import { caseHelp, casePlaceholder } from "@/lib/cases/caseHelpText";
 import {
   canRemoveLink,
   chainedLink,
   changeLinkForm,
   changeRefMode,
   CONNECTOR_OPTIONS,
-  LINK_FORM_OPTIONS,
+  linkFormOptions,
   needsFreeTextConfirm,
-  REF_MODE_OPTIONS,
   refMode,
+  refModeOptions,
   type LegalRefFormValues,
   type RefMode,
 } from "@/lib/cases/legalRefForm";
+import { CHROME } from "@/lib/i18n/chrome";
+import { fill, messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import type { CitationPreview } from "@/lib/cases/legalRefPreview";
 import { AddRowButton, RowGroup, SelectField, TextAreaField } from "./fields";
 import { LegalRefLinkFields } from "./LegalRefLinkFields";
 import type { ErrorLookup } from "./sections";
+
+const COPY = messages({
+  id: {
+    title: "Rujukan {number}",
+    removeRef: "Hapus rujukan {number}",
+    form: "Bentuk rujukan",
+    unstructured: "Tidak terstruktur",
+    freeText: "Teks bebas",
+    connector: "Penghubung peraturan {number}",
+    linkForm: "Bentuk peraturan {number}",
+    removeRegulation: "Hapus peraturan",
+    removeRegulationLabel: "Hapus peraturan {number}",
+    chain: "+ Rangkai peraturan",
+    previewLabel: "Pratinjau rujukan {number}",
+    preview: "Pratinjau: ",
+    switchTitle: "Ganti ke Teks Bebas?",
+    switchBody:
+      "Rujukan ini merangkai {count} peraturan. Kalau diganti ke Teks Bebas, rangkaian itu dihapus dan isinya perlu diketik ulang sebagai teks.",
+    switchConfirm: "Ganti ke Teks Bebas",
+  },
+  en: {
+    title: "Reference {number}",
+    removeRef: "Remove reference {number}",
+    form: "Reference form",
+    unstructured: "Unstructured",
+    freeText: "Free text",
+    connector: "Connector for regulation {number}",
+    linkForm: "Form of regulation {number}",
+    removeRegulation: "Remove regulation",
+    removeRegulationLabel: "Remove regulation {number}",
+    chain: "+ Chain a regulation",
+    previewLabel: "Reference {number} preview",
+    preview: "Preview: ",
+    switchTitle: "Switch to free text?",
+    switchBody:
+      "This reference chains {count} regulations. Switching to free text deletes that chain, and the contents have to be typed again.",
+    switchConfirm: "Switch to free text",
+  },
+});
 
 type Props = {
   index: number;
@@ -55,6 +97,11 @@ export function LegalRefRow({
   onUpdate,
   onRemove,
 }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
+  const help = caseHelp(locale);
+  const placeholder = casePlaceholder(locale);
+  const number = index + 1;
   // Id dari useFieldArray, bukan indeks: menghapus peraturan di tengah tidak menggeser isian.
   const links = useFieldArray({ control, name: `legal_refs.${index}.links` });
   // Bentuk Teks Bebas yang menunggu konfirmasi karena akan membuang rangkaian.
@@ -73,16 +120,16 @@ export function LegalRefRow({
 
   return (
     <RowGroup
-      title={`Rujukan ${index + 1}`}
-      removeLabel={`Hapus rujukan ${index + 1}`}
+      title={fill(copy.title, { number })}
+      removeLabel={fill(copy.removeRef, { number })}
       onRemove={onRemove}
       invalid={invalid}
     >
       <SelectField
-        label="Bentuk rujukan"
-        hint={CASE_HELP.refForm}
+        label={copy.form}
+        hint={help.refForm}
         value={refMode(ref)}
-        options={REF_MODE_OPTIONS}
+        options={refModeOptions(locale)}
         // Kesalahan struktur rujukan (bentuk atau daftar link) tidak punya kolom sendiri.
         error={errorFor(`legal_refs.${index}.kind`) ?? errorFor(`legal_refs.${index}.links`)}
         onChange={(mode) => chooseMode(ref, mode)}
@@ -101,13 +148,13 @@ export function LegalRefRow({
         <div>
           <p className="mb-1">
             <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
-              Tidak terstruktur
+              {copy.unstructured}
             </span>
           </p>
           <TextAreaField
-            label="Teks bebas"
-            hint={CASE_HELP.freeText}
-            placeholder={CASE_PLACEHOLDER.freeText}
+            label={copy.freeText}
+            hint={help.freeText}
+            placeholder={placeholder.freeText}
             registration={register(`legal_refs.${index}.free_text`)}
             error={errorFor(`legal_refs.${index}.free_text`)}
           />
@@ -123,16 +170,16 @@ export function LegalRefRow({
                 {linkIndex > 0 && (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <SelectField
-                      label={`Penghubung peraturan ${number}`}
+                      label={fill(copy.connector, { number })}
                       value={link.connector}
                       options={CONNECTOR_OPTIONS}
                       error={errorFor(`legal_refs.${index}.links.${linkIndex}.connector`)}
                       onChange={(connector) => links.update(linkIndex, { ...link, connector })}
                     />
                     <SelectField
-                      label={`Bentuk peraturan ${number}`}
+                      label={fill(copy.linkForm, { number })}
                       value={link.form}
-                      options={LINK_FORM_OPTIONS}
+                      options={linkFormOptions(locale)}
                       onChange={(form) => links.update(linkIndex, changeLinkForm(link, form))}
                     />
                   </div>
@@ -150,16 +197,16 @@ export function LegalRefRow({
                   <button
                     type="button"
                     onClick={() => links.remove(linkIndex)}
-                    aria-label={`Hapus peraturan ${number}`}
+                    aria-label={fill(copy.removeRegulationLabel, { number })}
                     className="text-xs font-medium text-red-700 hover:underline"
                   >
-                    Hapus peraturan
+                    {copy.removeRegulation}
                   </button>
                 )}
               </div>
             );
           })}
-          <AddRowButton label="+ Rangkai peraturan" onClick={() => links.append(chainedLink())} />
+          <AddRowButton label={copy.chain} onClick={() => links.append(chainedLink())} />
         </>
       )}
       <PreviewLine index={index} preview={preview} />
@@ -169,13 +216,14 @@ export function LegalRefRow({
 
 /** Teks rujukan dari server, atau error rujukan yang tidak punya kolom sendiri. */
 function PreviewLine({ index, preview }: Readonly<{ index: number; preview: CitationPreview | null }>) {
+  const copy = useText(COPY);
   const error = preview?.error?.kind === "form" ? preview.error.message : null;
   return (
     // <output> ber-role status: pembaca layar mengumumkan teks baru tanpa memindahkan fokus.
-    <output aria-label={`Pratinjau rujukan ${index + 1}`} className="block text-sm">
+    <output aria-label={fill(copy.previewLabel, { number: index + 1 })} className="block text-sm">
       {preview?.text != null && (
         <span className="text-slate-700">
-          <span className="font-medium">Pratinjau: </span>
+          <span className="font-medium">{copy.preview}</span>
           {preview.text}
         </span>
       )}
@@ -190,6 +238,8 @@ function ConfirmFreeText({
   onConfirm,
   onCancel,
 }: Readonly<{ linkCount: number; onConfirm: () => void; onCancel: () => void }>) {
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
   const titleId = useId();
   return (
     <div
@@ -198,26 +248,23 @@ function ConfirmFreeText({
       className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm"
     >
       <p id={titleId} className="font-medium text-amber-900">
-        Ganti ke Teks Bebas?
+        {copy.switchTitle}
       </p>
-      <p className="mt-1 text-amber-900">
-        Rujukan ini merangkai {linkCount} peraturan. Kalau diganti ke Teks Bebas, rangkaian itu
-        dihapus dan isinya perlu diketik ulang sebagai teks.
-      </p>
+      <p className="mt-1 text-amber-900">{fill(copy.switchBody, { count: linkCount })}</p>
       <div className="mt-2 flex gap-2">
         <button
           type="button"
           onClick={onConfirm}
           className="rounded-md bg-amber-700 px-3 py-1 text-xs font-medium text-white hover:bg-amber-800"
         >
-          Ganti ke Teks Bebas
+          {copy.switchConfirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="rounded-md border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
         >
-          Batal
+          {chrome.cancel}
         </button>
       </div>
     </div>

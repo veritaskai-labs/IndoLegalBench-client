@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { CaseStatus } from "@/types/case";
 
 export type FeedbackPresentation = {
@@ -8,23 +9,27 @@ export type FeedbackPresentation = {
   readOnlyNotice: string | null;
 };
 
-const DEFAULT_PRESENTATION: FeedbackPresentation = {
-  commentInDrawer: false,
-  launcherLabel: "Buka diskusi komentar",
-  readOnlyNotice: null,
-};
-
-/** Satu tempat yang menentukan tampilan catatan peninjau per status kasus, supaya status baru cukup satu baris. */
-const BY_STATUS: Partial<Record<CaseStatus, FeedbackPresentation>> = {
-  needs_revision: { commentInDrawer: false, launcherLabel: "Balas komentar", readOnlyNotice: null },
-  approved: {
-    commentInDrawer: true,
-    launcherLabel: "Lihat komentar",
-    readOnlyNotice: "Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca.",
+const COPY = messages({
+  id: {
+    open: "Buka diskusi komentar",
+    reply: "Balas komentar",
+    view: "Lihat komentar",
+    approvedNotice: "Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca.",
   },
-};
+  en: {
+    open: "Open comment discussion",
+    reply: "Reply to comment",
+    view: "View comment",
+    approvedNotice: "The case is approved. Comments and the thread are read-only.",
+  },
+});
 
 /** status null berarti kasus belum dimuat. */
-export function feedbackPresentation(status: CaseStatus | null): FeedbackPresentation {
-  return (status !== null && BY_STATUS[status]) || DEFAULT_PRESENTATION;
+export function feedbackPresentation(status: CaseStatus | null, locale: Locale = DEFAULT_LOCALE): FeedbackPresentation {
+  const copy = text(COPY, locale);
+  if (status === "needs_revision") return { commentInDrawer: false, launcherLabel: copy.reply, readOnlyNotice: null };
+  if (status === "approved") {
+    return { commentInDrawer: true, launcherLabel: copy.view, readOnlyNotice: copy.approvedNotice };
+  }
+  return { commentInDrawer: false, launcherLabel: copy.open, readOnlyNotice: null };
 }

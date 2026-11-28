@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { makeReviewCopy, structuredRef } from "@/test/reviewFixtures";
 import { ReviewCaseContent } from "./ReviewCaseContent";
 
@@ -169,5 +170,21 @@ describe("ReviewCaseContent", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  it("uses English chrome and leaves the case question unchanged", () => {
+    const copy = makeReviewCopy({ version_no: 3 });
+
+    render(
+      <LocaleProvider locale="en">
+        <ReviewCaseContent copy={copy} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("article", { name: "Case content" })).toBeInTheDocument();
+    expect(screen.getByText("Version 3")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Apakah pemberitahuan tertulis kepada pekerja wajib sebelum PHK?" }),
+    ).toBeInTheDocument();
   });
 });

@@ -3,14 +3,17 @@
 import { useCallback, useRef, useState } from "react";
 import { useAsyncResource } from "@/hooks/useAsyncResource";
 import { saveBlob } from "@/lib/browserDownload";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
 import { validateEvidence, type EvidenceInput } from "@/lib/runs/manualEvidenceRules";
 import { answerErrorMessage, type ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import type { EvidenceRead } from "@/types/measurement";
 
-const EVIDENCE_FALLBACK = "Terjadi kesalahan pada bukti jawaban. Coba lagi.";
+const COPY = messages({
+  id: "Terjadi kesalahan pada bukti jawaban. Coba lagi.",
+  en: "Something went wrong with the answer evidence. Try again.",
+});
 const GENERIC_FILE_NAME = "bukti-jawaban";
-
-const toMessage = (error: unknown) => answerErrorMessage(error, EVIDENCE_FALLBACK);
 
 /**
  * Bukti satu jawaban (AC7): daftar, tambah (berkas atau tautan), hapus, dan unduh. Aturan batas dan
@@ -22,6 +25,12 @@ export function useManualEvidence(
   snapshotItemId: string,
   attemptNo: number,
 ) {
+  const fallback = useText(COPY);
+  const locale = useLocale();
+  const toMessage = useCallback(
+    (error: unknown) => answerErrorMessage(error, fallback, locale),
+    [fallback, locale],
+  );
   const list = useAsyncResource<EvidenceRead[]>(
     `evidence|${sessionId}|${snapshotItemId}|${attemptNo}`,
     () => gateway.listEvidence(sessionId, snapshotItemId, attemptNo),
@@ -51,7 +60,7 @@ export function useManualEvidence(
         setBusy(false);
       }
     },
-    [reload],
+    [reload, toMessage],
   );
 
   const count = list.status === "ready" ? list.data.length : null;
@@ -59,7 +68,7 @@ export function useManualEvidence(
   const add = useCallback(
     async (input: EvidenceInput): Promise<boolean> => {
       if (count === null) return false;
-      const problem = validateEvidence(input, count);
+      const problem = validateEvidence(input, count, locale);
       if (problem !== null) {
         setError(problem);
         return false;
@@ -68,7 +77,7 @@ export function useManualEvidence(
         await gateway.addEvidence(sessionId, snapshotItemId, attemptNo, input);
       }, true);
     },
-    [count, run, gateway, sessionId, snapshotItemId, attemptNo],
+    [count, run, gateway, sessionId, snapshotItemId, attemptNo, locale],
   );
 
   const remove = useCallback(

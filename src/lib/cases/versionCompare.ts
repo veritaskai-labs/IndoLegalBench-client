@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, fill, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { VersionCompare, VersionSections } from "@/types/caseVersion";
 import { SECTION_KEYS, sectionLabel, sectionLines, visibleChanged } from "./versionSections";
 
@@ -10,20 +11,33 @@ type SectionKey = keyof VersionSections;
  */
 export const COMPARE_SECTION_KEYS: SectionKey[] = SECTION_KEYS.filter((key) => key !== "case_code");
 
-const NOTHING_CHANGED = "Tidak ada bagian yang berubah di antara kedua versi.";
+const SUMMARY_COPY = messages({
+  id: {
+    none: "Tidak ada bagian yang berubah di antara kedua versi.",
+    one: "{count} bagian berubah: {labels}.",
+    some: "{count} bagian berubah: {labels}.",
+  },
+  en: {
+    none: "No section changed between the two versions.",
+    one: "{count} section changed: {labels}.",
+    some: "{count} sections changed: {labels}.",
+  },
+});
 
 /**
  * Ringkasan di atas tabel, misalnya "2 bagian berubah: Kategori, Rujukan hukum." Urutannya
  * mengikuti tabel, bukan urutan dari server. Nama yang belum dikenal client tetap disebut di akhir
  * supaya perubahan dari server yang lebih baru tidak hilang diam-diam.
  */
-export function changeSummary(changed: readonly string[]): string {
+export function changeSummary(changed: readonly string[], locale: Locale = DEFAULT_LOCALE): string {
   const names = new Set(visibleChanged(changed));
   const known = COMPARE_SECTION_KEYS.filter((key) => names.has(key));
   const unknown = [...names].filter((name) => name !== "case_code" && !SECTION_KEYS.includes(name as SectionKey));
-  const labels = [...known, ...unknown].map(sectionLabel);
-  if (labels.length === 0) return NOTHING_CHANGED;
-  return `${labels.length} bagian berubah: ${labels.join(", ")}.`;
+  const labels = [...known, ...unknown].map((name) => sectionLabel(name, locale));
+  const copy = text(SUMMARY_COPY, locale);
+  if (labels.length === 0) return copy.none;
+  const template = labels.length === 1 ? copy.one : copy.some;
+  return fill(template, { count: labels.length, labels: labels.join(", ") });
 }
 
 /** both: baris yang sama ada di kedua versi. only_a / only_b: hanya ada di satu versi. */
@@ -57,9 +71,13 @@ const unmarked = (lines: string[]): MarkedLine[] => lines.map((text) => ({ text,
  * Isi satu bagian di kedua sisi, siap ditampilkan. Baris hanya ditandai bila server menyebut bagian
  * itu berubah, jadi tampilan tidak pernah menandai beda yang tidak dilaporkan server.
  */
-export function markedSectionLines(key: SectionKey, result: VersionCompare): { a: MarkedLine[]; b: MarkedLine[] } {
-  const a = sectionLines(key, result.a.sections);
-  const b = sectionLines(key, result.b.sections);
+export function markedSectionLines(
+  key: SectionKey,
+  result: VersionCompare,
+  locale: Locale = DEFAULT_LOCALE,
+): { a: MarkedLine[]; b: MarkedLine[] } {
+  const a = sectionLines(key, result.a.sections, locale);
+  const b = sectionLines(key, result.b.sections, locale);
   return result.changed.includes(key) ? compareLines(a, b) : { a: unmarked(a), b: unmarked(b) };
 }
 

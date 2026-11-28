@@ -3,8 +3,10 @@
 import { Controller, type Control, type UseFormRegister } from "react-hook-form";
 import type { RegulationTypesResource } from "@/hooks/useRegulationTypes";
 import type { CaseFormValues } from "@/lib/cases/caseFormMapping";
-import { CASE_HELP, CASE_PLACEHOLDER } from "@/lib/cases/caseHelpText";
+import { caseHelp, casePlaceholder } from "@/lib/cases/caseHelpText";
 import { visibleLinkFields, type LinkExtraField, type LinkForm } from "@/lib/cases/legalRefForm";
+import { messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
 import { TextField } from "./fields";
 import { RegulationTypeSelect } from "./RegulationTypeSelect";
 import type { ErrorLookup } from "./sections";
@@ -19,17 +21,30 @@ type Props = {
   regulationTypes: RegulationTypesResource;
 };
 
-/** Label, bantuan, dan contoh isian tiap field tambahan. Opsional ditandai di label saja. */
-const EXTRA_FIELDS: Record<LinkExtraField, { label: string; hint: string; placeholder: string }> = {
-  pasal: { label: "Pasal", hint: CASE_HELP.pasal, placeholder: CASE_PLACEHOLDER.pasal },
-  angka: { label: "Angka", hint: CASE_HELP.angka, placeholder: CASE_PLACEHOLDER.angka },
-  ayat: { label: "Ayat (opsional)", hint: CASE_HELP.ayat, placeholder: CASE_PLACEHOLDER.ayat },
-  huruf: {
-    label: "Huruf (opsional)",
-    hint: CASE_HELP.huruf,
-    placeholder: CASE_PLACEHOLDER.huruf,
+const LINK_COPY = messages({
+  id: {
+    regulationType: "Jenis peraturan",
+    loadingTypes: "Memuat jenis peraturan...",
+    number: "Nomor",
+    year: "Tahun",
+    about: "Tentang (opsional)",
+    pasal: "Pasal",
+    angka: "Angka",
+    ayat: "Ayat (opsional)",
+    huruf: "Huruf (opsional)",
   },
-};
+  en: {
+    regulationType: "Regulation type",
+    loadingTypes: "Loading regulation types...",
+    number: "Number",
+    year: "Year",
+    about: "About (optional)",
+    pasal: "Pasal",
+    angka: "Angka",
+    ayat: "Ayat (optional)",
+    huruf: "Huruf (optional)",
+  },
+});
 
 /** Field satu peraturan di dalam rujukan. Field tambahan mengikuti bentuk link-nya. */
 export function LegalRefLinkFields({
@@ -41,6 +56,16 @@ export function LegalRefLinkFields({
   errorFor,
   regulationTypes,
 }: Readonly<Props>) {
+  const copy = useText(LINK_COPY);
+  const locale = useLocale();
+  const help = caseHelp(locale);
+  const placeholder = casePlaceholder(locale);
+  const extraFields: Record<LinkExtraField, { label: string; hint: string; placeholder: string }> = {
+    pasal: { label: copy.pasal, hint: help.pasal, placeholder: placeholder.pasal },
+    angka: { label: copy.angka, hint: help.angka, placeholder: placeholder.angka },
+    ayat: { label: copy.ayat, hint: help.ayat, placeholder: placeholder.ayat },
+    huruf: { label: copy.huruf, hint: help.huruf, placeholder: placeholder.huruf },
+  };
   const base = `legal_refs.${refIndex}.links.${linkIndex}` as const;
   const ready = regulationTypes.status === "ready";
 
@@ -52,17 +77,15 @@ export function LegalRefLinkFields({
           name={`${base}.regulation_type`}
           render={({ field }) => (
             <RegulationTypeSelect
-              label="Jenis peraturan"
+              label={copy.regulationType}
               types={ready ? regulationTypes.types : []}
               value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
               inputRef={field.ref}
-              hint={CASE_HELP.regulationType}
+              hint={help.regulationType}
               placeholder={
-                regulationTypes.status === "loading"
-                  ? "Memuat jenis peraturan..."
-                  : CASE_PLACEHOLDER.regulationType
+                regulationTypes.status === "loading" ? copy.loadingTypes : placeholder.regulationType
               }
               disabled={!ready}
               error={errorFor(`${base}.regulation_type`)}
@@ -71,25 +94,25 @@ export function LegalRefLinkFields({
         />
       </div>
       <TextField
-        label="Nomor"
-        hint={CASE_HELP.number}
-        placeholder={CASE_PLACEHOLDER.number}
+        label={copy.number}
+        hint={help.number}
+        placeholder={placeholder.number}
         registration={register(`${base}.number`)}
         error={errorFor(`${base}.number`)}
       />
       <TextField
-        label="Tahun"
+        label={copy.year}
         type="number"
-        hint={CASE_HELP.year}
-        placeholder={CASE_PLACEHOLDER.year}
+        hint={help.year}
+        placeholder={placeholder.year}
         registration={register(`${base}.year`)}
         error={errorFor(`${base}.year`)}
       />
       <div className="sm:col-span-2">
         <TextField
-          label="Tentang (opsional)"
-          hint={CASE_HELP.about}
-          placeholder={CASE_PLACEHOLDER.about}
+          label={copy.about}
+          hint={help.about}
+          placeholder={placeholder.about}
           registration={register(`${base}.about`)}
           error={errorFor(`${base}.about`)}
         />
@@ -97,9 +120,9 @@ export function LegalRefLinkFields({
       {visibleLinkFields(form).map((name) => (
         <TextField
           key={name}
-          label={EXTRA_FIELDS[name].label}
-          hint={EXTRA_FIELDS[name].hint}
-          placeholder={EXTRA_FIELDS[name].placeholder}
+          label={extraFields[name].label}
+          hint={extraFields[name].hint}
+          placeholder={extraFields[name].placeholder}
           registration={register(`${base}.${name}`)}
           error={errorFor(`${base}.${name}`)}
         />

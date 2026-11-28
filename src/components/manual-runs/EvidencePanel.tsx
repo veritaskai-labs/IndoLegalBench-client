@@ -6,11 +6,13 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useManualEvidence } from "@/hooks/useManualEvidence";
 import { useRetainedResource } from "@/hooks/useRetainedResource";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import { answerErrorMessage, type ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import {
-  EVIDENCE_LIMIT_MESSAGE,
   MAX_EVIDENCE_PER_ANSWER,
   canAddEvidence,
+  evidenceMessage,
   formatFileSize,
   safeEvidenceHref,
 } from "@/lib/runs/manualEvidenceRules";
@@ -27,6 +29,47 @@ type Props = Readonly<{
   canEdit: boolean;
 }>;
 
+const COPY = messages({
+  id: {
+    download: "Unduh",
+    downloadLabel: "Unduh {name}",
+    delete: "Hapus",
+    deleteLabel: "Hapus bukti {n}",
+    loading: "Memuat bukti…",
+    count: "Bukti ({count} dari {max})",
+    upload: "Unggah berkas bukti",
+    link: "Tautan bukti",
+    addLink: "Tambah tautan",
+    deleteTitle: "Hapus bukti ini?",
+    deleteConfirm: "Hapus bukti",
+    deleteBusy: "Menghapus…",
+    deleteBody: "Berkas atau tautan ini dihapus dari jawaban dan tidak bisa dikembalikan.",
+    saveFirst: "Simpan jawaban terlebih dahulu untuk menambah bukti.",
+    region: "Bukti jawaban",
+    hide: "Sembunyikan bukti",
+    show: "Lihat bukti ({count} dari {max})",
+  },
+  en: {
+    download: "Download",
+    downloadLabel: "Download {name}",
+    delete: "Delete",
+    deleteLabel: "Delete evidence {n}",
+    loading: "Loading evidence…",
+    count: "Evidence ({count} of {max})",
+    upload: "Upload an evidence file",
+    link: "Evidence link",
+    addLink: "Add link",
+    deleteTitle: "Delete this evidence?",
+    deleteConfirm: "Delete evidence",
+    deleteBusy: "Deleting…",
+    deleteBody: "This file or link is removed from the answer and cannot be restored.",
+    saveFirst: "Save the answer first before adding evidence.",
+    region: "Answer evidence",
+    hide: "Hide evidence",
+    show: "View evidence ({count} of {max})",
+  },
+});
+
 const BUTTON = "rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 const ACCEPT = "image/png,image/jpeg,application/pdf";
 
@@ -36,13 +79,14 @@ function EvidenceLabel({
   busy,
   onDownload,
 }: Readonly<{ item: EvidenceRead; busy: boolean; onDownload: () => void }>) {
+  const copy = useText(COPY);
   if (item.kind === "file") {
     return (
       <div className="flex items-center gap-2">
         <span className="font-medium text-slate-900">{item.file_name}</span>
         <span className="text-xs text-slate-500">{formatFileSize(item.size_bytes)}</span>
-        <button type="button" className={BUTTON} disabled={busy} onClick={onDownload} aria-label={`Unduh ${item.file_name}`}>
-          Unduh
+        <button type="button" className={BUTTON} disabled={busy} onClick={onDownload} aria-label={fill(copy.downloadLabel, { name: item.file_name ?? "" })}>
+          {copy.download}
         </button>
       </div>
     );
@@ -71,12 +115,13 @@ function EvidenceItem({
   onDownload: () => void;
   onDelete: () => void;
 }>) {
+  const copy = useText(COPY);
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
       <EvidenceLabel item={item} busy={busy} onDownload={onDownload} />
       {canEdit && (
-        <button type="button" className={BUTTON} disabled={busy} onClick={onDelete} aria-label={`Hapus bukti ${position}`}>
-          Hapus
+        <button type="button" className={BUTTON} disabled={busy} onClick={onDelete} aria-label={fill(copy.deleteLabel, { n: position })}>
+          {copy.delete}
         </button>
       )}
     </li>
@@ -90,13 +135,15 @@ function EvidenceList({
   attemptNo,
   canEdit,
 }: Readonly<Omit<Props, "evidenceCount" | "slotFilled">>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const evidence = useManualEvidence(gateway, sessionId, snapshotItemId, attemptNo);
   const [linkText, setLinkText] = useState("");
   const [pendingDelete, setPendingDelete] = useState<EvidenceRead | null>(null);
   // Data lama tetap tampil saat daftar dimuat ulang, supaya kolom tautan tidak terlepas.
   const list = useRetainedResource(evidence.list);
 
-  if (list.status === "loading") return <LoadingState label="Memuat bukti…" />;
+  if (list.status === "loading") return <LoadingState label={copy.loading} />;
   if (list.status === "error") return <ErrorState variant="card" message={list.message} onRetry={list.reload} />;
 
   const items = list.data;
@@ -109,7 +156,7 @@ function EvidenceList({
   return (
     <div className="space-y-3">
       <h5 className="text-sm font-semibold text-slate-900">
-        Bukti ({items.length} dari {MAX_EVIDENCE_PER_ANSWER})
+        {fill(copy.count, { count: items.length, max: MAX_EVIDENCE_PER_ANSWER })}
       </h5>
       {items.length > 0 && (
         <ul className="space-y-2">
@@ -129,9 +176,9 @@ function EvidenceList({
 
       {canEdit && (
         <div className="space-y-2">
-          {!canAdd && <p className="text-xs text-slate-600">{EVIDENCE_LIMIT_MESSAGE}</p>}
+          {!canAdd && <p className="text-xs text-slate-600">{evidenceMessage("limit", locale)}</p>}
           <label className="block text-xs font-medium text-slate-600">
-            <span>Unggah berkas bukti</span>
+            <span>{copy.upload}</span>
             <input
               type="file"
               accept={ACCEPT}
@@ -146,7 +193,7 @@ function EvidenceList({
           </label>
           <div className="flex flex-wrap items-end gap-2">
             <label className="block text-xs font-medium text-slate-600">
-              <span>Tautan bukti</span>
+              <span>{copy.link}</span>
               <input
                 type="url"
                 value={linkText}
@@ -156,7 +203,7 @@ function EvidenceList({
               />
             </label>
             <button type="button" className={BUTTON} disabled={!canAdd || evidence.busy} onClick={() => void addLink()}>
-              Tambah tautan
+              {copy.addLink}
             </button>
           </div>
         </div>
@@ -170,15 +217,15 @@ function EvidenceList({
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Hapus bukti ini?"
-          confirmLabel="Hapus bukti"
-          busyLabel="Menghapus…"
+          title={copy.deleteTitle}
+          confirmLabel={copy.deleteConfirm}
+          busyLabel={copy.deleteBusy}
           onConfirm={() => evidence.remove(pendingDelete.id)}
-          errorMessage={answerErrorMessage}
+          errorMessage={(error) => answerErrorMessage(error, undefined, locale)}
           onDone={() => setPendingDelete(null)}
           onClose={() => setPendingDelete(null)}
         >
-          <p className="mt-2 text-sm text-slate-700">Berkas atau tautan ini dihapus dari jawaban dan tidak bisa dikembalikan.</p>
+          <p className="mt-2 text-sm text-slate-700">{copy.deleteBody}</p>
         </ConfirmDialog>
       )}
     </div>
@@ -193,16 +240,17 @@ function EvidenceList({
  * tidak mengirim satu permintaan per jawaban.
  */
 export function EvidencePanel({ evidenceCount, slotFilled, canEdit, ...rest }: Props) {
+  const copy = useText(COPY);
   const [open, setOpen] = useState(false);
   // Setelah dibuka sekali, daftar tetap terpasang (hanya disembunyikan) supaya tidak dimuat ulang
   // dan tautan yang sedang diketik tidak hilang.
   const [opened, setOpened] = useState(false);
   if (evidenceCount === null) return null;
   if (!slotFilled) {
-    return canEdit ? <p className="text-xs text-slate-500">Simpan jawaban terlebih dahulu untuk menambah bukti.</p> : null;
+    return canEdit ? <p className="text-xs text-slate-500">{copy.saveFirst}</p> : null;
   }
   return (
-    <section aria-label="Bukti jawaban" className="space-y-3 border-t border-slate-100 pt-3">
+    <section aria-label={copy.region} className="space-y-3 border-t border-slate-100 pt-3">
       <button
         type="button"
         className={BUTTON}
@@ -212,7 +260,7 @@ export function EvidencePanel({ evidenceCount, slotFilled, canEdit, ...rest }: P
           setOpened(true);
         }}
       >
-        {open ? "Sembunyikan bukti" : `Lihat bukti (${evidenceCount} dari ${MAX_EVIDENCE_PER_ANSWER})`}
+        {open ? copy.hide : fill(copy.show, { count: evidenceCount, max: MAX_EVIDENCE_PER_ANSWER })}
       </button>
       {opened && (
         <div hidden={!open}>

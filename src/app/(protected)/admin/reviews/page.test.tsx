@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import {
   listNeedsReassignment,
@@ -452,5 +453,23 @@ describe("AdminReviewsPage (SCRUM-150)", () => {
     await user.click(screen.getByRole("button", { name: "Batal" }));
     expect(trigger).toHaveFocus();
     expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("uses English chrome and leaves the case title unchanged", async () => {
+    queueMock.mockResolvedValue([
+      row({
+        void_assignments: [assignment({ status: "void", void_reason: "deactivated" })],
+      }),
+    ]);
+
+    render(
+      <LocaleProvider locale="en">
+        <AdminReviewsPage />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Case review" })).toBeInTheDocument();
+    expect(await screen.findByText("Sengketa tanah warisan")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Needs reassignment" })).toBeInTheDocument();
   });
 });

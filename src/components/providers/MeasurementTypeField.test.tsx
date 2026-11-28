@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
+
 import { MeasurementTypeField } from "./MeasurementTypeField";
 
 describe("MeasurementTypeField", () => {
@@ -50,5 +52,16 @@ describe("MeasurementTypeField", () => {
         "Jenis terkunci karena produk sudah punya riwayat pengukuran. Untuk produk yang salah jenis, nonaktifkan produk ini lalu daftarkan produk baru dengan nama berbeda.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("explains the automatic type in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <MeasurementTypeField value={null} onChange={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("radio", { name: /Automatic/ })).toBeInTheDocument();
+    expect(screen.getByText("Run by the system through the product API.")).toBeInTheDocument();
   });
 });

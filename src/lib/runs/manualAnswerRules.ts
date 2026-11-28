@@ -1,5 +1,6 @@
 import { isoToWibInput, nowWibInput, wibInputToIso } from "@/lib/datetime/wibInput";
 import type { Role } from "@/lib/auth";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 import type { ManualAnswerSaveRequest, ManualAttemptSlot, SessionStatus } from "@/types/measurement";
 
 /** Isian satu kotak jawaban. Waktu disimpan sebagai nilai kolom tanggal-jam dalam WIB. */
@@ -12,10 +13,22 @@ export type AnswerDraft = {
 
 export type DraftErrors = Partial<Record<"answer" | "note" | "obtainedAt", string>>;
 
-export const ANSWER_EMPTY_MESSAGE =
-  'Jawaban tidak boleh kosong. Tempel jawaban platform, atau pilih "Platform menolak menjawab".';
-export const NOTE_REQUIRED_MESSAGE = "Catatan wajib diisi bila platform menolak menjawab.";
-export const OBTAINED_AT_INVALID_MESSAGE = "Tanggal dan jam jawaban diperoleh tidak valid.";
+const DRAFT_MESSAGES = messages({
+  id: {
+    answer: 'Jawaban tidak boleh kosong. Tempel jawaban platform, atau pilih "Platform menolak menjawab".',
+    note: "Catatan wajib diisi bila platform menolak menjawab.",
+    obtainedAt: "Tanggal dan jam jawaban diperoleh tidak valid.",
+  },
+  en: {
+    answer: 'The answer cannot be empty. Paste the platform answer, or choose "Platform refused to answer".',
+    note: "A note is required when the platform refused to answer.",
+    obtainedAt: "The date and time the answer was obtained are not valid.",
+  },
+});
+
+export const ANSWER_EMPTY_MESSAGE = DRAFT_MESSAGES.id.answer;
+export const NOTE_REQUIRED_MESSAGE = DRAFT_MESSAGES.id.note;
+export const OBTAINED_AT_INVALID_MESSAGE = DRAFT_MESSAGES.id.obtainedAt;
 
 export function emptyDraft(now?: Date): AnswerDraft {
   return { answerMd: "", platformRefused: false, note: "", obtainedAt: nowWibInput(now) };
@@ -38,14 +51,15 @@ export function draftFromSlot(slot: ManualAttemptSlot, now?: Date): AnswerDraft 
  * Aturan AC6 dan AC7: jawaban tidak boleh kosong kecuali platform menolak menjawab, dan penolakan
  * wajib bercatatan. Teks jawaban hanya diperiksa, tidak diubah (AC4).
  */
-export function validateDraft(draft: AnswerDraft): DraftErrors {
+export function validateDraft(draft: AnswerDraft, locale: Locale = DEFAULT_LOCALE): DraftErrors {
+  const copy = text(DRAFT_MESSAGES, locale);
   const errors: DraftErrors = {};
   if (draft.platformRefused) {
-    if (draft.note.trim() === "") errors.note = NOTE_REQUIRED_MESSAGE;
+    if (draft.note.trim() === "") errors.note = copy.note;
   } else if (draft.answerMd.trim() === "") {
-    errors.answer = ANSWER_EMPTY_MESSAGE;
+    errors.answer = copy.answer;
   }
-  if (wibInputToIso(draft.obtainedAt) === null) errors.obtainedAt = OBTAINED_AT_INVALID_MESSAGE;
+  if (wibInputToIso(draft.obtainedAt) === null) errors.obtainedAt = copy.obtainedAt;
   return errors;
 }
 

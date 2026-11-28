@@ -10,6 +10,7 @@
 // memutuskan isian mana yang sah.
 
 import type { components } from "@/lib/generated/api";
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
 
 export type LinkForm = components["schemas"]["LegalRefLinkWrite"]["form"];
 export type LinkConnector = components["schemas"]["LegalRefLinkWrite"]["connector"];
@@ -50,17 +51,43 @@ const FORM_FIELDS: Record<LinkForm, readonly LinkExtraField[]> = {
 
 const EXTRA_FIELDS: readonly LinkExtraField[] = ["pasal", "angka", "ayat", "huruf"];
 
-export const LINK_FORM_OPTIONS: readonly { value: LinkForm; label: string }[] = [
-  { value: "name_only", label: "Nama Peraturan saja" },
-  { value: "pasal", label: "Pasal" },
-  { value: "pasal_angka", label: "Pasal + Angka" },
-];
+const FORM_OPTION_COPY = messages({
+  id: {
+    nameOnly: "Nama Peraturan saja",
+    pasal: "Pasal",
+    pasalAngka: "Pasal + Angka",
+    freeText: "Teks Bebas",
+  },
+  en: {
+    nameOnly: "Regulation name only",
+    pasal: "Pasal",
+    pasalAngka: "Pasal + Angka",
+    freeText: "Free text",
+  },
+});
+
+export function linkFormOptions(
+  locale: Locale = DEFAULT_LOCALE,
+): readonly { value: LinkForm; label: string }[] {
+  const copy = text(FORM_OPTION_COPY, locale);
+  return [
+    { value: "name_only", label: copy.nameOnly },
+    { value: "pasal", label: copy.pasal },
+    { value: "pasal_angka", label: copy.pasalAngka },
+  ];
+}
+
+/** Indonesian labels. Existing imports keep reading this. */
+export const LINK_FORM_OPTIONS: readonly { value: LinkForm; label: string }[] = linkFormOptions();
 
 /** Pilihan di link pertama: empat bentuk AC4, Teks Bebas terakhir. */
-export const REF_MODE_OPTIONS: readonly { value: RefMode; label: string }[] = [
-  ...LINK_FORM_OPTIONS,
-  { value: "free_text", label: "Teks Bebas" },
-];
+export function refModeOptions(
+  locale: Locale = DEFAULT_LOCALE,
+): readonly { value: RefMode; label: string }[] {
+  return [...linkFormOptions(locale), { value: "free_text", label: text(FORM_OPTION_COPY, locale).freeText }];
+}
+
+export const REF_MODE_OPTIONS: readonly { value: RefMode; label: string }[] = refModeOptions();
 
 const DEFAULT_FORM: LinkForm = "pasal";
 

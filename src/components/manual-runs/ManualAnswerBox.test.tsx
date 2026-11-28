@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
@@ -310,5 +311,26 @@ describe("ManualAnswerBox evidence (AC7)", () => {
     // Assert
     expect(screen.queryByRole("region", { name: "Bukti jawaban" })).not.toBeInTheDocument();
     expect(listEvidence).not.toHaveBeenCalled();
+  });
+});
+
+describe("ManualAnswerBox English", () => {
+  it("names Save answer in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ManualAnswerBox
+          sessionId="sesi-1"
+          snapshotItemId="snap-1"
+          slot={slot()}
+          gateway={{ saveAnswer: vi.fn(), getHistory: vi.fn(), listEvidence: vi.fn() } as unknown as ManualAnswerGateway}
+          canEdit
+          currentUserId="u-2"
+          onSaved={vi.fn()}
+          onDirtyChange={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Save answer" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Attempt 1" })).toBeInTheDocument();
   });
 });

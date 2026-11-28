@@ -1,4 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -87,5 +88,17 @@ describe("AcceptAsIsDialog (PBI-12 AC9: a written reason is required)", () => {
 
     expect(accept).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledWith(false);
+  });
+});
+
+describe("AcceptAsIsDialog English", () => {
+  it("names the dialog in English and leaves the session label unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <AcceptAsIsDialog session={{ id: "s-1", label: "Run November" }} onAccepted={vi.fn()} onClose={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Accept the session as-is?" })).toBeInTheDocument();
+    expect(screen.getByText(/Run November/)).toBeInTheDocument();
   });
 });

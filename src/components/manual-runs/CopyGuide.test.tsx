@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { describe, expect, it } from "vitest";
 import { CopyGuide } from "./CopyGuide";
 
@@ -44,5 +45,16 @@ describe("CopyGuide (AC3)", () => {
     // Assert
     expect(screen.queryByText(/unduh|unggah template|template/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+});
+
+describe("CopyGuide English", () => {
+  it("names the guide in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <CopyGuide />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "Guide to filling in answers" })).toBeInTheDocument();
   });
 });

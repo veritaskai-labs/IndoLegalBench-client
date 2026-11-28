@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import {
   createProduct,
   testConnection,
@@ -840,5 +841,19 @@ describe("ProviderFormDialog returning to the stored type (AC4)", () => {
 
     expect(screen.getByLabelText("Model")).toHaveValue("");
     expect(screen.getByLabelText("Budget per bulan (Rp)")).toHaveValue("");
+  });
+});
+
+describe("ProviderFormDialog in English", () => {
+  it("names the form in English and leaves the product name and API type", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ProviderFormDialog product={AUTOMATIC_PRODUCT} onClose={vi.fn()} onSaved={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Edit AI product" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveValue("DeepSeek");
+    expect(screen.getByRole("option", { name: "OpenAI-compatible" })).toBeInTheDocument();
   });
 });

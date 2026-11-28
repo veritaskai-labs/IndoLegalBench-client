@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { listRegulationTypes } from "@/lib/cases/regulationTypeApi";
 import { regulationTypeErrorMessage } from "@/lib/cases/regulationTypeErrors";
 import { useAsyncResource } from "./useAsyncResource";
@@ -10,10 +11,11 @@ import { useAsyncResource } from "./useAsyncResource";
  * kosong tetap status ready.
  */
 export function useRegulationTypes() {
+  const locale = useLocale();
   const { reload, ...resource } = useAsyncResource(
     "regulation-types",
     listRegulationTypes,
-    regulationTypeErrorMessage,
+    (error) => regulationTypeErrorMessage(error, locale),
   );
 
   if (resource.status === "ready")

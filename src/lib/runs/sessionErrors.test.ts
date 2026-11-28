@@ -125,3 +125,16 @@ describe("attemptIdOf", () => {
     );
   });
 });
+
+describe("English (SCRUM-357)", () => {
+  it("counts failed calls in English and keeps Indonesian grouping on the number", () => {
+    expect(errorSummaryText(0, "en")).toBe("No calls failed");
+    expect(errorSummaryText(1, "en")).toBe("1 call failed because of a technical problem");
+    expect(errorSummaryText(1500, "en")).toBe("1.500 calls failed because of a technical problem");
+  });
+
+  it("names a missing model version in English and leaves a recorded version unchanged", () => {
+    expect(modelVersionText(null, "en")).toBe("Not recorded");
+    expect(modelVersionText("gemini-2.0-flash", "en")).toBe("gemini-2.0-flash");
+  });
+});

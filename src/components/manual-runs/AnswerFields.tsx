@@ -2,7 +2,30 @@
 
 import { useId, useState } from "react";
 import { MarkdownAnswer } from "@/components/runs/MarkdownAnswer";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { fill, messages } from "@/lib/i18n/locale";
 import type { AnswerDraft, DraftErrors } from "@/lib/runs/manualAnswerRules";
+
+const COPY = messages({
+  id: {
+    note: "Catatan penolakan Percobaan {n}",
+    answer: "Jawaban Percobaan {n}",
+    write: "Tulis",
+    preview: "Pratinjau",
+    emptyPreview: "Belum ada isi untuk dipratinjau.",
+    refused: "Platform menolak menjawab",
+    obtained: "Tanggal dan jam jawaban diperoleh (WIB)",
+  },
+  en: {
+    note: "Refusal note for attempt {n}",
+    answer: "Answer for attempt {n}",
+    write: "Write",
+    preview: "Preview",
+    emptyPreview: "Nothing to preview yet.",
+    refused: "Platform refused to answer",
+    obtained: "Date and time the answer was obtained (WIB)",
+  },
+});
 
 type View = "write" | "preview";
 
@@ -23,11 +46,12 @@ type FieldProps = Readonly<{
 
 /** Catatan wajib saat platform menolak menjawab (AC6). */
 function RefusalNote({ attemptNo, error, disabled, value, onChange }: FieldProps & Readonly<{ value: string; onChange: (value: string) => void }>) {
+  const copy = useText(COPY);
   const errorId = useId();
   return (
     <div className="space-y-1">
       <textarea
-        aria-label={`Catatan penolakan Percobaan ${attemptNo}`}
+        aria-label={fill(copy.note, { n: attemptNo })}
         aria-invalid={error !== undefined}
         aria-describedby={error ? errorId : undefined}
         readOnly={disabled}
@@ -47,21 +71,22 @@ function RefusalNote({ attemptNo, error, disabled, value, onChange }: FieldProps
 
 /** Kotak jawaban markdown dengan tab Tulis dan Pratinjau (AC4). */
 function AnswerBox({ attemptNo, error, disabled, value, onChange }: FieldProps & Readonly<{ value: string; onChange: (value: string) => void }>) {
+  const copy = useText(COPY);
   const [view, setView] = useState<View>("write");
   const errorId = useId();
   return (
     <div className="space-y-1">
       <div className="flex gap-2">
         <button type="button" className={view === "write" ? TAB_ON : TAB_OFF} aria-pressed={view === "write"} onClick={() => setView("write")}>
-          Tulis
+          {copy.write}
         </button>
         <button type="button" className={view === "preview" ? TAB_ON : TAB_OFF} aria-pressed={view === "preview"} onClick={() => setView("preview")}>
-          Pratinjau
+          {copy.preview}
         </button>
       </div>
       {view === "write" ? (
         <textarea
-          aria-label={`Jawaban Percobaan ${attemptNo}`}
+          aria-label={fill(copy.answer, { n: attemptNo })}
           aria-invalid={error !== undefined}
           aria-describedby={error ? errorId : undefined}
           readOnly={disabled}
@@ -73,7 +98,7 @@ function AnswerBox({ attemptNo, error, disabled, value, onChange }: FieldProps &
       ) : (
         <div className="min-h-24 rounded-md border border-slate-200 bg-white">
           {value.trim() === "" ? (
-            <p className="px-3 py-2 text-sm text-slate-500">Belum ada isi untuk dipratinjau.</p>
+            <p className="px-3 py-2 text-sm text-slate-500">{copy.emptyPreview}</p>
           ) : (
             <MarkdownAnswer source={value} />
           )}
@@ -106,6 +131,7 @@ export function AnswerFields({
   disabled: boolean;
   onChange: <K extends keyof AnswerDraft>(key: K, value: AnswerDraft[K]) => void;
 }>) {
+  const copy = useText(COPY);
   const timeErrorId = useId();
 
   return (
@@ -117,7 +143,7 @@ export function AnswerFields({
           disabled={disabled}
           onChange={(event) => onChange("platformRefused", event.target.checked)}
         />
-        <span>Platform menolak menjawab</span>
+        <span>{copy.refused}</span>
       </label>
 
       {draft.platformRefused ? (
@@ -128,7 +154,7 @@ export function AnswerFields({
 
       <div className="space-y-1">
         <label className="block text-xs font-medium text-slate-600">
-          <span>Tanggal dan jam jawaban diperoleh (WIB)</span>
+          <span>{copy.obtained}</span>
           <input
             type="datetime-local"
             value={draft.obtainedAt}

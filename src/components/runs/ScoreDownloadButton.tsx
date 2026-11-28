@@ -5,6 +5,8 @@ import { useId, useRef, useState } from "react";
 import type { AsyncResource } from "@/hooks/useAsyncResource";
 import { ApiError } from "@/lib/apiClient";
 import { saveBlob } from "@/lib/browserDownload";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { messages, text } from "@/lib/i18n/locale";
 import {
   scoreDownloadDecision,
   type ScoreDownloadSession,
@@ -14,7 +16,15 @@ import { httpScoreDownload, type ScoreDownload } from "@/lib/runs/scoreDownloadA
 
 type Session = ScoreDownloadSession & { id: string };
 
-const DOWNLOAD_FAILED = "Permintaan gagal. Coba lagi.";
+const DOWNLOAD_FAILED = messages({
+  id: "Permintaan gagal. Coba lagi.",
+  en: "The request failed. Try again.",
+});
+
+const DOWNLOAD_LABEL = messages({
+  id: "Unduh skor",
+  en: "Download score",
+});
 
 /** Kalimat 409 yang memang ditulis untuk pengguna. Kode lain tidak ditampilkan. */
 const DOWNLOAD_REFUSAL = new Set([
@@ -27,11 +37,11 @@ const DOWNLOAD_REFUSAL = new Set([
   "SCORE_FILE_NO_VISIBLE_CASES",
 ]);
 
-function failureText(error: unknown): string {
+function failureText(error: unknown, locale: ReturnType<typeof useLocale>): string {
   if (error instanceof ApiError && error.serverMessage !== null && DOWNLOAD_REFUSAL.has(error.code)) {
     return error.serverMessage;
   }
-  return DOWNLOAD_FAILED;
+  return text(DOWNLOAD_FAILED, locale);
 }
 
 export function gradingOf(results: AsyncResource<unknown>): ScoreGrading {
@@ -54,11 +64,13 @@ export function ScoreDownloadButton({
   grading: ScoreGrading;
   download?: ScoreDownload["download"];
 }>) {
+  const locale = useLocale();
+  const downloadLabel = useText(DOWNLOAD_LABEL);
   const reasonId = useId();
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const decision = scoreDownloadDecision(session, grading);
+  const decision = scoreDownloadDecision(session, grading, locale);
   const reason = decision.eligible ? null : decision.reason;
 
   async function onClick() {
@@ -70,7 +82,7 @@ export function ScoreDownloadButton({
       const file = await download(session.id);
       saveBlob(file.blob, file.fileName);
     } catch (error: unknown) {
-      setFailure(failureText(error));
+      setFailure(failureText(error, locale));
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -100,7 +112,7 @@ export function ScoreDownloadButton({
             : "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-500"
         }
       >
-        Unduh skor
+        {downloadLabel}
       </button>
     </div>
   );

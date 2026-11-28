@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { findCaseReview } from "@/lib/reviews/reviewApi";
 import { CASE_ID, makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
 import type { Role } from "@/types";
@@ -100,5 +101,16 @@ describe("ReviewerFeedbackGate", () => {
     // Assert
     expect(feedback()).not.toBeInTheDocument();
     expect(reviewMock).not.toHaveBeenCalled();
+  });
+
+  it("uses English chrome and leaves the reviewer comment unchanged", async () => {
+    render(
+      <LocaleProvider locale="en">
+        <ReviewerFeedbackGate caseId={CASE_ID} user={me("admin")} status="needs_revision" />
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("region", { name: "Reviewer notes" })).toBeInTheDocument();
+    expect(screen.getByText("Pasal 151 salah")).toBeInTheDocument();
   });
 });

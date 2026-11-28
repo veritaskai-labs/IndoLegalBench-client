@@ -198,3 +198,15 @@ describe("casesDoneSummary (SCRUM-266, session list column)", () => {
     expect(casesDoneSummary(0, 0, 0)).toBe("0 dari 0 kasus · 0%");
   });
 });
+
+describe("progress words English", () => {
+  it("says there are no calls yet, and counts the rest in English around the same digits", () => {
+    expect(callCountText(0, 0, "en")).toBe("No calls yet");
+    expect(callCountText(1200, 1500, "en")).toBe("1.200 of 1.500");
+  });
+
+  it("estimates the remaining time in English", () => {
+    expect(remainingTimeText(null, "en")).toBe("Cannot estimate yet");
+    expect(remainingTimeText(60, "en")).toBe("about 1 minute");
+  });
+});

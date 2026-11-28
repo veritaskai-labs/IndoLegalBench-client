@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 
 vi.mock("@/lib/reviews/reviewApi", () => ({ replaceReviewer: vi.fn() }));
 
@@ -33,6 +34,10 @@ describe("useReplaceReviewer", () => {
     replaceMock.mockReset();
   });
 
+  afterEach(() => {
+    resetMockLocale();
+  });
+
   // Positif
   it("sends the replacement and tells the page it is done", async () => {
     const onDone = vi.fn();
@@ -64,6 +69,18 @@ describe("useReplaceReviewer", () => {
     );
     expect(onDone).not.toHaveBeenCalled();
     expect(result.current.pending).toBe(false);
+  });
+
+  it("names the author rule in English when the language mock is English", async () => {
+    setMockLocale("en");
+    replaceMock.mockRejectedValue(new ApiError(422, "CANNOT_ASSIGN_AUTHOR"));
+
+    const { result } = renderHook(() => useReplaceReviewer(vi.fn()));
+    await act(async () => {
+      await result.current.replace("a1", BODY);
+    });
+
+    expect(result.current.error).toBe("The case author cannot be a reviewer.");
   });
 
   // corner

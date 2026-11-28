@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useAuth } from "@/hooks/useAuth";
 import { useJudgeOptions, type JudgeOptionsApi } from "@/hooks/useJudgeOptions";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
 import { isUnavailableJudge } from "@/lib/providers/judgeChoice";
 
 type Props = {
@@ -17,7 +19,32 @@ type Props = {
 
 const BOX = "h-9 w-full rounded-control border border-line bg-paper px-3 text-sm text-ink";
 
-const COST_NOTE = "Biayanya memotong anggaran bulanan produk ini di halaman Produk AI.";
+const COPY = messages({
+  id: {
+    label: "Penilai LLM (LLM judge)",
+    cost: "Biayanya memotong anggaran bulanan produk ini di halaman Produk AI.",
+    loadFailed: "Gagal memuat penilai LLM.",
+    loading: "Memuat penilai LLM…",
+    emptyLead: "Belum ada penilai LLM yang aktif.",
+    emptyAdminBefore: "Tambahkan di",
+    emptyAdminLink: "halaman Produk AI",
+    emptyAdminAfter: ".",
+    emptyOther: "Minta Admin menambahkannya di halaman Produk AI.",
+    placeholder: "Pilih penilai LLM",
+  },
+  en: {
+    label: "LLM judge",
+    cost: "Its cost comes out of this product's monthly budget on the AI products page.",
+    loadFailed: "Could not load LLM judges.",
+    loading: "Loading LLM judges…",
+    emptyLead: "No active LLM judge yet.",
+    emptyAdminBefore: "Add one on the",
+    emptyAdminLink: "AI products page",
+    emptyAdminAfter: ".",
+    emptyOther: "Ask an Admin to add one on the AI products page.",
+    placeholder: "Choose an LLM judge",
+  },
+});
 
 /**
  * Pemilih penilai LLM (LLM judge) dari produk otomatis yang aktif di halaman Produk AI (PBI-14 AC1).
@@ -32,6 +59,7 @@ export function JudgeProviderSelect({
 }: Readonly<Props>) {
   const id = useId();
   const noteId = `${id}-catatan`;
+  const copy = useText(COPY);
   const judges = useJudgeOptions(api);
   const auth = useAuth();
   const isAdmin = auth.status === "authenticated" && auth.user.role === "admin";
@@ -44,30 +72,30 @@ export function JudgeProviderSelect({
 
   function control() {
     if (judges.status === "error") {
-      return <ErrorState message="Gagal memuat penilai LLM." onRetry={judges.reload} className="mt-1" />;
+      return <ErrorState message={copy.loadFailed} onRetry={judges.reload} className="mt-1" />;
     }
     if (judges.status !== "ready") {
       return (
         <output className={`${BOX} mt-1 flex items-center gap-2 text-muted`}>
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
-          <span>Memuat penilai LLM…</span>
+          <span>{copy.loading}</span>
         </output>
       );
     }
     if (judges.options.length === 0) {
       return (
         <p className="mt-1 text-sm text-muted">
-          Belum ada penilai LLM yang aktif.{" "}
+          {copy.emptyLead}{" "}
           {isAdmin ? (
             <>
-              Tambahkan di{" "}
+              {copy.emptyAdminBefore}{" "}
               <Link href="/admin/providers" className="text-accent-ink underline">
-                halaman Produk AI
+                {copy.emptyAdminLink}
               </Link>
-              .
+              {copy.emptyAdminAfter}
             </>
           ) : (
-            "Minta Admin menambahkannya di halaman Produk AI."
+            copy.emptyOther
           )}
         </p>
       );
@@ -83,7 +111,7 @@ export function JudgeProviderSelect({
         aria-describedby={noteId}
         className={`${BOX} mt-1`}
       >
-        <option value="">Pilih penilai LLM</option>
+        <option value="">{copy.placeholder}</option>
         {judges.options.map((option) => (
           <option key={option.id} value={option.id}>
             {option.name}
@@ -97,14 +125,14 @@ export function JudgeProviderSelect({
     <div>
       <div className="flex items-baseline">
         <label htmlFor={id} className="block text-sm font-medium text-ink">
-          Penilai LLM (LLM judge)
+          {copy.label}
         </label>
         <span aria-hidden="true" className="ml-0.5 text-accent">
           *
         </span>
       </div>
       <p id={noteId} className="text-xs leading-4 text-muted">
-        {COST_NOTE}
+        {copy.cost}
       </p>
       {control()}
     </div>

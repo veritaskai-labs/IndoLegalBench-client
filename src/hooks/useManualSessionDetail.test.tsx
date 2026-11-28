@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { useManualSessionDetail } from "./useManualSessionDetail";
 import { getManualSession } from "@/lib/runs/manualRunsApi";
 import { ApiError } from "@/lib/apiClient";
@@ -37,6 +38,10 @@ const MOCK_DETAIL: ManualSessionDetail = {
 describe("useManualSessionDetail (PBI-22 AC8, AC11)", () => {
   beforeEach(() => {
     mockGet.mockReset();
+  });
+
+  afterEach(() => {
+    resetMockLocale();
   });
 
   it("loads session detail without unfilled filter", async () => {
@@ -84,6 +89,18 @@ describe("useManualSessionDetail (PBI-22 AC8, AC11)", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Gagal memuat sesi pengukuran manual. Coba lagi.",
+    });
+  });
+
+  it("explains a failed load in English when the language mock is English", async () => {
+    setMockLocale("en");
+    mockGet.mockRejectedValue(new Error("Network failure"));
+
+    const { result } = renderHook(() => useManualSessionDetail("s-123"));
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current).toMatchObject({
+      message: "Could not load the manual measurement session. Try again.",
     });
   });
 });

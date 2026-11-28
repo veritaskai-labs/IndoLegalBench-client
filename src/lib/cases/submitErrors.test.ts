@@ -44,6 +44,10 @@ describe("mapSubmitError", () => {
       "Gagal mengajukan kasus. Coba lagi.",
     );
   });
+
+  it("says a failed submission in English", () => {
+    expect(mapSubmitError(new Error("boom"), "en")).toBe("Could not submit the case. Try again.");
+  });
   // Negative: 409 kedua dari server #49 — mengulang pengajuan tidak akan pernah menolong.
   it("explains a version with no revise decision yet", () => {
     expect(mapSubmitError(new ApiError(409, "ROUND_NOT_REVISED"))).toBe(

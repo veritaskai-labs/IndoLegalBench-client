@@ -189,3 +189,19 @@ describe("awaitingFirstAnswer (PBI-11 AC9 empty state)", () => {
     expect(awaitingFirstAnswer(cases)).toBe(true);
   });
 });
+
+describe("session detail words English", () => {
+  it("summarizes attempts in English", () => {
+    expect(attemptSummary([], "en")).toBe("No attempts yet");
+    expect(attemptSummary([attempt(), attempt({ repetition_no: 2, status: "technical_failure", answer_text: null })], "en")).toBe(
+      "1 of 2 succeeded · 1 technical failure",
+    );
+  });
+
+  it("explains a hidden test case in English and still returns null when an answer exists", () => {
+    expect(answerPlaceholder(attempt({ answer_text: "Jawaban tetap" }), { masked: false }, "en")).toBeNull();
+    expect(answerPlaceholder(attempt({ answer_text: null }), { masked: true }, "en")).toBe(
+      "Test-case content is hidden from Developer AI.",
+    );
+  });
+});

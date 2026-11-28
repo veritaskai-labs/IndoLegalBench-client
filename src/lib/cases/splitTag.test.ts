@@ -101,6 +101,10 @@ describe("splitTagErrorMessage", () => {
     // Act + Assert
     expect(splitTagErrorMessage(new Error("network"))).toBe("Gagal mengubah tag. Coba lagi.");
   });
+
+  it("says a failed tag change in English", () => {
+    expect(splitTagErrorMessage(new Error("network"), "en")).toBe("Could not change the tag. Try again.");
+  });
 });
 
 describe("splitTagErrorMessage unknown server errors", () => {

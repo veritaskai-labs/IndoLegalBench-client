@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiFetch } from "@/lib/apiClient";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
 import { DeleteSuiteDialog } from "./DeleteSuiteDialog";
 
@@ -106,5 +107,15 @@ describe("DeleteSuiteDialog", () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("asks to remove the suite in English and keeps its name", () => {
+    render(
+      <LocaleProvider locale="en">
+        <DeleteSuiteDialog suite={suite} onClose={vi.fn()} onDone={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Remove suite" })).toHaveTextContent("Perburuhan");
+    expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
   });
 });

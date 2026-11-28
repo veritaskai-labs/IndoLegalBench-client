@@ -1,7 +1,30 @@
+import { DEFAULT_LOCALE, messages, text, type Locale } from "@/lib/i18n/locale";
+
 /** Batas bukti per jawaban (AC7). Server memeriksa lagi dengan 409 EVIDENCE_LIMIT_REACHED. */
 export const MAX_EVIDENCE_PER_ANSWER = 3;
 
-export const EVIDENCE_LIMIT_MESSAGE = `Bukti sudah mencapai batas ${MAX_EVIDENCE_PER_ANSWER} per jawaban. Hapus satu bukti untuk menambah yang baru.`;
+const EVIDENCE_TEXT = messages({
+  id: {
+    type: "Hanya berkas PNG, JPG, atau PDF yang boleh diunggah.",
+    empty: "Berkas kosong. Pilih tangkapan layar yang benar.",
+    linkRequired: "Tautan bukti wajib diisi.",
+    linkProtocol: "Tautan bukti harus diawali http:// atau https://.",
+    limit: `Bukti sudah mencapai batas ${MAX_EVIDENCE_PER_ANSWER} per jawaban. Hapus satu bukti untuk menambah yang baru.`,
+  },
+  en: {
+    type: "Only PNG, JPG, or PDF files can be uploaded.",
+    empty: "The file is empty. Choose the correct screenshot.",
+    linkRequired: "An evidence link is required.",
+    linkProtocol: "An evidence link must start with http:// or https://.",
+    limit: `Evidence has reached the limit of ${MAX_EVIDENCE_PER_ANSWER} per answer. Delete one piece of evidence to add another.`,
+  },
+});
+
+export const EVIDENCE_LIMIT_MESSAGE = EVIDENCE_TEXT.id.limit;
+
+export function evidenceMessage(issue: keyof typeof EVIDENCE_TEXT.id, locale: Locale = DEFAULT_LOCALE): string {
+  return text(EVIDENCE_TEXT, locale)[issue];
+}
 
 const ALLOWED_FILE_TYPES: readonly string[] = ["image/png", "image/jpeg", "application/pdf"];
 /** Tipe kosong atau generik: server memeriksa isi berkas (magic bytes), jadi client tidak menolaknya. */
@@ -15,16 +38,18 @@ type EvidenceKind = EvidenceInput["kind"];
  * alur validateEvidence tidak berubah. Ukuran berkas sengaja tidak diperiksa di sini: batas
  * teknisnya diatur tim di server dan dijawab 413.
  */
-const KIND_RULES: { [K in EvidenceKind]: (input: Extract<EvidenceInput, { kind: K }>) => string | null } = {
+type EvidenceIssue = keyof typeof EVIDENCE_TEXT.id;
+
+const KIND_RULES: { [K in EvidenceKind]: (input: Extract<EvidenceInput, { kind: K }>) => EvidenceIssue | null } = {
   file: ({ file }) => {
-    if (!ALLOWED_FILE_TYPES.includes(file.type) && !GENERIC_FILE_TYPES.includes(file.type)) return "Hanya berkas PNG, JPG, atau PDF yang boleh diunggah.";
-    if (file.size === 0) return "Berkas kosong. Pilih tangkapan layar yang benar.";
+    if (!ALLOWED_FILE_TYPES.includes(file.type) && !GENERIC_FILE_TYPES.includes(file.type)) return "type";
+    if (file.size === 0) return "empty";
     return null;
   },
   link: ({ url }) => {
-    const text = url.trim();
-    if (text === "") return "Tautan bukti wajib diisi.";
-    return safeEvidenceHref(text) === null ? "Tautan bukti harus diawali http:// atau https://." : null;
+    const trimmed = url.trim();
+    if (trimmed === "") return "linkRequired";
+    return safeEvidenceHref(trimmed) === null ? "linkProtocol" : null;
   },
 };
 
@@ -34,10 +59,11 @@ export function canAddEvidence(count: number | null): boolean {
 }
 
 /** Pesan galat untuk bukti yang akan ditambah, atau null bila boleh dikirim ke server. */
-export function validateEvidence(input: EvidenceInput, currentCount: number): string | null {
-  if (!canAddEvidence(currentCount)) return EVIDENCE_LIMIT_MESSAGE;
-  const rule = KIND_RULES[input.kind] as (value: EvidenceInput) => string | null;
-  return rule(input);
+export function validateEvidence(input: EvidenceInput, currentCount: number, locale: Locale = DEFAULT_LOCALE): string | null {
+  if (!canAddEvidence(currentCount)) return evidenceMessage("limit", locale);
+  const rule = KIND_RULES[input.kind] as (value: EvidenceInput) => EvidenceIssue | null;
+  const issue = rule(input);
+  return issue === null ? null : evidenceMessage(issue, locale);
 }
 
 /** Tautan bukti hanya bisa diklik bila http atau https; ini pagar kedua di belakang pemeriksaan server. */

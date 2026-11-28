@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
+
 import { SaveTypeWarningDialog } from "./SaveTypeWarningDialog";
 
 describe("SaveTypeWarningDialog (AC3)", () => {
@@ -115,5 +117,15 @@ describe("SaveTypeWarningDialog (AC3)", () => {
     );
 
     expect(screen.getByRole("dialog")).toHaveClass("m-auto");
+  });
+
+  it("asks in English before saving a manual product", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SaveTypeWarningDialog measurementType="manual" onConfirm={vi.fn()} onCancel={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Save as a Manual product?" })).toBeInTheDocument();
   });
 });

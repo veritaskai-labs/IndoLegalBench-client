@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { LocaleProvider } from '@/lib/i18n/LocaleProvider';
 import { getDiscussion, sendReply } from '@/lib/reviews/discussionApi';
 import { DiscussionLauncher } from './DiscussionLauncher';
 vi.mock('@/lib/reviews/discussionApi', async (original) => ({ ...await original<typeof import('@/lib/reviews/discussionApi')>(), getDiscussion: vi.fn(), sendReply: vi.fn() }));
@@ -71,4 +72,16 @@ it('opens a read-only drawer with the notice and no reply form when asked to', a
   expect(await screen.findByText('Perjelas rujukan')).toBeInTheDocument();
   expect(screen.getByText('Kasus sudah disetujui. Komentar dan thread hanya dapat dibaca.')).toBeInTheDocument();
   expect(screen.queryByLabelText('Balasan Anda')).not.toBeInTheDocument();
+});
+
+it('uses English chrome and leaves the reviewer comment unchanged', async () => {
+  const user = userEvent.setup();
+  render(
+    <LocaleProvider locale="en">
+      <DiscussionLauncher assignmentId="a1" />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole('button', { name: 'Reply to comment' }));
+  expect(screen.getByRole('button', { name: 'Close discussion' })).toBeInTheDocument();
+  expect(await screen.findByText('Perjelas rujukan')).toBeInTheDocument();
 });

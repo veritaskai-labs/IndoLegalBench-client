@@ -2,7 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
-import { SelectField, TextAreaField, TextField } from "./fields";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
+import { RowGroup, SelectField, TextAreaField, TextField } from "./fields";
 
 // Registrasi palsu: field ini tidak butuh form sungguhan untuk diuji.
 function registration(name: string): UseFormRegisterReturn {
@@ -170,5 +171,19 @@ describe("SelectField", () => {
 
     // Assert
     expect(screen.getByLabelText("Bentuk rujukan")).not.toHaveAttribute("aria-describedby");
+  });
+});
+
+describe("RowGroup", () => {
+  it("says Remove in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <RowGroup title="Reference 1" removeLabel="Remove reference 1" onRemove={vi.fn()}>
+          <span>Pasal 151</span>
+        </RowGroup>
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("button", { name: "Remove reference 1" })).toHaveTextContent("Remove");
+    expect(screen.getByText("Pasal 151")).toBeInTheDocument();
   });
 });

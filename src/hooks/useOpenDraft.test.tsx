@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { getOpenCaseVersion } from "@/lib/cases/versionApi";
 import type { CaseRead } from "@/types/case";
 import { useOpenDraft } from "./useOpenDraft";
@@ -16,6 +17,10 @@ const onFound = vi.fn();
 beforeEach(() => {
   openMock.mockReset();
   onFound.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useOpenDraft", () => {
@@ -71,6 +76,18 @@ describe("useOpenDraft", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Gagal memuat draf versi baru. Coba lagi.",
+    });
+  });
+
+  it("shows the English message when the language mock is English", async () => {
+    setMockLocale("en");
+    openMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+
+    const { result } = renderHook(() => useOpenDraft("case-1", true, onFound));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({
+      message: "Could not load the new-version draft. Try again.",
     });
   });
 

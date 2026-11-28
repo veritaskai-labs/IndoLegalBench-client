@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
@@ -131,6 +132,18 @@ describe("NewCasePage", () => {
     expect(screen.getByRole("heading", { name: "Kasus baru" })).toBeInTheDocument();
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Identitas" })).toBeInTheDocument();
+  });
+
+  it("names a new case in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <NewCasePage />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("heading", { name: "New case" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeInTheDocument();
   });
 
   it("creates the case in this suite, shows a toast, and opens the edit page", async () => {

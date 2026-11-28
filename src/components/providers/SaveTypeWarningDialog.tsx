@@ -2,12 +2,28 @@
 
 import { useEffect, useRef } from "react";
 
+import { CHROME } from "@/lib/i18n/chrome";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
+
 import type { MeasurementType } from "./MeasurementTypeField";
 
-const TYPE_LABEL: Record<MeasurementType, string> = {
-  automatic: "Otomatis",
-  manual: "Manual",
-};
+const COPY = messages({
+  id: {
+    titleAutomatic: "Simpan sebagai produk Otomatis?",
+    titleManual: "Simpan sebagai produk Manual?",
+    body: "Jenis pengukuran tidak bisa diubah lagi setelah produk punya riwayat pengukuran. Uji koneksi tidak dihitung.",
+    switching: "Isian jenis sebelumnya akan hilang setelah disimpan.",
+    confirm: "Ya, simpan",
+  },
+  en: {
+    titleAutomatic: "Save as an Automatic product?",
+    titleManual: "Save as a Manual product?",
+    body: "The measurement type cannot be changed after the product has measurement history. A connection test does not count.",
+    switching: "The values from the previous type will be lost once this is saved.",
+    confirm: "Yes, save",
+  },
+});
 
 /** AC3: peringatan sebelum produk baru pertama kali tersimpan. */
 export function SaveTypeWarningDialog({
@@ -23,6 +39,9 @@ export function SaveTypeWarningDialog({
   onCancel: () => void;
 }>) {
   const ref = useRef<HTMLDialogElement>(null);
+  const copy = useText(COPY);
+  const chrome = useText(CHROME);
+  const title = measurementType === "automatic" ? copy.titleAutomatic : copy.titleManual;
 
   useEffect(() => {
     const dialog = ref.current;
@@ -43,31 +62,16 @@ export function SaveTypeWarningDialog({
       className="m-auto rounded-xl border border-slate-200 bg-white p-6 text-slate-900 shadow-lg backdrop:bg-slate-900/40"
     >
       <h2 id="save-type-warning-title" className="text-base font-medium">
-        Simpan sebagai produk {TYPE_LABEL[measurementType]}?
+        {title}
       </h2>
-      <p className="mt-2 max-w-sm text-sm text-slate-600">
-        Jenis pengukuran tidak bisa diubah lagi setelah produk punya riwayat
-        pengukuran. Uji koneksi tidak dihitung.
-      </p>
-      {switching && (
-        <p className="mt-2 max-w-sm text-sm text-slate-600">
-          Isian jenis sebelumnya akan hilang setelah disimpan.
-        </p>
-      )}
+      <p className="mt-2 max-w-sm text-sm text-slate-600">{copy.body}</p>
+      {switching && <p className="mt-2 max-w-sm text-sm text-slate-600">{copy.switching}</p>}
       <div className="mt-5 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          Batal
+        <button type="button" onClick={onCancel} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+          {chrome.cancel}
         </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white"
-        >
-          Ya, simpan
+        <button type="button" onClick={onConfirm} className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white">
+          {copy.confirm}
         </button>
       </div>
     </dialog>

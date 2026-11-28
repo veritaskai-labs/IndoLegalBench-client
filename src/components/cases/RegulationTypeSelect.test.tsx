@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { RegulationType } from "@/types/regulationType";
 import { CONTROL_CLASS } from "./fields";
 import { MAX_VISIBLE_OPTIONS, RegulationTypeSelect } from "./RegulationTypeSelect";
@@ -590,5 +591,14 @@ describe("RegulationTypeSelect input ref", () => {
 
     // Assert
     expect(received[0]).toBe(screen.getByRole("combobox", { name: "Jenis peraturan" }));
+  });
+
+  it("keeps a regulation type name from the API in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <RegulationTypeSelect label="Regulation type" types={TYPES} value="uu" onChange={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("combobox", { name: "Regulation type" })).toHaveValue("Undang-undang");
   });
 });

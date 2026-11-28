@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { getCase } from "@/lib/cases/caseApi";
@@ -77,6 +78,21 @@ describe("CaseReadPage (SCRUM-184)", () => {
     expect(screen.queryByRole("button", { name: /Simpan draf/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ajukan review/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Kembali ke suite" })).toHaveAttribute(
+      "href",
+      `/suites/${SUITE_ID}`,
+    );
+  });
+
+  it("offers a way back in English and keeps the case title", async () => {
+    getCaseMock.mockResolvedValue(approvedDevCase());
+    render(
+      <LocaleProvider locale="en">
+        <CaseReadPage />
+      </LocaleProvider>,
+    );
+    expect(await screen.findByRole("heading", { level: 1, name: "PHK-001" })).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Pemberitahuan PHK")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to the suite" })).toHaveAttribute(
       "href",
       `/suites/${SUITE_ID}`,
     );

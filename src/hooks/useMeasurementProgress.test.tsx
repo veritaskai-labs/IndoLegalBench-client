@@ -2,6 +2,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, apiFetch } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { PROGRESS_POLL_MS, useMeasurementProgress } from "./useMeasurementProgress";
 
 vi.mock("@/lib/apiClient", async (importOriginal) => ({
@@ -23,6 +24,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  resetMockLocale();
 });
 
 describe("useMeasurementProgress (PBI-12 AC5, AC6)", () => {
@@ -141,6 +143,15 @@ it("reloads progress after a failed first request even when polling is off", asy
     const { result } = renderHook(() => useMeasurementProgress("s-1", { poll: false }));
 
     await waitFor(() => expect(result.current).toMatchObject({ status: "error", message: "Sesi tidak ditemukan." }));
+  });
+
+  it("says the session is missing in English when the language mock is English", async () => {
+    setMockLocale("en");
+    apiFetchMock.mockRejectedValue(new ApiError(404, "MEASUREMENT_NOT_FOUND"));
+
+    const { result } = renderHook(() => useMeasurementProgress("s-1", { poll: false }));
+
+    await waitFor(() => expect(result.current).toMatchObject({ status: "error", message: "Session not found." }));
   });
 
   // Same as before the refactor: polling keeps going while the first read is still failing.

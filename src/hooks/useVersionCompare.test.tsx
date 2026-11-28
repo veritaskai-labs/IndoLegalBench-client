@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { compareCaseVersions } from "@/lib/cases/versionApi";
 import { makeCompare } from "@/test/versionFixtures";
 import type { VersionCompare } from "@/types/caseVersion";
@@ -20,6 +21,10 @@ function deferred() {
   });
   return { promise, resolve };
 }
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 beforeEach(() => {
   compareMock.mockReset();
@@ -78,6 +83,18 @@ describe("useVersionCompare", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Salah satu versi yang dipilih tidak ditemukan.",
+    });
+  });
+
+  it("reports the mapped message in English when the language mock is English", async () => {
+    setMockLocale("en");
+    compareMock.mockRejectedValue(new ApiError(404, "VERSION_NOT_FOUND"));
+    const { result } = renderHook(() => useVersionCompare("case-1"));
+
+    await act(async () => result.current.compare(1, 9));
+
+    expect(result.current).toMatchObject({
+      message: "One of the selected versions was not found.",
     });
   });
 
