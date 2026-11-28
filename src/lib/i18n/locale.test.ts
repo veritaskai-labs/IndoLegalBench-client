@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LOCALE, LOCALES, text } from "./locale";
+import { DEFAULT_LOCALE, LOCALES, fill, isLocale, messages, text } from "./locale";
 
 const SAMPLE = {
   id: { submit: "Ajukan review", hint: "Simpan perubahan dulu sebelum mengajukan." },
@@ -27,5 +27,22 @@ describe("locale lookup", () => {
     const question = "Apakah perusahaan wajib membayar pesangon?";
     expect(text(SAMPLE, "en").submit).not.toBe(question);
     expect(JSON.stringify(text(SAMPLE, "en"))).not.toContain(question);
+  });
+
+  it("fills placeholders with data and leaves an unknown placeholder empty", () => {
+    expect(fill("Versi {version} · {note}", { version: 2, note: "tetap berlaku" })).toBe(
+      "Versi 2 · tetap berlaku",
+    );
+    expect(fill("Kasus {code}", {})).toBe("Kasus ");
+  });
+
+  it("accepts only the two language codes", () => {
+    expect(isLocale("id")).toBe(true);
+    expect(isLocale("en")).toBe(true);
+    expect(isLocale("fr")).toBe(false);
+  });
+
+  it("keeps a catalog whose two languages share a shape", () => {
+    expect(messages(SAMPLE)).toBe(SAMPLE);
   });
 });
