@@ -16,9 +16,9 @@ import { useSuites } from "@/hooks/useSuites";
 import {
   DEFAULT_CASE_SORT,
   listDirectoryCases,
-  SORT_KEY_OF,
   type CaseDirectoryQuery,
   type CaseDirectoryRow,
+  type CaseDirectorySort,
   type CaseSortColumn,
 } from "@/lib/cases/caseDirectory";
 import { caseEditPath } from "@/lib/cases/casePaths";
@@ -28,7 +28,10 @@ import { formatLastModified, formatWib } from "@/lib/datetime/formatWib";
 import type { SortState } from "@/lib/ui/tableModel";
 import type { CaseStatus } from "@/types/case";
 
-const FIRST_PAGE: CaseDirectoryQuery = { q: "", status: "", suiteId: "", page: 1, sort: DEFAULT_CASE_SORT };
+/** The page always asks with a sort, so unlike the API query it is never left out here. */
+type CaseListRequest = CaseDirectoryQuery & { sort: CaseDirectorySort };
+
+const FIRST_PAGE: CaseListRequest = { q: "", status: "", suiteId: "", page: 1, sort: DEFAULT_CASE_SORT };
 
 export default function CasesPage() {
   const auth = useAuth();
@@ -61,7 +64,6 @@ function CaseDirectory() {
   }, []);
   // The server sorts, so a new sort asks for page one of the new order; keyword and filters stay.
   const changeSort = useCallback((next: SortState) => {
-    if (!(next.key in SORT_KEY_OF)) return;
     setRequest((current) => ({ ...current, sort: { key: next.key as CaseSortColumn, direction: next.direction }, page: 1 }));
   }, []);
 
@@ -338,7 +340,7 @@ function buildCaseColumns(
 }
 
 function CaseResults({ request, revision, onPageChange, onSortChange, onPreview, onDuplicate }: Readonly<{
-  request: CaseDirectoryQuery;
+  request: CaseListRequest;
   revision: number;
   onPageChange: (page: number) => void;
   onSortChange: (sort: SortState) => void;
@@ -384,7 +386,7 @@ function CaseResults({ request, revision, onPageChange, onSortChange, onPreview,
             rowKey={(row) => row.id}
             pageSize={20}
             caption="Daftar kasus"
-            controlledSort={request.sort ?? null}
+            controlledSort={request.sort}
             onSortChange={onSortChange}
           />
         </div>
