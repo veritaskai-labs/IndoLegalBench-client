@@ -25,6 +25,11 @@ export function violations(
 }
 
 /** Files that still have a violation; a known entry missing here means the bug was fixed. */
-export function filesWith(found: string[]): string[] {
-  return [...new Set(found.map((hit) => hit.slice(0, hit.lastIndexOf(":"))))].sort();
+export function filesWith(found: string[]): Set<string> {
+  return new Set(found.map(fileOf));
+}
+
+/** The file part of a `path:line` hit. */
+export function fileOf(hit: string): string {
+  return hit.slice(0, hit.lastIndexOf(":"));
 }

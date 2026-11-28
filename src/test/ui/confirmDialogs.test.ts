@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filesWith, sourceFiles, violations } from "@/test/sourceFiles";
+import { fileOf, filesWith, sourceFiles, violations } from "@/test/sourceFiles";
 
 const NATIVE_DIALOG = /(?<![\w.$])(?<!function\s+)(?:window\.)?(?:confirm|alert|prompt)\(/;
 
@@ -13,10 +13,10 @@ const found = violations(sourceFiles("src"), (line) => NATIVE_DIALOG.test(line))
 
 describe("konfirmasi memakai dialog yang seragam (PBI-25 AC2)", () => {
   it("tidak memakai confirm, alert, atau prompt bawaan browser", () => {
-    expect(found.filter((hit) => !filesWith([hit]).some((file) => file in KNOWN))).toEqual([]);
+    expect(found.filter((hit) => !(fileOf(hit) in KNOWN))).toEqual([]);
   });
 
   it("daftar bug yang diketahui masih akurat", () => {
-    expect(filesWith(found)).toEqual(Object.keys(KNOWN).sort());
+    expect(filesWith(found)).toEqual(new Set(Object.keys(KNOWN)));
   });
 });

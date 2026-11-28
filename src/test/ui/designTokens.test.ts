@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filesWith, sourceFiles, violations } from "@/test/sourceFiles";
+import { fileOf, filesWith, sourceFiles, violations } from "@/test/sourceFiles";
 
 // A raw Tailwind palette colour or a hex value instead of a globals.css token (ink, paper, accent, danger, ...).
 const RAW_COLOUR =
@@ -24,10 +24,10 @@ const found = violations(shared, (line) => RAW_COLOUR.test(line));
 
 describe("komponen bersama memakai token design system (PBI-25 AC1)", () => {
   it("tidak memakai warna palet Tailwind mentah atau hex", () => {
-    expect(found.filter((hit) => !filesWith([hit]).some((file) => file in KNOWN))).toEqual([]);
+    expect(found.filter((hit) => !(fileOf(hit) in KNOWN))).toEqual([]);
   });
 
   it("daftar bug yang diketahui masih akurat", () => {
-    expect(filesWith(found)).toEqual(Object.keys(KNOWN).sort());
+    expect(filesWith(found)).toEqual(new Set(Object.keys(KNOWN)));
   });
 });

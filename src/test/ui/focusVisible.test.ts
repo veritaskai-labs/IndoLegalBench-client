@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { filesWith, sourceFiles, violations } from "@/test/sourceFiles";
+import { fileOf, filesWith, sourceFiles, violations } from "@/test/sourceFiles";
 
 const REMOVES_OUTLINE = /(?<![\w-])(?:focus:)?outline-(?:none|0|hidden)(?![\w-])/;
 const REPLACEMENT_RING =
@@ -24,10 +24,10 @@ describe("fokus keyboard selalu terlihat (PBI-25 AC5)", () => {
   });
 
   it("elemen yang menghapus outline wajib memberi ring atau outline pengganti saat fokus", () => {
-    expect(found.filter((hit) => !filesWith([hit]).some((file) => file in KNOWN))).toEqual([]);
+    expect(found.filter((hit) => !(fileOf(hit) in KNOWN))).toEqual([]);
   });
 
   it("daftar bug yang diketahui masih akurat", () => {
-    expect(filesWith(found)).toEqual(Object.keys(KNOWN).sort());
+    expect(filesWith(found)).toEqual(new Set(Object.keys(KNOWN)));
   });
 });

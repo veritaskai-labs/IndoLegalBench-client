@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filesWith, sourceFiles, violations } from "@/test/sourceFiles";
+import { fileOf, filesWith, sourceFiles, violations } from "@/test/sourceFiles";
 
 const SCROLL_WRAPPER = /overflow-(?:x-)?(?:auto|scroll)/;
 const WRAPPER_LOOKBACK = 3;
@@ -32,7 +32,7 @@ const unwrapped = violations(
 
 describe("tabel lebar bisa digeser di ponsel tanpa menggeser halaman (PBI-25 AC5)", () => {
   it("setiap tabel dibungkus elemen overflow-x-auto", () => {
-    expect(unwrapped.filter((hit) => !filesWith([hit]).some((file) => file in KNOWN))).toEqual([]);
+    expect(unwrapped.filter((hit) => !(fileOf(hit) in KNOWN))).toEqual([]);
   });
 
   it.each(Object.values(WRAPPED_BY_CALLER))("setiap pemanggil %s menyediakan pembungkus scroll", (component) => {
@@ -45,6 +45,6 @@ describe("tabel lebar bisa digeser di ponsel tanpa menggeser halaman (PBI-25 AC5
   });
 
   it("daftar bug yang diketahui masih akurat", () => {
-    expect(filesWith(unwrapped)).toEqual(Object.keys(KNOWN).sort());
+    expect(filesWith(unwrapped)).toEqual(new Set(Object.keys(KNOWN)));
   });
 });
