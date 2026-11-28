@@ -215,7 +215,7 @@ describe("SuiteList", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("offers delete for an archived suite", () => {
+  it("hides delete for an archived suite", () => {
     const suite = makeSuite({ status: "archived" });
 
     render(
@@ -230,8 +230,8 @@ describe("SuiteList", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Hapus Perburuhan" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Hapus Perburuhan" }),
+    ).not.toBeInTheDocument();
   });
 
 
