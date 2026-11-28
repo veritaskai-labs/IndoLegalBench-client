@@ -264,3 +264,64 @@ describe("DataTable", () => {
     expect(onRowClick).toHaveBeenCalledWith(data[0]);
   });
 });
+
+describe("DataTable with a sort the page controls (SCRUM-381)", () => {
+  // Positive: the page (server) already ordered the rows, so the table shows them as given.
+  it("shows the rows in the order it is given even when a sort is active", () => {
+    // Arrange / Act
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} controlledSort={{ key: "name", direction: "asc" }} />);
+
+    // Assert
+    expect(bodyNames()).toEqual(["Budi", "Ani", "Citra"]);
+  });
+
+  // Positive: the header shows the sort the page chose.
+  it("reports the controlled sort with aria-sort", () => {
+    // Arrange / Act
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} controlledSort={{ key: "score", direction: "desc" }} />);
+
+    // Assert
+    expect(screen.getByRole("columnheader", { name: /Skor/ })).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByRole("columnheader", { name: /Nama/ })).toHaveAttribute("aria-sort", "none");
+  });
+
+  // Positive: pressing a header only tells the page; the table does not reorder or change its own sort.
+  it("reports the next sort without reordering the rows itself", async () => {
+    // Arrange
+    const onSortChange = vi.fn();
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} controlledSort={null} onSortChange={onSortChange} />);
+
+    // Act
+    await userEvent.click(within(screen.getByRole("columnheader", { name: /Nama/ })).getByRole("button"));
+
+    // Assert
+    expect(onSortChange).toHaveBeenCalledExactlyOnceWith({ key: "name", direction: "asc" });
+    expect(bodyNames()).toEqual(["Budi", "Ani", "Citra"]);
+    expect(screen.getByRole("columnheader", { name: /Nama/ })).toHaveAttribute("aria-sort", "none");
+  });
+
+  // Edge: pressing the active column flips the direction of the sort the page holds.
+  it("asks for the opposite direction when the active column is pressed", async () => {
+    // Arrange
+    const onSortChange = vi.fn();
+    render(
+      <DataTable columns={columns} rows={data} rowKey={(r) => r.id} controlledSort={{ key: "name", direction: "asc" }} onSortChange={onSortChange} />,
+    );
+
+    // Act
+    await userEvent.click(within(screen.getByRole("columnheader", { name: /Nama/ })).getByRole("button"));
+
+    // Assert
+    expect(onSortChange).toHaveBeenCalledExactlyOnceWith({ key: "name", direction: "desc" });
+  });
+
+  // Edge: no sort chosen by the page means no header is marked as sorted.
+  it("marks no header when the controlled sort is null", () => {
+    // Arrange / Act
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} controlledSort={null} />);
+
+    // Assert
+    expect(screen.getByRole("columnheader", { name: /Nama/ })).toHaveAttribute("aria-sort", "none");
+    expect(screen.getByRole("columnheader", { name: /Skor/ })).toHaveAttribute("aria-sort", "none");
+  });
+});
