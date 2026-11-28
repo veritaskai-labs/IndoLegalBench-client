@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { GUIDE_COLUMNS } from "./importGuide";
+import { GUIDE_COLUMNS, JSON_FORMAT_REASON, jsonListColumns } from "./importGuide";
 
 /**
  * Contract guard (E69: a copied value is tested against its source). The column names in the guide are a
@@ -84,5 +84,50 @@ describe("GUIDE_COLUMNS", () => {
     expect(splitTag?.meaning).toContain("dev");
     expect(splitTag?.meaning).toContain("test");
     expect(splitTag?.meaning).toContain("kosong");
+  });
+});
+
+describe("jsonListColumns (SCRUM-380, field berformat list JSON)", () => {
+  // Positive: the highlighted fields are exactly the list columns the server parses as JSON, in template order.
+  it("returns the three list columns in template order", () => {
+    // Arrange / Act
+    const names = jsonListColumns().map((column) => column.name);
+
+    // Assert
+    expect(names).toEqual(["legal_refs", "must_contain", "must_not_contain"]);
+  });
+
+  // Negative: plain text columns and the optional tag are never highlighted as JSON.
+  it("leaves out the plain text columns", () => {
+    // Arrange / Act
+    const names = jsonListColumns().map((column) => column.name);
+
+    // Assert
+    expect(names).not.toContain("title");
+    expect(names).not.toContain("split_tag");
+    expect(names).not.toContain("expected_conclusion");
+  });
+
+  // Edge: every highlighted field carries an example that can be copied, so the copy button is never empty.
+  it("gives every JSON column a non-empty example", () => {
+    // Arrange / Act
+    const columns = jsonListColumns();
+
+    // Assert
+    expect(columns.length).toBeGreaterThan(0);
+    expect(columns.every((column) => column.example.trim() !== "")).toBe(true);
+  });
+});
+
+describe("JSON_FORMAT_REASON (SCRUM-380)", () => {
+  // Positive: the reason says the field is read as a JSON list and what happens to an invalid row.
+  it("explains that invalid JSON fails the row and is reported in the result summary", () => {
+    // Arrange / Act
+    const reason = JSON_FORMAT_REASON;
+
+    // Assert
+    expect(reason).toContain("list JSON");
+    expect(reason).toMatch(/gagal diimpor/);
+    expect(reason).toMatch(/ringkasan hasil/);
   });
 });
