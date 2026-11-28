@@ -83,7 +83,7 @@ export function TextField({
   required,
   optional,
   type = "text",
-}: FieldProps & { type?: "text" | "number" }) {
+}: Readonly<FieldProps & { type?: "text" | "number" }>) {
   const id = useId();
   const errorId = `${id}-error`;
   return (
@@ -116,7 +116,7 @@ export function TextAreaField({
   required,
   optional,
   rows = 3,
-}: FieldProps & { rows?: number }) {
+}: Readonly<FieldProps & { rows?: number }>) {
   const id = useId();
   const errorId = `${id}-error`;
   return (
@@ -193,7 +193,7 @@ export function FormSection({
   help,
   error,
   children,
-}: {
+}: Readonly<{
   id?: string;
   title: string;
   /** Penjelasan singkat bagian ini untuk penulis kasus. */
@@ -201,7 +201,7 @@ export function FormSection({
   /** Error untuk bagian ini secara utuh, misalnya daftar rujukan kosong. */
   error?: string;
   children: ReactNode;
-}) {
+}>) {
   return (
     <fieldset
       id={id}
@@ -227,14 +227,14 @@ export function RowGroup({
   onRemove,
   invalid = false,
   children,
-}: {
+}: Readonly<{
   title: string;
   removeLabel: string;
   onRemove: () => void;
   /** Baris berisi isian yang tidak valid; disorot supaya mudah ditemukan. */
   invalid?: boolean;
   children: ReactNode;
-}) {
+}>) {
   return (
     <fieldset
       aria-invalid={invalid || undefined}

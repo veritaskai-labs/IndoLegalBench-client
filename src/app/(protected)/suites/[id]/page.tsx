@@ -288,7 +288,7 @@ function buildSuiteCaseColumns(
   ];
 }
 
-export default function SuiteDetailPage({ params }: PageProps) {
+export default function SuiteDetailPage({ params }: Readonly<PageProps>) {
   const { id: suiteId } = use(params);
   const router = useRouter();
   const auth = useAuth();

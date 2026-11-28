@@ -154,18 +154,9 @@ export function DataTable<T>({
             ) : (
               paged.items.map((row) => (
                 // Row click convenience; interactive descendants (links/buttons) still handle keyboard navigation.
-                <tr
+                <tr // NOSONAR
                   key={rowKey(row)}
-                  onClick={ // NOSONAR
-                    onRowClick
-                      ? (event) => {
-                          if ((event.target as HTMLElement).closest("a, button, input, select, textarea")) {
-                            return;
-                          }
-                          onRowClick(row);
-                        }
-                      : undefined
-                  }
+                  onClick={onRowClick ? (event) => { if (!(event.target as HTMLElement).closest("a, button, input, select, textarea")) onRowClick(row); } : undefined} // NOSONAR
                   className={`hover:bg-surface-hover ${onRowClick ? "cursor-pointer " : ""}${rowClassName?.(row) ?? ""}`}
                 >
                   {columns.map((column) => (

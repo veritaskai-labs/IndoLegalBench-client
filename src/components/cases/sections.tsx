@@ -21,7 +21,7 @@ type SectionProps = {
   errorFor: ErrorLookup;
 };
 
-export function IdentitySection({ register, errorFor }: SectionProps) {
+export function IdentitySection({ register, errorFor }: Readonly<SectionProps>) {
   return (
     <FormSection id="section-identitas" title="Identitas" help={CASE_HELP.identity}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -63,7 +63,7 @@ export function IdentitySection({ register, errorFor }: SectionProps) {
   );
 }
 
-export function AnswerCriteriaSection({ register, errorFor }: SectionProps) {
+export function AnswerCriteriaSection({ register, errorFor }: Readonly<SectionProps>) {
   return (
     <FormSection
       id="section-kriteria-jawaban"
@@ -113,7 +113,11 @@ type SplitTagSectionProps = SectionProps & {
   lockedTag?: SplitTag | null;
 };
 
-export function SplitTagSection({ register, errorFor, lockedTag = null }: SplitTagSectionProps) {
+export function SplitTagSection({
+  register,
+  errorFor,
+  lockedTag = null,
+}: Readonly<SplitTagSectionProps>) {
   const baseId = useId();
   const errorId = `${baseId}-error`;
   const error = errorFor("split_tag");
