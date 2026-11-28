@@ -12,7 +12,7 @@ type Props = {
   onSaved: () => void;
 };
 
-export function SuiteFormDialog({ suite, onClose, onSaved }: Props) {
+export function SuiteFormDialog({ suite, onClose, onSaved }: Readonly<Props>) {
   const [name, setName] = useState(suite?.name ?? "");
   const [description, setDescription] = useState(suite?.description ?? "");
   const [nameError, setNameError] = useState<string | null>(null);

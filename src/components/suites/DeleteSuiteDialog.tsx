@@ -11,7 +11,7 @@ type Props = {
   onDone: () => void;
 };
 
-export function DeleteSuiteDialog({ suite, onClose, onDone }: Props) {
+export function DeleteSuiteDialog({ suite, onClose, onDone }: Readonly<Props>) {
   const [hasApprovedCases, setHasApprovedCases] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

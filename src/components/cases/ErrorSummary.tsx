@@ -8,7 +8,7 @@ type Props = {
 };
 
 /** Ringkasan isian yang harus diperbaiki sebelum kasus bisa disimpan (SCRUM-109). */
-export function ErrorSummary({ issues, onSelect }: Props) {
+export function ErrorSummary({ issues, onSelect }: Readonly<Props>) {
   if (issues.length === 0) return null;
   return (
     <div role="alert" className="rounded-control border border-danger/30 bg-danger-wash p-4">

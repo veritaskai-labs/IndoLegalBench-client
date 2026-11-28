@@ -154,9 +154,9 @@ export function DataTable<T>({
             ) : (
               paged.items.map((row) => (
                 // Row click convenience; interactive descendants (links/buttons) still handle keyboard navigation.
-                <tr // NOSONAR
+                <tr
                   key={rowKey(row)}
-                  onClick={
+                  onClick={ // NOSONAR
                     onRowClick
                       ? (event) => {
                           if ((event.target as HTMLElement).closest("a, button, input, select, textarea")) {

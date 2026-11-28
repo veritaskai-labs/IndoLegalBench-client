@@ -47,7 +47,7 @@ export function FieldLabel({
   );
 }
 
-export function ErrorText({ id, message }: { id?: string; message: string }) {
+export function ErrorText({ id, message }: Readonly<{ id?: string; message: string }>) {
   return (
     <p id={id} className="mt-1 text-xs text-danger">
       {message}
@@ -266,7 +266,7 @@ export function RowGroup({
   );
 }
 
-export function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
+export function AddRowButton({ label, onClick }: Readonly<{ label: string; onClick: () => void }>) {
   return (
     <button
       type="button"
