@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileNavProvider } from "./MobileNav";
@@ -11,6 +12,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 // The bell has its own tests; here it only has to be in the right place.
 vi.mock("@/components/notifications/NotificationBell", () => ({
   NotificationBell: () => <span>Lonceng notifikasi</span>,
+}));
+// The search box has its own tests (GlobalSearch.test.tsx); here only whether and for whom it is shown.
+vi.mock("@/components/search/GlobalSearch", () => ({
+  GlobalSearch: ({ role }: { role: string }) => <span>Kotak cari untuk {role}</span>,
 }));
 
 const signedIn = {
@@ -171,5 +176,41 @@ describe("TopBar", () => {
     await userEvent.click(widen);
 
     expect(screen.getByRole("button", { name: "Minimize menu" })).toHaveAttribute("aria-expanded", "true");
+  });
+
+  // SCRUM-352 AC1: the search box sits in the header of every protected page.
+  it.each(["admin", "contributor", "developer_ai"] as const)("shows the search box to %s", (role) => {
+    useAuthMock.mockReturnValue({ ...signedIn, user: { ...signedIn.user, role } });
+
+    render(<TopBar />);
+
+    expect(screen.getByText(`Kotak cari untuk ${role}`)).toBeInTheDocument();
+  });
+
+  // PO 27 Nov: Viewer may not see test-case content (PBI-16), so there is no search box at all.
+  it("shows no search box to Viewer", () => {
+    useAuthMock.mockReturnValue({ ...signedIn, user: { ...signedIn.user, role: "viewer" } });
+
+    render(<TopBar />);
+
+    expect(screen.queryByText(/Kotak cari/)).toBeNull();
+  });
+
+  it("shows no search box while the session is loading", () => {
+    useAuthMock.mockReturnValue({ status: "loading" });
+
+    render(<TopBar />);
+
+    expect(screen.queryByText(/Kotak cari/)).toBeNull();
+  });
+
+  // The server has no window, so the first HTML is the full-height bar; the browser takes over after.
+  it("renders the full-height bar on the server", () => {
+    useAuthMock.mockReturnValue(signedIn);
+
+    const html = renderToString(<TopBar />);
+
+    expect(html).toContain("h-18");
+    expect(html).not.toContain("h-12");
   });
 });
