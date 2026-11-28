@@ -255,14 +255,7 @@ function buildCaseColumns(
       key: "case_code",
       header: "ID Kasus",
       sortable: true,
-      cell: (row) => (
-        <Link
-          href={caseEditPath(row.id)}
-          className="font-mono text-xs font-semibold text-ink hover:underline"
-        >
-          {row.case_code}
-        </Link>
-      ),
+      cell: (row) => <span className="font-mono text-xs font-semibold text-ink">{row.case_code}</span>,
     },
     {
       key: "title",
@@ -320,6 +313,14 @@ function buildCaseColumns(
           >
             Pratinjau
           </button>
+          <Link
+            href={caseEditPath(row.id)}
+            aria-label={`Buka editor ${row.case_code}`}
+            title={`Buka editor kasus ${row.case_code}`}
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
+          >
+            Buka editor
+          </Link>
           {!row.suite_archived && (
             <button
               type="button"
