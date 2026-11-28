@@ -55,7 +55,7 @@ describe("ManualAnswerBox header", () => {
 
     // Assert
     expect(screen.getByRole("group", { name: "Percobaan 1" })).toBeInTheDocument();
-    expect(screen.getByText("Belum diisi")).toBeInTheDocument();
+    expect(screen.getByText("Belum terisi")).toBeInTheDocument();
   });
 
   // Positive: a saved answer shows its status and when it was saved.

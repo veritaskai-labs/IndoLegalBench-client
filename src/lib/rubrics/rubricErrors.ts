@@ -25,8 +25,12 @@ export function createErrorMessage(error: unknown): string {
   return "Versi rubrik gagal disimpan. Coba lagi.";
 }
 
-/** GET /admin/rubrics: apa pun penyebabnya, yang bisa dilakukan Admin sama, yaitu mencoba lagi. */
-export const loadErrorMessage: (error?: unknown) => string = () => "Gagal memuat daftar versi rubrik. Coba lagi.";
+/**
+ * GET /admin/rubrics: apa pun penyebabnya, yang bisa dilakukan Admin sama, yaitu mencoba lagi. Pesan
+ * juga menyebut bahwa data rubrik aman, supaya gagal memuat tidak dikira versi hilang (SCRUM-375 A3).
+ */
+export const loadErrorMessage: (error?: unknown) => string = () =>
+  "Daftar versi rubrik gagal dimuat. Periksa koneksi, lalu coba lagi. Data rubrik tidak berubah.";
 
 /** Server menulis posisi dengan titik (aspects.0.name); input di form memakai kurung (aspects[0].name). */
 function formPath(serverField: string): string {

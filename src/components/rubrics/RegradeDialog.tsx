@@ -53,7 +53,6 @@ export function RegradeDialog({
     session.id,
     judgeId === "" ? null : { rubricVersion: version, judgeProviderId: judgeId },
     gateway,
-    judgeApi,
   );
 
   return (

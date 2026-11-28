@@ -1,11 +1,15 @@
-import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/apiClient";
 import type { DrilldownGateway } from "@/lib/reports/drilldownApi";
 import { HIDDEN_DRILLDOWN } from "@/lib/reports/drilldownRules";
+import type { ReportsGateway } from "@/lib/reports/reportsApi";
+import { firstReport } from "@/test/reportFixtures";
 
-import { useResultCase, useResultCases } from "./useReportDrilldown";
+import { forgetDrilldownMemory, useDrilldownReport, useResultCase, useResultCases } from "./useReportDrilldown";
+
+afterEach(forgetDrilldownMemory);
 
 function fakeGateway(overrides: Partial<DrilldownGateway> = {}): DrilldownGateway {
   return {
@@ -36,6 +40,41 @@ describe("useResultCases (AC1)", () => {
 
     await waitFor(() => expect(result.current).toMatchObject({ status: "error", message: HIDDEN_DRILLDOWN }));
   });
+
+  // Positif, SCRUM-378: the case detail reuses the list the case list page just loaded, without a third request.
+  it("reuses the list it loaded last for the same number", async () => {
+    const gateway = fakeGateway();
+    const first = renderHook(() => useResultCases("r-1", "res-1", gateway));
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    first.unmount();
+
+    const again = renderHook(() => useResultCases("r-1", "res-1", gateway));
+
+    await waitFor(() => expect(again.result.current.status).toBe("ready"));
+    expect(gateway.cases).toHaveBeenCalledTimes(1);
+  });
+
+  // Negatif: another number is loaded from the server, and a failure is never remembered, so a retry asks again.
+  it("asks the server for another number and after a failure", async () => {
+    const cases = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(500, "ANY"))
+      .mockResolvedValue({ cases: [] });
+    const gateway = fakeGateway({ cases });
+
+    const failed = renderHook(() => useResultCases("r-1", "res-1", gateway));
+    await waitFor(() => expect(failed.result.current.status).toBe("error"));
+    act(() => failed.result.current.reload());
+    await waitFor(() => expect(failed.result.current.status).toBe("ready"));
+    const other = renderHook(() => useResultCases("r-1", "res-2", gateway));
+    await waitFor(() => expect(other.result.current.status).toBe("ready"));
+
+    expect(cases.mock.calls).toEqual([
+      ["r-1", "res-1"],
+      ["r-1", "res-1"],
+      ["r-1", "res-2"],
+    ]);
+  });
 });
 
 describe("useResultCase (AC2, AC3)", () => {
@@ -58,5 +97,41 @@ describe("useResultCase (AC2, AC3)", () => {
     const { result } = renderHook(() => useResultCase("r-1", "res-1", "c-1", gateway));
 
     await waitFor(() => expect(result.current).toMatchObject({ status: "error", message }));
+  });
+});
+
+// Review #135: stepping through cases must not fetch the same frozen report for the breadcrumb every time.
+describe("useDrilldownReport", () => {
+  function fakeReports(detail: ReportsGateway["detail"]): ReportsGateway {
+    return { detail, list: vi.fn(), pdf: vi.fn(), eligibleSessions: vi.fn(), create: vi.fn(), validate: vi.fn() };
+  }
+
+  // Positif: the report of the last drill-down page is reused by the next one.
+  it("loads the report once for every drill-down page of that report", async () => {
+    const detail = vi.fn().mockResolvedValue(firstReport({ id: "r-1" }));
+    const reports = fakeReports(detail);
+    const first = renderHook(() => useDrilldownReport("r-1", reports));
+    await waitFor(() => expect(first.result.current.status).toBe("ready"));
+    first.unmount();
+
+    const next = renderHook(() => useDrilldownReport("r-1", reports));
+
+    await waitFor(() => expect(next.result.current).toMatchObject({ status: "ready", data: { id: "r-1" } }));
+    expect(detail).toHaveBeenCalledTimes(1);
+  });
+
+  // Negatif: another report is asked for, and a failure is not remembered, so a retry asks again.
+  it("asks again for another report and after a failure", async () => {
+    const detail = vi.fn().mockRejectedValueOnce(new ApiError(500, "ANY")).mockResolvedValue(firstReport());
+    const reports = fakeReports(detail);
+
+    const failed = renderHook(() => useDrilldownReport("r-1", reports));
+    await waitFor(() => expect(failed.result.current.status).toBe("error"));
+    const again = renderHook(() => useDrilldownReport("r-1", reports));
+    await waitFor(() => expect(again.result.current.status).toBe("ready"));
+    const other = renderHook(() => useDrilldownReport("r-2", reports));
+    await waitFor(() => expect(other.result.current.status).toBe("ready"));
+
+    expect(detail.mock.calls).toEqual([["r-1"], ["r-1"], ["r-2"]]);
   });
 });

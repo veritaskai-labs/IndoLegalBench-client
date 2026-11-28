@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { get, useForm } from "react-hook-form";
 import { useLegalRefPreview } from "@/hooks/useLegalRefPreview";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
@@ -54,6 +54,17 @@ function chosenTag(values: CaseFormValues | undefined): SplitTag | null {
 
 /** Jeda validasi saat mengetik, supaya error tidak berkedip di tiap ketukan. */
 export const VALIDATE_DELAY_MS = 300;
+
+const FORM_SECTIONS = [
+  { id: "section-identitas", label: "Identitas" },
+  { id: "section-rujukan-hukum", label: "Rujukan hukum" },
+  { id: "section-kriteria-jawaban", label: "Kriteria jawaban" },
+  { id: "section-tag-dev-test", label: "Tag dev/test" },
+] as const;
+
+type SectionId = (typeof FORM_SECTIONS)[number]["id"];
+
+const SECTION_TOP_THRESHOLD_PX = 160;
 
 export function CaseEditorForm({
   defaultValues,
@@ -132,35 +143,83 @@ export function CaseEditorForm({
     }
   });
 
-  return (
-    <form
-      noValidate
-      onSubmit={(event) => {
-        // Submit memvalidasi seluruh form. Validasi tertunda yang menyala sesudahnya
-        // akan menghapus error dari server untuk field itu (SCRUM-131).
-        clearTimeout(validateTimer.current);
-        // Error server lama berlaku untuk simpan sebelumnya; server menilai ulang tiap simpan.
-        clearErrors();
-        return submit(event);
-      }}
-      className="space-y-6"
-    >
-      <ErrorSummary issues={summary} onSelect={(path) => setFocus(path)} />
-      {/* fieldset disabled menonaktifkan semua kolom dan tombol tambah baris di dalamnya sekaligus. */}
-      <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-6 border-0 p-0">
-        <IdentitySection {...sectionProps} />
-        <LegalRefsSection
-          {...sectionProps}
-          control={control}
-          rowHasError={rowHasError}
-          regulationTypes={regulationTypes}
-          preview={preview}
-        />
-        <AnswerCriteriaSection {...sectionProps} />
-        <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
-      </fieldset>
+  const [activeSection, setActiveSection] = useState<SectionId>("section-identitas");
 
-      {!readOnly && <EditorActionBar saving={formState.isSubmitting}>{actions}</EditorActionBar>}
-    </form>
+  useEffect(() => {
+    function updateActiveSection() {
+      let current: SectionId = FORM_SECTIONS[0].id;
+      for (const section of FORM_SECTIONS) {
+        const el = document.getElementById(section.id);
+        if (el && el.getBoundingClientRect().top <= SECTION_TOP_THRESHOLD_PX) {
+          current = section.id;
+        }
+      }
+      setActiveSection(current);
+    }
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    return () => window.removeEventListener("scroll", updateActiveSection);
+  }, []);
+
+  function jumpToSection(id: SectionId) {
+    setActiveSection(id);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  return (
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_200px] lg:items-start lg:gap-8">
+      <form
+        noValidate
+        onSubmit={(event) => {
+          // Submit memvalidasi seluruh form. Validasi tertunda yang menyala sesudahnya
+          // akan menghapus error dari server untuk field itu (SCRUM-131).
+          clearTimeout(validateTimer.current);
+          // Error server lama berlaku untuk simpan sebelumnya; server menilai ulang tiap simpan.
+          clearErrors();
+          return submit(event);
+        }}
+        className="space-y-6"
+      >
+        <ErrorSummary issues={summary} onSelect={(path) => setFocus(path)} />
+        {/* fieldset disabled menonaktifkan semua kolom dan tombol tambah baris di dalamnya sekaligus. */}
+        <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-6 border-0 p-0">
+          <IdentitySection {...sectionProps} />
+          <LegalRefsSection
+            {...sectionProps}
+            control={control}
+            rowHasError={rowHasError}
+            regulationTypes={regulationTypes}
+            preview={preview}
+          />
+          <AnswerCriteriaSection {...sectionProps} />
+          <SplitTagSection {...sectionProps} lockedTag={tagLocked ? chosenTag(defaultValues) : null} />
+        </fieldset>
+
+        {!readOnly && <EditorActionBar saving={formState.isSubmitting}>{actions}</EditorActionBar>}
+      </form>
+
+      <nav
+        aria-label="Navigasi bagian kasus"
+        className="sticky top-20 hidden space-y-1 lg:block"
+      >
+        {FORM_SECTIONS.map(({ id, label }) => {
+          const isActive = activeSection === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => jumpToSection(id)}
+              aria-current={isActive ? "location" : undefined}
+              className={`block w-full cursor-pointer py-1.5 text-left text-sm transition-colors ${
+                isActive ? "font-semibold text-ink" : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

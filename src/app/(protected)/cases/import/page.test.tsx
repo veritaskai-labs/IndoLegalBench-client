@@ -73,6 +73,22 @@ describe("CaseImportPage (PBI-4 AC4-AC6)", () => {
     expect(replaceMock).not.toHaveBeenCalled();
   });
 
+  // Positive: SCRUM-380, the JSON fields are highlighted on the page itself, not hidden in the folded guide.
+  it("highlights the JSON list fields outside the collapsible guide", () => {
+    // Arrange
+    signedInAs("contributor");
+
+    // Act
+    const { container } = render(<CaseImportPage />);
+
+    // Assert
+    const callout = screen.getByRole("region", { name: "Kolom yang wajib berformat list JSON" });
+    expect(callout.closest("details")).toBeNull();
+    expect(container.querySelector("details")).not.toHaveAttribute("open");
+    expect(within(callout).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(callout).getByText(/dilaporkan beserta alasannya di ringkasan hasil/)).toBeInTheDocument();
+  });
+
   // Positive: the page is one of the "Suite dan kasus" tabs (entry point next to the case list).
   it("shows the Suite dan kasus tabs with Impor CSV as the current one", () => {
     // Arrange
@@ -178,7 +194,7 @@ describe("CaseImportPage upload flow (AC4, AC7, AC10)", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Ringkasan impor" })).toBeInTheDocument();
     expect(screen.getByText("split_tag: isi dev, test, atau kosongkan.")).toBeInTheDocument();
     expect(screen.queryByLabelText("Berkas CSV")).toBeNull();
-    expect(replaceMock).toHaveBeenCalledWith("/cases/import?batch=b-1");
+    expect(replaceMock).toHaveBeenCalledWith("/cases/import?batch=b-1", { scroll: false });
     expect(read).not.toHaveBeenCalled();
   });
 
@@ -196,7 +212,7 @@ describe("CaseImportPage upload flow (AC4, AC7, AC10)", () => {
     // Assert
     expect(screen.getByLabelText("Berkas CSV")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Ringkasan impor" })).toBeNull();
-    expect(replaceMock).toHaveBeenLastCalledWith("/cases/import");
+    expect(replaceMock).toHaveBeenLastCalledWith("/cases/import", { scroll: false });
   });
 
   // Positive: after a refresh, ?batch= reopens the stored summary.
@@ -233,7 +249,7 @@ describe("CaseImportPage upload flow (AC4, AC7, AC10)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Kembali ke formulir" }));
 
     // Assert: the form is back even though the mocked address still holds ?batch=b-x.
-    expect(replaceMock).toHaveBeenCalledWith("/cases/import");
+    expect(replaceMock).toHaveBeenCalledWith("/cases/import", { scroll: false });
     expect(screen.getByLabelText("Berkas CSV")).toBeInTheDocument();
   });
 

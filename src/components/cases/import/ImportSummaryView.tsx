@@ -104,7 +104,7 @@ export function ImportSummaryView({ summary }: Readonly<{ summary: ImportSummary
         })}
       </fieldset>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto pt-3">
         <table aria-label="Hasil per baris" className="min-w-full text-left text-sm">
           <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
             <tr>

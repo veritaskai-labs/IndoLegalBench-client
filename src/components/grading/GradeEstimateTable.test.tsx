@@ -6,22 +6,19 @@ import { BUDGET_SHORT_TEXT, NO_ATTEMPTS_TEXT, toEstimateView } from "@/lib/gradi
 import { gradeEstimate } from "@/test/gradingFixtures";
 import { GradeEstimateTable } from "./GradeEstimateTable";
 
-const JUDGES = [{ id: "judge-a", name: "Judge Alfa", provider_type: "openai_compatible" as const, model_name: "m" }];
-
 function ready(overrides: Parameters<typeof gradeEstimate>[0] = {}) {
-  return { status: "ready" as const, data: toEstimateView(gradeEstimate(overrides), JUDGES), reload: vi.fn() };
+  return { status: "ready" as const, data: toEstimateView(gradeEstimate(overrides)), reload: vi.fn() };
 }
 
 describe("GradeEstimateTable (PBI-14 AC6)", () => {
-  it("shows attempts, rubric version, judge, estimated cost and remaining budget as a table", () => {
+  it("shows rubric version, attempts, estimated cost and remaining budget as a table", () => {
     render(<GradeEstimateTable estimate={ready()} />);
 
     const table = within(screen.getByRole("table", { name: "Perkiraan biaya penilaian" }));
     expect(table.getByRole("rowheader", { name: "Jumlah percobaan" }).nextElementSibling).toHaveTextContent("12");
     expect(table.getByRole("rowheader", { name: "Versi rubrik" }).nextElementSibling).toHaveTextContent("Versi 1");
-    expect(table.getByRole("rowheader", { name: "LLM judge" }).nextElementSibling).toHaveTextContent("Judge Alfa");
     expect(table.getByRole("rowheader", { name: "Perkiraan biaya" }).nextElementSibling).toHaveTextContent("Rp 15.251");
-    expect(table.getByRole("rowheader", { name: "Sisa anggaran bulanan judge" }).nextElementSibling).toHaveTextContent("Rp 500.000");
+    expect(table.getByRole("rowheader", { name: "Sisa anggaran bulanan penilai" }).nextElementSibling).toHaveTextContent("Rp 500.000");
   });
 
   it("shows no warning when the budget is enough", () => {

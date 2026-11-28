@@ -1,45 +1,52 @@
+import type { IconName } from "@/lib/icons";
 import type { Role } from "@/types";
 
-export type NavItem = { label: string; href: string; roles: Role[] };
+export type NavItem = { label: string; href: string; icon: IconName; roles: Role[] };
+/** heading "" is the untitled first group, as in the prototype. */
 export type NavGroup = { heading: string; items: NavItem[] };
 
 // Developer AI tidak punya dasbor (server menjawab 403), jadi tidak masuk ALL.
 const ALL: Role[] = ["contributor", "admin", "viewer"];
 
-/** Mockup, nunggu SCRUM-97 */
+/** Menu dari prototipe yang disetujui (SCRUM-347): label dan urutannya mengikuti desain, alamatnya tetap. */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    heading: "Konteks",
+    heading: "",
+    items: [{ label: "Beranda", href: "/dashboard", icon: "beranda", roles: ALL }],
+  },
+  {
+    heading: "Persiapan",
     items: [
-      { label: "Dasbor", href: "/dashboard", roles: ALL },
       {
         label: "Suite dan kasus",
         href: "/suites",
+        icon: "suite",
         roles: ["contributor", "admin", "developer_ai"],
       },
-      {
-        label: "Antrean tinjauan",
-        href: "/reviews",
-        roles: ["contributor"],
-      },
+      { label: "Antrean tinjauan", href: "/reviews", icon: "antrean", roles: ["contributor"] },
+      { label: "Review kasus", href: "/admin/reviews", icon: "tinjauan", roles: ["admin"] },
+      { label: "Rubrik penilaian", href: "/admin/rubrics", icon: "rubrik", roles: ["admin"] },
+      { label: "Produk AI", href: "/admin/providers", icon: "produk", roles: ["admin"] },
     ],
   },
   {
     heading: "Pengukuran",
     items: [
-      { label: "Penyedia", href: "/admin/providers", roles: ["admin"] },
-      { label: "Eksekusi", href: "/runs", roles: ["admin", "developer_ai"] },
-      { label: "Pengukuran manual", href: "/manual-runs", roles: ["admin", "contributor"] },
-      { label: "Rubrik", href: "/admin/rubrics", roles: ["admin"] },
-      { label: "Laporan", href: "/reports", roles: ["admin", "contributor", "viewer", "developer_ai"] },
+      { label: "Pengukuran otomatis", href: "/runs", icon: "otomatis", roles: ["admin", "developer_ai"] },
+      { label: "Pengukuran manual", href: "/manual-runs", icon: "manual", roles: ["admin", "contributor"] },
+      {
+        label: "Laporan",
+        href: "/reports",
+        icon: "laporan",
+        roles: ["admin", "contributor", "viewer", "developer_ai"],
+      },
     ],
   },
   {
-    heading: "Sistem",
+    heading: "Pengaturan",
     items: [
-      { label: "Anggota", href: "/admin/members", roles: ["admin"] },
-      { label: "Pemantauan review", href: "/admin/reviews", roles: ["admin"] },
-      { label: "Log audit", href: "/admin/audit", roles: ["admin"] },
+      { label: "Pengguna", href: "/admin/members", icon: "pengguna", roles: ["admin"] },
+      { label: "Riwayat aktivitas", href: "/admin/audit", icon: "riwayat", roles: ["admin"] },
     ],
   },
 ];
@@ -51,10 +58,12 @@ export function navForRole(role: Role): NavGroup[] {
   })).filter((group) => group.items.length > 0);
 }
 
-/** Halaman di bawah "Suite dan kasus" yang tidak punya item menu sendiri (SCRUM-341, SCRUM-340). */
-const UNDER_SUITES: readonly string[] = ["/cases", "/cases/import"];
+const isAtOrBelow = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-/** Apakah item menu sedang aktif untuk alamat ini. */
+/**
+ * Apakah item menu sedang aktif untuk alamat ini. Halaman detail menyalakan menu induknya; halaman kasus
+ * tidak punya item sendiri, jadi ikut "Suite dan kasus" (SCRUM-341, SCRUM-340).
+ */
 export function isNavItemActive(href: string, pathname: string): boolean {
-  return pathname === href || (href === "/suites" && UNDER_SUITES.includes(pathname));
+  return isAtOrBelow(pathname, href) || (href === "/suites" && isAtOrBelow(pathname, "/cases"));
 }

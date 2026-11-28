@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { InReviewTable } from "./InReviewTable";
@@ -40,6 +40,31 @@ function row(overrides: Partial<InReviewRow> = {}): InReviewRow {
 }
 
 describe("InReviewTable", () => {
+  it("pages cases in server order and sorts all pages by code, title, and numeric round", async () => {
+    const user = userEvent.setup();
+    const rows = Array.from({ length: 11 }, (_, index) => {
+      const code = "CASE-" + String(11 - index).padStart(2, "0");
+      return row({
+        case: { id: code, case_code: code, title: "Judul " + String.fromCharCode(65 + index) },
+        review: review({ round_no: 11 - index }),
+      });
+    });
+    render(<InReviewTable rows={rows} />);
+    const firstCase = () => within(screen.getAllByRole("row")[1]).getAllByRole("cell")[0];
+    expect(firstCase()).toHaveTextContent("CASE-11");
+    expect(screen.getAllByRole("row")).toHaveLength(11);
+    await user.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(firstCase()).toHaveTextContent("CASE-01");
+    await user.click(screen.getByRole("button", { name: "Kode" }));
+    expect(firstCase()).toHaveTextContent("CASE-01");
+    expect(screen.getByText("Halaman 1 dari 2")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Judul" }));
+    expect(firstCase()).toHaveTextContent("CASE-11");
+    await user.click(screen.getByRole("button", { name: "Ronde" }));
+    expect(firstCase()).toHaveTextContent("CASE-01");
+    expect(within(screen.getAllByRole("row")[2]).getByText("Ronde 2")).toBeVisible();
+  });
+
   // Positif
   it("lists the case with its round and round status", () => {
     render(<InReviewTable rows={[row()]} />);
@@ -78,10 +103,12 @@ describe("InReviewTable", () => {
     expect(screen.getByText("Setuju")).toBeInTheDocument();
     expect(screen.getByText("Aileen")).toBeInTheDocument();
     expect(screen.getByText("Belum menilai")).toBeInTheDocument();
+    expect(screen.queryByText("Lihat komentar")).not.toBeInTheDocument();
   });
 
   // Positif
-  it("shows the comment that came with a verdict", () => {
+  it("keeps the verdict visible while its comment can be opened and closed", async () => {
+    const user = userEvent.setup();
     const queued = row({
       review: review({
         reviewers: [
@@ -99,7 +126,13 @@ describe("InReviewTable", () => {
     render(<InReviewTable rows={[queued]} />);
 
     expect(screen.getByText("Minta revisi")).toBeInTheDocument();
-    expect(screen.getByText("Pasal 1320 belum dikutip.")).toBeInTheDocument();
+    const toggle = screen.getByText("Lihat komentar");
+    const comment = screen.getByText("Pasal 1320 belum dikutip.");
+    expect(comment).not.toBeVisible();
+    await user.click(toggle);
+    expect(comment).toBeVisible();
+    await user.click(toggle);
+    expect(comment).not.toBeVisible();
   });
 
   // Positif (F-02)
@@ -148,38 +181,41 @@ describe("InReviewTable", () => {
 
     expect(screen.getByText("Belum ada reviewer")).toBeInTheDocument();
     expect(screen.getByText("Menunggu penugasan")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Ganti/ })).not.toBeInTheDocument();
   });
 
   // corner
-  it("renders only the header when there is nothing in review", () => {
+  it("keeps the column headings when there is nothing in review", () => {
     render(<InReviewTable rows={[]} />);
 
-    expect(screen.getAllByRole("row")).toHaveLength(1);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(6);
+    expect(screen.queryByRole("button", { name: /^Ganti/ })).not.toBeInTheDocument();
   });
 
   // AC7: reviewer yang lambat tapi masih aktif juga harus bisa diganti dari sini.
   it("hands back the slot and the row when the admin replaces a reviewer", async () => {
     const user = userEvent.setup();
     const onReplace = vi.fn();
-    const queued = row();
+    const second = slot({ assignment_id: "a2", reviewer: { id: "u2", name: "Dwi Eka Sari" } });
+    const queued = row({ review: review({ reviewers: [slot(), second] }) });
 
     render(<InReviewTable rows={[queued]} onReplace={onReplace} />);
     await user.click(
-      screen.getByRole("button", { name: "Ganti reviewer Roben" }),
+      screen.getByRole("button", { name: "Ganti Dwi Eka Sari, reviewer untuk ILB-PT-0142" }),
     );
 
-    expect(onReplace).toHaveBeenCalledWith(queued.review?.reviewers[0], queued);
+    expect(onReplace).toHaveBeenCalledWith(second, queued);
   });
 
   // corner: penugasan yang sudah diganti tidak bisa diganti lagi.
-  it("offers no button for a reviewer who was already replaced", () => {
+  it.each(["replaced", "void"] as const)("offers no replacement for a %s assignment", (status) => {
     const queued = row({
-      review: review({ reviewers: [slot({ status: "replaced" })] }),
+      review: review({ reviewers: [slot({ status })] }),
     });
 
     render(<InReviewTable rows={[queued]} onReplace={vi.fn()} />);
 
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByText("Roben")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^Ganti/ })).not.toBeInTheDocument();
   });
 });

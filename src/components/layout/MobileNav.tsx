@@ -5,6 +5,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 /** id of the phone navigation panel, for the menu button's aria-controls. */
 export const MOBILE_NAV_ID = "mobile-nav";
+/** id of the side column, for the collapse buttons' aria-controls. */
+export const SIDEBAR_ID = "sidebar";
+
+const COLLAPSED_KEY = "ilb:sidebar-collapsed";
 
 // Tailwind's md breakpoint, where Sidebar shows its column.
 const WIDE_ENOUGH_FOR_COLUMN = "(min-width: 768px)";
@@ -13,15 +17,38 @@ type MobileNav = {
   open: boolean;
   toggle: () => void;
   close: () => void;
+  /** Laptop and tablet: the side column shows icons only. */
+  collapsed: boolean;
+  toggleCollapsed: () => void;
 };
 
 // Outside the app shell (tests, the login screen) the menu simply never opens.
-const CLOSED: MobileNav = { open: false, toggle: () => {}, close: () => {} };
+const CLOSED: MobileNav = { open: false, toggle: () => {}, close: () => {}, collapsed: true, toggleCollapsed: () => {} };
+
+// The column rests collapsed; only a click on a widen button keeps it open. A private window or
+// blocked storage only loses that choice, never the toggle itself.
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function rememberCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // see readCollapsed
+  }
+}
 
 const MobileNavContext = createContext<MobileNav>(CLOSED);
 
 /**
- * Open state of the phone menu, shared by TopBar (button) and Sidebar (panel).
+ * Open state of the phone menu, shared by TopBar (button) and Sidebar (panel), and whether the side
+ * column is collapsed, remembered per browser. Nothing that reads `collapsed` renders before sign-in,
+ * so the server render never shows it and reading storage on the first client render is safe.
  *
  * The panel remembers the page it was opened on, so moving to another page closes it
  * without an effect that resets state.
@@ -30,6 +57,11 @@ export function MobileNavProvider({ children }: Readonly<{ children: React.React
   const pathname = usePathname();
   const [openOn, setOpenOn] = useState<string | null>(null);
   const open = openOn === pathname;
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+  const toggleCollapsed = useCallback(() => {
+    rememberCollapsed(!collapsed);
+    setCollapsed(!collapsed);
+  }, [collapsed]);
 
   const close = useCallback(() => setOpenOn(null), []);
   const toggle = useCallback(
@@ -59,7 +91,10 @@ export function MobileNavProvider({ children }: Readonly<{ children: React.React
     return () => wide.removeEventListener("change", onChange);
   }, [open, close]);
 
-  const value = useMemo(() => ({ open, toggle, close }), [open, toggle, close]);
+  const value = useMemo(
+    () => ({ open, toggle, close, collapsed, toggleCollapsed }),
+    [open, toggle, close, collapsed, toggleCollapsed],
+  );
   return <MobileNavContext.Provider value={value}>{children}</MobileNavContext.Provider>;
 }
 

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "@fontsource-variable/hanken-grotesk";
+@import "@fontsource-variable/source-serif-4";
 
 /* Design tokens, copied from the approved prototype (Final UI ILB). Light mode only. */
 :root {
@@ -22,8 +24,10 @@
   --danger: #c0321f;
   --danger-strong: #a32515;
   --danger-deep: #8a1f12;
+  --danger-wash: #fdf1ef;
   --warning-ink: #8a5200;
   --warning-wash: #fff1d6;
+  --success: #34a853;
   --success-ink: #1b6b34;
   --success-wash: #e0f3e6;
 
@@ -53,8 +57,10 @@
   --color-danger: var(--danger);
   --color-danger-strong: var(--danger-strong);
   --color-danger-deep: var(--danger-deep);
+  --color-danger-wash: var(--danger-wash);
   --color-warning-ink: var(--warning-ink);
   --color-warning-wash: var(--warning-wash);
+  --color-success: var(--success);
   --color-success-ink: var(--success-ink);
   --color-success-wash: var(--success-wash);
   --color-chart-deterministic: var(--chart-deterministic);
@@ -62,8 +68,8 @@
   --color-disabled-bg: var(--disabled-bg);
   --color-disabled-ink: var(--disabled-ink);
 
-  --font-sans: var(--font-hanken-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-source-serif), Georgia, Cambria, serif;
+  --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", Georgia, Cambria, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --radius-control: 8px;

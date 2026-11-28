@@ -40,6 +40,16 @@ function row(overrides: Partial<ReassignmentRow> = {}): ReassignmentRow {
 }
 
 describe("ReassignmentTable", () => {
+  it("pages the original queue and sorts by numeric round across pages", async () => {
+    const user = userEvent.setup();
+    const rows = Array.from({ length: 11 }, (_, i) => row({ round_id: String(i), round_no: 11 - i, case_code: "TEST-" + (11 - i) }));
+    render(<ReassignmentTable rows={rows} onReplace={vi.fn()} />);
+    expect(screen.queryByText("TEST-1")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ronde" }));
+    expect(screen.getByText("TEST-1")).toBeVisible();
+    expect(screen.queryByText("TEST-11")).not.toBeInTheDocument();
+  });
+
   // Positif
   it("lists the case, the round and why it is queued", () => {
     const queued = row({
@@ -75,7 +85,7 @@ describe("ReassignmentTable", () => {
 
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Ganti / })).not.toBeInTheDocument();
     expect(screen.getByText("Tidak ada penugasan untuk diganti")).toBeInTheDocument();
   });
 
@@ -85,7 +95,7 @@ describe("ReassignmentTable", () => {
 
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Ganti / })).not.toBeInTheDocument();
     expect(screen.getByText("Tidak ada penugasan untuk diganti")).toBeInTheDocument();
   });
 
@@ -100,16 +110,16 @@ describe("ReassignmentTable", () => {
 
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
-    expect(
-      screen.getAllByRole("button", { name: /^Ganti reviewer/ }),
-    ).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: /^Ganti / })).toHaveLength(2);
+    expect(screen.getByText("Ganti Aileen")).toBeVisible();
+    expect(screen.getByText("Reviewer dinonaktifkan")).toBeVisible();
   });
 
   // corner
-  it("renders only the header when the queue is empty", () => {
+  it("shows no replacement action when the queue is empty", () => {
     render(<ReassignmentTable rows={[]} onReplace={vi.fn()} />);
 
-    expect(screen.getAllByRole("row")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: /^Ganti / })).not.toBeInTheDocument();
   });
   // AC8: justru baris dengan reviewer nonaktif yang harus bisa diganti dari antrean.
   it("offers a button for a deactivated reviewer too", async () => {
@@ -125,7 +135,7 @@ describe("ReassignmentTable", () => {
 
     render(<ReassignmentTable rows={[queued]} onReplace={onReplace} />);
     await user.click(
-      screen.getByRole("button", { name: "Ganti reviewer nonaktif Rina" }),
+      screen.getByRole("button", { name: "Ganti Rina, reviewer untuk ILB-PT-0142" }),
     );
 
     expect(onReplace).toHaveBeenCalledWith(gone, queued);
@@ -148,10 +158,10 @@ describe("ReassignmentTable", () => {
     render(<ReassignmentTable rows={[queued]} onReplace={vi.fn()} />);
 
     expect(
-      screen.queryByRole("button", { name: "Ganti reviewer Roben" }),
+      screen.queryByRole("button", { name: "Ganti Roben, reviewer untuk ILB-PT-0142" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Ganti reviewer nonaktif Rina" }),
+      screen.getByRole("button", { name: "Ganti Rina, reviewer untuk ILB-PT-0142" }),
     ).toBeInTheDocument();
   });
 
@@ -169,7 +179,7 @@ describe("ReassignmentTable", () => {
 
     render(<ReassignmentTable rows={[queued]} onReplace={onReplace} />);
     await user.click(
-      screen.getByRole("button", { name: "Ganti reviewer (peran diubah) Rina" }),
+      screen.getByRole("button", { name: "Ganti Rina, reviewer untuk ILB-PT-0142" }),
     );
 
     expect(screen.getByText("Peran reviewer diubah")).toBeInTheDocument();
@@ -194,7 +204,7 @@ describe("ReassignmentTable", () => {
 
     expect(screen.getByText("Reviewer tidak lagi bertugas")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Ganti reviewer Rina" }),
+      screen.getByRole("button", { name: "Ganti Rina, reviewer untuk ILB-PT-0142" }),
     ).toBeInTheDocument();
   });
 });

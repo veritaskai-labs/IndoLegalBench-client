@@ -15,7 +15,7 @@ import { GradeEstimateTable } from "./GradeEstimateTable";
 
 /**
  * Konfirmasi tombol Nilai (PBI-14 AC6). LLM judge dipilih di sini, bukan saat membuat sesi (K-14,
- * SCRUM-282). Biaya penilai LLM memotong anggaran bulanan produk judge di halaman Penyedia (K-16,
+ * SCRUM-282). Biaya penilai LLM memotong anggaran bulanan produk judge di halaman Produk AI (K-16,
  * SCRUM-288), jadi Admin diberi tahu sebelum memakainya lewat tabel perkiraan biaya untuk judge yang
  * dipilih dan rubrik aktif; tombol Nilai baru hidup bila judge
  * dipilih, perkiraan sudah ada, dan anggaran cukup. Kunci tombol, Escape dan pesan penolakan datang
@@ -47,7 +47,7 @@ export function GradeSessionDialog({
 }>) {
   const [judgeId, setJudgeId] = useState("");
   // Belum memilih judge berarti belum ada perkiraan (null), bukan perkiraan untuk judge sesi.
-  const estimate = useGradeEstimate(session.id, judgeId === "" ? null : { judgeProviderId: judgeId }, gateway, judgeApi);
+  const estimate = useGradeEstimate(session.id, judgeId === "" ? null : { judgeProviderId: judgeId }, gateway);
 
   return (
     <ConfirmDialog
@@ -60,22 +60,17 @@ export function GradeSessionDialog({
       onDone={onQueued}
       onClose={onClose}
     >
-      <p className="mt-2 text-sm text-slate-600">
-        Jawaban yang sudah masuk di sesi “{session.label}” dinilai dengan rubrik versi aktif, lewat aturan
-        deterministik dan penilai LLM.
+      {/* SCRUM-375 C1: satu kalimat, lalu pilihan penilai dan ringkasan angka; catatan latar belakang di bawah. */}
+      <p className="mt-3 text-sm text-ink">
+        Sesi “{session.label}” dinilai dengan rubrik versi aktif, lewat aturan deterministik dan penilai LLM.
       </p>
-      <p className="mt-2 text-sm text-slate-600">
-        Biaya penilai LLM memotong anggaran bulanan produk LLM judge yang dipilih di halaman Penyedia. Sisa
-        anggarannya ada di tabel perkiraan.
-      </p>
-      <p className="mt-2 text-sm text-slate-600">
-        Penilaian berjalan di latar belakang: dialog ini tertutup begitu penilaian masuk antrean, dan progresnya
-        tampil di halaman sesi.
-      </p>
-      <div className="mt-3">
+      <div className="mt-4">
         <JudgeProviderSelect value={judgeId} onChange={setJudgeId} api={judgeApi} />
       </div>
       <GradeEstimateTable estimate={estimate} />
+      <p className="mt-3 rounded-control bg-surface px-3 py-2 text-[13px] text-ink-soft">
+        Berjalan di latar belakang. Dialog tertutup setelah penilaian masuk antrean, progresnya tampil di halaman sesi.
+      </p>
     </ConfirmDialog>
   );
 }

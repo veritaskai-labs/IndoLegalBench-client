@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { type Column, DataTable } from "./DataTable";
 
 type Row = { id: string; name: string; score: number };
@@ -136,5 +136,131 @@ describe("DataTable", () => {
     rerender(<DataTable columns={columns} rows={[...data]} rowKey={(r) => r.id} pageSize={2} />);
 
     expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+  });
+
+  // Review #125 (Rafa): a table should have a name for screen readers; an optional caption gives it one.
+  // Positive (SCRUM-375 A1): a footer that names the rows on the current page, also when it all fits on one page.
+  it("shows the summary with the range of the current page and follows the pager", async () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={data}
+        rowKey={(r) => r.id}
+        pageSize={2}
+        summary={({ from, to, total }) => `Baris ${from}–${to} dari ${total}`}
+      />,
+    );
+    expect(screen.getByText("Baris 1–2 dari 3")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+
+    expect(screen.getByText("Baris 3–3 dari 3")).toBeInTheDocument();
+  });
+
+  // Edge: no rows means no range to name; edge because from would be 1 and to 0, a "1–0" footer under the empty slot.
+  it("leaves the summary out when there are no rows", () => {
+    render(
+      <DataTable
+        columns={columns}
+        rows={[]}
+        rowKey={(r: Row) => r.id}
+        empty={<span>Kosong</span>}
+        summary={({ total }) => `Total ${total}`}
+      />,
+    );
+
+    expect(screen.queryByText(/Total/)).toBeNull();
+  });
+
+  it("names the table with an optional screen-reader caption", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} caption="Daftar peserta" />);
+    expect(screen.getByRole("table", { name: "Daftar peserta" })).toBeInTheDocument();
+  });
+
+  // Edge: a row marker drawn inside a cell stops at a fixed height, while the row grows when a cell wraps.
+  // A class on the row itself follows the real row height.
+  it("puts the optional row class on each row's own element", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} rowClassName={(r) => (r.id === "2" ? "marked" : undefined)} />);
+    const marked = within(screen.getByRole("table"))
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => row.classList.contains("marked"));
+    expect(marked).toEqual([false, true, false]);
+  });
+
+  it("has no caption when none is given", () => {
+    const { container } = render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} />);
+    expect(container.querySelector("caption")).toBeNull();
+  });
+
+  // Positif, SCRUM-378: a page can start the table in a sort it kept, e.g. after "Kembali ke daftar kasus".
+  it("starts in the given sort and shows it on the header", () => {
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} initialSort={{ key: "score", direction: "desc" }} />);
+
+    expect(bodyNames()).toEqual(["Ani", "Citra", "Budi"]);
+    expect(screen.getByRole("columnheader", { name: /Skor/ })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  // Positif, SCRUM-378: every sort the user picks is reported, so the page can keep it in the address.
+  it("reports each sort the user picks", async () => {
+    const onSortChange = vi.fn();
+    render(<DataTable columns={columns} rows={data} rowKey={(r) => r.id} onSortChange={onSortChange} />);
+    const header = within(screen.getByRole("columnheader", { name: /Skor/ })).getByRole("button");
+
+    await userEvent.click(header);
+    await userEvent.click(header);
+
+    expect(onSortChange.mock.calls).toEqual([[{ key: "score", direction: "asc" }], [{ key: "score", direction: "desc" }]]);
+  });
+
+  it("keeps the current page when resetPageOnDataChange is false", async () => {
+    const many = [
+      ...data,
+      { id: "4", name: "Dina", score: 75 },
+    ];
+    const { rerender } = render(
+      <DataTable columns={columns} rows={many} rowKey={(r) => r.id} pageSize={2} resetPageOnDataChange={false} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Berikutnya" }));
+    expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+
+    rerender(
+      <DataTable
+        columns={columns}
+        rows={many.map((row) => (row.id === "4" ? { ...row, name: "Dina Baru" } : row))}
+        rowKey={(r) => r.id}
+        pageSize={2}
+        resetPageOnDataChange={false}
+      />,
+    );
+    expect(screen.getByText("Halaman 2 dari 2")).toBeInTheDocument();
+    expect(screen.getByText("Dina Baru")).toBeInTheDocument();
+  });
+
+  it("calls onRowClick when clicking a row cell, but ignores nested buttons", async () => {
+    const onRowClick = vi.fn();
+    const onAction = vi.fn();
+    const withAction: Column<Row>[] = [
+      ...columns,
+      {
+        key: "act",
+        header: "Aksi",
+        cell: (r) => (
+          <button type="button" onClick={() => onAction(r.id)}>
+            Pilih {r.name}
+          </button>
+        ),
+      },
+    ];
+
+    render(<DataTable columns={withAction} rows={data} rowKey={(r) => r.id} onRowClick={onRowClick} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Pilih Ani" }));
+    expect(onAction).toHaveBeenCalledWith("2");
+    expect(onRowClick).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByText("Budi"));
+    expect(onRowClick).toHaveBeenCalledWith(data[0]);
   });
 });

@@ -4,7 +4,6 @@ import {
   activeAssignments,
   reassignmentReason,
   reviewerName,
-  voidedReplaceText,
 } from "./reviewQueue";
 import type {
   ReassignmentAssignment,
@@ -172,28 +171,5 @@ describe("reviewerName", () => {
     expect(reviewerName(assignment({ reviewer_name: null }))).toBe(
       "Reviewer tidak diketahui",
     );
-  });
-});
-
-describe("voidedReplaceText", () => {
-  // Positif
-  it("keeps the button text for a deactivated reviewer", () => {
-    expect(
-      voidedReplaceText(assignment({ status: "void", void_reason: "deactivated" })),
-    ).toBe("Ganti reviewer nonaktif");
-  });
-
-  // Positif
-  it("says the role changed on the button for a role change", () => {
-    expect(
-      voidedReplaceText(assignment({ status: "void", void_reason: "role_changed" })),
-    ).toBe("Ganti reviewer (peran diubah)");
-  });
-
-  // Negatif
-  it("uses a neutral button text when the void reason is null", () => {
-    expect(
-      voidedReplaceText(assignment({ status: "void", void_reason: null })),
-    ).toBe("Ganti reviewer");
   });
 });

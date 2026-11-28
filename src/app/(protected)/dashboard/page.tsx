@@ -5,6 +5,7 @@ import { NeedsReassignmentCard } from "@/components/dashboard/NeedsReassignmentC
 import { ReviewQueue } from "@/components/dashboard/ReviewQueue";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { Icon } from "@/components/ui/Icon";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -12,7 +13,7 @@ import { canViewDashboard } from "@/lib/auth";
 import { formatWibClock } from "@/lib/datetime/formatWib";
 
 /**
- * Dasbor sesuai peran (PBI-19 AC1, AC2, AC6).
+ * Beranda sesuai peran (PBI-19 AC1, AC2, AC6), dengan tampilan dari desain SCRUM-347.
  * Peran selain Kontributor dan Admin dijawab 403 oleh server, jadi dasbornya tidak dipanggil sama sekali.
  */
 export default function DashboardPage() {
@@ -29,19 +30,32 @@ export default function DashboardPage() {
       : "";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-3xl font-semibold text-slate-900">
-          Selamat pagi, {firstName}
-        </h1>
-        {refreshedAt !== "" && (
-          <p className="text-sm text-slate-500">Diperbarui {refreshedAt}</p>
+    <div className="space-y-7">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-4xl leading-10 text-ink">Beranda</h1>
+          <p className="mt-2 text-muted">
+            {firstName === "" ? "Selamat pagi." : `Selamat pagi, ${firstName}.`} Ringkasan status pengukuran dan hal
+            yang perlu ditindaklanjuti.
+          </p>
+        </div>
+        {allowed && (
+          <button
+            type="button"
+            onClick={dashboard.reload}
+            title="Muat ulang data"
+            className="inline-flex items-center gap-1.5 rounded-control pb-1.5 text-muted transition-colors hover:text-ink"
+          >
+            <Icon name="muatUlang" size={14} />
+            <span className="sr-only">Muat ulang data. </span>
+            <span>{refreshedAt === "" ? "Muat ulang" : `Diperbarui ${refreshedAt}`}</span>
+          </button>
         )}
-      </div>
+      </header>
 
       {user !== null && !allowed && (
         <EmptyState
-          title="Dasbor belum tersedia untuk peran Anda"
+          title="Beranda belum tersedia untuk peran Anda"
           description="Akun Anda hanya membaca kasus, jadi belum ada ringkasan kerja yang bisa ditampilkan."
         />
       )}
@@ -72,12 +86,11 @@ export default function DashboardPage() {
             counts={dashboard.summary.case_counts}
             total={dashboard.summary.total_cases}
             waiting={dashboard.summary.waiting_for_review}
-          />
-          {dashboard.summary.needs_reassignment !== null && (
-            <NeedsReassignmentCard
-              count={dashboard.summary.needs_reassignment}
-            />
-          )}
+          >
+            {dashboard.summary.needs_reassignment !== null && (
+              <NeedsReassignmentCard count={dashboard.summary.needs_reassignment} />
+            )}
+          </CaseCountCards>
           {dashboard.summary.review_queue !== null && (
             <ReviewQueue reviews={dashboard.summary.review_queue} />
           )}

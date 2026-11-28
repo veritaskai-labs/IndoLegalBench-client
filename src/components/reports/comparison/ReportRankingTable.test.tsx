@@ -1,149 +1,209 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { buttonClasses } from "@/components/ui/Button";
 import { reportSections } from "@/lib/reports/reportSections";
 import { firstReport, reportResult, reportSession } from "@/test/reportFixtures";
 import type { ProductLabelMode, ReportLanguage } from "@/types/reports";
 
-import { ReportRankingTable } from "./ReportRankingTable";
+import { ReportRankingTable, type ScoreHref } from "./ReportRankingTable";
 
 function renderTable(
-  language: ReportLanguage = "en",
+  language: ReportLanguage = "id",
   sessions = firstReport().sessions,
   labelMode: ProductLabelMode = "real_name",
+  scoreHref?: ScoreHref,
 ) {
   const [section] = reportSections(sessions);
-  render(<ReportRankingTable rows={section.rows} language={language} labelMode={labelMode} caption="Test cases" />);
-  return screen.getByRole("table", { name: "Test cases" });
+  render(
+    <ReportRankingTable
+      rows={section.rows}
+      language={language}
+      labelMode={labelMode}
+      caption="Kasus test"
+      scoreHref={scoreHref}
+    />,
+  );
+  return screen.getByRole("table", { name: "Kasus test" });
+}
+
+/** Column names as shown, without the hidden explanation text of the info buttons. */
+function headerLabels(table: HTMLElement): string[] {
+  return within(table)
+    .getAllByRole("columnheader")
+    .map((cell) => cell.querySelector("[data-column-label]")?.textContent ?? "");
 }
 
 function rowOf(table: HTMLElement, product: string) {
-  return within(table).getByRole("rowheader", { name: product }).closest("tr") as HTMLElement;
+  return within(table).getByRole("rowheader", { name: new RegExp(`^${product}`) }).closest("tr") as HTMLElement;
 }
 
-// SCRUM-322 (Fase 0 K6): the same eleven columns as the PDF, in the report's language.
+const cellTexts = (row: HTMLElement) => within(row).getAllByRole("cell").map((cell) => cell.textContent);
+
+const CORE_ID = [
+  "Peringkat",
+  "Produk",
+  "Skor deterministik",
+  "Skor penilai LLM",
+  "Kasus dinilai",
+  "Tingkat kegagalan",
+  "Penanda",
+];
+
+// SCRUM-346 A1/A6 (PO approved 25 Nov): the core columns the PRD always shows (PBI-15: cases graded, model
+// version, both scores apart), with Kasus dasar and Percobaan folded behind "Tampilkan kolom lengkap" (the
+// comparison basis is also in the line under the title). Kind and model version sit under the product name.
 describe("ReportRankingTable", () => {
-  it("shows the eleven PDF columns in English", () => {
-    const table = renderTable("en");
-    expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+  it("shows the core columns and folds the basis and attempts columns", () => {
+    expect(headerLabels(renderTable())).toEqual(CORE_ID);
+  });
+
+  it("opens the full columns and folds them again", () => {
+    const table = renderTable();
+    const toggle = screen.getByRole("button", { name: "Tampilkan kolom lengkap" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(toggle);
+    expect(headerLabels(table)).toEqual([
+      "Peringkat",
+      "Produk",
+      "Skor deterministik",
+      "Skor penilai LLM",
+      "Kasus dinilai",
+      "Kasus dasar",
+      "Tingkat kegagalan",
+      "Percobaan",
+      "Penanda",
+    ]);
+    const fold = screen.getByRole("button", { name: "Ringkas kolom" });
+    expect(fold).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(fold);
+    expect(headerLabels(table)).toEqual(CORE_ID);
+  });
+
+  // The report body keeps its language parameter (preview, PBI-26); the toggle is app chrome and stays Indonesian.
+  it("names the columns in English for an English report", () => {
+    expect(headerLabels(renderTable("en"))).toEqual([
       "Rank",
       "Product",
-      "Type",
       "Deterministic score",
       "LLM judge score",
       "Cases graded",
-      "Basis cases",
       "Failure rate",
-      "Attempts",
-      "Model version",
       "Markers",
     ]);
-  });
-
-  it("shows the columns in Indonesian for an Indonesian report", () => {
-    const table = renderTable("id");
-    expect(within(table).getByRole("columnheader", { name: "Skor penilai LLM" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tampilkan kolom lengkap" })).toBeInTheDocument();
   });
 
   it("lists products in rank order with the product as the row header", () => {
+    const names = within(renderTable())
+      .getAllByRole("rowheader")
+      .map((cell) => cell.querySelector("[data-product]")?.textContent);
+    expect(names).toEqual(["AiYU", "Gemini", "DeepSeek", "Justisio", "LegalHero"]);
+  });
+
+  it("writes one ranked automatic product with its kind and model version under the name", () => {
+    const row = rowOf(renderTable(), "AiYU");
+    expect(within(row).getByRole("rowheader")).toHaveTextContent("AiYUOtomatis · v2.1");
+    expect(cellTexts(row)).toEqual(["1", "0,91", "0,87", "50", "1,20%", ""]);
+  });
+
+  it("writes the folded numbers once the full columns are open", () => {
     const table = renderTable();
-    expect(within(table).getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
-      "AiYU",
-      "Gemini",
-      "DeepSeek",
-      "Justisio",
-      "LegalHero",
-    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Tampilkan kolom lengkap" }));
+    expect(cellTexts(rowOf(table, "AiYU"))).toEqual(["1", "0,91", "0,87", "50", "42", "1,20%", "3", ""]);
   });
 
-  it("writes one ranked automatic product like the PDF row", () => {
-    const cells = within(rowOf(renderTable("en"), "AiYU")).getAllByRole("cell").map((cell) => cell.textContent);
-    expect(cells).toEqual(["1", "Automatic", "0.91", "0.87", "50", "42", "1.20%", "3", "v2.1", ""]);
-  });
-
-  // AC9 and K6: a version hidden by code mode reads like the PDF, unlike a version that was never recorded.
-  it.each([
-    ["en", "Hidden"],
-    ["id", "Disamarkan"],
-  ] as const)("shows the model version of a code-mode report as hidden in %s", (language, shown) => {
+  // AC9 and K6: a version hidden by code mode reads "Disamarkan", unlike a version that was never recorded.
+  it("shows the model version of a code-mode report as hidden", () => {
     const session = reportSession({ product_label: "Produk A", results: [reportResult({ product_model_version: null })] });
-    const cells = within(rowOf(renderTable(language, [session], "code"), "Produk A")).getAllByRole("cell");
-    expect(cells[8]).toHaveTextContent(shown);
+    const row = rowOf(renderTable("id", [session], "code"), "Produk A");
+    expect(within(row).getByRole("rowheader")).toHaveTextContent("Produk AOtomatis · Disamarkan");
   });
 
-  // D1 and K7: no LLM score means no rank; AC2: the failure rate does not apply to a manual product.
-  it("writes the manual product without a rank, LLM score or failure rate", () => {
-    const cells = within(rowOf(renderTable("en"), "LegalHero")).getAllByRole("cell").map((cell) => cell.textContent);
-    expect(cells).toEqual([
-      "–",
-      "Manual",
-      "0.78",
-      "–",
-      "42",
-      "42",
-      "Not applicable",
-      "1",
-      "–",
-      "Different number of attempts; Refused to answer (2)",
+  // D1 and K7: no LLM score means no rank; AC2: the failure rate does not apply to a manual product. A version that
+  // was never recorded is left out instead of printing a dash under the name.
+  it("writes the manual product without a rank, LLM score, failure rate or version", () => {
+    const row = rowOf(renderTable(), "LegalHero");
+    expect(within(row).getByRole("rowheader")).toHaveTextContent(/^LegalHeroManual$/);
+    expect(cellTexts(row).slice(0, 5)).toEqual(["–", "0,78", "–", "42", "Tidak berlaku"]);
+  });
+
+  // H4 (finding N8): markers are badges like everywhere else, instead of text joined by ";".
+  const markerBadges = (table: HTMLElement, product: string) =>
+    within(within(rowOf(table, product)).getAllByRole("cell").at(-1) as HTMLElement)
+      .getAllByText(/./)
+      .map((badge) => badge.textContent);
+
+  it("shows each marker as its own badge", () => {
+    expect(markerBadges(renderTable(), "LegalHero")).toEqual(["Jumlah percobaan berbeda", "Menolak menjawab (2)"]);
+  });
+
+  // AC4: the trial badge comes first, before the D2 markers, same order as the PDF.
+  it("puts the trial badge before the other markers", () => {
+    const trial = reportSession({ product_label: "T", is_trial: true, markers: [{ code: "model_version_differs" }] });
+    expect(markerBadges(renderTable("id", [trial]), "T")).toEqual(["Uji Coba", "Versi model berbeda"]);
+  });
+
+  // PO comment 25 Nov: a blue info icon next to each column name explains it on hover or keyboard focus, instead
+  // of a row of column groups above the table. The text is the same as the "Cara membaca" panel (A5).
+  it("explains six columns with an info button and a tooltip", () => {
+    renderTable();
+    const buttons = screen.getAllByRole("button", { name: /^Penjelasan / });
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Penjelasan Peringkat",
+      "Penjelasan Skor deterministik",
+      "Penjelasan Skor penilai LLM",
+      "Penjelasan Kasus dinilai",
+      "Penjelasan Tingkat kegagalan",
+      "Penjelasan Penanda",
     ]);
-  });
+    expect(screen.queryByRole("tooltip")).toBeNull();
 
-  it("uses the Indonesian number format and labels for an Indonesian report", () => {
-    const cells = within(rowOf(renderTable("id"), "Gemini")).getAllByRole("cell").map((cell) => cell.textContent);
-    expect(cells).toEqual(["2", "Otomatis", "0,84", "0,88", "50", "42", "0,00%", "3", "2.5", "Uji Coba"]);
+    fireEvent.mouseEnter(buttons[1]);
+    expect(screen.getByRole("tooltip")).toHaveTextContent(/^Skor jalur rujukan peraturan dan pasal/);
   });
 
   // Security: names come from the server and from people typing them; React must print them as text.
   it("prints a product name with markup as plain text", () => {
     const sessions = [reportSession({ product_label: "<img src=x onerror=alert(1)>", results: [reportResult()] })];
-    const table = renderTable("en", sessions);
-    expect(within(table).getByRole("rowheader", { name: "<img src=x onerror=alert(1)>" })).toBeInTheDocument();
+    const table = renderTable("id", sessions);
+    expect(within(table).getByText("<img src=x onerror=alert(1)>")).toBeInTheDocument();
     expect(table.querySelector("img")).toBeNull();
   });
 
-  // K6: on a phone the table scrolls sideways inside its own labelled region (a section, Sonar S6819).
+  // K6 / AC5: on a phone the table scrolls sideways inside its own labelled region, rank and product stay put.
   it("wraps the table in a scroll region named after the section", () => {
     renderTable();
-    expect(screen.getByRole("region", { name: "Test cases" }).tagName).toBe("SECTION");
+    expect(screen.getByRole("region", { name: "Kasus test" }).tagName).toBe("SECTION");
   });
 
   // PBI-16 AC1 (SCRUM-328): every score opens the cases behind it; the link carries the number's result id.
   it("links each score to the cases behind it when a drill-down href is given", () => {
     const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
-    const [section] = reportSections([session]);
+    renderTable("id", [session], "real_name", (resultId) => `/drill/${resultId}`);
 
-    render(
-      <ReportRankingTable
-        rows={section.rows}
-        language="en"
-        labelMode="real_name"
-        caption="Test cases"
-        scoreHref={(resultId) => `/drill/${resultId}`}
-      />,
-    );
-
-    expect(screen.getByRole("link", { name: "0.91, telusuri kasus di balik skor deterministik AiYU" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "0,91, telusuri kasus di balik skor deterministik AiYU" })).toHaveAttribute(
       "href",
       "/drill/res-9",
     );
-    expect(screen.getByRole("link", { name: "0.87, telusuri kasus di balik skor penilai LLM AiYU" })).toHaveTextContent("0.87");
+    expect(screen.getByRole("link", { name: "0,87, telusuri kasus di balik skor penilai LLM AiYU" })).toHaveTextContent("0,87");
   });
 
-  // Positive (WCAG 2.5.3 Label in Name, review #104): the link name starts with the number on screen, so a screen
-  // reader says it and voice control can click it; the Indonesian hint is marked lang="id" inside an English report.
+  // Finding N2 (A2): the drill-down is also an explicit action per row, not only a blue number.
+  it("adds a Lihat kasus action per product when a drill-down href is given", () => {
+    const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
+    const table = renderTable("id", [session], "real_name", (resultId) => `/drill/${resultId}`);
+
+    expect(within(table).getAllByRole("columnheader").at(-1)).toHaveTextContent("Kasus di balik angka");
+    expect(screen.getByRole("link", { name: "Lihat kasus AiYU" })).toHaveAttribute("href", "/drill/res-9");
+  });
+
+  // Positive (WCAG 2.5.3 Label in Name, review #104): the link name starts with the number on screen.
   it("keeps the visible number in the link name and marks the hint as Indonesian", () => {
     const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
-    const [section] = reportSections([session]);
-
-    render(
-      <ReportRankingTable
-        rows={section.rows}
-        language="en"
-        labelMode="real_name"
-        caption="Test cases"
-        scoreHref={(resultId) => `/drill/${resultId}`}
-      />,
-    );
+    renderTable("en", [session], "real_name", (resultId) => `/drill/${resultId}`);
 
     const [link] = screen.getAllByRole("link");
     expect(link).not.toHaveAttribute("aria-label");
@@ -151,22 +211,32 @@ describe("ReportRankingTable", () => {
     expect(within(link).getByText(/telusuri kasus di balik/)).toHaveAttribute("lang", "id");
   });
 
-  // Edge: a dash is not a number, so an empty score is never a link (D1).
+  // Edge: a dash is not a number, so an empty score is never a link (D1); the row action stays.
   it("does not link an empty score", () => {
     const session = reportSession({ product_label: "AiYU", results: [reportResult({ llm_score: null, rank: null })] });
-    const [section] = reportSections([session]);
+    renderTable("id", [session], "real_name", () => "/x");
 
-    render(
-      <ReportRankingTable rows={section.rows} language="en" labelMode="real_name" caption="Test cases" scoreHref={() => "/x"} />,
-    );
-
-    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: /telusuri/ })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Lihat kasus AiYU" })).toBeInTheDocument();
   });
 
-  // Negative: without a drill-down href (the development preview), scores stay plain text.
-  it("keeps scores as text without a drill-down href", () => {
-    renderTable("en");
+  // Negative: without a drill-down href (the development preview), scores stay text and there is no action column.
+  it("keeps scores as text and has no action column without a drill-down href", () => {
+    const table = renderTable();
 
     expect(screen.queryAllByRole("link")).toHaveLength(0);
+    expect(within(table).queryByText("Kasus di balik angka")).toBeNull();
+  });
+
+  // Review #135 (PBI-25 one look): the column toggle is the shared Button and "Lihat kasus" looks exactly like it.
+  it("uses the shared ghost Button look for the column toggle and Lihat kasus", () => {
+    const session = reportSession({ product_label: "AiYU", results: [reportResult({ id: "res-9" })] });
+    renderTable("id", [session], "real_name", (resultId) => `/drill/${resultId}`);
+    const ghostSmall = buttonClasses({ variant: "ghost", size: "sm" }).split(" ");
+
+    const toggle = screen.getByRole("button", { name: "Tampilkan kolom lengkap" });
+    expect(toggle).toHaveClass(...ghostSmall);
+    expect(toggle).toHaveAttribute("type", "button");
+    expect(screen.getByRole("link", { name: "Lihat kasus AiYU" })).toHaveClass(...ghostSmall, "relative");
   });
 });

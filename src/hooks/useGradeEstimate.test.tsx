@@ -1,27 +1,15 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { JudgeOptionsApi } from "@/hooks/useJudgeOptions";
 import { ApiError } from "@/lib/apiClient";
 import type { GradingGateway } from "@/lib/grading/gradingApi";
 import { gradeEstimate } from "@/test/gradingFixtures";
 import type { GradeEstimate } from "@/types/grading";
 import { useGradeEstimate } from "./useGradeEstimate";
 
-// The hook takes the gateway and the judge list as parameters (DIP), so the test hands it fakes
-// instead of mocking modules.
+// The hook takes the gateway as a parameter (DIP), so the test hands it a fake instead of mocking modules.
 function fakeGateway(estimate: GradingGateway["estimate"]): GradingGateway {
   return { results: vi.fn(), sessions: vi.fn(), enqueue: vi.fn(), progress: vi.fn(), runs: vi.fn(), run: vi.fn(), estimate: vi.fn(estimate) };
-}
-
-function fakeJudges(names: Record<string, string> = { "judge-a": "Judge Alfa", "judge-b": "Judge Beta" }): JudgeOptionsApi {
-  return {
-    listJudgeOptions: vi.fn(() =>
-      Promise.resolve(
-        Object.entries(names).map(([id, name]) => ({ id, name, provider_type: "openai_compatible" as const, model_name: "m" })),
-      ),
-    ),
-  };
 }
 
 describe("useGradeEstimate (PBI-14 AC6)", () => {
@@ -29,19 +17,30 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
     const gateway = fakeGateway(() => Promise.resolve(gradeEstimate({ judge_provider_id: "judge-b" })));
     const options = { judgeProviderId: "judge-b", rubricVersion: "v2" };
 
-    const { result } = renderHook(() => useGradeEstimate("s-1", options, gateway, fakeJudges()));
+    const { result } = renderHook(() => useGradeEstimate("s-1", options, gateway));
 
     expect(result.current.status).toBe("loading");
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(gateway.estimate).toHaveBeenCalledWith("s-1", options);
     const data = result.current.status === "ready" ? result.current.data : null;
-    expect(data?.rows.find((row) => row.label === "LLM judge")?.value).toBe("Judge Beta");
+    expect(data?.rows.find((row) => row.label === "Versi rubrik")?.value).toBe("Versi 1");
+  });
+
+  // Positive (SCRUM-375 C2): no version sent means the server used the active one, so the row says aktif.
+  it("marks the version aktif when no version was chosen", async () => {
+    const gateway = fakeGateway(() => Promise.resolve(gradeEstimate({ rubric_version: "v8" })));
+
+    const { result } = renderHook(() => useGradeEstimate("s-1", { judgeProviderId: "judge-a" }, gateway));
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const data = result.current.status === "ready" ? result.current.data : null;
+    expect(data?.rows.find((row) => row.label === "Versi rubrik")?.value).toBe("Versi 8 · aktif");
   });
 
   it("estimates with no options for the first grading", async () => {
     const gateway = fakeGateway(() => Promise.resolve(gradeEstimate()));
 
-    renderHook(() => useGradeEstimate("s-1", {}, gateway, fakeJudges()));
+    renderHook(() => useGradeEstimate("s-1", {}, gateway));
 
     await waitFor(() => expect(gateway.estimate).toHaveBeenCalledWith("s-1", {}));
   });
@@ -50,7 +49,7 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
   it("does not ask the server while no options are given", async () => {
     const gateway = fakeGateway(() => Promise.resolve(gradeEstimate()));
 
-    const { result } = renderHook(() => useGradeEstimate("s-1", null, gateway, fakeJudges()));
+    const { result } = renderHook(() => useGradeEstimate("s-1", null, gateway));
 
     await waitFor(() => expect(result.current).toMatchObject({ status: "ready", data: null }));
     expect(gateway.estimate).not.toHaveBeenCalled();
@@ -64,7 +63,7 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
       .mockReturnValueOnce(new Promise<GradeEstimate>((resolve) => (finishSecond = resolve)));
     const gateway = fakeGateway(estimate);
 
-    const { result, rerender } = renderHook(({ judge }) => useGradeEstimate("s-1", { judgeProviderId: judge }, gateway, fakeJudges()), {
+    const { result, rerender } = renderHook(({ judge }) => useGradeEstimate("s-1", { judgeProviderId: judge }, gateway), {
       initialProps: { judge: "judge-a" },
     });
     await waitFor(() => expect(result.current.status).toBe("ready"));
@@ -79,7 +78,7 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
   it("loads again when the rubric version changes", async () => {
     const gateway = fakeGateway(() => Promise.resolve(gradeEstimate()));
 
-    const { rerender } = renderHook(({ version }) => useGradeEstimate("s-1", { rubricVersion: version }, gateway, fakeJudges()), {
+    const { rerender } = renderHook(({ version }) => useGradeEstimate("s-1", { rubricVersion: version }, gateway), {
       initialProps: { version: "v1" },
     });
     await waitFor(() => expect(gateway.estimate).toHaveBeenCalledWith("s-1", { rubricVersion: "v1" }));
@@ -97,7 +96,7 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
       .mockResolvedValueOnce(gradeEstimate({ judge_provider_id: "judge-b", attempts_to_grade: 3 }));
     const gateway = fakeGateway(estimate);
 
-    const { result, rerender } = renderHook(({ judge }) => useGradeEstimate("s-1", { judgeProviderId: judge }, gateway, fakeJudges()), {
+    const { result, rerender } = renderHook(({ judge }) => useGradeEstimate("s-1", { judgeProviderId: judge }, gateway), {
       initialProps: { judge: "judge-a" },
     });
     rerender({ judge: "judge-b" });
@@ -105,18 +104,18 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
     await act(async () => finishFirst(gradeEstimate({ judge_provider_id: "judge-a", attempts_to_grade: 99 })));
 
     const data = result.current.status === "ready" ? result.current.data : null;
-    expect(data?.rows[0]).toEqual({ label: "Jumlah percobaan", value: "3" });
+    expect(data?.rows.find((row) => row.label === "Jumlah percobaan")).toEqual({ label: "Jumlah percobaan", value: "3" });
   });
 
   it("explains a refusal in the estimate's own words", async () => {
     const gateway = fakeGateway(() => Promise.reject(new ApiError(422, "JUDGE_PRICING_MISSING")));
 
-    const { result } = renderHook(() => useGradeEstimate("s-1", {}, gateway, fakeJudges()));
+    const { result } = renderHook(() => useGradeEstimate("s-1", {}, gateway));
 
     await waitFor(() =>
       expect(result.current).toMatchObject({
         status: "error",
-        message: "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Penyedia.",
+        message: "Harga token penilai ini belum lengkap, jadi biayanya belum bisa diperkirakan. Lengkapi harga di halaman Produk AI.",
       }),
     );
   });
@@ -128,23 +127,11 @@ describe("useGradeEstimate (PBI-14 AC6)", () => {
       .mockResolvedValueOnce(gradeEstimate());
     const gateway = fakeGateway(estimate);
 
-    const { result } = renderHook(() => useGradeEstimate("s-1", {}, gateway, fakeJudges()));
+    const { result } = renderHook(() => useGradeEstimate("s-1", {}, gateway));
     await waitFor(() => expect(result.current).toMatchObject({ status: "error", message: "Perkiraan biaya gagal dimuat. Coba lagi." }));
     act(() => result.current.reload());
 
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(estimate).toHaveBeenCalledTimes(2);
-  });
-
-  // The judge list is only for the name; an estimate must still show when that list cannot load.
-  it("still shows the estimate when the judge list fails to load", async () => {
-    const gateway = fakeGateway(() => Promise.resolve(gradeEstimate()));
-    const judgeApi: JudgeOptionsApi = { listJudgeOptions: vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))) };
-
-    const { result } = renderHook(() => useGradeEstimate("s-1", {}, gateway, judgeApi));
-
-    await waitFor(() => expect(result.current.status).toBe("ready"));
-    const data = result.current.status === "ready" ? result.current.data : null;
-    expect(data?.rows.find((row) => row.label === "LLM judge")?.value).toBe("Judge yang dipilih");
   });
 });
