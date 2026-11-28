@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { type MouseEvent, type ReactNode, useMemo, useState } from "react";
 import {
   type Comparator,
   nextSort,
@@ -62,6 +62,16 @@ const ARIA_SORT = { asc: "ascending", desc: "descending" } as const;
 function ariaSortFor(sortable: boolean | undefined, active: SortState | null) {
   if (!sortable) return undefined;
   return active ? ARIA_SORT[active.direction] : "none";
+}
+
+function forwardRowClick<T>(
+  event: MouseEvent<HTMLTableRowElement>,
+  row: T,
+  onRowClick: (row: T) => void,
+) {
+  if (!(event.target as HTMLElement).closest("a, button, input, select, textarea")) {
+    onRowClick(row);
+  }
 }
 
 /** Table with the platform's one sorting and paging pattern; the rules live in lib/ui/tableModel. */
@@ -154,9 +164,9 @@ export function DataTable<T>({
             ) : (
               paged.items.map((row) => (
                 // Row click convenience; interactive descendants (links/buttons) still handle keyboard navigation.
-                <tr // NOSONAR
+                <tr
                   key={rowKey(row)}
-                  onClick={onRowClick ? (event) => { if (!(event.target as HTMLElement).closest("a, button, input, select, textarea")) onRowClick(row); } : undefined} // NOSONAR
+                  onClick={onRowClick ? (event) => forwardRowClick(event, row, onRowClick) : undefined}
                   className={`hover:bg-surface-hover ${onRowClick ? "cursor-pointer " : ""}${rowClassName?.(row) ?? ""}`}
                 >
                   {columns.map((column) => (
