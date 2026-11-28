@@ -135,29 +135,29 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     expect(pushMock).toHaveBeenCalledWith(editPath);
   });
 
-  it("menampilkan EmptyState dan tombol Tulis Kasus Sekarang di suite aktif", async () => {
+  it("menampilkan EmptyState dan tombol Tambah Kasus Sekarang di suite aktif", async () => {
     vi.mocked(casesApi.getCasesForSuite).mockResolvedValue([]);
 
     await renderPage();
 
     expect(await screen.findByText("Belum ada kasus di suite ini")).toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Tulis Kasus Sekarang" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah Kasus Sekarang" }));
     expect(pushMock).toHaveBeenCalledWith("/suites/suite-123/cases/new");
   });
 
-  it("tombol Tulis Kasus di header membuka form kasus baru", async () => {
+  it("tombol Tambah Kasus di header membuka form kasus baru", async () => {
     vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
 
     await renderPage();
 
-    const button = await screen.findByRole("button", { name: "Tulis Kasus" });
+    const button = await screen.findByRole("button", { name: "Tambah Kasus" });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     expect(pushMock).toHaveBeenCalledWith("/suites/suite-123/cases/new");
   });
 
-  it("menonaktifkan Tulis Kasus di suite yang diarsipkan", async () => {
+  it("menonaktifkan Tambah Kasus di suite yang diarsipkan", async () => {
     vi.mocked(apiFetch).mockResolvedValue(archivedSuite);
     vi.mocked(casesApi.getCasesForSuite).mockResolvedValue([]);
 
@@ -166,9 +166,9 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     expect(
       await screen.findByText("Suite diarsipkan, kasus baru tidak bisa ditulis.")
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tulis Kasus" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Tambah Kasus" })).toBeDisabled();
     expect(
-      screen.queryByRole("button", { name: "Tulis Kasus Sekarang" })
+      screen.queryByRole("button", { name: "Tambah Kasus Sekarang" })
     ).not.toBeInTheDocument();
   });
 
@@ -187,7 +187,7 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
       });
     });
 
-    fireEvent.change(screen.getByLabelText("Tag:"), { target: { value: "dev" } });
+    fireEvent.click(screen.getByRole("button", { name: "Hanya Dev" }));
 
     await waitFor(() => {
       expect(casesApi.getCasesForSuite).toHaveBeenCalledWith("suite-123", {
@@ -258,9 +258,9 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     await renderPage();
 
     const nav = await screen.findByRole("navigation", { name: "Breadcrumb" });
-    expect(nav).toHaveTextContent("Suite");
+    expect(nav).toHaveTextContent("Suite dan kasus");
     expect(nav).toHaveTextContent("Suite Ketenagakerjaan");
-    expect(within(nav).getByRole("link", { name: "Suite" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Suite dan kasus" })).toHaveAttribute(
       "href",
       "/suites",
     );
@@ -352,7 +352,7 @@ describe("SuiteDetailPage untuk Developer AI (SCRUM-184)", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("menyembunyikan Tulis Kasus dan filter status", async () => {
+  it("menyembunyikan Tambah Kasus dan filter status", async () => {
     await renderPage();
     await screen.findByText("PHK-001");
 
@@ -360,9 +360,9 @@ describe("SuiteDetailPage untuk Developer AI (SCRUM-184)", () => {
     expect(screen.getByText("Aktif")).toBeInTheDocument();
     expect(screen.queryByText("Suite diarsipkan, kasus baru tidak bisa ditulis.")).not.toBeInTheDocument();
 
-    expect(screen.queryByRole("button", { name: "Tulis Kasus" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Tambah Kasus" })).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Filter status kasus" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Tag:")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Filter tag kasus" })).toBeInTheDocument();
   });
 
   it("tidak menawarkan menulis kasus saat suite kosong", async () => {
@@ -374,7 +374,7 @@ describe("SuiteDetailPage untuk Developer AI (SCRUM-184)", () => {
       await screen.findByText("Belum ada kasus yang disetujui di suite ini."),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Tulis Kasus Sekarang" }),
+      screen.queryByRole("button", { name: "Tambah Kasus Sekarang" }),
     ).not.toBeInTheDocument();
   });
 });

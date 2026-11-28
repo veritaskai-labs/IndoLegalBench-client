@@ -45,8 +45,8 @@ export function LegalRefLinkFields({
   const ready = regulationTypes.status === "ready";
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <div className="sm:col-span-3">
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="sm:col-span-2">
         <Controller
           control={control}
           name={`${base}.regulation_type`}
@@ -85,13 +85,15 @@ export function LegalRefLinkFields({
         registration={register(`${base}.year`)}
         error={errorFor(`${base}.year`)}
       />
-      <TextField
-        label="Tentang (opsional)"
-        hint={CASE_HELP.about}
-        placeholder={CASE_PLACEHOLDER.about}
-        registration={register(`${base}.about`)}
-        error={errorFor(`${base}.about`)}
-      />
+      <div className="sm:col-span-2">
+        <TextField
+          label="Tentang (opsional)"
+          hint={CASE_HELP.about}
+          placeholder={CASE_PLACEHOLDER.about}
+          registration={register(`${base}.about`)}
+          error={errorFor(`${base}.about`)}
+        />
+      </div>
       {visibleLinkFields(form).map((name) => (
         <TextField
           key={name}

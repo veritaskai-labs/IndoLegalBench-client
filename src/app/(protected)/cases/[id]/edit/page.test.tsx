@@ -312,7 +312,7 @@ describe("EditCasePage breadcrumb and session", () => {
     // Act
     await user.click(
       within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("button", {
-        name: "Suite",
+        name: "Suite dan kasus",
       }),
     );
 

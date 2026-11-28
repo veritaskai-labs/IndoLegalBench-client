@@ -1,11 +1,16 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/ui/Toast";
 import { useSuites } from "@/hooks/useSuites";
 import SuitesPage from "./page";
 import { apiFetch } from "@/lib/apiClient";
 import type { Role } from "@/types";
 import type { Suite } from "@/types/suite";
+
+function render(ui: React.ReactElement) {
+  return rtlRender(<ToastProvider>{ui}</ToastProvider>);
+}
 
 const { useSuitesMock, useAuthMock } = vi.hoisted(() => ({
   useSuitesMock: vi.fn(),
@@ -15,6 +20,7 @@ const { useSuitesMock, useAuthMock } = vi.hoisted(() => ({
 vi.mock("@/hooks/useSuites", () => ({ useSuites: useSuitesMock }));
 // The page reads the role to decide who sees "Buat kasus".
 vi.mock("@/hooks/useAuth", () => ({ useAuth: useAuthMock }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 function signedInAs(role: Role) {
   useAuthMock.mockReturnValue({
@@ -59,7 +65,7 @@ describe("SuitesPage", () => {
     signedInAs(role);
     render(<SuitesPage />);
 
-    expect(screen.getByRole("link", { name: "Suite" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Daftar suite" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Daftar kasus" })).toHaveAttribute("href", "/cases");
   });
 
