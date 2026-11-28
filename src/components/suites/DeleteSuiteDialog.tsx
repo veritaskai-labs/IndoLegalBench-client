@@ -50,11 +50,11 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
-      <div
-        role="dialog"
+      <dialog
+        open
         aria-modal="true"
         aria-label="Hapus suite"
-        className="w-full max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog"
+        className="static m-0 w-full max-w-[520px] rounded-dialog bg-paper p-6 text-ink shadow-dialog"
       >
         <h2 className="font-serif text-[22px] font-medium leading-7 text-ink">
           Hapus suite
@@ -94,7 +94,7 @@ export function DeleteSuiteDialog({ suite, onClose, onDone }: Props) {
             </Button>
           )}
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

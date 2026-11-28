@@ -153,7 +153,8 @@ export function DataTable<T>({
               </tr>
             ) : (
               paged.items.map((row) => (
-                <tr
+                // Row click convenience; interactive descendants (links/buttons) still handle keyboard navigation.
+                <tr // NOSONAR
                   key={rowKey(row)}
                   onClick={
                     onRowClick

@@ -10,7 +10,7 @@ type Props = CompletenessState & {
  * Kelengkapan kasus di kepala editor (SCRUM-109, AC4 dan AC7). Angka dan
  * daftar kekurangan datang dari server, jadi rumusnya hanya ada di satu tempat.
  */
-export function CompletenessIndicator(props: Props) {
+export function CompletenessIndicator(props: Readonly<Props>) {
   if (props.status === "loading") {
     return (
       <section
@@ -18,9 +18,9 @@ export function CompletenessIndicator(props: Props) {
         aria-busy="true"
         className="rounded-control border border-line bg-paper p-4"
       >
-        <p role="status" className="text-sm text-muted">
+        <output className="block text-sm text-muted">
           Menghitung kelengkapan…
-        </p>
+        </output>
       </section>
     );
   }
@@ -60,19 +60,17 @@ export function CompletenessIndicator(props: Props) {
         )}
       </div>
 
-      <div
-        role="progressbar"
+      <progress
+        value={pct}
+        max={100}
         aria-label="Kelengkapan kasus"
-        aria-valuemin={0}
-        aria-valuemax={100}
         aria-valuenow={pct}
-        className="h-2 overflow-hidden rounded-full bg-surface"
-      >
-        <div
-          className={`h-full transition-all ${ready_for_review ? "bg-success" : "bg-accent"}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+        className={`block h-2 w-full appearance-none overflow-hidden rounded-full bg-surface [&::-webkit-progress-bar]:bg-surface [&::-moz-progress-bar]:transition-all [&::-webkit-progress-value]:transition-all ${
+          ready_for_review
+            ? "[&::-moz-progress-bar]:bg-success [&::-webkit-progress-value]:bg-success"
+            : "[&::-moz-progress-bar]:bg-accent [&::-webkit-progress-value]:bg-accent"
+        }`}
+      />
 
       {missing.length > 0 && (
         <div>

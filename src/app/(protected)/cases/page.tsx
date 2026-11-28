@@ -231,6 +231,96 @@ function CaseDirectory() {
   );
 }
 
+function buildCaseColumns(
+  onPreview: (row: CaseDirectoryRow) => void,
+  onDuplicate: (row: CaseDirectoryRow) => void,
+): Column<CaseDirectoryRow>[] {
+  return [
+    {
+      key: "case_code",
+      header: "ID Kasus",
+      sortable: true,
+      cell: (row) => (
+        <Link
+          href={caseEditPath(row.id)}
+          className="font-mono text-xs font-semibold text-ink hover:underline"
+        >
+          {row.case_code}
+        </Link>
+      ),
+    },
+    {
+      key: "title",
+      header: "Judul Pertanyaan",
+      sortable: true,
+      sortValue: (row) => row.title || "Kasus tanpa judul",
+      cell: (row) => (
+        <span className="font-medium text-ink">
+          {row.title || "Kasus tanpa judul"}
+        </span>
+      ),
+    },
+    {
+      key: "suite_name",
+      header: "Suite",
+      sortable: true,
+      cell: (row) => (
+        <span className="text-ink-soft">
+          {row.suite_name}
+          {row.suite_archived && <span className="block text-xs text-muted">Arsip</span>}
+        </span>
+      ),
+    },
+    {
+      key: "split_tag",
+      header: "Tag",
+      cell: (row) => <SplitTagBadge tag={row.split_tag} />,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (row) => <CaseStatusBadge status={row.status} />,
+    },
+    {
+      key: "updated_at",
+      header: "Terakhir Diubah",
+      sortable: true,
+      sortValue: (row) => row.updated_at,
+      cell: (row) => (
+        <span title={formatWib(row.updated_at)} className="text-ink-soft">
+          {formatRelativeTime(row.updated_at)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Aksi",
+      cell: (row) => (
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            aria-label={`Pratinjau ${row.case_code}`}
+            onClick={() => onPreview(row)}
+            className={buttonClasses({ variant: "ghost", size: "sm" })}
+          >
+            Pratinjau
+          </button>
+          {!row.suite_archived && (
+            <button
+              type="button"
+              aria-label={`Duplikat ${row.case_code}`}
+              onClick={() => onDuplicate(row)}
+              className="inline-flex h-8 cursor-pointer items-center justify-center rounded-control px-3 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-wash"
+            >
+              Duplikat
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+}
+
 function CaseResults({ request, revision, onPageChange, onPreview, onDuplicate }: Readonly<{
   request: CaseDirectoryQuery;
   revision: number;
@@ -250,90 +340,7 @@ function CaseResults({ request, revision, onPageChange, onPreview, onDuplicate }
   }, [pastEnd, lastPage, onPageChange]);
 
   const columns = useMemo<Column<CaseDirectoryRow>[]>(
-    () => [
-      {
-        key: "case_code",
-        header: "ID Kasus",
-        sortable: true,
-        cell: (row) => (
-          <Link
-            href={caseEditPath(row.id)}
-            className="font-mono text-xs font-semibold text-ink hover:underline"
-          >
-            {row.case_code}
-          </Link>
-        ),
-      },
-      {
-        key: "title",
-        header: "Judul Pertanyaan",
-        sortable: true,
-        sortValue: (row) => row.title || "Kasus tanpa judul",
-        cell: (row) => (
-          <span className="font-medium text-ink">
-            {row.title || "Kasus tanpa judul"}
-          </span>
-        ),
-      },
-      {
-        key: "suite_name",
-        header: "Suite",
-        sortable: true,
-        cell: (row) => (
-          <span className="text-ink-soft">
-            {row.suite_name}
-            {row.suite_archived && <span className="block text-xs text-muted">Arsip</span>}
-          </span>
-        ),
-      },
-      {
-        key: "split_tag",
-        header: "Tag",
-        cell: (row) => <SplitTagBadge tag={row.split_tag} />,
-      },
-      {
-        key: "status",
-        header: "Status",
-        cell: (row) => <CaseStatusBadge status={row.status} />,
-      },
-      {
-        key: "updated_at",
-        header: "Terakhir Diubah",
-        sortable: true,
-        sortValue: (row) => row.updated_at,
-        cell: (row) => (
-          <span title={formatWib(row.updated_at)} className="text-ink-soft">
-            {formatRelativeTime(row.updated_at)}
-          </span>
-        ),
-      },
-      {
-        key: "actions",
-        header: "Aksi",
-        cell: (row) => (
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              aria-label={`Pratinjau ${row.case_code}`}
-              onClick={() => onPreview(row)}
-              className={buttonClasses({ variant: "ghost", size: "sm" })}
-            >
-              Pratinjau
-            </button>
-            {!row.suite_archived && (
-              <button
-                type="button"
-                aria-label={`Duplikat ${row.case_code}`}
-                onClick={() => onDuplicate(row)}
-                className="inline-flex h-8 cursor-pointer items-center justify-center rounded-control px-3 text-[13px] font-medium text-accent-ink transition-colors hover:bg-accent-wash"
-              >
-                Duplikat
-              </button>
-            )}
-          </div>
-        ),
-      },
-    ],
+    () => buildCaseColumns(onPreview, onDuplicate),
     [onDuplicate, onPreview],
   );
 

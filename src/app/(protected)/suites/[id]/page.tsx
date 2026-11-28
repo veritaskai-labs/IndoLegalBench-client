@@ -212,6 +212,82 @@ function toPageError(err: unknown, scope: PageError["scope"]): PageError {
   return { message: "Terjadi kesalahan jaringan atau koneksi server.", retryable: true, scope };
 }
 
+function buildSuiteCaseColumns(
+  casePath: (id: string) => string,
+): Column<CaseSummary>[] {
+  return [
+    {
+      key: "case_code",
+      header: "ID Kasus",
+      sortable: true,
+      cell: (item) =>
+        item.masked ? (
+          <span className="font-mono font-medium text-subtle">{item.case_code}</span>
+        ) : (
+          <Link
+            href={casePath(item.id)}
+            className="font-mono font-semibold text-ink hover:underline"
+          >
+            {item.case_code}
+          </Link>
+        ),
+    },
+    {
+      key: "title",
+      header: "Judul Pertanyaan",
+      sortable: true,
+      cell: (item) =>
+        item.masked ? (
+          <span className="italic text-muted">{item.title}</span>
+        ) : (
+          <span className="font-medium text-ink">{item.title}</span>
+        ),
+    },
+    {
+      key: "split_tag",
+      header: "Tag",
+      cell: (item) => <SplitTagBadge tag={item.split_tag} />,
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (item) => <CaseStatusBadge status={item.status} />,
+    },
+    {
+      key: "completeness_pct",
+      header: "Kelengkapan",
+      sortable: true,
+      cell: (item) =>
+        item.masked ? (
+          <span className="text-subtle">—</span>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="w-20 shrink-0">
+              <ProgressBar
+                percent={item.completeness_pct}
+                label={`Kelengkapan ${item.case_code}`}
+              />
+            </div>
+            <span className="font-mono text-xs tabular-nums text-ink-soft">
+              {item.completeness_pct}%
+            </span>
+          </div>
+        ),
+    },
+    {
+      key: "updated_at",
+      header: "Terakhir Diubah",
+      sortable: true,
+      sortValue: (item) => item.updated_at,
+      cell: (item) => (
+        <span title={formatWib(item.updated_at)} className="text-ink-soft">
+          {formatRelativeTime(item.updated_at)}
+        </span>
+      ),
+    },
+  ];
+}
+
 export default function SuiteDetailPage({ params }: PageProps) {
   const { id: suiteId } = use(params);
   const router = useRouter();
@@ -330,77 +406,7 @@ export default function SuiteDetailPage({ params }: PageProps) {
   }, [cases, selectedStatuses, searchQuery]);
 
   const columns = useMemo<Column<CaseSummary>[]>(
-    () => [
-      {
-        key: "case_code",
-        header: "ID Kasus",
-        sortable: true,
-        cell: (item) =>
-          item.masked ? (
-            <span className="font-mono font-medium text-subtle">{item.case_code}</span>
-          ) : (
-            <Link
-              href={casePath(item.id)}
-              className="font-mono font-semibold text-ink hover:underline"
-            >
-              {item.case_code}
-            </Link>
-          ),
-      },
-      {
-        key: "title",
-        header: "Judul Pertanyaan",
-        sortable: true,
-        cell: (item) =>
-          item.masked ? (
-            <span className="italic text-muted">{item.title}</span>
-          ) : (
-            <span className="font-medium text-ink">{item.title}</span>
-          ),
-      },
-      {
-        key: "split_tag",
-        header: "Tag",
-        cell: (item) => <SplitTagBadge tag={item.split_tag} />,
-      },
-      {
-        key: "status",
-        header: "Status",
-        cell: (item) => <CaseStatusBadge status={item.status} />,
-      },
-      {
-        key: "completeness_pct",
-        header: "Kelengkapan",
-        sortable: true,
-        cell: (item) =>
-          item.masked ? (
-            <span className="text-subtle">—</span>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="w-20 shrink-0">
-                <ProgressBar
-                  percent={item.completeness_pct}
-                  label={`Kelengkapan ${item.case_code}`}
-                />
-              </div>
-              <span className="font-mono text-xs tabular-nums text-ink-soft">
-                {item.completeness_pct}%
-              </span>
-            </div>
-          ),
-      },
-      {
-        key: "updated_at",
-        header: "Terakhir Diubah",
-        sortable: true,
-        sortValue: (item) => item.updated_at,
-        cell: (item) => (
-          <span title={formatWib(item.updated_at)} className="text-ink-soft">
-            {formatRelativeTime(item.updated_at)}
-          </span>
-        ),
-      },
-    ],
+    () => buildSuiteCaseColumns(casePath),
     [casePath],
   );
 
