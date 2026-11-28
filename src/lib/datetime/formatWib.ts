@@ -46,3 +46,25 @@ export function formatWibClock(iso: string): string {
 
   return `${pad2(wib.getUTCHours())}.${pad2(wib.getUTCMinutes())}`;
 }
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+/** Waktu relatif dalam Bahasa Indonesia untuk &lt; 7 hari; lebih dari itu pakai tanggal WIB. */
+export function formatRelativeTime(iso: string): string {
+  const time = new Date(iso).getTime();
+  if (Number.isNaN(time)) return iso;
+
+  const diffMs = Date.now() - time;
+  if (diffMs < 0) return formatWibDate(iso);
+  if (diffMs < MINUTE_MS) return "Baru saja";
+  if (diffMs < HOUR_MS) return `${Math.floor(diffMs / MINUTE_MS)} menit yang lalu`;
+  if (diffMs < DAY_MS) return `${Math.floor(diffMs / HOUR_MS)} jam yang lalu`;
+
+  const days = Math.floor(diffMs / DAY_MS);
+  if (days === 1) return "Kemarin";
+  if (days < 7) return `${days} hari yang lalu`;
+
+  return formatWibDate(iso);
+}
