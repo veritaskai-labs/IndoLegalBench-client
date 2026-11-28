@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ASSIGNMENT_ID, makeCaseReview, makeSlot } from "@/test/reviewFixtures";
 import { SecondReviewerSlot } from "./SecondReviewerSlot";
 
@@ -45,5 +46,15 @@ describe("SecondReviewerSlot", () => {
     render(<SecondReviewerSlot caseReview={{ status: "ready", review, reload }} myAssignmentId={ASSIGNMENT_ID} />);
 
     expect(screen.getByRole("region", { name: "Peninjau kedua" })).toBeInTheDocument();
+  });
+
+  it("names the loading state in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SecondReviewerSlot caseReview={{ status: "loading", reload }} myAssignmentId={ASSIGNMENT_ID} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Loading the second reviewer…")).toBeInTheDocument();
   });
 });

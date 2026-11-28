@@ -423,4 +423,17 @@ describe("ReviewAssignmentPage tabs", () => {
     // Assert
     expect(screen.getByText(`Riwayat kasus ${CASE_ID}`)).not.toBeVisible();
   });
+
+  it("uses English chrome and leaves the case question unchanged", async () => {
+    render(
+      <LocaleProvider locale="en">
+        <ReviewAssignmentPage />
+      </LocaleProvider>,
+    );
+
+    expect(await screen.findByRole("tab", { name: "Verdict" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Apakah pemberitahuan tertulis kepada pekerja wajib sebelum PHK?" }),
+    ).toBeInTheDocument();
+  });
 });

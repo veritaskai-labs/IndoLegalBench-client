@@ -3,9 +3,34 @@
 import { useState } from "react";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useSubmitVerdict } from "@/hooks/useSubmitVerdict";
-import { VERDICT_HINT, VERDICT_LABEL, VERDICT_ORDER } from "@/lib/reviews/reviewLabels";
+import { fill, messages } from "@/lib/i18n/locale";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { VERDICT_ORDER, verdictFormLabel, verdictHint } from "@/lib/reviews/reviewLabels";
 import { buildVerdictBody, canSubmitVerdict } from "@/lib/reviews/verdictRules";
 import type { VerdictDecision, VerdictResult } from "@/types/review";
+
+const COPY = messages({
+  id: {
+    form: "Penilaian Anda",
+    title: "Penilaian Anda",
+    decision: "Keputusan",
+    comment: "Komentar untuk penulis",
+    placeholder: "Opsional saat menyetujui, wajib saat meminta revisi",
+    sending: "Mengirim…",
+    submit: "Kirim penilaian",
+    recorded: "Dicatat terhadap versi {version}",
+  },
+  en: {
+    form: "Your verdict",
+    title: "Your verdict",
+    decision: "Decision",
+    comment: "Comment for the author",
+    placeholder: "Optional when approving, required when requesting revision",
+    sending: "Sending…",
+    submit: "Submit verdict",
+    recorded: "Recorded against version {version}",
+  },
+});
 
 type Props = {
   assignmentId: string;
@@ -19,6 +44,8 @@ type Props = {
  * dan bentuk body ada di verdictRules, pengiriman ada di useSubmitVerdict; komponen ini hanya merangkai.
  */
 export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<Props>) {
+  const copy = useText(COPY);
+  const locale = useLocale();
   const [decision, setDecision] = useState<VerdictDecision | null>(null);
   const [comment, setComment] = useState("");
 
@@ -28,17 +55,17 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
 
   return (
     <form
-      aria-label="Penilaian Anda"
+      aria-label={copy.form}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
       className="space-y-4 rounded-lg border border-slate-200 bg-white p-5"
     >
-      <h2 className="text-base font-semibold text-slate-900">Penilaian Anda</h2>
+      <h2 className="text-base font-semibold text-slate-900">{copy.title}</h2>
 
       <fieldset className="grid gap-3 sm:grid-cols-2">
-        <legend className="sr-only">Keputusan</legend>
+        <legend className="sr-only">{copy.decision}</legend>
         {VERDICT_ORDER.map((option) => (
           <label
             key={option}
@@ -54,15 +81,15 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
               onChange={() => setDecision(option)}
               className="mt-1"
             />
-            <span className="block text-sm font-medium text-slate-900">{VERDICT_LABEL[option]}</span>
-            <span className="col-start-2 block text-xs text-slate-600">{VERDICT_HINT[option]}</span>
+            <span className="block text-sm font-medium text-slate-900">{verdictFormLabel(option, locale)}</span>
+            <span className="col-start-2 block text-xs text-slate-600">{verdictHint(option, locale)}</span>
           </label>
         ))}
       </fieldset>
 
       <div className="space-y-1">
         <label htmlFor="verdict-comment" className="block text-sm font-medium text-slate-800">
-          Komentar untuk penulis
+          {copy.comment}
         </label>
         <textarea
           id="verdict-comment"
@@ -70,7 +97,7 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
           value={comment}
           onChange={(event) => setComment(event.target.value)}
           aria-required={decision === "revise"}
-          placeholder="Opsional saat menyetujui, wajib saat meminta revisi"
+          placeholder={copy.placeholder}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
         />
       </div>
@@ -83,9 +110,9 @@ export function VerdictForm({ assignmentId, versionNo, onSubmitted }: Readonly<P
           disabled={!canSend}
           className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
-          {pending ? "Mengirim…" : "Kirim penilaian"}
+          {pending ? copy.sending : copy.submit}
         </button>
-        <p className="font-mono text-xs text-slate-500">Dicatat terhadap versi {versionNo}</p>
+        <p className="font-mono text-xs text-slate-500">{fill(copy.recorded, { version: versionNo })}</p>
       </div>
     </form>
   );

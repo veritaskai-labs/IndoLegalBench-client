@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import { findCaseReview } from "@/lib/reviews/reviewApi";
 import { CASE_ID, makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
@@ -71,5 +72,19 @@ describe("ReviewerFeedbackSection", () => {
 
     // Assert
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("uses English chrome and leaves the reviewer comment unchanged", async () => {
+    reviewMock.mockResolvedValue(decidedWithComment());
+
+    render(
+      <LocaleProvider locale="en">
+        <ReviewerFeedbackSection caseId={CASE_ID} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading reviewer notes…");
+    expect(await screen.findByText("Pasal 151 salah")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reviewer notes" })).toBeInTheDocument();
   });
 });

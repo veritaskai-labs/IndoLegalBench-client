@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { makeVerdictView } from "@/test/reviewFixtures";
 import { VerdictSummary } from "./VerdictSummary";
 
@@ -71,5 +72,18 @@ describe("VerdictSummary with the comment in the drawer", () => {
 
     // Assert
     expect(screen.getByText("Tanpa komentar")).toBeInTheDocument();
+  });
+
+  it("uses English chrome and leaves the comment unchanged", () => {
+    const verdict = makeVerdictView({ decision: "revise", comment: "Baris satu\nBaris dua" });
+
+    render(
+      <LocaleProvider locale="en">
+        <VerdictSummary verdict={verdict} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByText("Needs revision")).toBeInTheDocument();
+    expect(screen.getByText(/Baris satu/)).toHaveTextContent("Baris satu Baris dua");
   });
 });

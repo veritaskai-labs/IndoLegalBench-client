@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import { submitVerdict } from "@/lib/reviews/reviewApi";
 import { ASSIGNMENT_ID, makeVerdictResult } from "@/test/reviewFixtures";
@@ -147,5 +148,17 @@ describe("VerdictForm", () => {
     finish(makeVerdictResult());
     await waitFor(() => expect(screen.getByRole("button", { name: "Kirim penilaian" })).toBeEnabled());
     expect(submitMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses English chrome for the verdict form", () => {
+    render(
+      <LocaleProvider locale="en">
+        <VerdictForm assignmentId={ASSIGNMENT_ID} versionNo={3} onSubmitted={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("button", { name: "Submit verdict" })).toBeInTheDocument();
+    expect(screen.getByText("Recorded against version 3")).toBeInTheDocument();
+    expect(screen.getByText("Defensible as written")).toBeInTheDocument();
   });
 });

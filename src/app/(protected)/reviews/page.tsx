@@ -10,26 +10,56 @@ import { Tabs, tabElementId, tabPanelId, type TabItem } from "@/components/ui/Ta
 import { useAssignedReviews } from "@/hooks/useAssignedReviews";
 import { useAuth } from "@/hooks/useAuth";
 import { useAwaitingRevisionReviews } from "@/hooks/useAwaitingRevisionReviews";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import { isReviewerRole } from "@/lib/reviews/verdictRules";
 
 type QueueTab = "queue" | "awaiting";
 
 const TAB_PREFIX = "reviews";
-const QUEUE_TABS: readonly TabItem<QueueTab>[] = [
-  { id: "queue", label: "Antrean tinjauan" },
-  { id: "awaiting", label: "Menunggu revisi penulis" },
-];
+
+const COPY = messages({
+  id: {
+    title: "Antrean tinjauan",
+    tabsLabel: "Daftar tinjauan",
+    queueTab: "Antrean tinjauan",
+    awaitingTab: "Menunggu revisi penulis",
+    loadingQueue: "Memuat antrean…",
+    emptyQueueTitle: "Tidak ada kasus untuk ditinjau",
+    emptyQueueDescription: "Kasus yang ditugaskan kepada Anda akan muncul di sini.",
+    loadingCases: "Memuat kasus…",
+    emptyAwaitingTitle: "Tidak ada kasus yang menunggu revisi",
+    emptyAwaitingDescription: "Kasus yang sudah Anda nilai dan belum disetujui akan muncul di sini.",
+    reviewersOnlyTitle: "Antrean tinjauan hanya untuk peninjau",
+    reviewersOnlyDescription: "Akun Anda tidak ditugaskan menilai kasus. Admin memantau penilaian dari halaman admin.",
+  },
+  en: {
+    title: "Review queue",
+    tabsLabel: "Review lists",
+    queueTab: "Review queue",
+    awaitingTab: "Awaiting author revision",
+    loadingQueue: "Loading the queue…",
+    emptyQueueTitle: "No cases to review",
+    emptyQueueDescription: "Cases assigned to you will appear here.",
+    loadingCases: "Loading cases…",
+    emptyAwaitingTitle: "No cases are awaiting revision",
+    emptyAwaitingDescription: "Cases you have already reviewed and that are not yet approved will appear here.",
+    reviewersOnlyTitle: "The review queue is only for reviewers",
+    reviewersOnlyDescription: "Your account is not assigned to review cases. Admins monitor reviews from the admin page.",
+  },
+});
 
 function ReviewQueuePanel() {
+  const copy = useText(COPY);
   const queue = useAssignedReviews(true);
 
-  if (queue.status === "loading") return <LoadingState label="Memuat antrean…" />;
+  if (queue.status === "loading") return <LoadingState label={copy.loadingQueue} />;
   if (queue.status === "error") return <ErrorState variant="card" message={queue.message} onRetry={queue.reload} />;
   if (queue.reviews.length === 0) {
     return (
       <EmptyState
-        title="Tidak ada kasus untuk ditinjau"
-        description="Kasus yang ditugaskan kepada Anda akan muncul di sini."
+        title={copy.emptyQueueTitle}
+        description={copy.emptyQueueDescription}
       />
     );
   }
@@ -38,15 +68,16 @@ function ReviewQueuePanel() {
 
 /** Dipasang saat tab dibuka pertama kali, jadi daftar ini tidak diminta sebelum dibutuhkan. */
 function AwaitingRevisionPanel() {
+  const copy = useText(COPY);
   const queue = useAwaitingRevisionReviews(true);
 
-  if (queue.status === "loading") return <LoadingState label="Memuat kasus…" />;
+  if (queue.status === "loading") return <LoadingState label={copy.loadingCases} />;
   if (queue.status === "error") return <ErrorState variant="card" message={queue.message} onRetry={queue.reload} />;
   if (queue.reviews.length === 0) {
     return (
       <EmptyState
-        title="Tidak ada kasus yang menunggu revisi"
-        description="Kasus yang sudah Anda nilai dan belum disetujui akan muncul di sini."
+        title={copy.emptyAwaitingTitle}
+        description={copy.emptyAwaitingDescription}
       />
     );
   }
@@ -55,18 +86,23 @@ function AwaitingRevisionPanel() {
 
 /** Antrean tinjauan reviewer. Peran lain tidak memanggil server: jawabannya 403 dan itu melempar ke /forbidden. */
 export default function ReviewsPage() {
+  const copy = useText(COPY);
   const auth = useAuth();
   const isReviewer = isReviewerRole(auth.status === "authenticated" ? auth.user.role : null);
   const [tab, setTab] = useState<QueueTab>("queue");
   const [awaitingOpened, setAwaitingOpened] = useState(false);
+  const tabs: readonly TabItem<QueueTab>[] = [
+    { id: "queue", label: copy.queueTab },
+    { id: "awaiting", label: copy.awaitingTab },
+  ];
 
   if (auth.status !== "authenticated") return <LoadingState />;
 
   if (!isReviewer) {
     return (
       <EmptyState
-        title="Antrean tinjauan hanya untuk peninjau"
-        description="Akun Anda tidak ditugaskan menilai kasus. Admin memantau penilaian dari halaman admin."
+        title={copy.reviewersOnlyTitle}
+        description={copy.reviewersOnlyDescription}
       />
     );
   }
@@ -78,9 +114,9 @@ export default function ReviewsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-xl font-semibold text-slate-900">Antrean tinjauan</h1>
+      <h1 className="text-xl font-semibold text-slate-900">{copy.title}</h1>
 
-      <Tabs tabs={QUEUE_TABS} active={tab} onChange={showTab} label="Daftar tinjauan" idPrefix={TAB_PREFIX} />
+      <Tabs tabs={tabs} active={tab} onChange={showTab} label={copy.tabsLabel} idPrefix={TAB_PREFIX} />
       <div
         role="tabpanel"
         id={tabPanelId(TAB_PREFIX, "queue")}

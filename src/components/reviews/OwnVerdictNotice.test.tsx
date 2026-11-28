@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { makeVerdictView } from "@/test/reviewFixtures";
 import { OwnVerdictNotice } from "./OwnVerdictNotice";
 
@@ -105,4 +106,21 @@ it('offers the reviewer a discussion action only for an existing comment', () =>
  expect(screen.getByRole('button', {name:'Buka diskusi komentar'})).toBeInTheDocument();
  rerender(<OwnVerdictNotice verdict={makeVerdictView({comment:null})} roundStatus="decided" roundDecision="revise" assignmentId="a1" />);
  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+});
+
+it("uses English chrome and leaves the verdict comment unchanged", () => {
+  render(
+    <LocaleProvider locale="en">
+      <OwnVerdictNotice
+        verdict={makeVerdictView({ comment: "Perjelas" })}
+        roundStatus="open"
+        roundDecision={null}
+        assignmentId="a1"
+      />
+    </LocaleProvider>,
+  );
+
+  expect(screen.getByRole("heading", { name: "Your verdict" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Open comment discussion" })).toBeInTheDocument();
+  expect(screen.getByText("Perjelas")).toBeInTheDocument();
 });

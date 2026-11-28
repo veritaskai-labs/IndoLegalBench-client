@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 
 import { InReviewTable } from "./InReviewTable";
 import type { InReviewRow } from "@/lib/reviews/inReviewApi";
@@ -217,5 +218,32 @@ describe("InReviewTable", () => {
 
     expect(screen.getByText("Roben")).toBeVisible();
     expect(screen.queryByRole("button", { name: /^Ganti/ })).not.toBeInTheDocument();
+  });
+
+  it("uses English chrome and leaves the case title and comment unchanged", () => {
+    const queued = row({
+      review: review({
+        reviewers: [
+          slot({
+            verdict: {
+              decision: "revise",
+              comment: "Pasal 1320 belum dikutip.",
+              submitted_at: "2026-10-16T04:00:00Z",
+            },
+          }),
+        ],
+      }),
+    });
+
+    render(
+      <LocaleProvider locale="en">
+        <InReviewTable rows={[queued]} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+    expect(screen.getByText("Round 1")).toBeInTheDocument();
+    expect(screen.getByText("Sengketa tanah warisan")).toBeInTheDocument();
+    expect(screen.getByText("Pasal 1320 belum dikutip.")).toBeInTheDocument();
   });
 });

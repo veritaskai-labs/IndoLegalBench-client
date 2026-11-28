@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 
 import { ReassignmentTable } from "./ReassignmentTable";
 import type {
@@ -206,5 +207,17 @@ describe("ReassignmentTable", () => {
     expect(
       screen.getByRole("button", { name: "Ganti Rina, reviewer untuk ILB-PT-0142" }),
     ).toBeInTheDocument();
+  });
+
+  it("uses English chrome and leaves the case title unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ReassignmentTable rows={[row()]} onReplace={vi.fn()} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("columnheader", { name: "Code" })).toBeInTheDocument();
+    expect(screen.getByText("No assignment to replace")).toBeInTheDocument();
+    expect(screen.getByText("Sengketa tanah warisan")).toBeInTheDocument();
   });
 });

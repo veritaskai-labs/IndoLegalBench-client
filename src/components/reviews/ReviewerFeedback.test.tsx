@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { makeCaseReview, makeSlot, makeVerdictView } from "@/test/reviewFixtures";
 import { ReviewerFeedback } from "./ReviewerFeedback";
 
@@ -170,5 +171,21 @@ describe("ReviewerFeedback after approval", () => {
     const anisa = block("Anisa P.");
     expect(within(anisa).getByText("Catatan kecil saja")).toBeInTheDocument();
     expect(within(anisa).getByRole("button", { name: "Buka diskusi komentar" })).toBeInTheDocument();
+  });
+
+  it("uses English chrome and leaves the reviewer comment unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ReviewerFeedback
+          review={makeCaseReview({
+            reviewers: [reviseSlot("Anisa P.", "Pasal 151 salah, cek PP 35/2021")],
+          })}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Reviewer notes" })).toBeInTheDocument();
+    expect(screen.getByText("Pasal 151 salah, cek PP 35/2021")).toBeInTheDocument();
+    expect(screen.getByText("Anisa P.")).toBeInTheDocument();
   });
 });

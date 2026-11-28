@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LocaleProvider } from '@/lib/i18n/LocaleProvider';
 import { ApiError } from '@/lib/apiClient';
 import { getDiscussion, sendReply, type CommentDiscussion as Discussion } from '@/lib/reviews/discussionApi';
 import { CommentDiscussion } from './CommentDiscussion';
@@ -125,3 +126,15 @@ describe('CommentDiscussion', () => {
     expect(await screen.findByText('Diskusi dibuka setelah kedua penilaian selesai.')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+
+it('uses English chrome and leaves the reviewer comment unchanged', async () => {
+  render(
+    <LocaleProvider locale="en">
+      <CommentDiscussion assignmentId="a1" />
+    </LocaleProvider>,
+  );
+
+  expect(await screen.findByRole('link', { name: 'Back to dashboard' })).toBeInTheDocument();
+  expect(screen.getByText('Mohon perjelas rujukan.')).toBeInTheDocument();
+  expect(screen.getByText('Reviewer A')).toBeInTheDocument();
+});

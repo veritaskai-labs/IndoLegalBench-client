@@ -1,12 +1,28 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import { CommentDiscussion } from "./CommentDiscussion";
+
+const COPY = messages({
+  id: {
+    kicker: "Ruang diskusi",
+    title: "Diskusi komentar peninjau",
+    close: "Tutup diskusi",
+  },
+  en: {
+    kicker: "Discussion space",
+    title: "Reviewer comment discussion",
+    close: "Close discussion",
+  },
+});
 
 type Props = { assignmentId: string; draft: string; onDraftChange: (value: string) => void; onClose: () => void; readOnlyNotice?: string | null };
 
 /** Dialog native menjaga fokus keyboard dan membuat editor di belakang tetap terpasang. */
 export function DiscussionDrawer({ assignmentId, draft, onDraftChange, onClose, readOnlyNotice = null }: Readonly<Props>) {
+  const copy = useText(COPY);
   const [sending, setSending] = useState(false);
   const attachDialog = useCallback((node: HTMLDialogElement) => {
     const previousFocus = document.activeElement;
@@ -21,13 +37,13 @@ export function DiscussionDrawer({ assignmentId, draft, onDraftChange, onClose, 
   }, []);
 
   return (
-    <dialog ref={attachDialog} aria-label="Diskusi komentar peninjau" onCancel={(event) => {
+    <dialog ref={attachDialog} aria-label={copy.title} onCancel={(event) => {
       event.preventDefault();
       if (!sending) onClose();
     }} className="fixed inset-y-0 right-0 m-0 ml-auto h-dvh max-h-dvh w-full max-w-none flex-col overflow-hidden border-0 border-l border-slate-200 bg-white p-0 text-slate-900 shadow-2xl open:flex sm:max-w-xl backdrop:bg-slate-900/25">
       <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
-        <div><p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">Ruang diskusi</p><h2 className="mt-1 text-lg font-semibold">Diskusi komentar peninjau</h2></div>
-        <button type="button" onClick={onClose} disabled={sending} aria-label="Tutup diskusi" className="rounded-full p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-indigo-600 disabled:opacity-40">
+        <div><p className="text-xs font-semibold uppercase tracking-widest text-indigo-600">{copy.kicker}</p><h2 className="mt-1 text-lg font-semibold">{copy.title}</h2></div>
+        <button type="button" onClick={onClose} disabled={sending} aria-label={copy.close} className="rounded-full p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-indigo-600 disabled:opacity-40">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5" aria-hidden="true"><path strokeLinecap="round" d="m6 6 12 12M6 18 18 6" /></svg>
         </button>
       </header>

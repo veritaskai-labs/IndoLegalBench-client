@@ -173,3 +173,26 @@ describe("reviewerName", () => {
     );
   });
 });
+
+describe("reassignment reasons in English", () => {
+  it("names void reasons, gaps, and an unknown reviewer", () => {
+    const deactivated = assignment({ status: "void", void_reason: "deactivated" });
+    const roleChanged = assignment({ status: "void", void_reason: "role_changed" });
+
+    expect(reassignmentReason(row({ void_assignments: [deactivated] }), "en")).toBe("Reviewer deactivated");
+    expect(reassignmentReason(row({ void_assignments: [roleChanged] }), "en")).toBe("Reviewer role changed");
+    expect(reassignmentReason(row({ void_assignments: [assignment({ status: "void", void_reason: null })] }), "en")).toBe(
+      "Reviewer is no longer assigned",
+    );
+    expect(reassignmentReason(row({ round_status: "awaiting_assignment" }), "en")).toBe("No reviewer yet");
+    expect(reassignmentReason(row(), "en")).toBe("No active reviewer");
+    expect(reassignmentReason(row({ round_status: "open", active_reviewers_count: 1 }), "en")).toBe(
+      "Only 1 of 2 reviewers",
+    );
+    expect(reassignmentReason(row({ round_status: "open", active_reviewers_count: 2 }), "en")).toBe(
+      "Needs reassignment",
+    );
+    expect(reviewerName(assignment(), "en")).toBe("Aileen");
+    expect(reviewerName(assignment({ reviewer_name: null }), "en")).toBe("Unknown reviewer");
+  });
+});

@@ -1,12 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { messages } from "@/lib/i18n/locale";
+import { useText } from "@/lib/i18n/LocaleProvider";
 import { DiscussionDrawer } from "./DiscussionDrawer";
+
+const COPY = messages({
+  id: { reply: "Balas komentar" },
+  en: { reply: "Reply to comment" },
+});
 
 type Props = { assignmentId: string; label?: string; readOnlyNotice?: string | null };
 
 /** Panel ditutup tanpa membuang draf balasan selama kartu masih terpasang. */
-export function DiscussionLauncher({ assignmentId, label = "Balas komentar", readOnlyNotice = null }: Readonly<Props>) {
+export function DiscussionLauncher({ assignmentId, label, readOnlyNotice = null }: Readonly<Props>) {
+  const copy = useText(COPY);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   return (
@@ -14,7 +22,7 @@ export function DiscussionLauncher({ assignmentId, label = "Balas komentar", rea
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog"
         className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h8M8 14h5M5 20l3-3h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 1 2Z" /></svg>
-        {label}
+        {label ?? copy.reply}
       </button>
       {open && <DiscussionDrawer assignmentId={assignmentId} draft={draft} onDraftChange={setDraft} onClose={() => setOpen(false)} readOnlyNotice={readOnlyNotice} />}
     </>

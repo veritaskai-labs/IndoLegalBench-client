@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ASSIGNMENT_ID, CASE_ID, makeAwaiting, OTHER_ASSIGNMENT_ID } from "@/test/reviewFixtures";
 import { AwaitingRevisionList } from "./AwaitingRevisionList";
 
@@ -145,5 +146,17 @@ describe("AwaitingRevisionList", () => {
     // Assert
     const codes = screen.getAllByRole("listitem").map((item) => /ILB-PT-\d+/.exec(item.textContent ?? "")?.[0]);
     expect(codes).toEqual(["ILB-PT-0002", "ILB-PT-0001"]);
+  });
+
+  it("uses English chrome and leaves the case title unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <AwaitingRevisionList reviews={[makeAwaiting({ title: "PHK sepihak", round_no: 2 })]} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("list", { name: "Awaiting author revision" })).toBeInTheDocument();
+    expect(screen.getByText("Round 2")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "PHK sepihak" })).toBeInTheDocument();
   });
 });

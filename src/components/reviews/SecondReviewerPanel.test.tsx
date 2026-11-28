@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import {
   ASSIGNMENT_ID,
   makeCaseReview,
@@ -147,5 +148,22 @@ describe("SecondReviewerPanel", () => {
     // Assert
     expect(screen.getByText("Peninjau kedua belum ditugaskan.")).toBeInTheDocument();
     expect(screen.queryByText("Anonim")).not.toBeInTheDocument();
+  });
+
+  it("uses English chrome and leaves the other reviewer's comment unchanged", () => {
+    const review = makeCaseReview({
+      status: "decided",
+      reviewers: [mine(), makeSlot({ verdict: makeVerdictView({ comment: "Pasal 151 salah" }) })],
+    });
+
+    render(
+      <LocaleProvider locale="en">
+        <SecondReviewerPanel review={review} myAssignmentId={ASSIGNMENT_ID} />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "Second reviewer" })).toBeInTheDocument();
+    expect(screen.getByText("Pasal 151 salah")).toBeInTheDocument();
+    expect(screen.getByText("Anisa P.")).toBeInTheDocument();
   });
 });

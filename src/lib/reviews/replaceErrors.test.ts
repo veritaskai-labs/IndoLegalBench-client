@@ -70,3 +70,39 @@ describe("isStaleReplace", () => {
     expect(isStaleReplace(new Error("offline"))).toBe(false);
   });
 });
+
+describe("mapReplaceError in English", () => {
+  it("uses the English message for a known code, status, and fallback", () => {
+    expect(mapReplaceError(new ApiError(409, "ASSIGNMENT_ALREADY_REPLACED"), "en")).toBe(
+      "This assignment has already been replaced. The list has been reloaded.",
+    );
+    expect(mapReplaceError(new ApiError(409, "ROUND_ALREADY_DECIDED"), "en")).toBe(
+      "The review round has already been decided. The list has been reloaded.",
+    );
+    expect(mapReplaceError(new ApiError(422, "CANNOT_ASSIGN_AUTHOR"), "en")).toBe(
+      "The case author cannot be a reviewer.",
+    );
+    expect(mapReplaceError(new ApiError(422, "INVALID_REVIEWER"), "en")).toBe(
+      "That account cannot be used as a reviewer.",
+    );
+    expect(mapReplaceError(new ApiError(422, "REVIEWER_ALREADY_ASSIGNED"), "en")).toBe(
+      "That reviewer is already assigned to this round.",
+    );
+    expect(mapReplaceError(new ApiError(422, "REASON_REQUIRED"), "en")).toBe(
+      "A replacement reason is required.",
+    );
+    expect(mapReplaceError(new ApiError(403, "SOMETHING_NEW"), "en")).toBe(
+      "Only an Admin can replace a reviewer.",
+    );
+    expect(mapReplaceError(new ApiError(404, "SOMETHING_NEW"), "en")).toBe(
+      "The assignment or the new reviewer was not found. Reload the page.",
+    );
+    expect(mapReplaceError(new ApiError(409, "SOMETHING_NEW"), "en")).toBe(
+      "The assignment status has changed. The list has been reloaded.",
+    );
+    expect(mapReplaceError(new ApiError(422, "SOMETHING_NEW"), "en")).toBe(
+      "That new reviewer cannot be used for this case.",
+    );
+    expect(mapReplaceError(new Error("offline"), "en")).toBe("Could not replace the reviewer. Try again.");
+  });
+});
