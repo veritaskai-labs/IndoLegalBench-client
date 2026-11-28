@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { listSessions } from "@/lib/runs/runsApi";
 import type { SessionListItem } from "@/types/measurement";
 import { SESSIONS_POLL_MS, useSessions } from "./useSessions";
@@ -18,6 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  resetMockLocale();
 });
 
 function row(id: string, status: SessionListItem["status"], completed = 0) {
@@ -63,6 +65,14 @@ describe("useSessions (PBI-11 AC10)", () => {
     // Assert
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it("explains a failed load in English when the language mock is English", async () => {
+    setMockLocale("en");
+    list.mockRejectedValue(new TypeError("Failed to fetch"));
+    const { result } = renderHook(() => useSessions(true));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current).toMatchObject({ message: "Could not load the measurement sessions. Try again." });
   });
 
   it("filters out manual sessions from the active sessions list", async () => {

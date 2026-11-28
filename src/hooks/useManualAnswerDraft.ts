@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
 import {
   buildSaveRequest,
   draftFromSlot,
@@ -16,7 +18,10 @@ import {
 } from "@/lib/runs/manualAnswersApi";
 import type { ManualAnswerResponse, ManualAttemptSlot } from "@/types/measurement";
 
-const SAVE_FALLBACK = "Gagal menyimpan jawaban. Coba lagi.";
+const COPY = messages({
+  id: "Gagal menyimpan jawaban. Coba lagi.",
+  en: "Could not save the answer. Try again.",
+});
 
 type Options = {
   sessionId: string;
@@ -43,6 +48,8 @@ export function useManualAnswerDraft({
   onSaved,
   now,
 }: Readonly<Options>) {
+  const fallback = useText(COPY);
+  const locale = useLocale();
   const [baseline, setBaseline] = useState<AnswerDraft>(() => draftFromSlot(slot, now));
   const [draft, setDraft] = useState<AnswerDraft>(baseline);
   const [showErrors, setShowErrors] = useState(false);
@@ -84,7 +91,7 @@ export function useManualAnswerDraft({
         // Orang lain mengisi slot ini setelah halaman dimuat: server minta konfirmasi.
         const needsConfirm = isConfirmationRequired(failure);
         setConfirming(needsConfirm);
-        if (!needsConfirm) setSaveError(answerErrorMessage(failure, SAVE_FALLBACK));
+        if (!needsConfirm) setSaveError(answerErrorMessage(failure, fallback, locale));
       } finally {
         inFlight.current = false;
         setSaving(false);
@@ -92,7 +99,7 @@ export function useManualAnswerDraft({
       // Di luar try: galat di onSaved bukan kegagalan simpan.
       if (saved !== null) onSaved(saved);
     },
-    [draft, snapshotItemId, attemptNo, slot.filled, gateway, sessionId, onSaved],
+    [draft, snapshotItemId, attemptNo, slot.filled, gateway, sessionId, onSaved, fallback, locale],
   );
 
   const save = useCallback(() => attempt(false), [attempt]);

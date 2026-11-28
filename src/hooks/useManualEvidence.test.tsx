@@ -1,12 +1,17 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { saveBlob } from "@/lib/browserDownload";
 import type { ManualAnswerGateway } from "@/lib/runs/manualAnswersApi";
 import type { EvidenceRead } from "@/types/measurement";
 import { useManualEvidence } from "./useManualEvidence";
 
 vi.mock("@/lib/browserDownload", () => ({ saveBlob: vi.fn() }));
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 function item(id: string, overrides: Partial<EvidenceRead> = {}): EvidenceRead {
   return {
@@ -87,6 +92,19 @@ describe("loading the evidence of an answer (AC7)", () => {
 
     // Assert
     expect(result.current.list).toMatchObject({ status: "error", message: "Terjadi kesalahan pada bukti jawaban. Coba lagi." });
+  });
+
+  it("uses the English evidence fallback when the language mock is English", async () => {
+    setMockLocale("en");
+    const gateway = fake([]);
+    gateway.listEvidence.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const { result } = await setup(gateway);
+
+    expect(result.current.list).toMatchObject({
+      status: "error",
+      message: "Something went wrong with the answer evidence. Try again.",
+    });
   });
 });
 

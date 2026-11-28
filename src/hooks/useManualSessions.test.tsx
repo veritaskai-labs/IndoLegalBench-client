@@ -1,5 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { useManualSessions } from "./useManualSessions";
 import { listManualSessions } from "@/lib/runs/manualRunsApi";
 import type { SessionListItem } from "@/types/measurement";
@@ -30,6 +31,10 @@ const MOCK_ROWS: SessionListItem[] = [
 describe("useManualSessions (PBI-22 AC8, AC11)", () => {
   beforeEach(() => {
     mockList.mockReset();
+  });
+
+  afterEach(() => {
+    resetMockLocale();
   });
 
   it("loads manual session list successfully", async () => {
@@ -66,5 +71,17 @@ describe("useManualSessions (PBI-22 AC8, AC11)", () => {
       data: MOCK_ROWS,
     });
     expect(mockList).toHaveBeenCalledTimes(2);
+  });
+
+  it("explains a failed load in English when the language mock is English", async () => {
+    setMockLocale("en");
+    mockList.mockRejectedValue(new Error("Network Error"));
+
+    const { result } = renderHook(() => useManualSessions());
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current).toMatchObject({
+      message: "Could not load the manual measurement sessions. Try again.",
+    });
   });
 });
