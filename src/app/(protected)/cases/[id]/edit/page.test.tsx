@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useRegulationTypes } from "@/hooks/useRegulationTypes";
 import { ApiError, apiFetch } from "@/lib/apiClient";
@@ -202,6 +203,19 @@ describe("EditCasePage loading", () => {
     expect(
       screen.queryByRole("group", { name: "Identitas" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("names save draft in English and keeps the case title", async () => {
+    getCaseMock.mockResolvedValue(savedCase());
+    render(
+      <LocaleProvider locale="en">
+        <ToastProvider>
+          <EditCasePage />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    expect(await screen.findByRole("button", { name: "Save draft" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue("Pemberitahuan PHK");
   });
 
   it("shows the case code, the Draft badge, and the prefilled editor once loaded", async () => {

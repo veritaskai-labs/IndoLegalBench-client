@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { SuiteCaseNav } from "./SuiteCaseNav";
 
 describe("SuiteCaseNav", () => {
@@ -14,6 +15,17 @@ describe("SuiteCaseNav", () => {
     expect(screen.getByRole("link", { name: "Daftar suite" })).toHaveAttribute("href", "/suites");
     expect(screen.getByRole("link", { name: "Daftar kasus" })).toHaveAttribute("href", "/cases");
     expect(screen.getByRole("link", { name: "Impor CSV" })).toHaveAttribute("href", "/cases/import");
+  });
+
+  it("names the suite and case lists in English and leaves the import label", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SuiteCaseNav current="/suites" />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("link", { name: "Suite list" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Case list" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Impor CSV" })).toBeInTheDocument();
   });
 
   // Positive / edge: only the current tab is marked.

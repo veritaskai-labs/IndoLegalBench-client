@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError, apiFetch } from "@/lib/apiClient";
 import { ChangeSplitTagDialog } from "./ChangeSplitTagDialog";
 
@@ -144,5 +145,17 @@ describe("ChangeSplitTagDialog QA (SCRUM-166)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onDone).not.toHaveBeenCalled();
     expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("ChangeSplitTagDialog in English", () => {
+  it("names the dialog in English and keeps the case code", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ChangeSplitTagDialog caseId={CASE_ID} caseCode="KTK-001" current="dev" onClose={vi.fn()} onDone={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Change tag KTK-001" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 });

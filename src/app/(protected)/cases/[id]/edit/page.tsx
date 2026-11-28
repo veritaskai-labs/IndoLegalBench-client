@@ -40,6 +40,12 @@ import {
 import { isCaseEditable } from "@/lib/cases/permissions";
 import { canChangeTagAsAdmin, isTagLockedInEditor } from "@/lib/cases/splitTag";
 import type { CaseRead } from "@/types/case";
+import { caseReadPath } from "@/lib/cases/casePaths";
+import { decodeRouteParam } from "@/lib/routeParams";
+import { Breadcrumb } from "@/components/ui";
+import { useSuiteName } from "@/hooks/useSuiteName";
+import Link from "next/link";
+
 const COPY = messages({
   id: {
     loading: "Memuat kasus…",
@@ -74,11 +80,6 @@ const COPY = messages({
     submitted: "Case submitted for review",
   },
 });
-import { caseReadPath } from "@/lib/cases/casePaths";
-import { decodeRouteParam } from "@/lib/routeParams";
-import { Breadcrumb } from "@/components/ui";
-import { useSuiteName } from "@/hooks/useSuiteName";
-import Link from "next/link";
 
 export default function EditCasePage() {
   const caseId = decodeRouteParam(useParams<{ id: string }>().id);

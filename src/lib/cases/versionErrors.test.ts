@@ -48,6 +48,8 @@ describe("mapVersionError", () => {
 
     // Assert
     expect(message).toBe("Salah satu versi yang dipilih tidak ditemukan.");
+
+    expect(mapVersionError(error, "compare", "en")).toBe("One of the selected versions was not found.");
   });
 
   it("says the case is missing when the history returns 404", () => {

@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import { listCaseVersions } from "@/lib/cases/versionApi";
 import { makeSummary } from "@/test/versionFixtures";
@@ -143,5 +144,18 @@ describe("VersionHistoryTab", () => {
 
     // Assert
     expect(await screen.findByRole("alert")).toHaveTextContent("Kasus tidak ditemukan.");
+  });
+
+  it("names the history columns in English and keeps the author name", async () => {
+    listMock.mockResolvedValue([
+      version({ version_no: 2, author: { id: "u2", name: "Adra" }, changed: ["category"] }),
+    ]);
+    render(
+      <LocaleProvider locale="en">
+        <VersionHistoryTab caseId="case-1" />
+      </LocaleProvider>,
+    );
+    expect(await screen.findByRole("columnheader", { name: "Changed by" })).toBeInTheDocument();
+    expect(screen.getByText("Adra")).toBeInTheDocument();
   });
 });

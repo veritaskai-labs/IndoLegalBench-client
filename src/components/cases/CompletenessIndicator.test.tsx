@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { CaseCompleteness } from "@/types/case";
 import { CompletenessIndicator } from "./CompletenessIndicator";
 
@@ -152,5 +153,19 @@ describe("CompletenessIndicator", () => {
 
     expect(screen.getByText("Kelengkapan 100%")).toBeInTheDocument();
     expect(screen.queryByText("Siap diajukan review")).not.toBeInTheDocument();
+  });
+
+  it("says the case is ready for review in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <CompletenessIndicator
+          status="ready"
+          completeness={completeness({ pct: 100, missing: [], ready_for_review: true, is_complete: true })}
+          onRetry={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Ready for review")).toBeInTheDocument();
+    expect(screen.getByText("Completeness 100%")).toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { ApiError } from "@/lib/apiClient";
 import { compareCaseVersions } from "@/lib/cases/versionApi";
 import { makeCompare, makeSections, makeSide, makeSummary } from "@/test/versionFixtures";
@@ -228,5 +229,14 @@ describe("VersionCompareView", () => {
     // Assert
     expect(screen.getByText("Perlu minimal dua versi untuk dibandingkan.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Bandingkan" })).not.toBeInTheDocument();
+  });
+
+  it("asks for two versions in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <VersionCompareView caseId="case-1" versions={[makeSummary(1)]} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("At least two versions are needed to compare.")).toBeInTheDocument();
   });
 });

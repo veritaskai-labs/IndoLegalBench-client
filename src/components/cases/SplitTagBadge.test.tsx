@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { SplitTagBadge } from "./SplitTagBadge";
 
 describe("SplitTagBadge", () => {
@@ -47,5 +48,14 @@ describe("SplitTagBadge", () => {
 
     // Assert
     expect(screen.queryByText("pernah dev set")).not.toBeInTheDocument();
+  });
+
+  it("says an unset tag in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SplitTagBadge tag={null} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Not set")).toBeInTheDocument();
   });
 });

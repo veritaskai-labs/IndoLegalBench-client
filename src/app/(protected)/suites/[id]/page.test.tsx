@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import SuiteDetailPage from "./page";
 import * as casesApi from "@/lib/api/cases";
 import { ApiError, apiFetch } from "@/lib/apiClient";
@@ -102,6 +103,23 @@ describe("SuiteDetailPage (SCRUM-110)", () => {
     expect(screen.getByText("Kasus hukum ketenagakerjaan")).toBeInTheDocument();
     expect(screen.getByText("Aktif")).toBeInTheDocument();
     expect(apiFetch).toHaveBeenCalledWith("/suites/suite-123");
+  });
+
+  it("names add case in English and keeps the suite name and description", async () => {
+    vi.mocked(casesApi.getCasesForSuite).mockResolvedValue(mockCases);
+    await act(async () => {
+      render(
+        <LocaleProvider locale="en">
+          <Suspense fallback={null}>
+            <SuiteDetailPage params={Promise.resolve({ id: "suite-123" })} />
+          </Suspense>
+        </LocaleProvider>,
+      );
+    });
+    expect(await screen.findByRole("heading", { level: 1, name: "Suite Ketenagakerjaan" })).toBeInTheDocument();
+    expect(screen.getByText("Kasus hukum ketenagakerjaan")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add case" })).toBeInTheDocument();
+    expect(screen.getByText("Active")).toBeInTheDocument();
   });
 
   it("merender daftar kasus dengan status dan kelengkapan", async () => {

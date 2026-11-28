@@ -133,6 +133,21 @@ describe("mapSaveError", () => {
     });
   });
 
+  it("translates the client sentence and keeps the server detail in English", () => {
+    const error = fieldError(
+      "VALIDATION_ERROR",
+      "legal_refs[0].links[0].year",
+      "Input should be greater than or equal to 1",
+    );
+
+    expect(mapSaveError(error, "en")).toEqual({
+      kind: "field",
+      path: "legal_refs.0.links.0.year",
+      message: "The value is not valid.",
+      detail: "Input should be greater than or equal to 1",
+    });
+  });
+
   // Negative: field the form does not have.
   it.each([
     "path.suite_id",

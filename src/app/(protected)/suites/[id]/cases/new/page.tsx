@@ -13,10 +13,9 @@ import { createCase } from "@/lib/cases/caseApi";
 import type { CaseWritePayload } from "@/lib/cases/caseFormMapping";
 import { caseEditPath } from "@/lib/cases/casePaths";
 import { mapSaveError, type FieldSaveError } from "@/lib/cases/saveError";
-import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { decodeRouteParam } from "@/lib/routeParams";
 import { messages } from "@/lib/i18n/locale";
-import { useText } from "@/lib/i18n/LocaleProvider";
+import { useLocale, useText } from "@/lib/i18n/LocaleProvider";
+import { decodeRouteParam } from "@/lib/routeParams";
 
 const COPY = messages({
   id: {

@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiFetch } from "@/lib/apiClient";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
 import { SuiteFormDialog } from "./SuiteFormDialog";
 
@@ -121,5 +122,15 @@ describe("SuiteFormDialog", () => {
     await user.click(screen.getByRole("button", { name: "Batal" }));
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("offers to create a suite in English", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SuiteFormDialog onClose={vi.fn()} onSaved={vi.fn()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("dialog", { name: "Create suite" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveValue("");
   });
 });

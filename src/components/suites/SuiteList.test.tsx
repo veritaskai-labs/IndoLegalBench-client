@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import type { Suite } from "@/types/suite";
 import { SuiteList } from "./SuiteList";
 
@@ -400,5 +401,23 @@ describe("SuiteList", () => {
 
     await user.click(screen.getByText("Deskripsi uji"));
     expect(pushMock).toHaveBeenCalledWith("/suites/suite-123");
+  });
+
+  it("names the name column in English and keeps the suite name", () => {
+    render(
+      <LocaleProvider locale="en">
+        <SuiteList
+          status="ready"
+          suites={[makeSuite({ name: "Perburuhan", description: "Sengketa tanah" })]}
+          onRetry={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onArchive={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("columnheader", { name: "Name" })).toBeInTheDocument();
+    expect(screen.getByText("Perburuhan")).toBeInTheDocument();
+    expect(screen.getByText("Sengketa tanah")).toBeInTheDocument();
   });
 });

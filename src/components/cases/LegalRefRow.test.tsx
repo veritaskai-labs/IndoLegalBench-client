@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { emptyCaseFormValues, type CaseFormValues } from "@/lib/cases/caseFormMapping";
 import { emptyLegalRef } from "@/lib/cases/legalRefForm";
 import { LegalRefRow } from "./LegalRefRow";
@@ -49,5 +50,16 @@ describe("LegalRefRow", () => {
 
     // Assert
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("names the reference form in English and keeps the regulation type from the API", () => {
+    render(
+      <LocaleProvider locale="en">
+        <Host index={0} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByRole("combobox", { name: "Reference form" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Pasal" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Free text" })).toBeInTheDocument();
   });
 });

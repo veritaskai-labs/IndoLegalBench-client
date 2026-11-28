@@ -38,6 +38,10 @@ describe("sectionLabel", () => {
     // Assert
     expect(label).toBe("toString");
   });
+
+  it("names a section in English", () => {
+    expect(sectionLabel("legal_refs", "en")).toBe("Legal references");
+  });
 });
 
 describe("describeChanged", () => {
@@ -179,6 +183,21 @@ describe("sectionLines", () => {
 
     // Assert
     expect(lines).toEqual(["Wajib ada: Pasal 151; pemberitahuan tertulis", "Kesimpulan: Wajib."]);
+  });
+
+  it("translates the criteria labels and leaves the typed phrases in English", () => {
+    const version = sections({
+      answer_criteria: {
+        must_contain: ["Pasal 151", "pemberitahuan tertulis"],
+        must_not_contain: [],
+        expected_conclusion: "Wajib.",
+      },
+    });
+
+    expect(sectionLines("answer_criteria", version, "en")).toEqual([
+      "Must include: Pasal 151; pemberitahuan tertulis",
+      "Conclusion: Wajib.",
+    ]);
   });
 
   // Edge: nothing filled in.

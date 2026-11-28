@@ -47,6 +47,10 @@ describe("changeSummary", () => {
     expect(summary).toBe("1 bagian berubah: Kategori.");
   });
 
+  it("names one changed section in English", () => {
+    expect(changeSummary(["category"], "en")).toBe("1 section changed: Category.");
+  });
+
   // Positive: several sections, listed in table order whatever order the server sends.
   it("names several changed sections in table order", () => {
     // Arrange / Act
