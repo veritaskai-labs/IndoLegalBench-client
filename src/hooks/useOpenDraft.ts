@@ -1,14 +1,13 @@
 "use client";
 
 import { ApiError } from "@/lib/apiClient";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { getOpenCaseVersion } from "@/lib/cases/versionApi";
 import { mapVersionError } from "@/lib/cases/versionErrors";
 import type { CaseRead } from "@/types/case";
 import { useAsyncResource } from "./useAsyncResource";
 
 const NO_OPEN_VERSION = "NO_OPEN_VERSION";
-
-const openMessage = (error: unknown) => mapVersionError(error, "open");
 
 /** Kasus yang hanya punya versi disetujui itu wajar, jadi "tidak ada versi terbuka" bukan error. */
 function noDraftAsNull(error: unknown): null {
@@ -27,6 +26,7 @@ function noDraftAsNull(error: unknown): null {
  * jadi pemanggil mengisi enabled hanya untuk mereka. Bila enabled false, tidak ada permintaan.
  */
 export function useOpenDraft(caseId: string, enabled: boolean, onFound: (draft: CaseRead) => void) {
+  const locale = useLocale();
   return useAsyncResource<CaseRead | null>(
     `${caseId}|${enabled}`,
     async () => {
@@ -36,6 +36,6 @@ export function useOpenDraft(caseId: string, enabled: boolean, onFound: (draft: 
       if (draft !== null && draft.id === caseId) onFound(draft);
       return draft;
     },
-    openMessage,
+    (error) => mapVersionError(error, "open", locale),
   );
 }

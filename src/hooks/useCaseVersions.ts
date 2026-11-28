@@ -1,11 +1,10 @@
 "use client";
 
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { listCaseVersions } from "@/lib/cases/versionApi";
 import { mapVersionError } from "@/lib/cases/versionErrors";
 import type { VersionSummary } from "@/types/caseVersion";
 import { useAsyncResource } from "./useAsyncResource";
-
-const historyMessage = (error: unknown) => mapVersionError(error, "history");
 
 /** Server mengirim nomor terkecil dulu; halaman ingin yang terbaru di atas. */
 const newestFirst = (versions: VersionSummary[]) =>
@@ -13,10 +12,11 @@ const newestFirst = (versions: VersionSummary[]) =>
 
 /** Riwayat versi satu kasus untuk tab "Riwayat versi". Daftar kosong tetap status ready. */
 export function useCaseVersions(caseId: string) {
+  const locale = useLocale();
   const { reload, ...resource } = useAsyncResource(
     caseId,
     () => listCaseVersions(caseId).then(newestFirst),
-    historyMessage,
+    (error) => mapVersionError(error, "history", locale),
   );
 
   if (resource.status === "ready") return { status: "ready" as const, versions: resource.data, reload };

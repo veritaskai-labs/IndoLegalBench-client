@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { listRegulationTypes } from "@/lib/cases/regulationTypeApi";
 import type { RegulationType } from "@/types/regulationType";
 import { useRegulationTypes } from "./useRegulationTypes";
@@ -22,6 +23,10 @@ const PP = regulationType("pp", "Peraturan Pemerintah", "PP");
 
 beforeEach(() => {
   listMock.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useRegulationTypes", () => {
@@ -107,6 +112,18 @@ describe("useRegulationTypes", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Gagal memuat daftar jenis peraturan. Coba lagi.",
+    });
+  });
+
+  it("reports the general message in English when the language mock is English", async () => {
+    setMockLocale("en");
+    listMock.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR"));
+
+    const { result } = renderHook(() => useRegulationTypes());
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({
+      message: "Could not load the list of regulation types. Try again.",
     });
   });
 

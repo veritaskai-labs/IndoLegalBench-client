@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { listCaseVersions } from "@/lib/cases/versionApi";
 import type { VersionSummary } from "@/types/caseVersion";
 import { useCaseVersions } from "./useCaseVersions";
@@ -27,6 +28,10 @@ function deferred() {
   });
   return { promise, resolve };
 }
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 beforeEach(() => {
   listMock.mockReset();
@@ -93,6 +98,18 @@ describe("useCaseVersions", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Anda tidak memiliki izin untuk melihat riwayat versi kasus ini.",
+    });
+  });
+
+  it("reports the mapped message in English when the language mock is English", async () => {
+    setMockLocale("en");
+    listMock.mockRejectedValue(new ApiError(403, "FORBIDDEN"));
+
+    const { result } = renderHook(() => useCaseVersions("case-1"));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({
+      message: "You do not have permission to view this case's version history.",
     });
   });
 
