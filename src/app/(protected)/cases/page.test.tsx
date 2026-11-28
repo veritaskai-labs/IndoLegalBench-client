@@ -262,6 +262,56 @@ describe("Daftar kasus", () => {
     vi.useRealTimers();
   });
 
+  // Positive: SCRUM-381, the case code is plain text now; opening the editor is a separate control.
+  it("shows the case code as plain text, not as a link", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    const row = (await screen.findByText(source.title)).closest("tr") as HTMLElement;
+    const codeCell = within(row).getAllByRole("cell")[0];
+    expect(codeCell).toHaveTextContent("KAS-01");
+    expect(within(codeCell).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  // Positive: every row has Buka editor in the Aksi column, next to Pratinjau and Duplikat, pointing at its editor.
+  it("puts a Buka editor button with a tooltip next to Duplikat in the Aksi column", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    const row = (await screen.findByText(source.title)).closest("tr") as HTMLElement;
+    const actions = within(within(row).getAllByRole("cell").at(-1) as HTMLElement);
+    const open = actions.getByRole("link", { name: "Buka editor KAS-01" });
+    expect(open).toHaveAttribute("href", "/cases/source/edit");
+    expect(open).toHaveAttribute("title", "Buka editor kasus KAS-01");
+    expect(actions.getAllByRole("link").concat(actions.getAllByRole("button")).map((item) => item.textContent).sort())
+      .toEqual(["Buka editor", "Duplikat", "Pratinjau"]);
+  });
+
+  // Edge: a case in an archived suite still opens in the editor (read-only there), only Duplikat is withheld.
+  it("offers Buka editor for a case in an archived suite, without Duplikat", async () => {
+    // Arrange / Act
+    render(<CasesPage />);
+
+    // Assert
+    const row = (await screen.findByText(old.title)).closest("tr") as HTMLElement;
+    expect(within(row).getByRole("link", { name: "Buka editor KAS-02" })).toHaveAttribute("href", "/cases/old/edit");
+    expect(within(row).queryByRole("button", { name: "Duplikat KAS-02" })).not.toBeInTheDocument();
+  });
+
+  // Edge: the id is encoded in the address, like caseEditPath does everywhere else.
+  it("encodes the case id in the editor address", async () => {
+    // Arrange
+    list.mockResolvedValue(casePage([{ ...source, id: "a/b c" }]));
+
+    // Act
+    render(<CasesPage />);
+
+    // Assert
+    expect(await screen.findByRole("link", { name: "Buka editor KAS-01" })).toHaveAttribute("href", "/cases/a%2Fb%20c/edit");
+  });
+
   it("shows the full read-only case and restores focus and filters on Escape", async () => {
     const user = userEvent.setup();
     render(<CasesPage />);
