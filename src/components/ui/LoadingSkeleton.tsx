@@ -1,3 +1,13 @@
+"use client";
+
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
+
+const COPY = messages({
+  id: { table: "Memuat data tabel…" },
+  en: { table: "Loading table data…" },
+});
+
 export interface LoadingSkeletonProps {
   variant?: "table" | "cards" | "lines";
   cardType?: "case" | "metric" | "provider" | "generic";
@@ -13,6 +23,7 @@ export function LoadingSkeleton({
   columns = 5,
   className = "",
 }: LoadingSkeletonProps) {
+  const copy = useText(COPY);
 
   // Table Skeleton
   if (variant === "table") {
@@ -34,7 +45,7 @@ export function LoadingSkeleton({
                 />
                 {colIndex === 0 && (
                   <span role="status" className="sr-only">
-                    Memuat data tabel…
+                    {copy.table}
                   </span>
                 )}
               </td>

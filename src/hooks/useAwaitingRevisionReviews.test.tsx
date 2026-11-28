@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/apiClient";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { listAwaitingRevision } from "@/lib/reviews/reviewApi";
 import { makeAwaiting, OTHER_ASSIGNMENT_ID } from "@/test/reviewFixtures";
 import { useAwaitingRevisionReviews } from "./useAwaitingRevisionReviews";
@@ -11,6 +12,10 @@ const listMock = vi.mocked(listAwaitingRevision);
 
 beforeEach(() => {
   listMock.mockReset();
+});
+
+afterEach(() => {
+  resetMockLocale();
 });
 
 describe("useAwaitingRevisionReviews", () => {
@@ -73,6 +78,18 @@ describe("useAwaitingRevisionReviews", () => {
     expect(result.current).toMatchObject({
       status: "error",
       message: "Gagal memuat kasus yang menunggu revisi. Coba lagi.",
+    });
+  });
+
+  it("maps a failure in English when the language mock is English", async () => {
+    setMockLocale("en");
+    listMock.mockRejectedValue(new ApiError(500, "INTERNAL"));
+
+    const { result } = renderHook(() => useAwaitingRevisionReviews(true));
+    await waitFor(() => expect(result.current.status).toBe("error"));
+
+    expect(result.current).toMatchObject({
+      message: "Could not load cases awaiting revision. Try again.",
     });
   });
 

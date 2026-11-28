@@ -1,10 +1,15 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
 import { LoadingState } from "./LoadingState";
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 describe("Reusable States UI Components", () => {
   describe("LoadingSkeleton", () => {
@@ -35,6 +40,20 @@ describe("Reusable States UI Components", () => {
 
       const statusAnnouncements = screen.getAllByRole("status");
       expect(statusAnnouncements).toHaveLength(3);
+      expect(statusAnnouncements[0]).toHaveTextContent("Memuat data tabel…");
+    });
+
+    it("announces the table in English when the language mock is English", () => {
+      setMockLocale("en");
+      render(
+        <table>
+          <tbody>
+            <LoadingSkeleton variant="table" rows={1} columns={1} />
+          </tbody>
+        </table>,
+      );
+
+      expect(screen.getByRole("status")).toHaveTextContent("Loading table data…");
     });
 
     it("merender varian 'cards' untuk tipe case, metric, dan provider", () => {

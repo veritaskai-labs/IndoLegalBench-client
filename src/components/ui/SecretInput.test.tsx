@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 import { CredentialHint } from "./CredentialHint";
 import { SecretInput } from "./SecretInput";
 
@@ -9,6 +10,10 @@ function Controlled({ hint, error }: { hint?: string; error?: string }) {
   const [value, setValue] = useState("");
   return <SecretInput label="Kredensial" value={value} onChange={setValue} hint={hint} error={error} />;
 }
+
+afterEach(() => {
+  resetMockLocale();
+});
 
 describe("SecretInput", () => {
   // Positive
@@ -35,6 +40,16 @@ describe("SecretInput", () => {
     expect(screen.getByRole("button", { name: "Tampilkan kredensial" })).toBeDisabled();
   });
 
+  it("names show and hide in English when the language mock is English", async () => {
+    setMockLocale("en");
+    const user = userEvent.setup();
+    render(<Controlled />);
+
+    await user.type(screen.getByLabelText("Kredensial"), "sk-rahasia-1234");
+    await user.click(screen.getByRole("button", { name: "Show kredensial" }));
+    expect(screen.getByRole("button", { name: "Hide kredensial" })).toBeInTheDocument();
+  });
+
   // Corner: the browser must not autofill a saved password into it.
   it("asks the browser not to autofill and not to spellcheck", () => {
     render(<Controlled />);
@@ -59,5 +74,13 @@ describe("CredentialHint", () => {
 
     expect(screen.getByText("••••a1b2")).toBeInTheDocument();
     expect(screen.getByLabelText("Kredensial berakhiran a1b2")).toBeInTheDocument();
+  });
+
+  it("reads the ending in English when the language mock is English", () => {
+    setMockLocale("en");
+    render(<CredentialHint hint="a1b2" />);
+
+    expect(screen.getByText("••••a1b2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Credential ending in a1b2")).toBeInTheDocument();
   });
 });

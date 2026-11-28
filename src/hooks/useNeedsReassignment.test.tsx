@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMockLocale, setMockLocale } from "@/lib/i18n/localeMock";
 
 vi.mock("@/lib/reviews/reviewApi", () => ({ listNeedsReassignment: vi.fn() }));
 
@@ -34,6 +35,10 @@ describe("useNeedsReassignment", () => {
     listMock.mockReset();
   });
 
+  afterEach(() => {
+    resetMockLocale();
+  });
+
   // Positif
   it("waits, then hands the queue back", async () => {
     listMock.mockResolvedValue([ROW]);
@@ -66,6 +71,18 @@ describe("useNeedsReassignment", () => {
     await waitFor(() => expect(result.current.status).toBe("error"));
     expect(result.current).toMatchObject({
       message: "Gagal memuat antrean penugasan ulang. Coba lagi.",
+    });
+  });
+
+  it("keeps the general message in English when the language mock is English", async () => {
+    setMockLocale("en");
+    listMock.mockReturnValue(rejectedWith(new Error("offline")));
+
+    const { result } = renderHook(() => useNeedsReassignment());
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current).toMatchObject({
+      message: "Could not load the reassignment queue. Try again.",
     });
   });
 

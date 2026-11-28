@@ -1,6 +1,13 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useText } from "@/lib/i18n/LocaleProvider";
+import { messages } from "@/lib/i18n/locale";
+
+const COPY = messages({
+  id: { show: "Tampilkan", hide: "Sembunyikan" },
+  en: { show: "Show", hide: "Hide" },
+});
 
 type Props = {
   label: string;
@@ -29,6 +36,7 @@ export function SecretInput({
   autoComplete = "new-password",
   required = false,
 }: Props) {
+  const copy = useText(COPY);
   const id = useId();
   const [visible, setVisible] = useState(false);
   const describedBy =
@@ -63,11 +71,11 @@ export function SecretInput({
           type="button"
           onClick={() => setVisible((shown) => !shown)}
           aria-pressed={visible}
-          aria-label={visible ? `Sembunyikan ${label.toLowerCase()}` : `Tampilkan ${label.toLowerCase()}`}
+          aria-label={`${visible ? copy.hide : copy.show} ${label.toLowerCase()}`}
           disabled={value === ""}
           className="shrink-0 rounded-md border border-slate-300 px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
-          {visible ? "Sembunyikan" : "Tampilkan"}
+          {visible ? copy.hide : copy.show}
         </button>
       </div>
       {error && (
