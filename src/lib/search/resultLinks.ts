@@ -1,5 +1,7 @@
-/** Tautan hasil di dalam panel pencarian, urut seperti di layar. */
+/**
+ * Tautan hasil di dalam panel pencarian, urut seperti di layar. null = panel belum terpasang;
+ * menerima null di sini membuat komponen tidak perlu cabang yang tidak pernah terjadi.
+ */
 export function resultLinks(panel: ParentNode | null): HTMLAnchorElement[] {
-  void panel;
-  return [];
+  return panel === null ? [] : Array.from(panel.querySelectorAll("a"));
 }
